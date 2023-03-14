@@ -131,7 +131,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.6.0.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
@@ -143,6 +143,11 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
                           help="log4j log level for application console")
+        parser.add_option("--nonceasing", dest="nonceasing", default=False, action="store_true",
+                          help="Specify if sidechain is non-ceasing. By default, it is ceasing.")
+        parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
+                          help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
+                               "/NaiveThresholdSignatureCircuitWithKeyRotation")
 
         self.add_options(parser)
         self.sc_add_options(parser)

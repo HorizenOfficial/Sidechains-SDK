@@ -1,8 +1,8 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.utils.BytesUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;

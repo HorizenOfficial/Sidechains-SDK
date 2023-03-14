@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.horizen</groupId>
 	<artifactId>sidechains-sdk-scbootstrappingtools</artifactId>
-	<version>0.5.0</version>
+	<version>0.6.0</version>
 	<inceptionYear>2018</inceptionYear>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,7 +16,7 @@
 		<dependency>
 			<groupId>io.horizen</groupId>
 			<artifactId>sidechains-sdk</artifactId>
-			<version>0.5.0</version>
+			<version>0.6.0</version>
 		</dependency>
 
 		<dependency>
@@ -53,7 +53,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
-				<version>3.1.1</version>
+				<version>3.3.0</version>
 				<executions>
 					<execution>
 						<id>copy-dependencies</id>
@@ -67,6 +67,7 @@
 							<overWriteSnapshots>false</overWriteSnapshots>
 							<overWriteIfNewer>true</overWriteIfNewer>
 							<includeScope>compile</includeScope>
+							<useBaseVersion>false</useBaseVersion>
 						</configuration>
 					</execution>
 				</executions>

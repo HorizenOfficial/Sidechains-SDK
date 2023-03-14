@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "topQualityCertificateOpt"))
 class SidechainBlock(override val header: SidechainBlockHeader,
                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],

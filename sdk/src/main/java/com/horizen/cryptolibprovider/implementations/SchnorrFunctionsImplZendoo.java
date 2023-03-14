@@ -1,5 +1,7 @@
-package com.horizen.cryptolibprovider;
+package com.horizen.cryptolibprovider.implementations;
 
+import com.horizen.cryptolibprovider.utils.FieldElementUtils;
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.schnorrnative.SchnorrKeyPair;
 import com.horizen.schnorrnative.SchnorrPublicKey;
@@ -7,11 +9,12 @@ import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.librustsidechains.Constants;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 
-import static com.horizen.cryptolibprovider.FieldElementUtils.messageToFieldElement;
-import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.PUBLIC;
-import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.SECRET;
+import static com.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
+import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.PUBLIC;
+import static com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType.SECRET;
 
 public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
 
@@ -65,6 +68,18 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     }
 
     @Override
+    public byte[] getHash(byte[] publicKeyBytes) {
+        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
+        FieldElement hash = publicKey.getHash();
+        byte[] hashBytes = hash.serializeFieldElement();
+
+        publicKey.freePublicKey();
+        hash.freeFieldElement();
+
+        return hashBytes;
+    }
+
+    @Override
     public int schnorrSecretKeyLength() {
         return Constants.SCHNORR_SK_LENGTH();
     }
@@ -78,4 +93,5 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     public int schnorrSignatureLength() {
         return Constants.SCHNORR_SIGNATURE_LENGTH();
     }
+
 }

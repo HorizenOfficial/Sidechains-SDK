@@ -119,7 +119,7 @@ class SidechainStateIntegrationTest
 
     initialVersion = getVersion
 
-    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
     stateStorage.update(
       initialVersion,
       initialWithdrawalEpochInfo,

@@ -5,7 +5,7 @@ import os
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, \
-    MCConnectionInfo, SCBootstrapInfo
+    MCConnectionInfo, SCBootstrapInfo, NO_KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi, COIN
@@ -36,7 +36,7 @@ class Demo(SidechainTestFramework):
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, 2)
 
-    def setup_network(self, split = False):
+    def setup_network(self, split=False):
         # Setup nodes and connect them
         self.nodes = self.setup_nodes()
         connect_nodes_bi(self.nodes, 0, 1)
@@ -51,7 +51,7 @@ class Demo(SidechainTestFramework):
     def sc_setup_nodes(self):
         return
 
-    def sc_setup_network(self, split = False):
+    def sc_setup_network(self, split=False):
         return
 
     def run_test(self):
@@ -68,7 +68,6 @@ class Demo(SidechainTestFramework):
         logging.info("MC chain height is " + str(mc_height) + ". Sidechains fork activated.\n")
 
         self.pause()
-
 
         # Declare SC creation output tx
         logging.info("\nDeclaring new Sidechain in MC network.")
@@ -88,7 +87,9 @@ class Demo(SidechainTestFramework):
             os.makedirs(ps_keys_dir)
 
         cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, True)
+
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, True,
+                                                                 NO_KEY_ROTATION_CIRCUIT)
 
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
         csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
@@ -108,10 +109,13 @@ class Demo(SidechainTestFramework):
             "vFieldElementCertificateFieldConfig": fe_certificate_field_configs
         }
         logging.info("Running sc_create RPC call on MC node:\n" +
-              'sc_create {} '.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
+                     'sc_create {} '.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
         logging.info(
-            "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount - {} ({} Zen)\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
-                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * COIN,  sc_creation_info.forward_amount,
+            "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the "
+            "Sidechain - {}\nfirst Forward Transfer amount - {} ({} Zen)\nwithdrawal certificate verification key "
+            "- {}\nfirst ForgerBox VRF public key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
+                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * COIN,
+                sc_creation_info.forward_amount,
                 certificate_proof_info.verificationKey, custom_data, certificate_proof_info.genSysConstant))
 
         self.pause()
@@ -131,11 +135,11 @@ class Demo(SidechainTestFramework):
 
         self.pause()
 
-
         # Declare SC genesis data config info
         logging.info("\nPreparing Sidechain network configuration.")
-        logging.info("Running getscgenesisinfo RPC call on MC to get the Sidechain related data for genesis block generation:\n" +
-              'getscgenesisinfo "{}"'.format(sidechain_id))
+        logging.info(
+            "Running getscgenesisinfo RPC call on MC to get the Sidechain related data for genesis block generation:\n" +
+            'getscgenesisinfo "{}"'.format(sidechain_id))
 
         genesis_info = [mc_node.getscgenesisinfo(sidechain_id), mc_node.getblockcount(), sidechain_id]
 
@@ -143,15 +147,14 @@ class Demo(SidechainTestFramework):
             "secret": genesis_account.secret,
             "vrfSecret": vrf_key.secret,
             "info": genesis_info[0],
-            "regtestBlockTimestampRewind": 720*120*5
+            "regtestBlockTimestampRewind": 720 * 120 * 5
         }
         jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
         logging.info("\nCalculating Sidechain network genesis data using ScBootstrappingTool command:\n" +
-              "genesisinfo {}\n".format(json.dumps(jsonParameters, indent=4, sort_keys=True)) +
-              "where arguments are:\ninfo - genesis info retrieved from MC on previous step\nsecret and vrfSecret - private part the corresponds first FT data in sc_create RPC call.\n")
+                     "genesisinfo {}\n".format(json.dumps(jsonParameters, indent=4, sort_keys=True)) +
+                     "where arguments are:\ninfo - genesis info retrieved from MC on previous step\nsecret and vrfSecret - private part the corresponds first FT data in sc_create RPC call.\n")
 
         self.pause()
-
 
         # Result of genesis data config info
         logging.info("Result:\n {}".format(json.dumps(jsonNode, indent=4, sort_keys=True)))
@@ -159,16 +162,17 @@ class Demo(SidechainTestFramework):
 
         sidechain_id = genesis_info[2]
 
-        sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
-                               genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                               sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                               genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
-
+        sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount,
+                                            genesis_info[1],
+                                            genesis_data["scGenesisBlockHex"], genesis_data["powData"],
+                                            genesis_data["mcNetwork"],
+                                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
+                                            genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths,
+                                            csw_keys_paths)
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)
 
         self.pause()
-
 
         # Start SC info
         logging.info("\nStarting Sidechain node...")
@@ -177,10 +181,12 @@ class Demo(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
 
         initial_sc_balance = sc_node.wallet_coinsBalance()["result"]
-        logging.info("\nInitial SC wallet balance in satoshi: {}".format(json.dumps(initial_sc_balance, indent=4, sort_keys=True)))
+        logging.info("\nInitial SC wallet balance in satoshi: {}".format(
+            json.dumps(initial_sc_balance, indent=4, sort_keys=True)))
 
         initial_boxes_balances = sc_node.wallet_allBoxes()["result"]
-        logging.info("\nInitial SC wallet boxes: {}".format(json.dumps(initial_boxes_balances, indent=4, sort_keys=True)))
+        logging.info(
+            "\nInitial SC wallet boxes: {}".format(json.dumps(initial_boxes_balances, indent=4, sort_keys=True)))
 
         self.pause()
 
@@ -195,14 +201,14 @@ class Demo(SidechainTestFramework):
         mc_return_address = mc_node.getnewaddress()
         cmdInput = [{'toaddress': sc_address, 'amount': ft_amount, "scid": sc_bootstrap_info.sidechain_id,
                      "mcReturnAddress": mc_return_address}]
-        logging.info("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * COIN, ft_amount) +
-              'sc_send {}'.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
+        logging.info(
+            "\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * COIN, ft_amount) +
+            'sc_send {}'.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
 
         self.pause()
 
         ft_tx_id = mc_node.sc_send(cmdInput)
         logging.info("\nFT transaction id - {}".format(ft_tx_id))
-
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
         logging.info("Generating MC Block with Forward Transfer...")
@@ -230,7 +236,6 @@ class Demo(SidechainTestFramework):
 
         self.pause()
 
-
         # Do inchain coins send
         sc_send_amount = 1  # Zen
         logging.info("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * COIN, sc_send_amount))
@@ -251,7 +256,6 @@ class Demo(SidechainTestFramework):
         boxes_balances = sc_node.wallet_allBoxes()["result"]
         logging.info("\nSC wallet boxes: {}".format(json.dumps(boxes_balances, indent=4, sort_keys=True)))
 
-
         # Do BT
         self.pause()
         mc_address = mc_node.getnewaddress()
@@ -262,7 +266,8 @@ class Demo(SidechainTestFramework):
         ]
         }
 
-        logging.info("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(bt_amount * COIN, bt_amount))
+        logging.info("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(
+            bt_amount * COIN, bt_amount))
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         logging.info("Generating SC Block with Backward Transfer request transaction...")
@@ -274,7 +279,8 @@ class Demo(SidechainTestFramework):
         logging.info("Generating 9 more MC blocks to finish withdrawal epoch for the Sidechain...")
         mc_block_ids = mc_node.generate(9)
         logging.info("MC Block ids - {}\n".format(mc_block_ids))
-        logging.info("Generating SC blocks to synchronize MC blocks and automatically start creation of Withdrawal Certificate...")
+        logging.info(
+            "Generating SC blocks to synchronize MC blocks and automatically start creation of Withdrawal Certificate...")
         sc_block_ids = generate_next_blocks(sc_node, "first node", 4)
         logging.info("\nGenerating Withdrawal Certificate...\n")
 
@@ -293,7 +299,8 @@ class Demo(SidechainTestFramework):
 
         # Check MC balance for BT destination address before Certificate inclusion
         mc_balance_before_cert = mc_node.getreceivedbyaddress(mc_address)
-        logging.info("\nMC address {} balance before Certificate inclusion is = {:.8f} Zen.".format(mc_address, mc_balance_before_cert))
+        logging.info("\nMC address {} balance before Certificate inclusion is = {:.8f} Zen.".format(mc_address,
+                                                                                                    mc_balance_before_cert))
 
         self.pause()
 
@@ -306,7 +313,8 @@ class Demo(SidechainTestFramework):
 
         # Check MC balance for BT destination address before Certificate inclusion
         mc_balance_after_cert = mc_node.getreceivedbyaddress(mc_address)
-        logging.info("\nMC address {} balance after Certificate inclusion is = {:.8f} Zen.".format(mc_address, mc_balance_after_cert))
+        logging.info("\nMC address {} balance after Certificate inclusion is = {:.8f} Zen.".format(mc_address,
+                                                                                                   mc_balance_after_cert))
 
         self.pause()
 
@@ -325,15 +333,16 @@ class Demo(SidechainTestFramework):
         pass
 
     def send_coins(self, sc_node, receiver, amount, fee):
-        j = {"outputs": [ {
-                "publicKey": receiver,
-                "value": amount
-                } ],
+        j = {"outputs": [{
+            "publicKey": receiver,
+            "value": amount
+        }],
             "fee": fee,
-            }
+        }
         request = json.dumps(j)
         txid = sc_node.transaction_sendCoinsToAddress(request)["result"]["transactionId"]
         return txid
+
 
 if __name__ == "__main__":
     Demo().main()

@@ -6,6 +6,7 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.Box
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.cryptolibprovider.utils.CircuitTypes
 import com.horizen.fixtures.{VrfGenerator, _}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
@@ -161,6 +162,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 5: the same as above but with valid withdrawalEpochLength specified in params / sc creation
     Mockito.when(params.withdrawalEpochLength).thenReturn(1000)
+    Mockito.when(params.circuitType).thenReturn(CircuitTypes.NaiveThresholdSignatureCircuit)
     assertTrue("Sidechain genesis block with 1 MainchainBlockReferencesData with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
   }
 

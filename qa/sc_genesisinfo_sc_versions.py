@@ -8,7 +8,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.mc_test.mc_test import CertTestUtils
 from test_framework.util import start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, get_epoch_data
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
     assert_true, create_alien_sidechain, create_certificate_for_alien_sc
@@ -182,7 +182,8 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         create_certificate_for_alien_sc(self.mcTest, self.scid0_ver1, mc_node, fePatternArray=["0100"])
         time.sleep(1)
 
-        create_certificate_for_alien_sc(self.mcTest, self.scid0_ver2, mc_node, fePatternArray=["0100"])
+        _, _, prev_cert_data_hash = get_epoch_data(self.scid0_ver2, mc_node, 9)
+        create_certificate_for_alien_sc(self.mcTest, self.scid0_ver2, mc_node, fePatternArray=["0100"], prev_cert_data_hash=prev_cert_data_hash)
         time.sleep(1)
 
         # in version 0 we can have at most 3f for not to have an invalid fe module

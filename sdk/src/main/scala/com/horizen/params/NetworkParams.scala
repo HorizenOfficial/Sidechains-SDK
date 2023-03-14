@@ -2,8 +2,10 @@ package com.horizen.params
 
 
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.cryptolibprovider.utils.CircuitTypes.CircuitTypes
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -33,6 +35,8 @@ trait NetworkParams {
   val sidechainGenesisBlockId: ModifierId
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
+  val mastersPublicKeys: Seq[SchnorrProposition]
+  val circuitType: CircuitTypes
   val signersThreshold: Int
   val certProvingKeyFilePath: String
   val certVerificationKeyFilePath: String
@@ -58,6 +62,9 @@ trait NetworkParams {
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
+  val isNonCeasing: Boolean
+
+  val minVirtualWithdrawalEpochLength: Int
 
   // Sidechain forger restriction
   val restrictForgers: Boolean = false

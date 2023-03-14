@@ -6,7 +6,7 @@ import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter

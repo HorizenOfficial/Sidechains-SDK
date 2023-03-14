@@ -3,7 +3,7 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType;
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType;
 import com.horizen.node.NodeWallet;
 import scorex.crypto.hash.Blake2b256;
 

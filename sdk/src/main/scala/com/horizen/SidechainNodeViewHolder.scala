@@ -554,14 +554,6 @@ object SidechainNodeViewHolder /*extends ScorexLogging with SparkzEncoding*/ {
 
   private[horizen] object InternalReceivableMessages {
     case class ApplyModifier(applied: Seq[SidechainBlock])
-
-    sealed trait NewLocallyGeneratedTransactions[TX <: Transaction] {
-      val txs: Iterable[TX]
-    }
-
-    case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
-      override val txs: Iterable[TX] = Iterable(tx)
-    }
   }
 }
 

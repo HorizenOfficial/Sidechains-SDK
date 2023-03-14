@@ -3,12 +3,12 @@ package com.horizen
 import java.io.File
 import java.net.URL
 import java.util.{Optional => JOptional}
-
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import sparkz.core.settings.{SparkzSettings, SettingsReaders}
 import com.typesafe.scalalogging.LazyLogging
+import net.ceedubs.ficus.readers.EnumerationReader._
 
 import scala.compat.java8.OptionConverters.toScala
 
@@ -24,6 +24,7 @@ object SidechainSettingsReader
     val sparkzSettings = config.as[SparkzSettings]("sparkz")
     val genesisSettings = config.as[GenesisDataSettings]("sparkz.genesis")
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("sparkz.withdrawalEpochCertificate")
+    val remoteKeysManagerSettings = config.as[RemoteKeysManagerSettings]("sparkz.remoteKeysManager")
     val mempoolSettings = config.as[MempoolSettings]("sparkz.mempool")
     val walletSettings = config.as[WalletSettings]("sparkz.wallet")
     val forgerSettings = config.as[ForgerSettings]("sparkz.forger")
@@ -31,7 +32,7 @@ object SidechainSettingsReader
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
-      mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
+      remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

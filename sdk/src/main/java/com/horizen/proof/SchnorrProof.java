@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
@@ -12,6 +13,7 @@ import java.util.Arrays;
 public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition> {
     public static int SIGNATURE_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSignatureLength();
 
+    @JsonProperty("signature")
     final byte[] signature;
 
     public SchnorrProof(byte[] signatureBytes) {

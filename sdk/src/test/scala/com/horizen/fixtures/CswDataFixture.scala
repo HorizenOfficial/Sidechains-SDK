@@ -1,7 +1,7 @@
 package com.horizen.fixtures
 
 import com.google.common.primitives.Longs
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.utils.{ForwardTransferCswData, UtxoCswData}
 
 import scala.util.Random

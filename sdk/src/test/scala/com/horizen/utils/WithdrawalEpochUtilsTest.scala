@@ -43,12 +43,12 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     assertEquals("Epoch info expected to be the same as previous.",
       WithdrawalEpochInfo(1, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 0),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
 
 
@@ -73,17 +73,17 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, 2),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, withdrawalEpochLength),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
 
 
@@ -108,17 +108,17 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, 3),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, withdrawalEpochLength),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength - 2), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 2), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
     )
 
 
@@ -142,12 +142,12 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     assertEquals("Epoch info expected to be the same as previous.",
       WithdrawalEpochInfo(1, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 0),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
   }
 

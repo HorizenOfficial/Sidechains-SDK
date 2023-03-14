@@ -3,8 +3,8 @@ package com.horizen
 import com.google.common.io.Files
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
-import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
@@ -32,17 +32,6 @@ class SigProofTest {
     new File(provingKeyPath).delete()
     new File(verificationKeyPath).delete()
     tmpDir.delete()
-  }
-
-  // Use this method to regenerate Schnorr PrivateKeys and save them to resources.
-  // Note: currently schnorr keys are generated non-deterministically
-  private def generateSchnorrPrivateKeys(): Unit = {
-    (0 to 9).foreach(index => {
-      val bts = schnorrFunctions.generateSchnorrKeys(s"$index".getBytes()).get(KeyType.SECRET)
-      val bw = new BufferedWriter(new FileWriter("src/test/resources/schnorr_sk0"+ index + "_hex"))
-      bw.write(BytesUtils.toHexString(bts))
-      bw.close()
-    })
   }
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
@@ -124,7 +113,7 @@ class SigProofTest {
       .asJava
 
     println(s"Generating Marlin snark keys. Path: pk=$provingKeyPath, vk=$verificationKeyPath")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW)) {
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION)) {
       fail("Error occurred during snark keys generation.")
     }
 
@@ -138,8 +127,4 @@ class SigProofTest {
     assertTrue("Proof verification failed - CSW disabled", resultCSWDisabled)
 
   }
-
-
-
-
 }

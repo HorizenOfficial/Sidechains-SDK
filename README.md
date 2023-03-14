@@ -40,7 +40,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.5.0.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.6.0.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
@@ -83,3 +83,15 @@ You can find an example of a sidechain implementation without any custom busines
 ## Extras
 
 In order to build and use `SNAPSHOT.jar` package version refer to the following [documentation](./ci/README.md)
+
+
+**Test Sidechains-SDK with unreleased version of zendoo-sc-cryptolib**
+1. git clone https://github.com/HorizenOfficial/zendoo-sc-cryptolib
+2. git checkout -b name_of_needed_branch
+3. cargo build --release --manifest-path=api/Cargo.toml
+4. cp target/release/libzendoo_sc.so jni/src/main/resources/native/linux64/libzendoo_sc.so
+5. cd jni
+6. mvn clean install -Dmaven.test.skip=true
+7. Go to project Sidechains-SDK
+7. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
+8. mvn clean install -Dmaven.test.skip=true

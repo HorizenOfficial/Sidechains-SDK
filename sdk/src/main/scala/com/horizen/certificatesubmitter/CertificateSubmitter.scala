@@ -5,30 +5,29 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
+import com.horizen.api.http.client.SecureEnclaveApiClient
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.certificatesubmitter.dataproof.CertificateData
+import com.horizen.certificatesubmitter.strategies._
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.{CircuitTypes, FieldElementUtils}
 import com.horizen.fork.ForkManager
-import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
+import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeCertificateApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import com.horizen.utils.BytesUtils
+import com.horizen.websocket.client.MainchainNodeChannel
+import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.util.ScorexLogging
 
 import java.io.File
 import java.util
-import java.util.Optional
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
@@ -42,10 +41,13 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-class CertificateSubmitter(settings: SidechainSettings,
+class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
+                           secureEnclaveApiClient: SecureEnclaveApiClient,
                            params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
+                           mainchainChannel: MainchainNodeCertificateApi,
+                           submissionStrategy: CertificateSubmissionStrategy,
+                           keyRotationStrategy: CircuitStrategy[T])
                           (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
@@ -53,7 +55,6 @@ class CertificateSubmitter(settings: SidechainSettings,
   import CertificateSubmitter.Timers._
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -89,7 +90,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   override def postStop(): Unit = {
     log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
-    if(timers.isTimerActive(CertificateGenerationTimer)) {
+    if (timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
@@ -107,16 +108,16 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
-    newBlockArrived orElse
-    locallyGeneratedSignature orElse
-    signatureFromRemote orElse
-    tryToScheduleCertificateGeneration orElse
-    tryToGenerateCertificate orElse
-    getCertGenerationState orElse
-    getSignaturesStatus orElse
-    submitterStatus orElse
-    signerStatus orElse
-    reportStrangeInput
+      newBlockArrived orElse
+      locallyGeneratedSignature orElse
+      signatureFromRemote orElse
+      tryToScheduleCertificateGeneration orElse
+      tryToGenerateCertificate orElse
+      getCertGenerationState orElse
+      getSignaturesStatus orElse
+      submitterStatus orElse
+      signerStatus orElse
+      reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
@@ -198,16 +199,18 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Success(submissionWindowStatus) =>
           if (submissionWindowStatus.isInWindow) {
             signaturesStatus match {
-              case Some(_) => // do nothing
-              case None =>
-                val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
+              // Nothing changed -> do nothing
+              // Note: applicable only to non-ceasing sidechains
+              case Some(status) if status.referencedEpoch == submissionWindowStatus.referencedWithdrawalEpochNumber => // Nothing changes -> do nothing
+              case _ => // Case None or Some(status) for newer referencedEpoch
+                val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedWithdrawalEpochNumber
                 getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
                     // Try to calculate signatures if signing is enabled
                     if (certificateSigningEnabled) {
-                      calculateSignatures(messageToSign) match {
+                      calculateSignatures(messageToSign, referencedWithdrawalEpochNumber) match {
                         case Success(signaturesInfo) =>
                           signaturesInfo.foreach(sigInfo => {
                             self ! LocallyGeneratedSignature(sigInfo)
@@ -222,7 +225,8 @@ class CertificateSubmitter(settings: SidechainSettings,
                     signaturesStatus = None // keep signaturesStatus undefined as before
                 }
             }
-          } else {
+          }
+          else {
             if (timers.isTimerActive(CertificateGenerationTimer)) {
               timers.cancel(CertificateGenerationTimer)
               log.info("Cancel the scheduled Certificate generation due to the Submission Window end")
@@ -231,9 +235,15 @@ class CertificateSubmitter(settings: SidechainSettings,
             signaturesStatus = None
           }
 
-        case Failure(exception) =>
+        case Failure(exception)
+        =>
           log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating SubmissionWindowStatus.", exception)
       }
+  }
+
+  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(view => keyRotationStrategy.getMessageToSign(view, referencedWithdrawalEpochNumber)),
+      timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
   // Take withdrawal epoch info for block from the History.
@@ -241,90 +251,49 @@ class CertificateSubmitter(settings: SidechainSettings,
   // but the older block may being applied at the moment.
   private def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
-      val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+      submissionStrategy.getStatus(sidechainNodeView, block)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
-  // No MBTRs support, so no sense to specify btrFee different to zero.
-  private def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
-
   private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
-      val history = sidechainNodeView.history
-      val state = sidechainNodeView.state
-
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
-
-      val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
-
-      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val sidechainId = params.sidechainId
-
-      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
-        Try {
-          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
-        } match {
-          case Failure(e: IllegalStateException) =>
-            throw new Exception("CertificateSubmitter is too late against the State. " +
-              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
-            throw new Exception(exception)
-          case Success(value) => value
-        }
-      }
-
-
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-        withdrawalRequests.asJava,
-        sidechainId,
-        referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash,
-        btrFee,
-        ftMinAmount,
-        utxoMerkleTreeRoot)
-    }
-
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
-  }
-
-  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
-    if (params.isCSWEnabled) {
-      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
-        case x: Some[Array[Byte]] => x.asJava
-        case None =>
-          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
-          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
-      }
-    }
-    else {
-      Optional.empty()
-    }
-  }
-
-  private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
-    def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
+  protected def calculateSignatures(messageToSign: Array[Byte], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
+    def getSignersPrivateKeys(sidechainNodeView: View): Seq[CertificateSignatureInfo] = {
       val wallet = sidechainNodeView.vault
-      params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+      val signersPublicKeys = sidechainNodeView.state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
+        case Some(actualKeys) => actualKeys.signingKeys
+        case None => params.signersPublicKeys
+      }
+      val privateKeysWithIndexes = signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
         case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
       }
+
+      val remainingKeys = signersPublicKeys.zipWithIndex.filterNot(key_index => privateKeysWithIndexes.map(_._2).contains(key_index._2))
+      (signaturesFromEnclave(messageToSign, remainingKeys)
+        ++ privateKeysWithIndexes.map {
+        case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
+      })
     }
 
-    val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
-      .asInstanceOf[Seq[(SchnorrSecret, Int)]]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
+      .asInstanceOf[Seq[CertificateSignatureInfo]]
+  }
 
-    privateKeysWithIndexes.map {
-      case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
-    }
+  def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
+    if (!secureEnclaveApiClient.isEnabled) return Seq()
+
+    val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
+      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
+      .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
+      .map(Future.sequence(_))
+      .flatten
+
+    Try(Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten)
+      .getOrElse(Seq())
   }
 
   private def locallyGeneratedSignature: Receive = {
@@ -373,60 +342,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       }
   }
 
-  private def getCertificateTopQuality(epoch: Int): Try[Long] = {
-    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
-      .map(topQualityCertificates => {
-        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
-          // case we have mempool cert for the given epoch return its quality.
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
-          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
-          // case we have chain cert for the given epoch return its quality.
-          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
-          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
-          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
-          // no known certs
-          case _ => 0
-        }
-      })
-  }
-
-  private def checkQuality(status: SignaturesStatus): Boolean = {
-    if (status.knownSigs.size >= params.signersThreshold) {
-      getCertificateTopQuality(status.referencedEpoch) match {
-        case Success(currentCertificateTopQuality) =>
-          if (status.knownSigs.size > currentCertificateTopQuality)
-            return true
-        case Failure(e) => e match {
-          // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
-          case ex: WebsocketErrorResponseException =>
-            log.error("Mainchain error occurred while processed top quality certificates request(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // May happen during node synchronization and node behind for one epoch or more
-          case ex: ObsoleteWithdrawalEpochException =>
-            log.info("Sidechain is behind the Mainchain(" + ex + ")")
-            return false
-          // May happen if MC and SDK websocket protocol is inconsistent.
-          // Should never happen in production.
-          case ex: WebsocketInvalidErrorMessageException =>
-            log.error("Mainchain error message is inconsistent to SC implementation(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // Various connection errors
-          case other =>
-            log.error("Unable to retrieve actual top quality certificates from Mainchain(" + other + ")")
-            return false
-        }
-      }
-    }
-    false
-  }
-
   private def tryToScheduleCertificateGeneration: Receive = {
     // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
     case TryToScheduleCertificateGeneration if !submitterEnabled ||
@@ -436,7 +351,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     case TryToScheduleCertificateGeneration =>
       signaturesStatus match {
         case Some(status) =>
-          if (checkQuality(status)) {
+          if (submissionStrategy.checkQuality(status)) {
             val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
             log.info(s"Scheduling Certificate generation in $delay seconds")
             timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
@@ -452,11 +367,11 @@ class CertificateSubmitter(settings: SidechainSettings,
       signaturesStatus match {
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
-          if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
+          if (submissionStrategy.checkQuality(status)) {
+            def getProofGenerationData(sidechainNodeView: View): CertificateData = keyRotationStrategy.buildCertificateData(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
-              .asInstanceOf[DataForProofGeneration]
+              .asInstanceOf[T]
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
 
             // Run the time consuming part of proof generation and certificate submission in a background
@@ -465,7 +380,7 @@ class CertificateSubmitter(settings: SidechainSettings,
               override def run(): Unit = {
                 var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
                 try {
-                  proofWithQuality = generateProof(dataForProofGeneration)
+                  proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration, provingFileAbsolutePath)
                 } catch {
                   case e: Exception =>
                     log.error("Proof creation failed.", e)
@@ -481,7 +396,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
-                  dataForProofGeneration.utxoMerkleTreeRoot,
+                  dataForProofGeneration.getCustomFields,
                   certificateFee,
                   params)
 
@@ -517,121 +432,13 @@ class CertificateSubmitter(settings: SidechainSettings,
         context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
-
-  case class DataForProofGeneration(referencedEpochNumber: Int,
-                                    sidechainId: Array[Byte],
-                                    withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endEpochCumCommTreeHash: Array[Byte],
-                                    btrFee: Long,
-                                    ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
-
-    override def toString: String = {
-      val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
-      "DataForProofGeneration(" +
-        s"referencedEpochNumber = $referencedEpochNumber, " +
-        s"sidechainId = $sidechainId, " +
-        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
-        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
-        s"btrFee = $btrFee, " +
-        s"ftMinAmount = $ftMinAmount, " +
-        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
-        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
-    }
-  }
-
-  private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
-
-    val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
-    val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
-    val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
-
-
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
-      case (pubKey, pubKeyIndex) =>
-        (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
-    }
-
-    DataForProofGeneration(
-      status.referencedEpoch,
-      sidechainId,
-      withdrawalRequests,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount,
-      utxoMerkleTreeRoot,
-      signersPublicKeyWithSignatures)
-  }
-
-  private def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
-
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
-    TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
-  }
-
-  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
-
-    headerInfo.cumulativeCommTreeHash
-  }
-
-  private def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
-    val mcBlockHash = withdrawalEpochNumber match {
-      case -1 => params.parentHashOfGenesisMainchainBlock
-      case _ => {
-        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
-      }
-    }
-    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
-      BytesUtils.toHexString(mcBlockHash)
-    }")
-
-    history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
-  }
-
-  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map {
-        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
-      }.unzip
-
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
-      dataForProofGeneration
-    }, " +
-      s"signersThreshold = ${
-        params.signersThreshold
-      }. " +
-      s"It can take a while.")
-
-    //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumCommTreeHash,
-      dataForProofGeneration.btrFee,
-      dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.utxoMerkleTreeRoot,
-      signaturesBytes.asJava,
-      signersPublicKeysBytes.asJava,
-      params.signersThreshold,
-      provingFileAbsolutePath,
-      true,
-      true)
-  }
-
   def submitterStatus: Receive = {
     case EnableSubmitter =>
+      if (!submitterEnabled) {
+        // If previous value was `false` -> try to schedule cert generation
+        // Maybe we have enough signatures at the moment
+        self ! TryToScheduleCertificateGeneration
+      }
       submitterEnabled = true
     case DisableSubmitter =>
       submitterEnabled = false
@@ -679,9 +486,6 @@ object CertificateSubmitter {
   case object InvalidSignature extends SignatureProcessingStatus
 
   case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
-
-  // Data
-  private case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
 
   case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
 
@@ -734,18 +538,34 @@ object CertificateSubmitter {
 }
 
 object CertificateSubmitterRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def props(settings: SidechainSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            secureEnclaveApiClient: SecureEnclaveApiClient,
+            params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+           (implicit ec: ExecutionContext): Props = {
+    val submissionStrategy: CertificateSubmissionStrategy = if (params.isNonCeasing) {
+      new NonCeasingSidechain(params)
+    } else {
+      new CeasingSidechain(mainchainChannel, params)
+    }
+    val keyRotationStrategy = if (params.circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuit)) {
+      new WithoutKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    } else {
+      new WithKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation)
+    }
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy))
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+  }
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }
+

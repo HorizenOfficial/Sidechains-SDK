@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;

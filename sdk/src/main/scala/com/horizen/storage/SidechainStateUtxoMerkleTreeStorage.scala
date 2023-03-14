@@ -1,7 +1,8 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer, Pair => JPair}
 import com.horizen.utils.Utils

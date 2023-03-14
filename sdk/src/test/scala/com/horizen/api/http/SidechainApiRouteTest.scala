@@ -43,6 +43,8 @@ import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, bytesToId}
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import com.horizen.cryptolibprovider.utils.CircuitTypes
 
 import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
@@ -112,6 +114,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
   val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
+  val keyRotationProof = utilMocks.keyRotationProof
+  val certifiersKeys = utilMocks.certifiersKeys
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
@@ -133,6 +137,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GetDataFromCurrentSidechainNodeView(f) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case GetDataFromCurrentView(f) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentView_reply())
+            sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
         case ApplyFunctionOnNodeView(f) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
@@ -306,6 +313,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   })
   val mockedCswManagerActorRef: Option[ActorRef] = Some(mockedCswManagerActor.ref)
 
+  val mockedSidechainCertActor = TestProbe()
+  val mockedCertSubmitterActorRef: ActorRef = mockedSidechainCertActor.ref
+
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
@@ -340,7 +350,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray)
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
-    sidechainTransactionsCompanion, params).route
+    sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
 
@@ -353,7 +363,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-
+  val sidechainSubmitterApiRoute: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuit).route
+  val sidechainSubmitterApiRouteWithKeyRotation: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation).route
 
   val basePath: String
 

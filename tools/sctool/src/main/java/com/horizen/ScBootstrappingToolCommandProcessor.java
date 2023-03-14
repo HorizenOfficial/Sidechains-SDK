@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -15,6 +13,7 @@ import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.utils.CircuitTypes;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -30,15 +29,18 @@ import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
 import scala.Enumeration;
+import scorex.crypto.hash.Blake2b256;
+import scorex.util.encode.Base16;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import scorex.crypto.hash.Blake2b256;
-import scorex.util.encode.Base16;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
@@ -62,7 +64,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     @Override
-    public void processCommand(String input) throws IOException {
+    public void processCommand(String input) throws Exception {
         Command command = parseCommand(input);
 
         switch(command.name()) {
@@ -83,6 +85,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 break;
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
+                break;
+            case "generateCertWithKeyRotationProofInfo":
+                processGenerateCertWithKeyRotationProofInfo(command.data());
                 break;
             case "generateCswProofInfo":
                 processGenerateCswProofInfo(command.data());
@@ -246,7 +251,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     private void processGenerateCertProofInfo(JsonNode json) {
         if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
-            printGenerateCertProofInfoUsageMsg("wrong public keys");
+            printGenerateCertProofInfoUsageMsg("signersPublicKeys are missing or have unsupported format.");
             return;
         }
 
@@ -257,7 +262,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             JsonNode pkNode = pksIterator.next();
 
             if (!pkNode.isTextual()) {
-                printGenerateCertProofInfoUsageMsg("wrong public key format");
+                printGenerateCertProofInfoUsageMsg("wrong signersPublicKeys format");
                 return;
             }
 
@@ -265,14 +270,14 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
-            printGenerateCertProofInfoUsageMsg("wrong threshold");
+            printGenerateCertProofInfoUsageMsg("threshold is missing or it has unsupported format");
             return;
         }
 
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > publicKeys.size()) {
-            printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
+            printGenerateCertProofInfoUsageMsg("threshold parameter should be greater than 0 and be less or equal to keyCount. Current value: " + threshold);
             return;
         }
 
@@ -305,7 +310,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_NO_KEY_ROTATION;
             if (isCSWEnabled){
                 numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
             }
@@ -321,7 +326,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<byte[]> publicKeysBytes = publicKeys.stream().map(pk -> BytesUtils.fromHexString(pk)).collect(Collectors.toList());
+        List<byte[]> publicKeysBytes = publicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
         String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -336,6 +341,160 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         for (String publicKeyStr : publicKeys) {
             keyArrayNode.add(publicKeyStr);
+        }
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void printGenerateCertWithKeyRotationProofInfoUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateCertWithKeyRotationProofInfo {\"signersPublicKeys\": [signerPk1, signerPk2, ...], \"mastersPublicKeys\": [masterPk1, masterPk2, ...],\", \"threshold\":5, signersPublicKeys and mastersPublicKeys size should be equal," +
+                "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
+                "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\"}"+
+                "\n\t - threshold parameter should be less or equal to keyCount.");
+    }
+    private void processGenerateCertWithKeyRotationProofInfo(JsonNode json) throws Exception {
+        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("signersPublicKeys are missing or have unsupported format.");
+            return;
+        }
+
+        List<String> signersPublicKeys = new ArrayList<String>();
+
+        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
+        int index = 1;
+        while (pksIterator.hasNext()) {
+            JsonNode pkNode = pksIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong signersPublicKeys format");
+                return;
+            }
+
+            String pk = pkNode.asText();
+
+            int duplicateIndex = signersPublicKeys.indexOf(pk);
+            if (duplicateIndex != -1) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("signersKeys contains duplicate values. SignersKey with index %d is identical to signersKey with index %d.", duplicateIndex + 1, index));
+                return;
+            }
+
+            signersPublicKeys.add(pk);
+            index++;
+        }
+
+        if (!json.has("mastersPublicKeys") || !json.get("mastersPublicKeys").isArray()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("mastersPublicKeys are missing or have unsupported format.");
+            return;
+        }
+
+        List<String> mastersPublicKeys = new ArrayList<>();
+
+        Iterator<JsonNode> mastersPublicKeysIterator = json.get("mastersPublicKeys").elements();
+        index = 1;
+        while (mastersPublicKeysIterator.hasNext()) {
+            JsonNode pkNode = mastersPublicKeysIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong mastersPublicKeys format");
+                return;
+            }
+
+            String masterKey = pkNode.asText();
+
+            int duplicateIndex = mastersPublicKeys.indexOf(masterKey);
+            if (duplicateIndex != -1) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("masterKeys contains duplicate values. MasterKey with index %d is identical to masterKey with index %d.", duplicateIndex + 1, index));
+                return;
+            }
+
+            mastersPublicKeys.add(masterKey);
+            index++;
+        }
+
+        if (mastersPublicKeys.size() != signersPublicKeys.size()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("the number of signer keys must be equal to the number of master keys."));
+            return;
+        }
+
+        for(int i = 0; i < mastersPublicKeys.size(); i++) {
+            int duplicateIndex = signersPublicKeys.indexOf(mastersPublicKeys.get(i));
+            if(duplicateIndex != -1) {
+                printGenerateCertWithKeyRotationProofInfoUsageMsg(String.format("duplicated keys are found. SignersKey with index %d equals to mastersKey with index %d", duplicateIndex, i));
+                return;
+            }
+        }
+
+        if (!json.has("threshold") || !json.get("threshold").isInt()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("threshold is missing or it has unsupported format");
+            return;
+        }
+
+        int threshold = json.get("threshold").asInt();
+
+        if (threshold <= 0 || threshold > signersPublicKeys.size()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("threshold parameter should be greater than 0 and be less than or equal to keyCount. Current value: " + threshold);
+            return;
+        }
+
+        if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            return;
+        }
+        String provingKeyPath = json.get("provingKeyPath").asText();
+
+        if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
+            printGenerateCertWithKeyRotationProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            return;
+        }
+        String verificationKeyPath = json.get("verificationKeyPath").asText();
+
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+
+            if (!initDlogKey()) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
+
+            if (!CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateCoboundaryMarlinSnarkKeys(signersPublicKeys.size(), provingKeyPath, verificationKeyPath)) {
+                printer.print("Error occurred during snark keys generation.");
+                return;
+            }
+        }
+        // Read verification key from file
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        if(verificationKey.isEmpty()) {
+            printer.print("Verification key file is empty or the key is broken.");
+            return;
+        }
+
+        List<byte[]> signersPublicKeysBytes = signersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        List<byte[]> mastersPublicKeysBytes = mastersPublicKeys.stream().map(BytesUtils::fromHexString).collect(Collectors.toList());
+        String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation().generateSysDataConstant(signersPublicKeysBytes, mastersPublicKeysBytes, threshold));
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("maxPks", signersPublicKeys.size());
+        resJson.put("threshold", threshold);
+        resJson.put("genSysConstant", genSysConstant);
+        resJson.put("verificationKey", verificationKey);
+
+        ArrayNode signingKeyArrayNode = resJson.putArray("signersPublicKeys");
+
+        for (String publicKeyStr : signersPublicKeys) {
+            signingKeyArrayNode.add(publicKeyStr);
+        }
+
+        ArrayNode masterKeyArrayNode = resJson.putArray("mastersPublicKeys");
+        for (String publicKeyStr : mastersPublicKeys) {
+            masterKeyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
@@ -436,6 +595,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
                       "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
                       "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
+                      "\t\t\"virtualWithdrawalEpochLength\": optional field used for non-ceasing sidechain to specify the cert generation frequency.\n" +
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
@@ -500,6 +660,21 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         } catch (Exception e) {
             printGenesisInfoUsageMsg("'vrfSecret' value is broken. Can't deserialize the key.");
             return;
+        }
+
+        // virtualWithdrawalEpochLength is an optional field that
+        int virtualWithdrawalEpochLength = 0;
+        if (json.has("virtualWithdrawalEpochLength")) {
+            if(!json.get("virtualWithdrawalEpochLength").isInt()) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be integer.");
+                return;
+            }
+            virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
+
+            if (virtualWithdrawalEpochLength < 0) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' can't be negative.");
+                return;
+            }
         }
 
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
@@ -574,7 +749,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), CircuitTypes.NaiveThresholdSignatureCircuit());
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
@@ -629,6 +804,23 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
+            boolean isNonCeasing = (withdrawalEpochLength == 0);
+
+            if (isNonCeasing && virtualWithdrawalEpochLength == 0) {
+                printGenesisInfoUsageMsg("For non-ceasing sidechains virtualWithdrawalEpochLength must be specified.");
+                return;
+            }
+
+            if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
+                printGenesisInfoUsageMsg("For ceasing sidechains virtualWithdrawalEpochLength must not be specified.");
+                return;
+            }
+
+            if (isNonCeasing && virtualWithdrawalEpochLength < params.minVirtualWithdrawalEpochLength()) {
+                printGenesisInfoUsageMsg(String.format("Virtual withdrawal epoch length is too short. It should be at least %d for %s network.", params.minVirtualWithdrawalEpochLength(), mcNetworkName));
+                return;
+            }
+
             String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
 
 
@@ -638,7 +830,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
-            resJson.put("withdrawalEpochLength", withdrawalEpochLength);
+            resJson.put("isNonCeasing", isNonCeasing);
+            resJson.put("withdrawalEpochLength", isNonCeasing ? virtualWithdrawalEpochLength : withdrawalEpochLength);
             resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
@@ -676,11 +869,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null,CircuitTypes.NaiveThresholdSignatureCircuit(), 0, null, null, null, null, null, null, null, false, null, null,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

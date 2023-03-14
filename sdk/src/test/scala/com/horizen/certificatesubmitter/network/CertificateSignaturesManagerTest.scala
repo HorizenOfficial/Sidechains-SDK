@@ -26,7 +26,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
@@ -44,6 +44,8 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
   def roundTrip(msg: Message[_]): Message[_] = {
     messageSerializer.deserialize(messageSerializer.serialize(msg), msg.source) match {
       case Success(Some(value)) => value
+      case Success(_) => fail("unexpected case")
+      case Failure(ex) => fail("round trip serialization failed", ex)
     }
   }
 

@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.5.0</version>
+  <version>0.6.0</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -55,7 +55,8 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <version>0.5.0</version>
+      <!-- 0.6.0-SNAPSHOT2 tag -->
+      <version>0.6.0-20230124.165959-5</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
@@ -265,6 +266,14 @@
       <name>Softmotions Public Repository</name>
       <url>https://repo.softmotions.com/repository/softmotions-public</url>
     </repository>
+    <repository>
+      <id>oss-sonatype</id>
+      <name>oss-sonatype</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
   </repositories>
   <build>
     <testResources>
@@ -348,6 +357,9 @@
           <include>cert_with_bts</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
+          <include>new_mc_blocks/mc_block_reference_data_2_certificates</include>
+          <include>new_mc_blocks/mc_block_reference_data_empty_sidechains</include>
+          <include>new_mc_blocks/mc_block_reference_data_certificate_with_bts</include>
           <include>new_mc_blocks/mc_block_with_1_sc_creation</include>
           <include>new_mc_blocks/mc_block_with_1_ft</include>
           <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_blocks_data.py -->

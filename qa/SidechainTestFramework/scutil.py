@@ -6,16 +6,18 @@ import json
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
-    SCCreationInfo, DEFAULT_API_KEY
+    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, \
+    SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
 
-from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
-from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
+from test_framework.mc_test.mc_test import generate_random_field_element_hex
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, \
+    assert_false, get_field_element_with_padding
 
 WAIT_CONST = 1
 
@@ -34,6 +36,7 @@ DEFAULT_REST_API_TIMEOUT = 5
 
 # max P2P message size for a Modifier
 DEFAULT_MAX_PACKET_SIZE = 5242980
+
 
 class TimeoutException(Exception):
     def __init__(self, operation):
@@ -123,7 +126,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.5.0.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.6.0.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -145,7 +148,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.6.0.jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -158,12 +161,14 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
 
 
 """
-Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
+Generate a genesis info by calling ScBootstrappingTool with command "genesisinfo"
 Parameters:
  - genesis_info: genesis info provided by a mainchain node
  - genesis_secret: private key 25519 secret to sign SC block
  - vrf_secret: vrk secret key to check consensus rules SC block
  - block_timestamp_rewind: rewind genesis block timestamp by some value
+ - virtual_withdrawal_epoch_length - actual withdrawal epoch length from SC perspective in case of non-ceasing sidechain
+    Note: must be undefined or 0 in case of ceasing sidechain; >0 in case of non-ceasing sidechain.
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
@@ -178,9 +183,11 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind,
+                          virtual_withdrawal_epoch_length):
     jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
-                      "regtestBlockTimestampRewind": block_timestamp_rewind}
+                      "regtestBlockTimestampRewind": block_timestamp_rewind,
+                      "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -239,6 +246,8 @@ Parameters:
 
 Output: an array of instances of SchnorrKey (see sc_bootstrap_info.py).
 """
+
+
 def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
     schnorr_keys = []
     secrets = []
@@ -267,31 +276,46 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths, is_csw_enabled):
+def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
+                                    is_csw_enabled, circuit_type):
     signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
     signer_secrets = []
-    signer_public_keys = []
+    public_signing_keys = []
+    master_secrets = []
+    public_master_keys = []
     for i in range(len(signer_keys)):
-        keys = signer_keys[i]
-        signer_secrets.append(keys.secret)
-        signer_public_keys.append(keys.publicKey)
+        signer_key = signer_keys[i]
+        signer_secrets.append(signer_key.secret)
+        public_signing_keys.append(signer_key.publicKey)
 
     json_parameters = {
-        "signersPublicKeys": signer_public_keys,
+        "signersPublicKeys": public_signing_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
         "isCSWEnabled": is_csw_enabled
     }
-    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
+
+    if circuit_type == KEY_ROTATION_CIRCUIT:
+        master_keys = generate_cert_signer_secrets("master" + seed, number_of_signer_keys)
+        for i in range((len(master_keys))):
+            master_key = master_keys[i]
+            master_secrets.append(master_key.secret)
+            public_master_keys.append(master_key.publicKey)
+
+        json_parameters["mastersPublicKeys"] = public_master_keys
+
+    output = launch_bootstrap_tool("generateCertProofInfo",
+                                   json_parameters) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
+        launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
-                                                  signer_public_keys)
+                                                  public_signing_keys, master_secrets, public_master_keys)
     return certificate_proof_info
 
 
@@ -373,8 +397,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
-    all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
-    signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
+    all_signers_private_keys = bootstrap_info.certificate_proof_info.schnorr_signers_secrets
+    signer_private_keys = [all_signers_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
@@ -402,6 +426,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'POW_DATA': bootstrap_info.pow_data,
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
+        'NON_CEASING': ("true" if bootstrap_info.is_non_ceasing else "false"),
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
         'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
@@ -411,9 +436,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_signing_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
-        "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "MASTER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.public_master_keys),
+        # This should be NON empty only in case of Key Rotation Circuit
+        "MAX_PKS": len(bootstrap_info.certificate_proof_info.public_signing_keys),
         "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
@@ -422,7 +449,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "CIRCUIT_TYPE": bootstrap_info.circuit_type,
+        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -441,6 +470,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
+
+
 def initialize_default_sc_datadir(dirname, n, api_key):
     apiAddress = "127.0.0.1"
     configsData = []
@@ -481,7 +512,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
-        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE,
+        "REMOTE_KEY_MANAGER_ENABLED": "false"
     }
 
     configsData.append({
@@ -528,9 +560,9 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if sys.platform.startswith('win'):
         lib_separator = ";"
-    examples_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
+    examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
     if binary is None:
-        binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.6.0.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -629,7 +661,8 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if
+               i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
@@ -846,7 +879,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys, sc_creation_info.csw_enabled,
+                                            sc_creation_info.circuit_type)
     if sc_creation_info.csw_enabled:
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
@@ -867,8 +901,10 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
+                                                            sc_nodes_bootstrap_info.is_non_ceasing,
                                                             cert_keys_paths,
-                                                            csw_keys_paths)
+                                                            csw_keys_paths,
+                                                            sc_creation_info.circuit_type)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -880,13 +916,23 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False,
+                          circuit_type=NO_KEY_ROTATION_CIRCUIT):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    pk = "cert_marlin_snark_pk"
-    vk = "cert_marlin_snark_vk"
-    if isCSWEnabled is False:
-        pk = "cert_marlin_snark_pk_csw_disabled"
-        vk = "cert_marlin_snark_vk_csw_disabled"
+    if (circuit_type == NO_KEY_ROTATION_CIRCUIT):
+        if isCSWEnabled:
+            pk = "cert_marlin_snark_pk"
+            vk = "cert_marlin_snark_vk"
+        else:
+            pk = "cert_marlin_snark_pk_csw_disabled"
+            vk = "cert_marlin_snark_vk_csw_disabled"
+    elif circuit_type == KEY_ROTATION_CIRCUIT:
+        assert_false(isCSWEnabled)
+        pk = "cert_marlin_snark_pk_with_key_rotation"
+        vk = "cert_marlin_snark_vk_with_key_rotation"
+    else:
+        assert "type is not supported " + str(circuit_type)
+
     return ProofKeysPaths(
         os.path.join(dirname, pk + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
         os.path.join(dirname, vk + str(cert_threshold_sig_max_keys)).replace("\\", "/"))
@@ -915,9 +961,12 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
+    withdrawal_epoch_length = 0 if sc_creation_info.non_ceasing else sc_creation_info.withdrawal_epoch_length
+    virtual_withdrawal_epoch_length = sc_creation_info.withdrawal_epoch_length if sc_creation_info.non_ceasing else 0
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
-                                                             sc_creation_info.csw_enabled)
+                                                             sc_creation_info.csw_enabled,
+                                                             sc_creation_info.circuit_type)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:
@@ -925,7 +974,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
 
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
-        sc_creation_info.withdrawal_epoch_length,
+        withdrawal_epoch_length,
         genesis_account.publicKey,
         sc_creation_info.forward_amount,
         vrf_key.publicKey,
@@ -934,16 +983,19 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         csw_verification_key,
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
-        sc_creation_info.csw_enabled)
+        sc_creation_info.csw_enabled,
+        sc_creation_info.circuit_type)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind)
+                                         block_timestamp_rewind, virtual_withdrawal_epoch_length)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], sc_creation_info.non_ceasing, cert_keys_paths,
+                           csw_keys_paths,
+                           sc_creation_info.circuit_type)
 
 
 def calculateApiKeyHash(auth_api_key):
@@ -1000,7 +1052,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
-                                                                                       slotNumber=next_slot))
+                                                                                              slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
@@ -1046,7 +1098,8 @@ def get_scinfo_data(scid, mc_node):
 
 def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag, feCfgList=[]):
     sc_tag = customHexTag
-    vk = mcTest.generate_params(sc_tag)
+    keyrot = True if scVersion == 2 else False
+    vk = mcTest.generate_params(sc_tag, keyrot=keyrot)
     constant = generate_random_field_element_hex()
     # we use this field to store sc_tag, used by mcTool when creating certificates
     customData = sc_tag
@@ -1077,7 +1130,7 @@ def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag
     return ret
 
 
-def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
+def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray, prev_cert_data_hash=None):
     epoch_number_1, epoch_cum_tree_hash_1, sc_version, constant, sc_tag = get_scinfo_data(scid, mc_node)
 
     logging.info("sc_tag[{}]".format(sc_tag))
@@ -1103,13 +1156,17 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
         feList.append(get_field_element_with_padding(pattern, sc_version))
     scid_swapped = str(swap_bytes(scid))
 
+    prev_cert_hash = prev_cert_data_hash
+    if sc_version == 2 and prev_cert_data_hash == None:
+        prev_cert_hash = 0
+
     scProof = mcTest.create_test_proof(
         sc_tag, scid_swapped, epoch_number_1, quality=10,
         btr_fee=MBTR_SC_FEE, ft_min_amount=FT_SC_FEE,
         end_cum_comm_tree_root=epoch_cum_tree_hash_1, constant=constant,
-        pks=[], amounts=[], custom_fields=feList)
+        pks=[], amounts=[], custom_fields=feList, prev_cert_hash=prev_cert_hash)
 
-    logging.info("cum =", epoch_cum_tree_hash_1)
+    logging.info("cum =", str(epoch_cum_tree_hash_1))
     params = {
         'scid': scid,
         'quality': 10,
@@ -1131,5 +1188,14 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
+
 def get_resources_dir():
-    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'resources'))
+
+
+def get_withdrawal_epoch(sc_node):
+    j = {
+        "blockId": sc_node.block_best()["result"]["block"]["id"]
+    }
+    request = json.dumps(j)
+    return sc_node.block_findBlockInfoById(request)["result"]["blockInfo"]["withdrawalEpochInfo"]["epoch"]

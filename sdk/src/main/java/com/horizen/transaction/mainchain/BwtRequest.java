@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxBwtRequestCrosschainOutput;
 import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.cryptolibprovider.FieldElementUtils;
+import com.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 

@@ -29,7 +29,6 @@ public class SchnorrProposition
         return CryptoLibProvider.schnorrFunctions().verify(message, pubKeyBytes(), signature.bytes());
     }
 
-
     @JsonProperty("publicKey")
     @Override
     public byte[] pubKeyBytes() {
