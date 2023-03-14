@@ -109,22 +109,18 @@ public class EthereumTransactionDecoder {
         if (((RlpList)values.getValues().get(8)).getValues().size() > 0)
             throw new IllegalArgumentException("Access list is not supported");
 
-        byte[] v = getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
-        byte[] r = ((RlpString)values.getValues().get(10)).getBytes();
-        byte[] s = ((RlpString)values.getValues().get(11)).getBytes();
+        BigInteger vOrig = getCheckedValue(((RlpString)values.getValues().get(9)), "sig_v");
+        BigInteger v = getVFromRecId(vOrig);
+        BigInteger r = getCheckedValue(((RlpString)values.getValues().get(10)), "sig_r");
+        BigInteger s = getCheckedValue(((RlpString)values.getValues().get(11)), "sig_s");
+
 
         SignatureSecp256k1 realSignature;
-        if (Arrays.equals(r, new byte[0]) && Arrays.equals(s, new byte[0])) {
+        if (r.equals(BigInteger.ZERO) && s.equals(BigInteger.ZERO)) {
             // if r and s are both 0 we assume that this signature stands for an unsigned tx object
-            // therefore v is the plain chain ID and the signature is set to null
+            // and the signature is set to null
             realSignature = null;
         } else {
-            // we check the size here even if an assertion would be thrown when instantiating the signature obj below
-            if (r.length != 32)
-                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
-            if (s.length != 32)
-                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
-
             realSignature = new SignatureSecp256k1(v, r, s);
         }
 
@@ -209,7 +205,7 @@ public class EthereumTransactionDecoder {
         return (v - CHAIN_ID_INC) / 2;
     }
 
-    private static byte[] getVFromRecId(int recId) {
-        return new byte[]{(byte)(LOWER_REAL_V + recId)};
+    private static BigInteger getVFromRecId(BigInteger recId) {
+        return BigInteger.valueOf(LOWER_REAL_V + recId.intValueExact());
     }
 }

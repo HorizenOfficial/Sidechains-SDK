@@ -241,6 +241,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getNonce().signum() < 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "negative nonce", id()));
+        if (!BigIntegerUtil.isUint64(getNonce()))
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "nonce uint64 overflow", id()));
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));

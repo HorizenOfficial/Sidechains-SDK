@@ -31,6 +31,9 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
                 (r.length == Secp256k1.SIGNATURE_RS_SIZE && s.length == Secp256k1.SIGNATURE_RS_SIZE);
     }
 
+    private static BigInteger secp256k1N= new BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16);
+    private static BigInteger secp256k1halfN = secp256k1N.divide(BigInteger.TWO);
+
     public static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
         if (v == null || r == null || s == null)
             throw new IllegalArgumentException("Null v/r/s obj passed in signature data");
@@ -45,7 +48,25 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     }
 
     public static void verifySignatureData(BigInteger v, BigInteger r, BigInteger s) {
-       // TODO
+
+        // TODO:
+        //  check if we always have real signature also in case of eip155 txes.
+        //  In this case we have 27/28 as only possible values
+        if (v.bitLength()/8 > Long.BYTES)
+            throw new IllegalArgumentException("Too large a v obj passed in signature data");
+
+        if (v.signum() < 0 || r.signum() < 0 || s.signum() < 0) {
+            throw new IllegalArgumentException("Negative r/s obj passed in signature data");
+        }
+        // reject upper range of s values (ECDSA malleability)
+        if (s.compareTo(secp256k1halfN) > 0) {
+            throw new IllegalArgumentException("Invalid signature s obj passed in signature data");
+        }
+
+        if (r.compareTo(secp256k1N) >= 0 || s.compareTo(secp256k1N) >= 0) {
+            throw new IllegalArgumentException("Invalid signature r/s obj passed in signature data");
+        }
+
         /*
         // ValidateSignatureValues verifies whether the signature values are valid with
         // the given chain rules. The v value is assumed to be either 0 or 1.
