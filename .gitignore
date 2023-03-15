@@ -14,7 +14,16 @@ examples/simpleapp/dependency-reduced-pom.xml
 qa/tmp
 hs_err*
 log
+*.bkp*
+**/contracts/compiled/**
 /examples/entrypoint.sh
 /examples/Dockerfile
 project/
 sc_test.log
+.metals/metals.lock.db
+.metals/metals.log
+.metals/metals.mv.db
+qa/.metals/metals.lock.db
+qa/.metals/metals.mv.db
+qa/.metals/metals.log
+.scalafmt.conf

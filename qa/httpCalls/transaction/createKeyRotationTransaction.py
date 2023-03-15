@@ -1,7 +1,10 @@
 import json
 
+
 # execute a transaction/createKeyRotationTransaction call
-def http_create_key_rotation_transaction(sidechainNode, key_type, key_index, new_key, signing_key_signature, master_key_signature, new_key_signature, format = True, automatic_send = True, api_key=None):
+def http_create_key_rotation_transaction(sidechainNode, key_type, key_index, new_key, signing_key_signature,
+                                         master_key_signature, new_key_signature, format=True, automatic_send=True,
+                                         api_key=None):
     j = {
         "keyType": key_type,
         "keyIndex": key_index,

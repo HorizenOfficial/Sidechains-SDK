@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import multiprocessing
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -31,6 +30,8 @@ Test:
 class ScCertSubmitterSecureEnclave(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
+    remote_keys_ip_address = "127.0.0.1"
+    remote_keys_port = 5000
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
@@ -44,9 +45,11 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
+        remote_address = f"http://{self.remote_keys_ip_address}:{self.remote_keys_port + self.options.parallel}"
+
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list([0, 1, 2],), remote_keys_manager_enabled=True
+            True, True, list([0, 1, 2], ), remote_keys_manager_enabled=True, remote_keys_server_address=remote_address
             # certificate submitter is enabled, signing is enabled with 3 schnorr PKs
         )
 
@@ -67,10 +70,10 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         api_server = SecureEnclaveApiServer(
             self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets[4:],
             self.sc_nodes_bootstrap_info.certificate_proof_info.public_signing_keys[4:],
+            self.remote_keys_ip_address,
+            self.remote_keys_port + self.options.parallel
         )
-
-        api_server_thread = multiprocessing.Process(target=lambda: api_server.start())
-        api_server_thread.start()
+        api_server.start()
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
@@ -101,7 +104,6 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1)['cert']['quality'],
                      "Certificate has wrong quality")
         logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
-        api_server_thread.terminate()
 
 
 if __name__ == "__main__":

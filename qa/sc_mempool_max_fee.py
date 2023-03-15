@@ -88,12 +88,11 @@ class SCMempoolMaxFee(SidechainTestFramework):
 
         # Test that we are not able to send a transaction with fee > max_fee in sc_node1
         logging.info("# Test that we are not able to send a transaction with fee > max_fee in sc_node1")
-        error = False
         try:
             sendCoinsToAddress(sc_node1, sc_address_2, 10, self.max_fee + 1)
+            fail("Transaction should not have been sent")
         except:
-            error = True
-        assert_true(error)
+            pass
 
         # Test that we are able to send a transaction with fee = max_fee in sc_node1
         logging.info("# Test that we are able to send a transaction with fee = max_fee in sc_node1")

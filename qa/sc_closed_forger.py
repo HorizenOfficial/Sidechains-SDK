@@ -2,9 +2,9 @@
 import logging
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, connect_nodes_bi, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, \
+from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, \
     bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
@@ -29,9 +29,13 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 class SidechainClosedForgerTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
-    number_of_forgers = 5
-    allowed_forger_propositions = generate_secrets("seed", number_of_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers)
+
+    # the genesis pubKey/vrfKeys are added to the list of allowed forgers, therefore we have a
+    # total of 5 allowed forgers
+    number_of_forgers = 4
+
+    allowed_forger_propositions = generate_secrets("seed2", number_of_forgers)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed2", number_of_forgers)
 
     def __init__(self):
         self.sc_nodes_bootstrap_info = None
@@ -68,7 +72,9 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir
+                              #, extra_args=['-agentlib']
+                              )
 
     def find_box(self, boxes, proposition):
         for box in boxes:
@@ -139,16 +145,14 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        # Create some ZenBoxes
+        # Create some ZenBoxes for all forger propositions and a new one
         logging.info("Create some ZenBoxes")
-        sendCointsToMultipleAddress(sc_node1,
-                                    list(map(lambda forger: forger.publicKey, self.allowed_forger_propositions)),
-                                    [1000] * len(self.allowed_forger_propositions), 0)
-        self.sc_sync_all()
-        generate_next_blocks(sc_node1, "first node", 1)
-        self.sc_sync_all()
+        listProp = list(map(lambda forger: forger.publicKey, self.allowed_forger_propositions))
+        listProp.append(new_public_key)
+        listAmounts = ([1000]*len(self.allowed_forger_propositions))
+        listAmounts.append(1500)
+        sendCointsToMultipleAddress(sc_node1, listProp, listAmounts, fee=0)
 
-        sendCoinsToAddress(sc_node1, new_public_key, 1500, 0)
         self.sc_sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
@@ -173,41 +177,38 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         # Try to send an openStake transaction with negative forgerIndex
         logging.info("Try to send an openStake transaction with negative forgerIndex")
-        error_occur = False
         try:
             createOpenStakeTransaction(sc_node1, new_public_key_box["id"], new_public_key, -1, sc_fee)
+            fail("Try to send an openStake transaction with negative forgerIndex")
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
-            error_occur = True
-        assert_true(error_occur, "Try to send an openStake transaction with negative forgerIndex")
+
         logging.info("Ok!")
 
         # Try to send an openStake transaction with empty output proposition
         logging.info("Try to send an openStake transaction with empty output proposition")
-        error_occur = False
         try:
             createOpenStakeTransaction(sc_node1, new_public_key_box["id"], "", 0, sc_fee)
+            fail("Try to send an openStake transaction with empty output proposition")
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
-            error_occur = True
-        assert_true(error_occur, "Try to send an openStake transaction with empty output proposition")
+
         logging.info("Ok!")
 
         # Try to send an openStake transaction with empty boxid
         logging.info("Try to send an openStake transaction with empty boxid")
-        error_occur = False
         try:
             createOpenStakeTransaction(sc_node1, "", new_public_key, 0, sc_fee)
+            fail("Try to send an openStake transaction with empty output proposition")
         except SCAPIException as e:
             logging.info("Expected SCAPIException: " + e.error)
-            error_occur = True
-            assert_true(error_occur, "Try to send an openStake transaction with empty output proposition")
+
         logging.info("Ok!")
 
         # Try to send an openStake transaction with forgerIndex out of bounds
         logging.info("Try to send an openStake transaction with forgerIndex out of bounds")
-        tx_bytes = createOpenStakeTransaction(sc_node1, new_public_key_box["id"], new_public_key,
-                                              self.number_of_forgers, sc_fee)
+        tx_bytes = createOpenStakeTransaction(sc_node1, new_public_key_box["id"],new_public_key,self.number_of_forgers+1,sc_fee)
+
         res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])
         assert_true("ForgerIndex in OpenStakeTransaction is out of bound" in res["error"]["detail"])
         logging.info("Ok!")

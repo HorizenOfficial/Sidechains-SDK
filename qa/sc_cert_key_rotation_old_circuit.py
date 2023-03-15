@@ -65,7 +65,6 @@ class SCKeyRotationOldCircuitTest(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
-
         sc_address_1 = http_wallet_createPrivateKey25519(sc_node)
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a
@@ -102,6 +101,7 @@ class SCKeyRotationOldCircuitTest(SidechainTestFramework):
                         automatic_send=True)
         assert("error" in response)
         assert_equal(response["error"]["description"], "The current circuit doesn't support key rotation transaction!")
+
 
 if __name__ == "__main__":
     SCKeyRotationOldCircuitTest().main()

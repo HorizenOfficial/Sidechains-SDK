@@ -185,6 +185,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /block/currentHeight:
+    post:
+      tags:
+        - block
+      summary: finds the chain height
+      description: Returns the height in active chain
+      operationId: getCurrentHeight
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      height:
+                        type: integer
+                        format: int64
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /block/getFeePayments:
     post:
       tags:
@@ -466,9 +496,8 @@ paths:
         - transaction
       summary: finds transaction in memory pool, or in a block or in full blockchain
       description:  "All the possible behaviours are:\n
-      1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
-      2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
-      3) blockHash not set, txIndex = false -> Search in memory pool"
+      1) blockHash set -> Search in block referenced by blockHash\n
+      2) blockHash not set -> Search in memory pool"
       operationId: findById
       requestBody:
         content:
@@ -483,9 +512,6 @@ paths:
                 blockHash:
                   type: string
                   default: ""
-                transactionIndex:
-                  type: boolean
-                  default: false
                 format:
                   type: boolean
                   default: false
@@ -1898,8 +1924,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: returns hash of public key
-      description: Accepts public key and returns hash of the public signing key
+      summary: calculate and return signing key messageToSign to be used to key rotation proof
+      description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
         content:
@@ -1930,7 +1956,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
-                        description: Hash of public key of certificate signer
+                        description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1944,8 +1970,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: returns hash of public key
-      description: Accepts public key and returns hash of the public master key
+      summary: calculate and return master key messageToSign to be used to key rotation proof
+      description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForMasterKey
       requestBody:
         content:
@@ -1976,7 +2002,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
-                        description: Hash of public key of certificate signer
+                        description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:

@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="evmapp" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="11" />
+    <envs>
+      <env name="LD_PRELOAD" value="/usr/lib/x86_64-linux-gnu/libjemalloc.so.2" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="io.horizen.examples.EvmApp" />
+    <module name="sidechains-sdk-evmapp" />
+    <option name="PROGRAM_PARAMETERS" value="src/main/resources/sc_evm_settings.conf" />
+    <option name="VM_PARAMETERS" value="--add-opens java.base/java.lang=ALL-UNNAMED" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

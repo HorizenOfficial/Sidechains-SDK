@@ -22,11 +22,11 @@
         </RollingFile-->
 
         <!-- if filePattern ends in .gz, the rollover files are compressed -->
-        <RollingFile name="fileLog" fileName="${sys:logDir}${sys:logFilename}"
-                     filePattern="${sys:logDir}${sys:logFilename}-%d{yyyy-MM-dd}-%i.gz" >
+        <RollingFile name="fileLog" fileName="${sys:logDir}${sys:logFileName}"
+                     filePattern="${sys:logDir}${sys:logFileName}-%d{yyyy-MM-dd}-%i.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="50 MB" />
+                <SizeBasedTriggeringPolicy size="50 MB"/>
             </Policies>
             <!-- Maximum number of files to rollover with the same filePattern %d prefix-->
             <DefaultRolloverStrategy max="10"/>
@@ -42,7 +42,12 @@
             <AppenderRef ref="Console"/>
         </Logger-->
 
-        <Root level="all">
+        <!-- Squelch noisy class/package -->
+        <Logger name="sparkz.core.network" level="error">
+            <AppenderRef ref="Console" />
+        </Logger>
+
+        <Root level="${sys:logRootLevel}">
             <AppenderRef ref="fileLog" level="${sys:logFileLevel}"/>
             <AppenderRef ref="Console" level="${sys:logConsoleLevel}"/>
         </Root>

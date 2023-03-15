@@ -44,8 +44,8 @@ sc_test_framework_file="\${base_dir}/qa/SidechainTestFramework/sc_test_framework
 sc_secure_enclave_file="\${base_dir}/qa/SidechainTestFramework/secure_enclave_http_api_server.py"
 
 # .md files
-mc_sc_workflow_file="\${base_dir}/examples/simpleapp/mc_sc_workflow_example.md"
-simpleapp_readme_file="\${base_dir}/examples/simpleapp/README.md"
+mc_sc_workflow_file="\${base_dir}/examples/mc_sc_workflow_example.md"
+examples_readme_file="\${base_dir}/examples/README.md"
 main_readme_file="\${base_dir}/README.md"
 
 # Functions
@@ -104,7 +104,7 @@ mvn versions:set -DprocessAllModules=true -DoldVersion="\${version_old}" -DnewVe
 # shellcheck disable=SC2001
 version_old_dot_escaped="\$(sed -e 's/\./\\\./g' <<< \${version_old})"
 
-for file in "\${scutil_file}" "\${sc_test_framework_file}" "\${sc_secure_enclave_file}" "\${mc_sc_workflow_file}" "\${simpleapp_readme_file}" "\${main_readme_file}" "\${run_sc_file}"; do
+for file in "\${scutil_file}" "\${sc_test_framework_file}" "\${sc_secure_enclave_file}" "\${mc_sc_workflow_file}" "\${examples_readme_file}" "\${main_readme_file}" "\${run_sc_file}"; do
   # Checking if OLD version matches with the CURRENT version in pom file(s)
   if [ "\${file}" != "\${run_sc_file}" ]; then
     if ! grep -cq "sidechains.*\${version_old}" "\${file}"; then

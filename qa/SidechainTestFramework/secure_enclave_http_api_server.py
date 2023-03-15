@@ -1,7 +1,7 @@
 import logging
+import multiprocessing
 import os
 import subprocess
-import threading
 
 from flask import Flask, request, json
 
@@ -27,7 +27,7 @@ class SecureEnclaveApiServer(object):
         def sign_message():
             content = json.loads(request.data)
             logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
-            if ('privateKey' not in content):
+            if 'privateKey' not in content:
                 pk = content['publicKey']
                 index = self.schnorr_public_keys.index(pk)
                 sk = self.schnorr_secrets[index]
@@ -63,18 +63,19 @@ class SecureEnclaveApiServer(object):
             logging.info("SecureEnclaveApiServer /api/v1/listKeys result" + result)
             return result
 
-        self.thread = threading.Thread(target=self.app.run(debug=False))
-        self.thread.run()
+        multiprocessing.Process(daemon=True, target=lambda: self.app.run(host=self.host, port=self.port, debug=False,
+                                                                         use_reloader=False)).start()
 
-    def __init__(self, schnorr_secrets=None, schnorr_public_keys=None):
+    def __init__(self, schnorr_secrets=None, schnorr_public_keys=None, host="127.0.0.1", port=5000):
         if schnorr_public_keys is None:
             schnorr_public_keys = []
         if schnorr_secrets is None:
             schnorr_secrets = []
-        self.thread = None
         self.app = Flask(__name__)
         self.schnorr_secrets = schnorr_secrets
         self.schnorr_public_keys = schnorr_public_keys
+        self.host = host
+        self.port = port
 
 
 def launch_signing_tool(json_parameters):
@@ -82,7 +83,7 @@ def launch_signing_tool(json_parameters):
 
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK", "..")
-                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.6.0.jar",
+                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.7.0-SNAPSHOT.jar",
                                 "createSignature", json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
