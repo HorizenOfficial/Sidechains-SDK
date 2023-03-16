@@ -112,11 +112,11 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val txPoolTransaction1 = new EthereumTransactionView(executableTx1)
-    val txPoolTransaction2 = new EthereumTransactionView(executableTx2)
+    val executableTxView1 = new EthereumTransactionView(executableTx1)
+    val executableTxView2 = new EthereumTransactionView(executableTx2)
 
-    executableNonceTxsMap1.put(BigInteger.valueOf(16), txPoolTransaction1)
-    executableNonceTxsMap1.put(BigInteger.valueOf(24), txPoolTransaction2)
+    executableNonceTxsMap1.put(BigInteger.valueOf(16), executableTxView1)
+    executableNonceTxsMap1.put(BigInteger.valueOf(24), executableTxView2)
     executableTxsMap.put(proposition1.address(), executableNonceTxsMap1)
     executableTxsMapFrom.put(proposition1.address(), executableNonceTxsMap1)
 
@@ -145,9 +145,9 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val txPoolTransaction3 = new EthereumTransactionView(executableTx3)
+    val executableTxView3 = new EthereumTransactionView(executableTx3)
 
-    executableNonceTxsMap2.put(BigInteger.valueOf(32), txPoolTransaction3)
+    executableNonceTxsMap2.put(BigInteger.valueOf(32), executableTxView3)
     executableTxsMap.put(proposition2.address(), executableNonceTxsMap2)
 
     executableNonceTxsMapInspect2.put(BigInteger.valueOf(32), "0x15532e34426cd5c37371ff455a5ba07501c0f522: 18000000 wei + 15467876 gas × 1000000100 wei")
@@ -187,9 +187,9 @@ case class AccountMockDataHelper(genesis: Boolean)
       defaultSignature
     )
 
-    val nonExecTxPoolTransaction1 = new EthereumTransactionView(nonExecutableTx1)
+    val nonExecutableTxView1 = new EthereumTransactionView(nonExecutableTx1)
 
-    nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecTxPoolTransaction1)
+    nonExecutableNonceTxsMap1.put(BigInteger.valueOf(40), nonExecutableTxView1)
     nonExecutableTxsMap.put(proposition1.address(), nonExecutableNonceTxsMap1)
     nonExecutableTxsMapFrom.put(proposition1.address(), nonExecutableNonceTxsMap1)
 

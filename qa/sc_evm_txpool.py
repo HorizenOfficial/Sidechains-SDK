@@ -275,8 +275,6 @@ class SCEvmTxPool(AccountChainSetup):
         assert_true(mempool_tx2['from'] == '0x'+evm_address_1)
         assert_true(mempool_tx2['to'] == '0x'+evm_address_2)
         assert_true(mempool_tx2['value'] == hex(convertZenToWei(transferred_amount_in_zen)))
-        print(hex(maxPriorityFeePerGas))
-        print(mempool_tx2['maxPriorityFeePerGas'])
         assert_true(mempool_tx2['maxPriorityFeePerGas'] == hex(maxPriorityFeePerGas))
         assert_true("maxFeePerGas" in mempool_tx2)
         assert_true("accessList" in mempool_tx2)
