@@ -1,9 +1,9 @@
 package io.horizen.account.websocket
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.horizen.account.api.rpc.request.{RpcId, RpcRequest}
 import io.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
-import io.horizen.account.api.rpc.service.RpcFilter
+import io.horizen.account.api.rpc.service.{EthService, RpcFilter, RpcProcessor}
 import io.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
 import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
@@ -50,23 +50,25 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
   def onMessageReceived(session: Session, message: String): Unit = {
     try {
       val rpcRequest = new RpcRequest(EthJsonMapper.getMapper.readTree(message))
-      if (badRpcRequestParams(rpcRequest.params)) {
-        log.debug("Missing or empty field params.")
-        WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-          new RpcError(RpcCode.InvalidParams, "Missing or empty field params.", "")),
-          session)
-      } else {
-        rpcRequest.method match {
-          case SUBSCRIBE_REQUEST.request =>
-            subscribe(session, rpcRequest)
-          case UNSUBSCRIBE_REQUEST.request =>
-            unsubscribe(session, rpcRequest)
-          case unknownMethod =>
+
+      rpcRequest.method match {
+        case SUBSCRIBE_REQUEST.request | UNSUBSCRIBE_REQUEST.request=>
+          if (badRpcRequestParams(rpcRequest.params)) {
+            log.debug("Missing or empty field params.")
             WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-              new RpcError(RpcCode.MethodNotFound, s"Method $unknownMethod not supported.", "")),
+              new RpcError(RpcCode.InvalidParams, "Missing or empty field params.", "")),
               session)
-            log.debug(s"Method $unknownMethod not supported.")
-        }
+          } else {
+            rpcRequest.method match {
+              case SUBSCRIBE_REQUEST.request =>
+                subscribe(session, rpcRequest)
+              case UNSUBSCRIBE_REQUEST.request =>
+                unsubscribe(session, rpcRequest)
+            }
+          }
+        case _ =>
+          val response = RpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
+          WebSocketAccountServerEndpoint.sendRpc(response, session)
       }
     } catch {
       case ex: Throwable =>
@@ -307,4 +309,13 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     })
   }
 
+  def sendRpc(rpcResponse: Object, session: Session): Unit = {
+    session.getAsyncRemote.sendObject(rpcResponse, new SendHandler {
+      override def onResult(sendResult: SendResult): Unit = {
+        if (!sendResult.isOK) {
+          log.debug("Websocket send message failed. "+session.getId)
+        }
+      }
+    })
+  }
 }

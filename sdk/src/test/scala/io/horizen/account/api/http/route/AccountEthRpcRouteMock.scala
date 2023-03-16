@@ -8,11 +8,9 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
-import io.horizen.account.companion.SidechainAccountTransactionsCompanion
-import io.horizen.account.fixtures.BasicAuthenticationFixture
+import io.horizen.account.fixtures.{BasicAuthenticationFixture, MockedRpcProcessor}
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.MessageProcessor
-import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.api.http._
@@ -41,8 +39,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
-  val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
-
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
 
   val mapper: ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
@@ -57,7 +53,6 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
 
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
   Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
@@ -139,23 +134,21 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   Mockito.when(mockedSidechainSettings.sparkzSettings.network).thenReturn(mock[NetworkSettings])
   Mockito.when(mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections).thenReturn(10)
 
-  val metadataStorage = mock[AccountStateMetadataStorage]
   val stateDb = mock[LevelDBDatabase]
   val messageProcessors = mock[Seq[MessageProcessor]]
 
   val ethRpcRoute: Route = AccountEthRpcRoute(
     mockedRESTSettings,
-    mockedSidechainNodeViewHolderRef,
-    mockedNetworkControllerRef,
-    mockedSidechainSettings,
-    params,
-    mockedSidechainTransactionActorRef,
-    mockedSyncStatusActorRef,
-    metadataStorage,
-    stateDb,
-    messageProcessors,
-    sidechainTransactionsCompanion
+    mockedSidechainNodeViewHolderRef
   ).route
+
+  MockedRpcProcessor(
+    mockedSidechainNodeViewHolderRef = mockedSidechainNodeViewHolderRef,
+    mockedNetworkControllerRef = mockedNetworkControllerRef,
+    mockedSidechainSettings = mockedSidechainSettings,
+    mockedSidechainTransactionActorRef = mockedSidechainTransactionActorRef,
+    mockedSyncStatusActorRef = mockedSyncStatusActorRef,
+    ).initialize()
 
   val basePath = "/ethv1"
 
