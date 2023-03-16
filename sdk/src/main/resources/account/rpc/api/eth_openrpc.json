@@ -254,6 +254,241 @@
 			}
 		},
 		{
+			"name": "debug_traceCall",
+			"summary": "Runs an eth_call within the context of the given block execution",
+			"params": [
+				{
+					"name": "Transaction call object",
+					"required": true,
+					"schema": {
+						"type": "object",
+						"title": "Transaction object generic to all types",
+						"required": [
+							"to"
+						],
+						"properties": {
+							"type": {
+								"title": "type",
+								"type": "string",
+								"pattern": "^0x([0-9,a-f,A-F]?){1,2}$"
+							},
+							"nonce": {
+								"title": "nonce",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							"to": {
+								"title": "to address",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"from": {
+								"title": "from address",
+								"type": "string",
+								"pattern": "^0x[0-9,a-f,A-F]{40}$"
+							},
+							"gas": {
+								"title": "gas limit",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							"value": {
+								"title": "value",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							"input": {
+								"title": "input data",
+								"type": "string",
+								"pattern": "^0x[0-9a-f]*$"
+							},
+							"gasPrice": {
+								"title": "gas price",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
+								"description": "The gas price willing to be paid by the sender in wei"
+							},
+							"maxPriorityFeePerGas": {
+								"title": "max priority fee per gas",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
+								"description": "Maximum fee per gas the sender is willing to pay to miners in wei"
+							},
+							"maxFeePerGas": {
+								"title": "max fee per gas",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
+								"description": "The maximum total fee per gas the sender is willing to pay (includes the network / base fee and miner / priority fee) in wei"
+							},
+							"accessList": {
+								"title": "accessList",
+								"type": "array",
+								"description": "EIP-2930 access list - will be ignored",
+								"items": {
+									"title": "Access list entry",
+									"type": "object",
+									"properties": {
+										"address": {
+											"title": "hex encoded address",
+											"type": "string",
+											"pattern": "^0x[0-9,a-f,A-F]{40}$"
+										},
+										"storageKeys": {
+											"type": "array",
+											"items": {
+												"title": "32 byte hex value",
+												"type": "string",
+												"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+											}
+										}
+									}
+								}
+							},
+							"chainId": {
+								"title": "chainId",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
+								"description": "Chain ID that this transaction is valid on."
+							}
+						}
+					}
+				},
+				{
+					"name": "Block",
+					"required": true,
+					"schema": {
+						"title": "Block number or tag",
+						"oneOf": [
+							{
+								"title": "Block number",
+								"type": "string",
+								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
+							},
+							{
+								"title": "Block tag",
+								"type": "string",
+								"enum": [
+									"earliest",
+									"finalized",
+									"safe",
+									"latest",
+									"pending"
+								],
+								"description": "`earliest`: The lowest numbered block the client has available; `finalized`: The most recent crypto-economically secure block, cannot be re-orged outside of manual intervention driven by community coordination; `safe`: The most recent block that is safe from re-orgs under honest majority and certain synchronicity assumptions; `latest`: The most recent block in the canonical chain observed by the client, this block may be re-orged out of the canonical chain even under healthy/normal conditions; `pending`: A sample next block built by the client on top of `latest` and containing the set of transactions usually taken from local mempool. Before the merge transition is finalized, any call querying for `finalized` or `safe` block MUST be responded to with `-39001: Unknown block` error"
+							}
+						]
+					}
+				},
+				{
+					"name": "Tracer configuration",
+					"schema": {
+						"type": "object",
+						"required": [
+							"enableMemory",
+							"disableStack",
+							"disableStorage",
+							"enableReturnData"
+						],
+						"properties": {
+							"enableMemory": {
+								"type": "boolean"
+							},
+							"disableStack": {
+								"type": "boolean"
+							},
+							"disableStorage": {
+								"type": "boolean"
+							},
+							"enableReturnData": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			],
+			"result": {
+				"name": "List of transaction traces in the block",
+				"schema": {
+					"type": "object",
+					"properties": {
+						"gas": {
+							"title": "hex encoded gas",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"returnValue": {
+							"title": "hex encoded return value",
+							"type": "string",
+							"pattern": "^0x[0-9,a-f,A-F]{40}$"
+						},
+						"structLogs": {
+							"title": "List of EVM trace logs",
+							"type": "object",
+							"properties": {
+								"pc": {
+									"title": "hex encoded pc",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"op": {
+									"title": "string op code",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"gas": {
+									"title": "hex encoded gas",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"gasCost": {
+									"title": "hex encoded gasCost",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"depth": {
+									"title": "hex encoded depth",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"error": {
+									"title": "string error",
+									"type": "string",
+									"pattern": "^0x[0-9,a-f,A-F]{40}$"
+								},
+								"stack": {
+									"title": "string array with stack data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								},
+								"memory": {
+									"title": "string array with memory data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								},
+								"storage": {
+									"title": "string array with storage data",
+									"type": "array",
+									"items": {
+										"title": "32 byte hex value",
+										"type": "string",
+										"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"name": "debug_traceTransaction",
 			"summary": "Replays the transaction that is already present in the database",
 			"params": [
@@ -374,7 +609,6 @@
 		},
 		{
 			"name": "web3_clientVersion",
-			"description": "It is not implemented, yet and needs to be decided if it will be.",
 			"summary": "Returns the client version",
 			"params": [],
 			"result": {
@@ -387,7 +621,6 @@
 		},
 		{
 			"name": "net_peerCount",
-			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns number of peers currently connected to the client",
 			"params": [],
 			"result": {
@@ -401,7 +634,6 @@
 		},
 		{
 			"name": "net_listening",
-			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns true if client is actively listening for network connections",
 			"params": [],
 			"result": {
@@ -2254,7 +2486,6 @@
 		},
 		{
 			"name": "eth_getLogs",
-			"description": "It is not implemented, yet, but will be.",
 			"summary": "Returns an array of all logs matching filter with given id.",
 			"params": [
 				{

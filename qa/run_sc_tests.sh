@@ -87,6 +87,8 @@ testScriptsEvm=(
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_orphan_txs.py'
     'sc_evm_rpc_invalid_txs.py'
+    'sc_evm_rpc_net_methods.py'
+    'sc_evm_rpc_web3_methods.py'
     'sc_evm_test_debug_methods.py'
     'sc_evm_estimateGas.py'
     'sc_evm_test_block_bloom_filter.py'
