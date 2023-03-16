@@ -7,27 +7,26 @@ import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.secret.PrivateKeySecp256k1;
 import io.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
-import io.horizen.json.serializer.HexBigIntegerSerializer;
+import io.horizen.json.serializer.HexNoPrefixBigIntegerSerializer;
 import io.horizen.proof.ProofOfKnowledge;
 import io.horizen.proof.ProofSerializer;
 import io.horizen.json.Views;
 import java.math.BigInteger;
 
-import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 
 @JsonView(Views.Default.class)
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
 
     @JsonProperty("v")
-    @JsonSerialize(using = HexBigIntegerSerializer.class)
+    @JsonSerialize(using = HexNoPrefixBigIntegerSerializer.class)
     private final BigInteger v;
 
     @JsonProperty("r")
-    @JsonSerialize(using = HexBigIntegerSerializer.class)
+    @JsonSerialize(using = HexNoPrefixBigIntegerSerializer.class)
     private final BigInteger r;
 
     @JsonProperty("s")
-    @JsonSerialize(using = HexBigIntegerSerializer.class)
+    @JsonSerialize(using = HexNoPrefixBigIntegerSerializer.class)
     private final BigInteger s;
 
     private static final BigInteger secp256k1N= new BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16);
