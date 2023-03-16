@@ -301,6 +301,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt = None
     receiptsOpt = None
     nextBaseFeeOpt = None
+    scTxCommitmentTreeRootHashesSeq = Seq()
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
