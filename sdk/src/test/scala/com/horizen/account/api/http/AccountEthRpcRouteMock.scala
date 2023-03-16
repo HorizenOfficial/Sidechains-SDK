@@ -149,7 +149,8 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedSidechainTransactionActorRef,
     metadataStorage,
     stateDb,
-    messageProcessors
+    messageProcessors,
+    sidechainTransactionsCompanion
   ).route
 
   val basePath = "/ethv1"

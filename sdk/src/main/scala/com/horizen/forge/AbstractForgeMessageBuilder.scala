@@ -46,8 +46,8 @@ abstract class AbstractForgeMessageBuilder[
   type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
 
 
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout, forcedTx)
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, mcRefDataRetrievalTimeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, mcRefDataRetrievalTimeout, forcedTx)
 
     val forgeMessage: ForgeMessageType =
       GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult](forgingFunctionForEpochAndSlot)
@@ -57,7 +57,7 @@ abstract class AbstractForgeMessageBuilder[
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, mcRefDataRetrievalTimeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
     val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
@@ -109,7 +109,7 @@ abstract class AbstractForgeMessageBuilder[
             privateKey25519,
             vrfProof,
             vrfOutput,
-            timeout,
+            mcRefDataRetrievalTimeout,
             forcedTx
           )
         }
@@ -241,8 +241,9 @@ abstract class AbstractForgeMessageBuilder[
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
                            vrfOutput: VrfOutput,
-                           timeout: Timeout,
-                           forcedTx: Iterable[TX]): ForgeResult = {
+                           mcRefDataRetrievalTimeout: Timeout,
+                           forcedTx: Iterable[TX],
+                           isPending: Boolean = false): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -291,14 +292,15 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > getMaxBlockOverheadSize())
+          if (blockSize + refDataSize > getMaxBlockOverheadSize()) {
+            log.info(s"Block size would exceed limit, stopping mc ref data collection. Block size $blockSize, Data collected so far: ${mainchainReferenceData.length}, refData skipped size: $refDataSize")
             false // stop data collection
-          else {
+          } else {
             mainchainReferenceData.append(ref.data)
             blockSize += refDataSize
             // Note: temporary solution because of the delays on MC Websocket server part.
             // Can be after MC Websocket performance optimization.
-            val isTimeout: Boolean = System.currentTimeMillis() - startTime >= timeout.duration.toMillis / 2
+            val isTimeout: Boolean = System.currentTimeMillis() - startTime >= mcRefDataRetrievalTimeout.duration.toMillis
             !isTimeout // continue data collection
           }
         }
@@ -336,7 +338,8 @@ abstract class AbstractForgeMessageBuilder[
       vrfOutput,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      blockSize
+      blockSize,
+      isPending = isPending
     )
 
     tryBlock match {
@@ -362,7 +365,8 @@ abstract class AbstractForgeMessageBuilder[
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,
-                     signatureOption: Option[Signature25519] = None
+                     signatureOption: Option[Signature25519] = None,
+                     isPending: Boolean = false
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
 

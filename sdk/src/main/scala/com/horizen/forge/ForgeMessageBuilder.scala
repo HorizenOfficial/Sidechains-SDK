@@ -60,7 +60,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,
-                 signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
+                 signatureOption: Option[Signature25519],
+                 isPending: Boolean = false) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
     val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.

@@ -19,11 +19,11 @@ import com.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEnco
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import com.horizen.fixtures.FieldElementFixture
+import com.horizen.fixtures.SidechainBlockFixture.{getDefaultAccountTransactionsCompanion}
 import com.horizen.params.RegTestParams
 import com.horizen.utils.BytesUtils
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import io.horizen.evm.Address
-import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -304,12 +304,17 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val nodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
     val transactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
     val ethServiceSettings = EthServiceSettings()
+    val transactionsCompanion = getDefaultAccountTransactionsCompanion
     ethService = new EthService(
       nodeViewHolderRef,
-     mockedNetworkControllerRef, new FiniteDuration(10, SECONDS),
+      mockedNetworkControllerRef,
+      new FiniteDuration(10, SECONDS),
       networkParams,
       ethServiceSettings,
-     10, "testVersion", transactionActorRef
+      10,
+      "testVersion",
+      transactionActorRef,
+      transactionsCompanion
     )
   }
 
@@ -330,17 +335,17 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def net_listening(): Unit = {
-    assertEquals(true, ethService.execute(getRpcRequest()))
+    assertJsonEquals("true", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def net_peerCount(): Unit = {
-    assertEquals(BigInteger.ZERO, ethService.execute(getRpcRequest()).asInstanceOf[BigInteger])
+    assertJsonEquals("\"0x0\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
   def web3_clientVersion(): Unit = {
-    assertEquals("testVersion", ethService.execute(getRpcRequest()))
+    assertJsonEquals("\"testVersion\"", ethService.execute(getRpcRequest()))
   }
 
   @Test
@@ -539,16 +544,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, expectedBlockViewTxHydrated),
       ("latest", false, expectedBlockViewTxHashes),
-      ("0x2", true, expectedBlockViewTxHydrated)
+      ("0x2", true, expectedBlockViewTxHydrated),
+      ("safe", true, "null"),
+      ("finalized", true, "null"),
+      ("0x1337", true, "null"),
     )
 
     val invalidCases =
       Table(
         ("Block tag / number", "Full transaction objects"),
-        ("safe", true),
-        ("finalized", true),
         ("aaaa", true),
-        ("0x1337", true)
       )
 
     forAll(validCases) { (tag, fullTx, expectedOutput) =>
@@ -571,8 +576,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block hash", "Full transaction objects", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, expectedBlockViewTxHydrated),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes),
-      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes)
     )
 
     val invalidCases =
@@ -599,11 +603,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag / index", "Expected output"),
       ("latest", "\"0x1\""),
       ("0x2", "\"0x1\""),
-      ("0x1", "\"0x0\"")
+      ("0x1", "\"0x0\""),
+      ("0x1337", "null")
     )
 
     val invalidCases =
-      Table("Block tag / index", "0x1337", "1337abcd")
+      Table("Block tag / index", "1337abcd")
 
     forAll(validCases) { (tag, expectedOutput) =>
       assertJsonEquals(

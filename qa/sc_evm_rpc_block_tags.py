@@ -97,29 +97,30 @@ class SCEvmRpcBlockTags(AccountChainSetup):
                 else True
 
         for node in self.sc_nodes:
-            resBalance = node.rpc_eth_getBalance(self.evm_address, tag)
-            resTxCount = node.rpc_eth_getTransactionCount(self.evm_address, tag)
-            resBlockTxCount = node.rpc_eth_getBlockTransactionCountByNumber(tag)
-            resBlock = node.rpc_eth_getBlockByNumber(tag, False)
+            resBalance = node.rpc_eth_getBalance(self.evm_address, tag)['result']
+            resTxCount = node.rpc_eth_getTransactionCount(self.evm_address, tag)['result']
+            resBlockTxCount = node.rpc_eth_getBlockTransactionCountByNumber(tag)['result']
+            resBlock = node.rpc_eth_getBlockByNumber(tag, False)['result']
+            resTxByIdx = node.rpc_eth_getTransactionByBlockNumberAndIndex(tag, "0x0")['result']
 
+            assert_true(resBalance == kwargs['Balance'])
+            assert_true(resTxCount == kwargs['TransactionCount'])
+            assert_true(resBlockTxCount == kwargs['BlockTransactionCount'])
+            expTxByIdx = kwargs['TransactionByIndex']
+            if resTxByIdx is None:
+                assert_true(resTxByIdx == expTxByIdx)
+            else:
+                assert_true(resTxByIdx['transactionIndex'] == expTxByIdx)
             if hasBlock:
-                assert_true(resBalance['result'] == kwargs['Balance'])
-                assert_true(resTxCount['result'] == kwargs['TransactionCount'])
-                assert_true(resBlockTxCount['result'] == kwargs['BlockTransactionCount'])
-                resBlock = resBlock['result']
                 if tag == 'earliest':
                     assert_true(resBlock['parentHash'] == kwargs['Block'])
                 else:
                     assert_true(resBlock['number'] == kwargs['Block'])
             else:
-                assert_true(resBalance['error']['code'] == kwargs['Balance'])
-                assert_true(resTxCount['error']['code'] == kwargs['TransactionCount'])
-                assert_true(resBlockTxCount['error']['code'] == kwargs['BlockTransactionCount'])
-                assert_true(resBlock['error']['code'] == kwargs['Block'])
+                assert_true(resBlock == kwargs['Block'])
 
     def run_test(self):
         sc_node_1 = self.sc_nodes[0]
-        sc_node_2 = self.sc_nodes[1]
 
         ft_amount_in_zen = Decimal('500.0')
         ft_amount_in_wei_hex_str = str(hex(convertZenToWei(ft_amount_in_zen)))
@@ -129,13 +130,11 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         evm_address_sc1 = remove_0x_prefix(self.evm_address)
         evm_address_sc2 = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
-        # create an address on sc_node_2 for nonempty storage
-        sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-
         self.sc_sync_all()
 
         expResp = {'Balance': '0x0', 'TransactionCount': '0x0', 'BlockTransactionCount': '0x0',
-                   'Block': '0x0000000000000000000000000000000000000000000000000000000000000000'}
+                   'Block': '0x0000000000000000000000000000000000000000000000000000000000000000',
+                   'TransactionByIndex': None}
         self.__send_and_assert_tag_rpc_methods('earliest', **expResp)
 
         expResp['Balance'], expResp['Block'] = ft_amount_in_wei_hex_str, '0x3'
@@ -144,8 +143,9 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         expResp['Block'] = '0x2'
         self.__send_and_assert_tag_rpc_methods('latest', **expResp)
 
-        # safe / finalized will return -39001 Unknown Block error until we have 100 sidechain blocks
-        expResp = {k: -39001 for k in expResp}
+        # safe / finalized will end in -39001 Unknown Block error and therefore return null until we have 100
+        # sidechain blocks
+        expResp = {k: None for k in expResp}
         self.__send_and_assert_tag_rpc_methods('safe', **expResp)
         self.__send_and_assert_tag_rpc_methods('finalized', **expResp)
 
@@ -169,7 +169,7 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         pendingBalance = str(hex((int(ft_amount_in_wei_hex_str, 16) - balanceUsed)))
 
         expResp = {'Balance': pendingBalance, 'TransactionCount': '0x4', 'BlockTransactionCount': '0x4',
-                   'Block': '0x3'}
+                   'Block': '0x3', 'TransactionByIndex': '0x0'}
         self.__send_and_assert_tag_rpc_methods('pending', **expResp)
 
         generate_next_block(sc_node_1, "first node")
@@ -198,7 +198,7 @@ class SCEvmRpcBlockTags(AccountChainSetup):
         # Generate SC blocks to get the genesis block to be first safe / finalized block
         generate_next_blocks(sc_node_1, "first node", 101 - int(sc_node_1.rpc_eth_blockNumber()['result'], 16))
         expResp = {'Balance': '0x0', 'TransactionCount': '0x0', 'BlockTransactionCount': '0x0',
-                   'Block': '0x1'}
+                   'Block': '0x1', 'TransactionByIndex': None}
         self.__send_and_assert_tag_rpc_methods('safe', **expResp)
         self.__send_and_assert_tag_rpc_methods('finalized', **expResp)
 
