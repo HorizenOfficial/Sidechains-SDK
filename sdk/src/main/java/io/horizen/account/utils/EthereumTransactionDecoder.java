@@ -11,7 +11,6 @@ import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.VLQByteBufferReader;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Optional;
 import static io.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static io.horizen.account.utils.EthereumTransactionUtils.getRealV;

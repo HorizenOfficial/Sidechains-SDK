@@ -7,6 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.*;
@@ -39,7 +40,8 @@ public class SignatureSecp256k1Test {
         assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(null, signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 4: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
-        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(new byte[20], signatureSecp256k1.getR(), signatureSecp256k1.getS()));
+        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(
+                new BigInteger(1, new byte[20]), signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 5: Returns signature data string correctly
         assertEquals(String.format("SignatureSecp256k1{v=%s, r=%s, s=%s}", Numeric.toHexStringNoPrefix(signatureSecp256k1.getV()), Numeric.toHexStringNoPrefix(signatureSecp256k1.getR()), Numeric.toHexStringNoPrefix(signatureSecp256k1.getS())), signatureSecp256k1.toString());

@@ -19,9 +19,10 @@ import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils._
+import io.horizen.account.utils.{BigIntegerUInt256, _}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
@@ -251,7 +252,10 @@ class EthService(
     applyOnAccountView { nodeView =>
       val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
-      signature.getR ++ signature.getS ++ signature.getV
+      // TODO check order: why V is the last contribution?
+      getUnsignedByteArray(signature.getR) ++
+        getUnsignedByteArray(signature.getS) ++
+        getUnsignedByteArray(signature.getV)
     }
   }
 

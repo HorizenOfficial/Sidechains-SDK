@@ -912,7 +912,7 @@ class ForgerStakeMsgProcessorTest
       // bytes are not considered when decoding
       val decodingOk = RemoveStakeCmdInputDecoder.decode(data)
       val decodingBad = RemoveStakeCmdInputDecoder.decode(badData2)
-      assertArrayEquals(decodingOk.signature.getV, decodingBad.signature.getV)
+      assertArrayEquals(decodingOk.signature.getV.toByteArray, decodingBad.signature.getV.toByteArray)
 
       msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData2, nonce)
       val ex2 = intercept[ExecutionRevertedException] {

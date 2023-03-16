@@ -4,7 +4,6 @@ import io.horizen.account.proposition.AddressProposition;
 import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Optional;
 import static io.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
@@ -17,30 +16,11 @@ public final class EthereumTransactionUtils {
     // return minimal byte array representation of a long
     public static byte[] convertToBytes(long x) {
         BigInteger v = BigInteger.valueOf(x);
-        //return v.toByteArray();
-        return trimLeadingZeroFromByteArray(v);
-    }
-
-    // w3j way for converting bytes, it works also with generic byte contents (not only Long.BYTES byte arrays)
-    public static long convertToLong(byte[] bytes) {
-        BigInteger bi = Numeric.toBigInt(bytes);
-        return bi.longValueExact();
+        return BigIntegerUInt256.getUnsignedByteArray(v);
     }
 
     public static long convertToLong(BigInteger val) {
         return val.longValueExact();
-    }
-
-    public static byte[] getRealV(byte[] bv) {
-        long v = convertToLong(bv);
-        if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
-            return new byte[]{(byte) v};
-        }
-        int inc = 0;
-        if ((int) v % 2 == 0) {
-            inc = 1;
-        }
-        return new byte[]{(byte) (LOWER_REAL_V + inc)};
     }
 
     public static BigInteger getRealV(BigInteger bv) {
@@ -105,17 +85,6 @@ public final class EthereumTransactionUtils {
                     return dataBytes;
                 }
             }
-        }
-    }
-
-    public static byte[] trimLeadingZeroFromByteArray(BigInteger bi) {
-        // toByteArray() returns all the data from both parts, which is the number of bits required for the
-        // unsigned integer, and one bit for the sign.
-        var barr = bi.toByteArray();
-        if(barr[0] == 0x00) {
-            return Arrays.copyOfRange(barr, 1, barr.length);
-        } else {
-            return barr;
         }
     }
 }

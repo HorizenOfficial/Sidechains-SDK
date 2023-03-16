@@ -113,14 +113,7 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
     @Test
     public void regressionTestUnsignedEip155() {
         EthereumTransaction transaction = getUnsignedEip155LegacyTransaction();
-        doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex", true);
-    }
-
-    @Test
-    @Ignore
-    public void regressionTestPartiallySignedEip155() {
-        EthereumTransaction transaction = getPartiallySignedEip155LegacyTransaction();
-        doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_partially_signed_hex", false);
+        doTest(transaction, "ethereumtransaction_eoa2eoa_eip155_legacy_unsigned_hex", false);
     }
 
     @Test

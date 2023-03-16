@@ -1,14 +1,17 @@
 package io.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.horizen.account.state.receipt.EthereumReceipt;
 import io.horizen.account.transaction.EthereumTransaction;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
+import io.horizen.json.serializer.HexBigIntegerSerializer;
+import io.horizen.json.serializer.HexPrefixedBigIntegerSerializer;
 import io.horizen.utils.BytesUtils;
-
 import java.math.BigInteger;
 import java.util.Objects;
+
 
 public class EthereumTransactionView {
     // block data
@@ -32,9 +35,12 @@ public class EthereumTransactionView {
     public final BigInteger maxFeePerGas;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public final BigInteger chainId;
-    public final byte[] v;
-    public final byte[] r;
-    public final byte[] s;
+    @JsonSerialize(using = HexPrefixedBigIntegerSerializer.class)
+    public final BigInteger v;
+    @JsonSerialize(using = HexPrefixedBigIntegerSerializer.class)
+    public final BigInteger r;
+    @JsonSerialize(using = HexPrefixedBigIntegerSerializer.class)
+    public final BigInteger s;
 
     /**
      * Note for the correct JSON representation of the accessList property:
