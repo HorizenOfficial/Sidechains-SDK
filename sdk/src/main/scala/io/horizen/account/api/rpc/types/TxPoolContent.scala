@@ -10,5 +10,5 @@ import scala.collection.mutable
 
 @JsonView(Array(classOf[Views.Default]))
 class TxPoolContent(
-    val pending: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]],
-    val queued: TrieMap[Address, mutable.SortedMap[BigInteger, TxPoolTransaction]]) { }
+    val pending: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]],
+    val queued: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]) { }
