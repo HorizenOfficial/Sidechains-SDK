@@ -44,7 +44,5 @@ trait AccountStateReader {
 
   def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash): Option[Int]
 
-  def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean
-
   def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean
 }

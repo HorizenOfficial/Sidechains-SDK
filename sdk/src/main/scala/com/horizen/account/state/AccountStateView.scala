@@ -65,7 +65,7 @@ class AccountStateView(
 
   def updateNextBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateNextBaseFee(baseFee)
 
-  def updateSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit = metadataStorageView.updateSidechainTxCommitmentTreeRootHash(hash)
+  def addSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit = metadataStorageView.addSidechainTxCommitmentTreeRootHash(hash)
 
   def getNextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
@@ -97,10 +97,4 @@ class AccountStateView(
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
-
-  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
-    metadataStorageView.doesScTxCommitmentTreeRootExist(hash)
-
-  override def doesCrossChainMessageHashFromRedeemMessageExist(ccRedeemMsg: CrossChainMessageHash): Boolean =
-    metadataStorageView.doesCrossChainMessageHashFromRedeemMessageExist(ccRedeemMsg)
 }

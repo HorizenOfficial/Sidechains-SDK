@@ -1,7 +1,7 @@
 package com.horizen.account.sc2sc
 
 import com.horizen.account.fixtures.AccountCrossChainMessageFixture
-import com.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.receiverSidechain
+import com.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{nextScCommitmentTreeRoot, receiverSidechain, scCommitmentTreeRoot}
 import com.horizen.account.state._
 import com.horizen.cryptolibprovider.Sc2scCircuit
 import com.horizen.evm.utils.Address
@@ -53,7 +53,7 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(true)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn("someBytes".getBytes)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -74,9 +74,9 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.doesScTxCommitmentTreeRootExist(any())).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, scCommitmentTreeRoot)).thenReturn(Array.emptyByteArray)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -97,9 +97,10 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.doesScTxCommitmentTreeRootExist(any())).thenReturn(true).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes())
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, nextScCommitmentTreeRoot)).thenReturn(Array.emptyByteArray)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -120,9 +121,10 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.doesScTxCommitmentTreeRootExist(any())).thenReturn(true).thenReturn(true)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes())
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, nextScCommitmentTreeRoot)).thenReturn("someBytes".getBytes())
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
     when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any(), any())).thenReturn(false)
@@ -146,9 +148,10 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(false)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.doesScTxCommitmentTreeRootExist(any())).thenReturn(true).thenReturn(true)
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes())
+    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, nextScCommitmentTreeRoot)).thenReturn("someBytes".getBytes())
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
     when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any(), any())).thenReturn(true)
@@ -165,21 +168,6 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
 
 class CrossChainRedeemMessageProcessorImpl(networkParams: NetworkParams, sc2scCircuit: Sc2scCircuit)
   extends AbstractCrossChainRedeemMessageProcessor(networkParams, sc2scCircuit) {
-  /**
-   * A hook to add custom validation logic
-   */
-  override protected def validateMsgHook(): Unit = {}
-
-  /**
-   * A hook to define the process logic after the message has been validated
-   *
-   * @param msg          message to apply to the state
-   * @param view         state view
-   * @param gas          available gas for the execution
-   * @param blockContext contextual information accessible during execution
-   * @return return data on successful execution
-   */
-  override protected def processHook(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = "".getBytes
 
   override val contractAddress: Address = CrossChainRedeemMessageProcessorImpl.contractAddress
   override val contractCode: Array[Byte] = CrossChainRedeemMessageProcessorImpl.contractCode
@@ -194,12 +182,34 @@ class CrossChainRedeemMessageProcessorImpl(networkParams: NetworkParams, sc2scCi
     )
     val certificateDataHash = "certificateDataHash".getBytes
     val nextCertificateDataHash = "nextCertificateDataHash".getBytes
-    val scCommitmentTreeRoot = "scCommitmentTreeRoot".getBytes
-    val nextScCommitmentTreeRoot = "nextScCommitmentTreeRoot".getBytes
+    val scCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.scCommitmentTreeRoot
+    val nextScCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.nextScCommitmentTreeRoot
     val proof = "proof".getBytes
     AccountCrossChainRedeemMessage(
       accountCrossChainMessage, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
     )
+  }
+
+  /**
+   * Apply message to the given view. Possible results:
+   * <ul>
+   * <li>applied as expected: return byte[]</li>
+   * <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
+   * <li>message invalid and must not exist in a block: throw any other Exception</li>
+   * </ul>
+   *
+   * @param msg          message to apply to the state
+   * @param view         state view
+   * @param gas          available gas for the execution
+   * @param blockContext contextual information accessible during execution
+   * @return return data on successful execution
+   * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
+   * @throws ExecutionFailedException   revert-and-consume-all-gas, also mark the message as "failed"
+   * @throws RuntimeException           any other exceptions are consideres as "invalid message"
+   */
+  @throws(classOf[ExecutionFailedException])
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+    processRedeemMessage(getAccountCrossChainRedeemMessageFromMessage(msg), view)
   }
 }
 
@@ -208,4 +218,6 @@ object CrossChainRedeemMessageProcessorImpl extends CrossChainMessageProcessorCo
   val contractCode: Array[Byte] = Keccak256.hash("CrossChainRedeemMessageProcessorImplCode")
 
   val receiverSidechain: Array[Byte] = "receiverSidechain".getBytes
+  val scCommitmentTreeRoot: Array[Byte] = "scCommitmentTreeRoot".getBytes
+  val nextScCommitmentTreeRoot: Array[Byte] = "nextScCommitmentTreeRoot".getBytes
 }

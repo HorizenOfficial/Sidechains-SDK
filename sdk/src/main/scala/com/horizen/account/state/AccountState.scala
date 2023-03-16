@@ -102,7 +102,7 @@ class AccountState(
           mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
 
           // Save the scTxCommitmentTreeRootHash of every mainchain header in a block
-          mod.mainchainHeaders.foreach(mcHeader => stateView.updateSidechainTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment))
+          mod.mainchainHeaders.foreach(mcHeader => stateView.addSidechainTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment))
         } else {
           // For ceasing sidechains submission window concept is used.
           // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -522,9 +522,6 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
-
-  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
-    if (sc2scConfig.canSendMessages) using(getView)(_.doesScTxCommitmentTreeRootExist(hash)) else false
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
     if (sc2scConfig.canSendMessages) using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash)) else false

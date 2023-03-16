@@ -43,8 +43,8 @@ class StateDbAccountStateView(
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
   lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] = messageProcessors.filter(_.isInstanceOf[CrossChainMessageProvider]).map(_.asInstanceOf[CrossChainMessageProvider])
-  lazy val crossChainRedeemMessageProvider: CrossChainRedeemMessageProvider =
-    messageProcessors.find(_.isInstanceOf[CrossChainRedeemMessageProvider]).get.asInstanceOf[CrossChainRedeemMessageProvider]
+  lazy val crossChainRedeemMessageProviders: Seq[CrossChainRedeemMessageProvider] =
+    messageProcessors.filter(_.isInstanceOf[CrossChainRedeemMessageProvider]).map(_.asInstanceOf[CrossChainRedeemMessageProvider])
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -372,9 +372,8 @@ class StateDbAccountStateView(
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
     new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
 
-  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
-    crossChainRedeemMessageProvider.doesScTxCommitmentTreeRootExist(hash, this)
-
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
-    crossChainRedeemMessageProvider.doesCrossChainMessageHashFromRedeemMessageExist(hash, this)
+    crossChainRedeemMessageProviders.foldLeft(false) { (acc, provider) =>
+      acc || provider.doesCrossChainMessageHashFromRedeemMessageExist(hash, this)
+    }
 }

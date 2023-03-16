@@ -51,7 +51,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var topCertificateMainchainHashes: Map[Int, Array[Byte]] = Map()
   //Contains the base fee to be used when forging the next block
   private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
-  private[horizen] var scTxCommitmentTreeRootHash: Option[Array[Byte]] = None
+  private[horizen] var scTxCommitmentTreeRootHashesSeq: Seq[Array[Byte]] = Seq()
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -63,7 +63,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     withdrawalEpochInfoOpt.orElse(getWithdrawalEpochInfoFromStorage).getOrElse(WithdrawalEpochInfo(0, 0))
   }
 
-  def getScTxCommitmentTreeRootHash: Option[Array[Byte]] = scTxCommitmentTreeRootHash
+  def getScTxCommitmentTreeRootHashes: Seq[Array[Byte]] = scTxCommitmentTreeRootHashesSeq
 
   private[horizen] def getWithdrawalEpochInfoFromStorage: Option[WithdrawalEpochInfo] = {
     storage.get(withdrawalEpochInformationKey).asScala match {
@@ -194,9 +194,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     storage.get(getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot)).isPresent
   }
 
-  private[horizen] def doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash: CrossChainMessageHash): Boolean =
-    storage.get(getCrossChainMessageHashFromRedeemMessageKey(ccMsgHash)).isPresent
-
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
   override def getHeight: Int = {
@@ -272,8 +269,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     nextBaseFeeOpt.orElse(getNextBaseFeeFromStorage).getOrElse(FeeUtils.INITIAL_BASE_FEE)
   }
 
-  def updateSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit =
-    scTxCommitmentTreeRootHash = Some(hash)
+  def addSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit =
+    scTxCommitmentTreeRootHashesSeq = scTxCommitmentTreeRootHashesSeq :+ hash
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
 
@@ -359,7 +356,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
 
-    scTxCommitmentTreeRootHash.foreach(hash => updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(hash), hash)))
+    scTxCommitmentTreeRootHashesSeq.foreach(hash => updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(hash), hash)))
 
     // update the height unless we have the very first version of the db
     //--

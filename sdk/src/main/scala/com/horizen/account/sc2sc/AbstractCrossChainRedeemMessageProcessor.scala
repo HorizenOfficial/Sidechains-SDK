@@ -1,7 +1,6 @@
 package com.horizen.account.sc2sc
 
 import com.horizen.account.events.AddCrossChainRedeemMessage
-import com.horizen.account.sc2sc.AbstractCrossChainRedeemMessageProcessor.Constant.CrossChainMessageHashKey
 import com.horizen.account.state._
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.cryptolibprovider.{CryptoLibProvider, Sc2scCircuit}
@@ -9,11 +8,8 @@ import com.horizen.merkletreenative.MerklePath
 import com.horizen.params.NetworkParams
 import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import com.horizen.utils.BytesUtils
-import sparkz.crypto.hash.Keccak256
 
 trait CrossChainRedeemMessageProvider {
-  def doesScTxCommitmentTreeRootExist(hash: Array[Byte], view: BaseAccountStateView): Boolean
-
   def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean
 }
 
@@ -21,26 +17,34 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
                                                          networkParams: NetworkParams,
                                                          sc2scCircuit: Sc2scCircuit
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
-  /**
-   * Apply message to the given view. Possible results:
-   * <ul>
-   * <li>applied as expected: return byte[]</li>
-   * <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
-   * <li>message invalid and must not exist in a block: throw any other Exception</li>
-   * </ul>
-   *
-   * @param msg          message to apply to the state
-   * @param view         state view
-   * @param gas          available gas for the execution
-   * @param blockContext contextual information accessible during execution
-   * @return return data on successful execution
-   */
-  @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val accCcRedeemMessage = getAccountCrossChainRedeemMessageFromMessage(msg)
+  protected def processRedeemMessage(msg: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Array[Byte] = {
+    validateRedeemMsg(msg, view)
 
-    validateRedeemMsg(accCcRedeemMessage, view)
-    processHook(msg, view, gas, blockContext)
+    addCrossChainMessageToView(view, msg)
+
+    addCrossChainRedeemMessageLogEvent(view, msg)
+
+    msg.encode()
+  }
+
+  private def addCrossChainRedeemMessageLogEvent(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
+    val event = AddCrossChainRedeemMessage(
+      accCcRedeemMessage.accountCrossChainMessage,
+      accCcRedeemMessage.certificateDataHash,
+      accCcRedeemMessage.nextCertificateDataHash,
+      accCcRedeemMessage.scCommitmentTreeRoot,
+      accCcRedeemMessage.nextScCommitmentTreeRoot,
+      accCcRedeemMessage.proof
+    )
+    val evmLog = getEvmLog(event)
+    view.addLog(evmLog)
+  }
+
+  private def addCrossChainMessageToView(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
+    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(
+      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcRedeemMessage.accountCrossChainMessage, networkParams)
+    )
+    setCrossChainMessageHash(messageHash, view)
   }
 
   /**
@@ -65,8 +69,6 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
     // Validate Proof
     validateProof(ccRedeemMgs)
-
-    validateMsgHook()
   }
 
   private def validateScId(scId: Array[Byte], receivingScId: Array[Byte]): Unit = {
@@ -77,7 +79,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateDoubleMessageRedeem(ccMsg: CrossChainMessage, view: BaseAccountStateView): Unit = {
     val currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg)
-    val ccMsgFromRedeemAlreadyExists = view.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash)
+    val ccMsgFromRedeemAlreadyExists = doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash, view)
     if (ccMsgFromRedeemAlreadyExists) {
       throw new IllegalArgumentException(s"Message $ccMsg has already been redeemed")
     }
@@ -87,11 +89,11 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
                                             scCommitmentTreeRoot: Array[Byte],
                                             nextScCommitmentTreeRoot: Array[Byte],
                                             view: BaseAccountStateView): Unit = {
-    if (!view.doesScTxCommitmentTreeRootExist(scCommitmentTreeRoot)) {
+    if (view.getAccountStorage(contractAddress, scCommitmentTreeRoot).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain commitment tree root `${BytesUtils.toHexString(scCommitmentTreeRoot)}` does not exist")
     }
 
-    if (!view.doesScTxCommitmentTreeRootExist(nextScCommitmentTreeRoot)) {
+    if (view.getAccountStorage(contractAddress, nextScCommitmentTreeRoot).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain next commitment tree root `${BytesUtils.toHexString(nextScCommitmentTreeRoot)}` does not exist")
     }
   }
@@ -115,67 +117,9 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     }
   }
 
-  /**
-   * A hook to add custom validation logic
-   */
-  protected def validateMsgHook(): Unit
-
-  /**
-   * A hook to define the process logic after the message has been validated
-   *
-   * @param msg          message to apply to the state
-   * @param view         state view
-   * @param gas          available gas for the execution
-   * @param blockContext contextual information accessible during execution
-   * @return return data on successful execution
-   */
-  protected def processHook(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte]
-
-  protected def addCrossChainRedeemMessage(
-                                            accountCrossChainMessage: AccountCrossChainMessage,
-                                            certificateDataHash: Array[Byte],
-                                            nextCertificateDataHash: Array[Byte],
-                                            scCommitmentTreeRoot: Array[Byte],
-                                            nextScCommitmentTreeRoot: Array[Byte],
-                                            proof: Array[Byte],
-                                            view: AccountStateView
-                                          ): Array[Byte] = {
-    val redeemMessage = AccountCrossChainRedeemMessage(
-      accountCrossChainMessage, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
-    )
-
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(
-      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accountCrossChainMessage, networkParams)
-    )
-    setCrossChaimMessageHash(messageHash, view)
-
-    val event = AddCrossChainRedeemMessage(
-      accountCrossChainMessage, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
-    )
-    val evmLog = getEvmLog(event)
-    view.addLog(evmLog)
-
-    redeemMessage.encode()
-  }
-
-  private def getCrossChainMessageHashKey: Array[Byte] =
-    calculateKey(CrossChainMessageHashKey.getBytes)
-
-  private[horizen] def calculateKey(keySeed: Array[Byte]): Array[Byte] =
-    Keccak256.hash(keySeed)
-
-  private def setCrossChaimMessageHash(messageHash: CrossChainMessageHash, view: AccountStateView): Unit =
-    view.updateAccountStorage(contractAddress, getCrossChainMessageHashKey, messageHash.bytes)
-
-  override def doesScTxCommitmentTreeRootExist(hash: Array[Byte], view: BaseAccountStateView): Boolean =
-    view.doesScTxCommitmentTreeRootExist(hash)
+  private def setCrossChainMessageHash(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Unit =
+    view.updateAccountStorage(contractAddress, messageHash.getValue, Array.emptyByteArray)
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean =
-    view.doesCrossChainMessageHashFromRedeemMessageExist(hash)
-}
-
-object AbstractCrossChainRedeemMessageProcessor {
-  object Constant {
-    val CrossChainMessageHashKey = "crossChainMsgHashKey"
-  }
+    view.getAccountStorage(contractAddress, hash.getValue).nonEmpty
 }
