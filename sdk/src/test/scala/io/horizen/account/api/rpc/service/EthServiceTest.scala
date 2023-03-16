@@ -129,7 +129,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "pending":{
          "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
             "16":{
-               "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+               "blockHash":null,
                "blockNumber":null,
                "transactionIndex":null,
                "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
@@ -150,7 +150,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
                "accessList":[]
             },
             "24":{
-               "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+               "blockHash":null,
                "blockNumber":null,
                "transactionIndex":null,
                "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
@@ -173,7 +173,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
          },
          "0xb039865dbea73df08e23f185847bab8e6a44108d":{
             "32":{
-               "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+               "blockHash":null,
                "blockNumber":null,
                "transactionIndex":null,
                "hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
@@ -198,7 +198,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "queued":{
          "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
             "40":{
-               "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+               "blockHash":null,
                "blockNumber":null,
                "transactionIndex":null,
                "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
@@ -225,7 +225,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     """{
        "pending":{
           "16":{
-             "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+             "blockHash":null,
              "blockNumber":null,
              "transactionIndex":null,
              "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
@@ -246,7 +246,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
              "accessList":[]
           },
           "24":{
-             "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+             "blockHash":null,
              "blockNumber":null,
              "transactionIndex":null,
              "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
@@ -269,7 +269,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
        },
        "queued":{
           "40":{
-             "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+             "blockHash":null,
              "blockNumber":null,
              "transactionIndex":null,
              "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
