@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.security.*;
 
 import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
+import static io.horizen.utils.BytesUtils.padWithZeroBytes;
 
 public final class Secp256k1 {
     private static final int COORD_SIZE = 32;
@@ -61,21 +62,10 @@ public final class Secp256k1 {
 
     public static byte[] signedMessageToAddress(byte[] message, BigInteger v, BigInteger r, BigInteger s) throws SignatureException {
         byte[] v_barr = getUnsignedByteArray(v);
-        byte[] r_barr = getUnsignedByteArray(r);
-        byte[] s_barr = getUnsignedByteArray(s);
 
-        // w3j wants only 32 bytes array, pad with 0x00 if necessary
-        if (s_barr.length < SIGNATURE_RS_SIZE) {
-            byte[] padded_s = new byte[SIGNATURE_RS_SIZE];
-            System.arraycopy(s_barr, 0, padded_s, SIGNATURE_RS_SIZE - s_barr.length, s_barr.length);
-            s_barr = padded_s;
-        }
-
-        if (r_barr.length < SIGNATURE_RS_SIZE) {
-            byte[] padded_r = new byte[SIGNATURE_RS_SIZE];
-            System.arraycopy(r_barr, 0, padded_r, SIGNATURE_RS_SIZE - r_barr.length, r_barr.length);
-            r_barr = padded_r;
-        }
+        // w3j wants only 32 bytes long array, pad with 0x00 if necessary
+        byte[] r_barr = padWithZeroBytes(getUnsignedByteArray(r), SIGNATURE_RS_SIZE);
+        byte[] s_barr = padWithZeroBytes(getUnsignedByteArray(s), SIGNATURE_RS_SIZE);
 
         Sign.SignatureData signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr);
         BigInteger pubKey = Sign.signedMessageToKey(message, signatureData);

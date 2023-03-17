@@ -5,6 +5,7 @@ import io.horizen.account.fixtures.EthereumTransactionFixture;
 import io.horizen.account.utils.EthereumTransactionDecoder;
 import io.horizen.account.utils.RlpStreamDecoder;
 import io.horizen.account.utils.RlpStreamEncoder;
+import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Test;
@@ -364,6 +365,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             ethTx.semanticValidity();
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            fail("Should not fail");
         }
 
         VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
@@ -382,6 +384,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             ethTx.semanticValidity();
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            fail("Should not fail");
         }
         assertTrue(getUnsignedByteArray(ethTx.getSignature().getR()).length == 31);
 

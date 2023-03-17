@@ -257,4 +257,15 @@ public final class BytesUtils {
 
         return bytes;
     }
+
+    // pad an array prepending the necessary 0x00 bytes up to the wanted size
+    public static byte[] padWithZeroBytes(byte[] src, int destSize) {
+        if (src != null && src.length < destSize) {
+            byte[] padded_s = new byte[destSize];
+            System.arraycopy(src, 0, padded_s, destSize - src.length, src.length);
+            return padded_s;
+        }
+        return src;
+    }
+
 }

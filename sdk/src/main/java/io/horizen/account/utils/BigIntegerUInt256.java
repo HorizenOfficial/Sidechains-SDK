@@ -1,6 +1,5 @@
 package io.horizen.account.utils;
 
-import org.web3j.utils.Numeric;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -37,10 +36,6 @@ public class BigIntegerUInt256 {
         } else {
             return barr;
         }
-    }
-    // alternative way, but much costly
-    public static byte[] getUnsignedByteArray2(BigInteger bi) {
-        return Numeric.hexStringToByteArray(bi.toString(16));
     }
 
 }

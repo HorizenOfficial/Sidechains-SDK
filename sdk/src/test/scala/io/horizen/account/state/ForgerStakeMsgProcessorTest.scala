@@ -6,7 +6,8 @@ import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creato
 import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
-import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -22,7 +23,10 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
+import sparkz.util.serialization.{Reader, VLQByteBufferReader}
+
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{Optional, Random}
@@ -896,8 +900,8 @@ class ForgerStakeMsgProcessorTest
 
       // should fail when an illegal signature is provided
       val chunk1 = data.slice(0, 32) // Bytes32 - stakeId
-      val chunk2 = data.slice(32, 64) // Bytes1 - v siganture value
-      val _ = data.slice(64, 96) // Bytes32 - r siganture value
+      val chunk2 = data.slice(32, 64) // Bytes1 - v signature value
+      val _ = data.slice(64, 96) // Bytes32 - r signature value
       val chunk4 = data.slice(96, data.length) // Bytes32 - s signature value
 
       val rndBytes = new Array[Byte](31)
@@ -912,7 +916,7 @@ class ForgerStakeMsgProcessorTest
       // bytes are not considered when decoding
       val decodingOk = RemoveStakeCmdInputDecoder.decode(data)
       val decodingBad = RemoveStakeCmdInputDecoder.decode(badData2)
-      assertArrayEquals(decodingOk.signature.getV.toByteArray, decodingBad.signature.getV.toByteArray)
+      assertEquals(decodingOk.signature.getV, decodingBad.signature.getV)
 
       msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData2, nonce)
       val ex2 = intercept[ExecutionRevertedException] {
@@ -922,6 +926,18 @@ class ForgerStakeMsgProcessorTest
 
       view.commit(bytesToVersion(getVersion.data()))
     }
+  }
+
+  @Test
+  def testRemoveStakeCmdEncode(): Unit = {
+    // The tx has a signature r value whose byte array representation is 31 bytes long (not 32), and this should be supported by te ABI encoding (no exceptions)
+    val b = BytesUtils.fromHexString("f8878214920783011170941050072833849ff9bf49a55ff15d40f6d89651e880a440d097c30000000000000000000000000f6cf5090c089dfbd2c37eb58a70abad83dd79d2820d209f52759db97387354cd02079a382b1a165bac472be1da47a15a748039c6faf18a032bff10a83396a6a4a89b2f18880d6d73f7b6af9952b3f06cacc1283c86f0fa8")
+    val reader = new VLQByteBufferReader(ByteBuffer.wrap(b))
+    val ethTx = EthereumTransactionDecoder.decode(reader)
+
+    val stakeId = Keccak256.hash("test")
+    RemoveStakeCmdInput(stakeId, ethTx.getSignature).encode()
+
   }
 
   @Test

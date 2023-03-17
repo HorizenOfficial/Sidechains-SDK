@@ -12,7 +12,6 @@ import sparkz.util.serialization.VLQByteBufferReader;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Optional;
-import static io.horizen.account.utils.EthereumTransactionUtils.convertToLong;
 import static io.horizen.account.utils.EthereumTransactionUtils.getRealV;
 import static io.horizen.account.utils.Secp256k1.*;
 
@@ -179,7 +178,7 @@ public class EthereumTransactionDecoder {
         if (r.equals(BigInteger.ZERO) && s.equals(BigInteger.ZERO)) {
             // if r and s are both 0 we assume that this signature stands for an unsigned tx object
             // therefore v is the plain chain ID and the signature is set to null
-            chainId = convertToLong(v);
+            chainId = v.longValueExact();
             realSignature = null;
         } else {
             chainId = decodeEip155ChainId(v);
@@ -197,7 +196,7 @@ public class EthereumTransactionDecoder {
     }
 
     private static long decodeEip155ChainId(BigInteger bv) {
-        long v = convertToLong(bv);
+        long v = bv.longValueExact();
         if (v == LOWER_REAL_V || v == (LOWER_REAL_V + 1)) {
             return 0L;
         }
@@ -205,6 +204,6 @@ public class EthereumTransactionDecoder {
     }
 
     private static BigInteger getVFromRecId(BigInteger recId) {
-        return BigInteger.valueOf(LOWER_REAL_V + recId.intValueExact());
+        return recId.add(BigInteger.valueOf(LOWER_REAL_V));
     }
 }

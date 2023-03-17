@@ -29,8 +29,8 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     @JsonSerialize(using = HexNoPrefixBigIntegerSerializer.class)
     private final BigInteger s;
 
-    private static final BigInteger secp256k1N= new BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16);
-    private static final BigInteger secp256k1halfN = secp256k1N.divide(BigInteger.TWO);
+    public static final BigInteger secp256k1N = new BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16);
+    public static final BigInteger secp256k1halfN = secp256k1N.divide(BigInteger.TWO);
     // byte string is: 7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
      public static void verifySignatureData(BigInteger v, BigInteger r, BigInteger s) {
@@ -42,23 +42,27 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             ", s=" + ((s == null) ? "NULL" : s.toString(16))  );
         }
 
-        if (v.bitLength()/8 > 1)
-            throw new IllegalArgumentException("Too large a v obj passed in signature data");
+        if (v.signum() <= 0 || r.signum() <= 0 || s.signum() <= 0) {
+            throw new IllegalArgumentException("Non positive v/r/s obj passed in signature data");
+        }
+
+        // a positive value should fit in 8 bits
+        if (v.bitLength() > 8)
+           throw new IllegalArgumentException("Too large a v obj passed in signature data");
 
         int v_val = v.intValueExact();
-        if ( v_val != 27 && v_val != 28) {
+        if (v_val != 27 && v_val != 28) {
             throw new IllegalArgumentException("Invalid v obj passed in signature data: " + v_val);
         }
 
-        if (v.signum() < 0 || r.signum() < 0 || s.signum() < 0) {
-            throw new IllegalArgumentException("Negative v/r/s obj passed in signature data");
-        }
         // reject upper range of s values (ECDSA malleability)
-        if (s.compareTo(secp256k1halfN) > 0) {
+        if (s.compareTo(secp256k1halfN) > 0) { // must be lesser or equal
             throw new IllegalArgumentException("Invalid s obj passed in signature data");
         }
 
-        if (r.compareTo(secp256k1N) >= 0 || s.compareTo(secp256k1N) >= 0) {
+        // reject upper range for r values too (would be a theoretical limit also for s but s has a lower upper value
+        // already checked above
+        if (r.compareTo(secp256k1N) >= 0) { // must be lesser
             throw new IllegalArgumentException("Invalid signature r/s obj passed in signature data");
         }
 
@@ -82,7 +86,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
             secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
         )
-         */
+        */
     }
 
     public SignatureSecp256k1(BigInteger v_in, BigInteger r_in, BigInteger s_in) {

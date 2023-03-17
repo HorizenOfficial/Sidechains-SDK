@@ -33,6 +33,7 @@ import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
@@ -252,9 +253,9 @@ class EthService(
     applyOnAccountView { nodeView =>
       val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
-      // TODO check order: why V is the last contribution?
-      getUnsignedByteArray(signature.getR) ++
-        getUnsignedByteArray(signature.getS) ++
+      // The order of r, s, v concatenations is the same as in eth
+      padWithZeroBytes(getUnsignedByteArray(signature.getR), Secp256k1.SIGNATURE_RS_SIZE) ++
+        padWithZeroBytes(getUnsignedByteArray(signature.getS), Secp256k1.SIGNATURE_RS_SIZE) ++
         getUnsignedByteArray(signature.getV)
     }
   }
