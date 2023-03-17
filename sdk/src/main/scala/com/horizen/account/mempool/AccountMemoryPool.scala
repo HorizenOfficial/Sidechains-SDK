@@ -1,10 +1,12 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.api.rpc.types.EthereumTransactionView
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.evm.Address
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
 

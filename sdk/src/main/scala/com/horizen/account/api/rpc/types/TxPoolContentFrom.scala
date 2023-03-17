@@ -1,7 +1,7 @@
-package io.horizen.account.api.rpc.types
+package com.horizen.account.api.rpc.types
 
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.json.Views
+import com.horizen.serialization.Views
 
 import java.math.BigInteger
 import scala.collection.mutable

@@ -1,8 +1,8 @@
-package io.horizen.account.api.rpc.types
+package com.horizen.account.api.rpc.types
 
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.serialization.Views
 import io.horizen.evm.Address
-import io.horizen.json.Views
 
 import java.math.BigInteger
 import scala.collection.concurrent.TrieMap

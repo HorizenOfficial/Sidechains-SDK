@@ -1,9 +1,10 @@
 package com.horizen.account.utils
 
 import com.horizen.SidechainTypes
+import com.horizen.account.api.rpc.types.EthereumTransactionView
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{Bloom, EthereumReceipt}
@@ -28,8 +29,8 @@ import com.horizen.storage.{SidechainSecretStorage, Storage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
-import io.horizen.evm.{Address, Hash, StateDB}
 import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, StateDB}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
