@@ -45,7 +45,8 @@ public class EthereumTransactionView {
     public final Object[] accessList;
 
     public EthereumTransactionView(EthereumTransaction tx, EthereumReceipt receipt, BigInteger baseFee) {
-        assert Objects.equals(BytesUtils.toHexString(receipt.transactionHash()), tx.id());
+
+        if(receipt != null) assert Objects.equals(BytesUtils.toHexString(receipt.transactionHash()), tx.id());
         type = BigInteger.valueOf(tx.version());
         nonce = tx.getNonce();
         from = tx.getFromAddress();
@@ -53,7 +54,9 @@ public class EthereumTransactionView {
         value = tx.getValue();
         input = tx.getData();
         gas = tx.getGasLimit();
-        gasPrice = tx.getEffectiveGasPrice(baseFee);
+        // if a transaction is already confirmed in a block the gas price will be the effective gas price based on the base fee
+        // otherwise for legacy transactions the gas price is the gasPrice and for the EIP1559 is the maxFeePerGas
+        gasPrice = baseFee != null ? tx.getEffectiveGasPrice(baseFee) : tx.getGasPrice();
         if (tx.isEIP1559()) {
             maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas();
             maxFeePerGas = tx.getMaxFeePerGas();
@@ -66,18 +69,29 @@ public class EthereumTransactionView {
         chainId = tx.getChainId() == null ? null : BigInteger.valueOf(tx.getChainId());
         var signature = tx.getSignature();
         if (signature == null) {
-            v = null;
-            r = null;
-            s = null;
+            v = null; r = null; s = null;
         } else {
             v = signature.getV();
             r = signature.getR();
             s = signature.getS();
         }
-        hash = new Hash(receipt.transactionHash());
-        blockHash = receipt.blockHash() != null ? new Hash(receipt.blockHash()) : null;
-        blockNumber = BigInteger.valueOf(receipt.blockNumber());
-        transactionIndex = BigInteger.valueOf(receipt.transactionIndex());
+
+        if(receipt != null) {
+            hash = new Hash(receipt.transactionHash());
+            blockHash = receipt.blockHash() != null ? new Hash(receipt.blockHash()) : null;
+            blockNumber = BigInteger.valueOf(receipt.blockNumber());
+            transactionIndex = BigInteger.valueOf(receipt.transactionIndex());
+        } else {
+            hash = new Hash("0x" + tx.id());
+            blockHash = null; blockNumber = null; transactionIndex = null;
+        }
+
     }
+
+    // constructor used for the pending transactions
+    public EthereumTransactionView(EthereumTransaction tx) {
+        this(tx, null, null);
+    }
+
 }
 
