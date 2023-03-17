@@ -308,7 +308,6 @@ class SmartContract:
     def __make_legacy_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int = 1,
                                    data: str = '0x', gas_price: int = 1):
         r = {
-            "type": 0,
             "nonce": nonce,
             "gas": gas,
             "value": value,
@@ -325,7 +324,6 @@ class SmartContract:
     def __make_eip155_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int,
                                    data: str = '0x', gas_price: int = 1, chain_id: str):
         r = {
-            "type": 0,
             "nonce": nonce,
             "gas": gas,
             "value": value,
@@ -344,7 +342,6 @@ class SmartContract:
                                     data: str = '0x', max_priority_fee_per_gas: int = None, max_fee_per_gas: int = None,
                                     chain_id: str):
         r = {
-            "type": 2,
             "nonce": nonce,
             "gas": gas,
             "value": value,

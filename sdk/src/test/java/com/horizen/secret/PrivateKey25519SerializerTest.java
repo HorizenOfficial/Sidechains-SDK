@@ -18,13 +18,15 @@ public class PrivateKey25519SerializerTest {
         // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_hex"
         key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes());
 
-//     Uncomment and run if you want to update regression data.
-//        try {
-//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/privatekey25519_hex"));
-//            out.write(BytesUtils.toHexString(key.bytes()));
-//            out.close();
-//        } catch (Throwable e) {
-//        }
+        // Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/privatekey25519_hex"));
+                out.write(BytesUtils.toHexString(key.bytes()));
+                out.close();
+            } catch (Throwable e) {
+            }
+        }
     }
 
     @Test
@@ -41,7 +43,7 @@ public class PrivateKey25519SerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            FileReader file = new FileReader(classLoader.getResource("privatekey25519_hex").getFile());
+                FileReader file = new FileReader(classLoader.getResource("privatekey25519_hex").getFile());
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {

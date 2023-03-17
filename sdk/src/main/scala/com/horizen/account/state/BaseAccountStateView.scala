@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
-import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
+import com.horizen.account.receipt.EthereumConsensusDataLog
+import io.horizen.evm.Address
 
 import java.math.BigInteger
 
@@ -20,7 +20,7 @@ trait BaseAccountStateView extends AccountStateReader {
   def removeAccountStorage(address: Address, key: Array[Byte]): Unit
   def removeAccountStorageBytes(address: Address, key: Array[Byte]): Unit
 
-  def addLog(evmLog: EvmLog): Unit
+  def addLog(log: EthereumConsensusDataLog): Unit
 
   def getGasTrackedView(gas: GasPool): BaseAccountStateView
 }

@@ -8,24 +8,19 @@ import com.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.fixtures.FieldElementFixture
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
-import com.horizen.schnorrnative.{SchnorrSecretKey, ValidatorKeysUpdatesList}
 import com.horizen.secret.SchnorrSecret
-import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
-
 import java.io._
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class SigProofWithKeyRotationTest {
-  private val classLoader: ClassLoader = getClass.getClassLoader
+class SigProofWithKeyRotationTest extends SecretFixture {
   private val sigCircuit: ThresholdSignatureCircuitWithKeyRotationImplZendoo = new ThresholdSignatureCircuitWithKeyRotationImplZendoo()
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
 
@@ -40,22 +35,9 @@ class SigProofWithKeyRotationTest {
     tmpDir.delete()
   }
 
-  private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
-    var bytes: Array[Byte] = null
-    try {
-      val resourceName = "schnorr_sk0"+ index + "_hex"
-      val file = new FileReader(classLoader.getResource(resourceName).getFile)
-      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
-    }
-    catch {
-      case e: Exception =>
-        assertEquals(e.toString, true, false)
-    }
-
-    SchnorrSecretKey.deserialize(bytes)
-  }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuitWithKeyRotation
+  // TODO: refactor this test: split into separate test methods, remove boilerplate code as much as possible.
   @Ignore
   @Test
   def simpleCheck(): Unit = {
@@ -173,21 +155,25 @@ class SigProofWithKeyRotationTest {
 
 
     // Try with signer key updates and first epoch
-    val newSigningKeySecretKey = buildSchnorrPrivateKey(2*keyPairsLen)
-    val newSigningKeyPublicKey = newSigningKeySecretKey.getPublicKey
-    val newKeyToSign = newSigningKeyPublicKey.getHash.serializeFieldElement()
+    val newSecretKey = buildSchnorrPrivateKey(2*keyPairsLen)
+    val newPublicKey = newSecretKey.getPublicKey
+    val signingKeyRotationMessageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForSigningKeyUpdate(
+      newPublicKey.serializePublicKey(), epochNumber0, sidechainId
+    )
 
     val updatedSignerPublicKeysBytes: util.ArrayList[Array[Byte]] = new util.ArrayList[Array[Byte]]()
     val updatedMasterPublicKeysBytes: util.ArrayList[Array[Byte]] = new util.ArrayList[Array[Byte]]()
-    updatedSignerPublicKeysBytes.add(newSigningKeyPublicKey.serializePublicKey())
-    updatedMasterPublicKeysBytes.add(newSigningKeyPublicKey.serializePublicKey())
+    updatedSignerPublicKeysBytes.add(newPublicKey.serializePublicKey())
+    updatedMasterPublicKeysBytes.add(newPublicKey.serializePublicKey())
     for (i <- 1 until signerPublicKeysBytes.size()) {
       updatedSignerPublicKeysBytes.add(signerPublicKeysBytes.get(i))
       updatedMasterPublicKeysBytes.add(masterPublicKeysBytes.get(i))
     }
 
-    val oldSignerSignature = new SchnorrSecret(signerKeyPairs.head._1.serializeSecretKey(), signerKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
-    val oldMasterSignature = new SchnorrSecret(masterKeyPairs.head._1.serializeSecretKey(), masterKeyPairs.head._2.serializePublicKey()).sign(newKeyToSign).bytes()
+    val oldSignerSignature = new SchnorrSecret(signerKeyPairs.head._1.serializeSecretKey(), signerKeyPairs.head._2.serializePublicKey())
+      .sign(signingKeyRotationMessageToSign).bytes()
+    val oldMasterSignature = new SchnorrSecret(masterKeyPairs.head._1.serializeSecretKey(), masterKeyPairs.head._2.serializePublicKey())
+      .sign(signingKeyRotationMessageToSign).bytes()
 
     val signerSignatures = new util.ArrayList[Option[SchnorrProof]]()
     signerSignatures.add(Option.apply(new SchnorrProof(oldSignerSignature)))
@@ -238,6 +224,24 @@ class SigProofWithKeyRotationTest {
 
     println("Generating snark proof...")
 
+    val masterKeyRotationMessageToSign = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getMsgToSignForMasterKeyUpdate(
+      newPublicKey.serializePublicKey(), epochNumber10, sidechainId
+    )
+
+    val oldSignerSignature2 = new SchnorrSecret(signerKeyPairs.head._1.serializeSecretKey(), signerKeyPairs.head._2.serializePublicKey())
+      .sign(masterKeyRotationMessageToSign).bytes()
+    val oldMasterSignature2 = new SchnorrSecret(masterKeyPairs.head._1.serializeSecretKey(), masterKeyPairs.head._2.serializePublicKey())
+      .sign(masterKeyRotationMessageToSign).bytes()
+
+    val signerSignatures2 = new util.ArrayList[Option[SchnorrProof]]()
+    signerSignatures2.add(Option.apply(new SchnorrProof(oldSignerSignature2)))
+    val masterSignatures2 = new util.ArrayList[Option[SchnorrProof]]()
+    masterSignatures2.add(Option.apply(new SchnorrProof(oldMasterSignature2)))
+    for (_ <- 0 until keyPairsLen - 1) {
+      signerSignatures2.add(Option.empty)
+      masterSignatures2.add(Option.empty)
+    }
+
     schnorrKeysSignatures = SchnorrKeysSignatures(
       signerPublicKeysBytes.asScala.map(b => new SchnorrProposition(b)),
       masterPublicKeysBytes.asScala.map(b => new SchnorrProposition(b)),
@@ -245,8 +249,8 @@ class SigProofWithKeyRotationTest {
       updatedMasterPublicKeysBytes.asScala.map(b => new SchnorrProposition(b)),
       emptyUpdateProofs,
       emptyUpdateProofs,
-      signerSignatures.asScala,
-      masterSignatures.asScala
+      signerSignatures2.asScala,
+      masterSignatures2.asScala
     )
 
     newKeysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(signerPublicKeysBytes, updatedMasterPublicKeysBytes)

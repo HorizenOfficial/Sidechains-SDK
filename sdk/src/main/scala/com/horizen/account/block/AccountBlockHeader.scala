@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.receipt.{Bloom, BloomSerializer}
-import com.horizen.account.utils.FeeUtils
+import com.horizen.account.utils.{BigIntegerUInt256, FeeUtils}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -219,13 +219,13 @@ object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader]
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val baseFeeSize = r.getInt()
-    val baseFee = new BigInteger(r.getBytes(baseFeeSize))
+    val baseFee = new BigIntegerUInt256(r.getBytes(baseFeeSize)).getBigInt
 
     val gasUsedSize = r.getInt()
-    val gasUsed = new BigInteger(r.getBytes(gasUsedSize))
+    val gasUsed = new BigIntegerUInt256(r.getBytes(gasUsedSize)).getBigInt
 
     val gasLimitSize = r.getInt()
-    val gasLimit = new BigInteger(r.getBytes(gasLimitSize))
+    val gasLimit = new BigIntegerUInt256(r.getBytes(gasLimitSize)).getBigInt
 
     val ommersMerkleRootHash = r.getBytes(MerkleTree.ROOT_HASH_LENGTH)
 

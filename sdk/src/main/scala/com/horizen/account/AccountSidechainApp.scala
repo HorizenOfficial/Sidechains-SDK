@@ -18,7 +18,6 @@ import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.evm.LevelDBDatabase
 import com.horizen.fork.ForkConfigurator
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl}
 import com.horizen.node.NodeWalletBase
@@ -29,6 +28,7 @@ import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen._
 import com.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import io.horizen.evm.LevelDBDatabase
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -151,7 +151,7 @@ class AccountSidechainApp @Inject()
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
+    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, networkControllerRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala, sidechainTransactionsCompanion)
   )
 
   val nodeViewProvider: NodeViewProvider[

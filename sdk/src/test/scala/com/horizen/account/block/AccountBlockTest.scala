@@ -10,8 +10,7 @@ import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{Bloom, EthereumConsensusDataReceipt}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer, SidechainBlock}
-import com.horizen.evm.interop.EvmLog
+import com.horizen.block._
 import com.horizen.fixtures._
 import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -56,21 +55,20 @@ class AccountBlockTest
 
   val generatedDataSeed = 908
   val vrfGenerationPrefix = "AccountBlockTest"
-
+  //set to true for update vrf proof
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
-    VrfGeneratedDataProvider.updateVrfProofAndOutput(vrfGenerationPrefix, generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage()
     Option((secret, publicKey))
   }
 
   val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeyPair)
   val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
-  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, generatedDataSeed)
+  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(generatedDataSeed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -80,8 +78,8 @@ class AccountBlockTest
       getUnsignedEoa2EoaLegacyTransaction
     ),
     receipts = Seq(
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Array.empty[EvmLog]),
-      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Array.empty[EvmLog])
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.SUCCESSFUL.id, BigInteger.valueOf(112233), Seq.empty),
+      new EthereumConsensusDataReceipt(2, ReceiptStatus.FAILED.id, BigInteger.valueOf(22334455), Seq.empty)
     ),
     mainchainBlockReferencesData = Seq(mcBlockRef1.data, mcBlockRef2.data),
     mainchainHeaders = Seq(mcBlockRef2.header, mcBlockRef3.header, mcBlockRef4.header),

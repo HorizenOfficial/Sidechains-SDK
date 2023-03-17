@@ -1,7 +1,7 @@
 package com.horizen.account.events
 
 import com.horizen.account.event.annotation.{Indexed, Parameter}
-import com.horizen.evm.utils.Address
+import io.horizen.evm.Address
 import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.{Address => AbiAddress}
 
@@ -14,8 +14,5 @@ case class WithdrawForgerStake(
 
 object WithdrawForgerStake {
   def apply(owner: Address, stakeId: Array[Byte]): WithdrawForgerStake =
-    WithdrawForgerStake(
-      new AbiAddress(owner.toString),
-      new Bytes32(stakeId)
-    )
+    WithdrawForgerStake(new AbiAddress(owner.toString), new Bytes32(stakeId))
 }

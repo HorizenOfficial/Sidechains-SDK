@@ -3,9 +3,8 @@ package com.horizen.account.state
 import com.horizen.account.AccountFixture
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.FeeUtils
-import com.horizen.evm.utils.{Address, Hash}
-import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.evm.{Address, Hash, MemoryDatabase, StateDB}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type

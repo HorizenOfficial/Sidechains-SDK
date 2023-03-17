@@ -7,8 +7,8 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.evm.utils.Address
 import com.horizen.state.BaseStateReader
+import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}

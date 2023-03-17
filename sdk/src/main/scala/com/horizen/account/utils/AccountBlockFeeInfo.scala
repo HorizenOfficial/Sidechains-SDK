@@ -28,9 +28,11 @@ object AccountBlockFeeInfoSerializer extends SparkzSerializer[AccountBlockFeeInf
 
   override def parse(r: Reader): AccountBlockFeeInfo = {
     val baseFeeLength = r.getInt()
-    val baseFee = new BigInteger(r.getBytes(baseFeeLength))
+    val baseFee = new BigIntegerUInt256(r.getBytes(baseFeeLength)).getBigInt
+
     val forgerTipsLength = r.getInt()
-    val forgerTips = new BigInteger(r.getBytes(forgerTipsLength))
+    val forgerTips = new BigIntegerUInt256(r.getBytes(forgerTipsLength)).getBigInt
+
     val forgerRewardKey: AddressProposition = AddressPropositionSerializer.getSerializer.parse(r)
 
     AccountBlockFeeInfo(baseFee, forgerTips, forgerRewardKey)

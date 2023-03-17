@@ -35,6 +35,14 @@ You can run all tests by running the following command from the qa directory:
 ./run_sc_tests.sh
 ```
 
+*Parallel Testing:* Tests can be parallelized to reduce test run time by specifying the *-parallel* flag and passing in an integer value:
+
+```
+./run_sc_tests.sh -parallel=2
+```
+
+*Note: Setting this parallel value too high can result in test failures due to resource usage on your machine.*
+
 You can use _-evm_only_ or _-utxo_only_ options for running only a subset of the tests.
 
 The log output for this test run can be found in the qa directory with the name "sc_test.log".

@@ -50,7 +50,10 @@ public class EthereumTransactionDecoder {
     }
 
     public static EthereumTransaction decode(String hexTransaction) {
-        byte[] transaction = Numeric.hexStringToByteArray(hexTransaction);
+        return decode(Numeric.hexStringToByteArray(hexTransaction));
+    }
+
+    public static EthereumTransaction decode(byte[] transaction) {
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(transaction));
         EthereumTransaction tx = EthereumTransactionDecoder.decode(reader);
         int size = reader.remaining();
@@ -149,7 +152,7 @@ public class EthereumTransactionDecoder {
                     BytesUtils.toHexString(rawValueBytes)
             );
         }
-        return rawValueString.asPositiveBigInteger();
+        return new BigIntegerUInt256(rawValueBytes).getBigInt();
     }
 
     private static EthereumTransaction RlpList2LegacyTransaction(RlpList rlpList) {

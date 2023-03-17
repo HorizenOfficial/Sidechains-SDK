@@ -27,31 +27,69 @@ from test_framework.authproxy import AuthServiceProxy
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
 
 COIN = 100000000  # 1 zen in zatoshis, aka zennies
-
 certificate_field_config_csw_enabled = [255, 255]
-
 certificate_field_config_csw_disabled = []
 certificate_with_key_rotation_field_config = [255] * 32  # 32 elements of size 255 bits each
+parallel_test = 0
+
+
+def set_mc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        return (parallel_test - 1) * 100
 
 
 def p2p_port(n):
-    return 11000 + n + os.getpid() % 999
+    start_port = 11000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def rpc_port(n):
-    return 12000 + n + os.getpid() % 999
+    start_port = 12000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def websocket_port_by_mc_node_index(n):
-    return 13000 + n + os.getpid() % 999
+    start_port = 13000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
-# Helper for creating json rpc requests correctly
+def obj_to_hex(obj):
+    """Recursively convert integers to hex"""
+    if isinstance(obj, bool):
+        # do not change booleans - for history reasons bool is a subclass of int in python
+        return obj
+    if isinstance(obj, int):
+        return hex(obj)
+    if isinstance(obj, dict):
+        return {key: obj_to_hex(value) for key, value in obj.items()}
+    if isinstance(obj, list) or isinstance(obj, tuple):
+        return [obj_to_hex(item) for item in obj]
+    return obj
+
+
 def create_json2_rpc_request(method, args):
+    """Helper for creating json rpc requests correctly"""
     return json.dumps({
         "jsonrpc": "2.0",
         "method": method,
-        "params": args,
+        "params": obj_to_hex(args),
         "id": "1"
     })
 

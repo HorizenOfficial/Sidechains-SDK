@@ -2,7 +2,7 @@
 import json
 import logging
 
-from eth_utils import to_checksum_address
+from eth_utils import add_0x_prefix, to_checksum_address
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa
@@ -48,7 +48,7 @@ class SCEvmForwardTransfer(AccountChainSetup):
         assert_equal(hex(ft_amount_in_wei), balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
-        forward_transfer = sc_node.rpc_zen_getForwardTransfers("latest")['result']['forwardTransfers'][0]
+        forward_transfer = sc_node.rpc_zen_getForwardTransfers(add_0x_prefix(self.block_id))['result']['forwardTransfers'][0]
         assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         assert_equal(self.evm_address.lower(), forward_transfer['to'])
 

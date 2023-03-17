@@ -8,7 +8,7 @@ import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
@@ -18,49 +18,56 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
+import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import com.horizen.account.utils.Secp256k1.generateContractAddress
-import com.horizen.account.utils.{EthereumTransactionDecoder, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceOptions
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
+import io.horizen.evm.results.ProofAccountResult
+import io.horizen.evm.{Address, Hash, TraceOptions}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
-import sparkz.core.{NodeViewHolder, bytesToId}
+import sparkz.core.network.ConnectedPeer
+import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
+import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
-import java.util
+import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
+import scala.jdk.CollectionConverters
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class EthService(
     scNodeViewHolderRef: ActorRef,
+    networkControllerRef: ActorRef,
     nvtimeout: FiniteDuration,
     networkParams: NetworkParams,
     settings: EthServiceSettings,
-    sidechainTransactionActorRef: ActorRef
+    maxIncomingConnections: Int,
+    rpcClientVersion: String,
+    sidechainTransactionActorRef: ActorRef,
+    transactionsCompanion: SidechainAccountTransactionsCompanion
 ) extends RpcService
       with ClosableResourceHandler
       with SparkzLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
+  implicit val timeout: Timeout = new Timeout(nvtimeout)
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
-    implicit val timeout: Timeout = new Timeout(nvtimeout)
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
@@ -98,58 +105,42 @@ class EthService(
     )
   }
 
+  private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
+    CollectionConverters.mapAsJavaMap(
+      poolMap.map { case (proposition, txByNonce) =>
+        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
+          txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
+        )
+      }
+    )
+
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
-    new TxPoolContent(getPoolTxs(nodeView, executable = true), getPoolTxs(nodeView, executable = false))
-  }
-
-  private def getPoolTxs(
-      nodeView: NV,
-      executable: Boolean
-  ): util.Map[String, util.Map[BigInteger, TxPoolTransaction]] = {
-    val returnAddressNonceTxsMap = {
-      val addressNonceTxsMap = new java.util.HashMap[String, util.Map[BigInteger, TxPoolTransaction]]
-      var mempoolTxsMap = TrieMap.empty[SidechainTypes#SCP, MempoolMap#TxByNonceMap]
-      if (executable) mempoolTxsMap = nodeView.pool.getExecutableTransactionsMap
-      else mempoolTxsMap = nodeView.pool.getNonExecutableTransactionsMap
-      for ((from, nonceTransactionsMap) <- mempoolTxsMap) {
-        val returnNonceTxsMap = {
-          val nonceTxsMap = new java.util.HashMap[BigInteger, TxPoolTransaction]
-          for ((txNonce, tx) <- nonceTransactionsMap) {
-            nonceTxsMap.put(
-              txNonce,
-              new TxPoolTransaction(
-                tx.getFrom.bytes(),
-                tx.getGasLimit,
-                tx.getGasPrice,
-                tx.id.toBytes,
-                tx.getData,
-                tx.getNonce,
-                tx.getTo.get().bytes(),
-                tx.getValue
-              )
-            )
-          }
-          nonceTxsMap
-        }
-        addressNonceTxsMap.put(Numeric.toHexString(from.bytes()), returnNonceTxsMap)
-      }
-      addressNonceTxsMap
-    }
-    returnAddressNonceTxsMap
+    new TxPoolContent(
+      convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
+      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+    )
   }
 
   @RpcMethod("eth_getBlockByNumber")
   def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
-      constructEthBlockWithTransactions(nodeView, getBlockIdByTag(nodeView, tag), hydratedTx)
+      try {
+        constructEthBlockWithTransactions(nodeView, getBlockIdByTag(nodeView, tag), hydratedTx)
+      } catch {
+        case _: BlockNotFoundException => null
+      }
     }
   }
 
   @RpcMethod("eth_getBlockByHash")
   def getBlockByHash(hash: Hash, hydratedTx: Boolean): EthereumBlockView = {
     applyOnAccountView { nodeView =>
-      constructEthBlockWithTransactions(nodeView, bytesToId(hash.toBytes), hydratedTx)
+      try {
+        constructEthBlockWithTransactions(nodeView, bytesToId(hash.toBytes), hydratedTx)
+      } catch {
+        case _: BlockNotFoundException => null
+      }
     }
   }
 
@@ -158,13 +149,7 @@ class EthService(
       blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlockView = {
-    val (block, blockInfo): (AccountBlock, SidechainBlockInfo) =
-      try {
-        getBlockById(nodeView, blockId)
-      } catch {
-        case _: Throwable => return null
-      }
-
+    val (block, blockInfo): (AccountBlock, SidechainBlockInfo) = getBlockById(nodeView, blockId)
     val history = nodeView.history
     val (blockNumber, blockHash, view): (Long, Hash, AccountStateView) =
       if (blockId == null) {
@@ -188,25 +173,28 @@ class EthService(
   }
 
   @RpcMethod("eth_getBlockTransactionCountByHash")
-  def getBlockTransactionCountByHash(hash: Hash): Quantity = {
+  def getBlockTransactionCountByHash(hash: Hash): BigInteger = {
     blockTransactionCount(_ => bytesToId(hash.toBytes))
   }
 
   @RpcMethod("eth_getBlockTransactionCountByNumber")
-  def getBlockTransactionCountByNumber(tag: String): Quantity = {
+  def getBlockTransactionCountByNumber(tag: String): BigInteger = {
     blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
   }
 
-  private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
+  private def blockTransactionCount(getBlockId: NV => ModifierId): BigInteger = {
     applyOnAccountView { nodeView =>
-      val blockId = getBlockId(nodeView)
-      if (blockId == null) {
-        new Quantity(getPoolTxs(nodeView, true).values().flatMap(_.values()).size)
-      } else {
-        nodeView.history.getStorageBlockById(blockId)
-          .map(_.transactions.size)
-          .map(new Quantity(_))
-          .orNull
+      try {
+        val blockId = getBlockId(nodeView)
+        if (blockId == null) {
+          BigInteger.valueOf(nodeView.pool.getExecutableTransactionsMap.map(_._2.size).sum)
+        } else {
+          nodeView.history.getStorageBlockById(blockId)
+            .map(block => BigInteger.valueOf(block.transactions.size))
+            .orNull
+        }
+      } catch {
+        case _: BlockNotFoundException => null
       }
     }
   }
@@ -220,25 +208,27 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
-  def call(params: TransactionArgs, tag: String): String = {
-    applyOnAccountView { nodeView =>
-      Option.apply(doCall(nodeView, params, tag)).map(Numeric.toHexString).orNull
-    }
-  }
+  def call(params: TransactionArgs, tag: String): Array[Byte] = applyOnAccountView(doCall(_, params, tag))
 
   @RpcMethod("eth_sendTransaction")
-  def sendTransaction(params: TransactionArgs): String = {
+  def sendTransaction(params: TransactionArgs): Hash = {
     val tx = signTransaction(params)
     sendRawTransaction(tx)
   }
 
   @RpcMethod("eth_signTransaction")
-  def signTransaction(params: TransactionArgs): String = {
+  def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value.add(params.gas))
-        .map(secret => signTransactionWithSecret(secret, params.toTransaction(networkParams)))
-        .map(tx => Numeric.toHexString(tx.encode(tx.isSigned)))
-        .orNull
+      val unsignedTx =
+        params.toTransaction(
+          networkParams,
+          nodeView.history,
+          nodeView.pool,
+          () => doEstimateGas(nodeView, params, "pending")
+        )
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, params.getFrom, unsignedTx.maxCost())
+      val signedTx = signTransactionWithSecret(secret, unsignedTx)
+      signedTx.encode(true)
     }
   }
 
@@ -247,33 +237,31 @@ class EthService(
    * gives context to the signed message and prevents signing of transactions.
    */
   @RpcMethod("eth_sign")
-  def sign(sender: Address, message: String): String = {
-    val data = Numeric.hexStringToByteArray(message)
-    val prefix = s"\u0019Ethereum Signed Message:\n${data.length}"
-    val messageToSign = prefix.getBytes() ++ data
+  def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
+    val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
+    val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
     applyOnAccountView { nodeView =>
-      getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
-        .map(secret => secret.sign(messageToSign))
-        .map(signature => Numeric.toHexString(signature.getR ++ signature.getS ++ signature.getV))
-        .orNull
+      val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
+      val signature = secret.sign(messageToSign)
+      signature.getR ++ signature.getS ++ signature.getV
     }
   }
 
   private def getFittingSecret(
       wallet: AccountWallet,
       state: AccountState,
-      fromAddress: Option[Address],
-      txCostInWei: BigInteger
-  ): Option[PrivateKeySecp256k1] = {
-    wallet
+      sender: Address,
+      minimumBalance: BigInteger
+  ): PrivateKeySecp256k1 = {
+    val matchingKeys = wallet
       .secretsOfType(classOf[PrivateKeySecp256k1])
       .map(_.asInstanceOf[PrivateKeySecp256k1])
-      .find(secret =>
-        // if from address is given the secrets public key needs to match, otherwise check all of the secrets
-        fromAddress.forall(_.equals(secret.publicImage.address)) &&
-          // TODO account for gas
-          state.getBalance(secret.publicImage.address).compareTo(txCostInWei) >= 0
-      )
+      .filter(_.publicImage.address.equals(sender))
+    if (matchingKeys.isEmpty) {
+      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "no matching key for given sender"))
+    }
+    matchingKeys.find(secret => state.getBalance(secret.publicImage.address).compareTo(minimumBalance) >= 0)
+      .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds")))
   }
 
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
@@ -297,102 +285,106 @@ class EthService(
     high
   }
 
+  private def doEstimateGas(nodeView: NV, params: TransactionArgs, tag: String): BigInteger = {
+    // Binary search the gas requirement, as it may be higher than the amount used
+    val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
+    // Determine the highest gas limit can be used during the estimation.
+    var highBound = params.gas
+    getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
+      if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
+        highBound = blockContext.blockGasLimit
+      }
+      // Normalize the max fee per gas the call is willing to spend.
+      val feeCap = if (params.gasPrice != null) {
+        params.gasPrice
+      } else if (params.maxFeePerGas != null) {
+        params.maxFeePerGas
+      } else {
+        BigInteger.ZERO
+      }
+      // Recap the highest gas limit with account's available balance.
+      if (feeCap.bitLength() > 0) {
+        val balance = tagStateView.getBalance(params.getFrom)
+        if (params.value.compareTo(balance) >= 0)
+          throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
+        val allowance = balance.subtract(params.value).divide(feeCap)
+        if (highBound.compareTo(allowance) > 0) {
+          highBound = allowance
+        }
+      }
+    }
+    if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
+      highBound = settings.globalRpcGasCap
+    }
+    // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
+    // other exceptions are not caught as the call would not succeed with any amount of gas
+    val check = (gas: BigInteger) =>
+      try {
+        params.gas = gas
+        doCall(nodeView, params, tag)
+        (true, None)
+      } catch {
+        case err: ExecutionRevertedException => (false, Some(err))
+        case _: ExecutionFailedException => (false, None)
+        case _: IntrinsicGasException => (false, None)
+      }
+    // Execute the binary search and hone in on an executable gas limit
+    // We need to do a search because the gas required during execution is not necessarily equal to the consumed
+    // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
+    val requiredGasLimit = binarySearch(lowBound, highBound)(check(_)._1)
+    // Reject the transaction as invalid if it still fails at the highest allowance
+    if (requiredGasLimit == highBound) {
+      val (success, reverted) = check(highBound)
+      if (!success) {
+        val error = reverted
+          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
+          .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+        throw new RpcException(error)
+      }
+    }
+    requiredGasLimit
+  }
+
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
-  def estimateGas(params: TransactionArgs, tag: String): Quantity = {
+  def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      // Binary search the gas requirement, as it may be higher than the amount used
-      val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
-      // Determine the highest gas limit can be used during the estimation.
-      var highBound = params.gas
-      getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
-        if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = blockContext.blockGasLimit
-        }
-        // Normalize the max fee per gas the call is willing to spend.
-        var feeCap = BigInteger.ZERO
-        if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
-          throw new RpcException(
-            RpcError
-              .fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-          )
-        } else if (params.gasPrice != null) {
-          feeCap = params.gasPrice
-        } else if (params.maxFeePerGas != null) {
-          feeCap = params.maxFeePerGas
-        }
-        // Recap the highest gas limit with account's available balance.
-        if (feeCap.bitLength() > 0) {
-          val balance = tagStateView.getBalance(params.getFrom)
-          val available = if (params.value == null) { balance }
-          else {
-            if (params.value.compareTo(balance) >= 0)
-              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
-            balance.subtract(params.value)
-          }
-          val allowance = available.divide(feeCap)
-          if (highBound.compareTo(allowance) > 0) {
-            highBound = allowance
-          }
-        }
-      }
-      if (highBound.compareTo(settings.globalRpcGasCap) > 0) {
-        highBound = settings.globalRpcGasCap
-      }
-      // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
-      // other exceptions are not caught as the call would not succeed with any amount of gas
-      val check = (gas: BigInteger) =>
-        try {
-          params.gas = gas
-          doCall(nodeView, params, tag)
-          (true, None)
-        } catch {
-          case err: ExecutionRevertedException => (false, Some(err))
-          case _: ExecutionFailedException => (false, None)
-          case _: IntrinsicGasException => (false, None)
-        }
-      // Execute the binary search and hone in on an executable gas limit
-      // We need to do a search because the gas required during execution is not necessarily equal to the consumed
-      // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
-      val requiredGasLimit = binarySearch(lowBound, highBound)(check(_)._1)
-      // Reject the transaction as invalid if it still fails at the highest allowance
-      if (requiredGasLimit == highBound) {
-        val (success, reverted) = check(highBound)
-        if (!success) {
-          val error = reverted
-            .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
-            .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
-          throw new RpcException(error)
-        }
-      }
-      new Quantity(requiredGasLimit)
+      doEstimateGas(nodeView, params, tag)
     }
   }
 
   @RpcMethod("eth_blockNumber")
-  def blockNumber: Quantity = applyOnAccountView { nodeView =>
-    new Quantity(nodeView.history.getCurrentHeight)
+  def blockNumber: BigInteger = applyOnAccountView { nodeView =>
+    BigInteger.valueOf(nodeView.history.getCurrentHeight)
   }
 
   @RpcMethod("eth_chainId")
-  def chainId: Quantity = new Quantity(networkParams.chainId)
+  def chainId: BigInteger = BigInteger.valueOf(networkParams.chainId)
 
   @RpcMethod("eth_getBalance")
   @RpcOptionalParameters(1)
-  def getBalance(address: Address, tag: String): Quantity = {
+  def getBalance(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getBalance(address))
+      try {
+        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+          tagStateView.getBalance(address)
+        }
+      } catch {
+        case _: BlockNotFoundException => BigInteger.ZERO
       }
     }
   }
 
   @RpcMethod("eth_getTransactionCount")
   @RpcOptionalParameters(1)
-  def getTransactionCount(address: Address, tag: String): Quantity = {
+  def getTransactionCount(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        new Quantity(tagStateView.getNonce(address))
+      try {
+        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+          tagStateView.getNonce(address)
+        }
+      } catch {
+        case _: BlockNotFoundException => BigInteger.ZERO
       }
     }
   }
@@ -403,20 +395,16 @@ class EthService(
    */
   private def getBlockById(nodeView: NV, blockId: ModifierId): (AccountBlock, SidechainBlockInfo) = {
     val (block, blockInfo) = if (blockId == null) {
-      val pendingBlock = getPendingBlock(nodeView)
-      val parentId = getBlockIdByTag(nodeView, "latest")
+      val pendingBlock = getPendingBlock(nodeView).getOrElse(throw BlockNotFoundException())
       (
-        pendingBlock.getOrElse(throw new RpcException(RpcError.fromCode(
-          RpcCode.UnknownBlock,
-          "Invalid block tag parameter."
-        ))),
-        getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId))
+        pendingBlock,
+        getPendingBlockInfo(nodeView)
       )
     } else {
       (
         nodeView.history
           .getStorageBlockById(blockId)
-          .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter."))),
+          .getOrElse(throw BlockNotFoundException()),
         nodeView.history.blockInfoById(blockId)
       )
     }
@@ -430,11 +418,9 @@ class EthService(
    */
   private def getBlockInfoById(nodeView: NV, blockId: ModifierId): SidechainBlockInfo = {
     val blockInfo = if (blockId == null) {
-      val parentId = getBlockIdByTag(nodeView, "latest")
-      getPendingBlockInfo(parentId, nodeView.history.blockInfoById(parentId)
-      )
+      getPendingBlockInfo(nodeView)
     } else {
-        nodeView.history.blockInfoById(blockId)
+      nodeView.history.blockInfoById(blockId)
     }
     blockInfo
   }
@@ -460,7 +446,7 @@ class EthService(
     )
   }
 
-  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) ⇒ A): A = {
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) => A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
     val blockContext = getBlockContext(block, blockInfo, nodeView.history)
     if (tag == "pending") {
@@ -474,42 +460,72 @@ class EthService(
     tag match {
       case "earliest" => 1
       case "finalized" | "safe" => nodeView.history.getCurrentHeight match {
-          case height if height <= 100 => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-          case height if height > 100 => height - 100
+          case height if height <= 100 => throw BlockNotFoundException()
+          case height => height - 100
         }
       case "latest" | null => nodeView.history.getCurrentHeight
       case "pending" => nodeView.history.getCurrentHeight + 1
-      case height =>
-        Try
-          .apply(Numeric.decodeQuantity(height).intValueExact())
-          .filter(_ <= nodeView.history.getCurrentHeight)
-          .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
+      case height => parseBlockNumber(height)
+          .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block number or tag")))
     }
+  }
+
+  private def parseBlockNumber(number: String): Option[Int] = {
+    Try(Numeric.decodeQuantity(number).intValueExact()).toOption
   }
 
   private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
     val blockId = parseBlockTag(nodeView, tag) match {
       case height if height == nodeView.history.getCurrentHeight + 1 => null
-      case height => ModifierId(nodeView.history.blockIdByHeight(height).get)
+      case height => ModifierId(nodeView.history.blockIdByHeight(height).getOrElse(throw BlockNotFoundException()))
     }
     blockId
   }
 
-  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+  private def getBlockIdByHash(tag: String): Option[ModifierId] = {
     if (tag.length == 66 && tag.substring(0, 2) == "0x")
-      bytesToId(BytesUtils.fromHexString(tag.substring(2)))
-    else {
-      getBlockIdByTag(nodeView, tag)
-    }
+      Some(bytesToId(BytesUtils.fromHexString(tag.substring(2))))
+    else
+      None
+  }
+
+  private def getBlockIdByHashOrTag(nodeView: NV, tag: String): ModifierId = {
+    getBlockIdByHash(tag).getOrElse(getBlockIdByTag(nodeView, tag))
+  }
+
+  private def getBlockIdByHashOrNumber(nodeView: NV, blockHashOrNumber: String): ModifierId = {
+    getBlockIdByHash(blockHashOrNumber).getOrElse(
+      parseBlockNumber(blockHashOrNumber)
+        .flatMap(nodeView.history.blockIdByHeight)
+        .map(ModifierId(_))
+        .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block input parameter", null)))
+    )
   }
 
   @RpcMethod("net_version")
   def version: String = String.valueOf(networkParams.chainId)
 
+  private def getPeers: Seq[ConnectedPeer] = {
+    val peerReq = (networkControllerRef ? GetConnectedPeers).asInstanceOf[Future[Seq[ConnectedPeer]]]
+    Await.result(peerReq, nvtimeout)
+  }
+
+  @RpcMethod("net_peerCount")
+  def peerCount: BigInteger = BigInteger.valueOf(getPeers.size)
+
+  @RpcMethod("net_listening")
+  def listening: Boolean = {
+    val incomingConnections = getPeers.flatMap(_.peerInfo).count(_.connectionType.exists(_.isIncoming))
+    incomingConnections < maxIncomingConnections
+  }
+
+  @RpcMethod("web3_clientVersion")
+  def clientVersion: String = rpcClientVersion
+
   @RpcMethod("eth_gasPrice")
-  def gasPrice: Quantity = {
+  def gasPrice: BigInteger = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => new Quantity(blockContext.baseFee) }
+      Backend.calculateGasPrice(nodeView.history, nodeView.history.bestBlock.header.baseFee)
     }
   }
 
@@ -541,23 +557,23 @@ class EthService(
   }
 
   @RpcMethod("eth_getTransactionByBlockHashAndIndex")
-  def getTransactionByBlockHashAndIndex(hash: Hash, index: Quantity): EthereumTransactionView = {
+  def getTransactionByBlockHashAndIndex(hash: Hash, index: BigInteger): EthereumTransactionView = {
     blockTransactionByIndex(_ => bytesToId(hash.toBytes), index)
   }
 
   @RpcMethod("eth_getTransactionByBlockNumberAndIndex")
-  def getTransactionByBlockNumberAndIndex(tag: String, index: Quantity): EthereumTransactionView = {
+  def getTransactionByBlockNumberAndIndex(tag: String, index: BigInteger): EthereumTransactionView = {
     blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
   }
 
   private def getPendingBlock(nodeView: NV): Option[AccountBlock] = {
-    new AccountForgeMessageBuilder(new MainchainSynchronizer(null), null, networkParams, false)
-      .getPendingBlock(
-        nodeView
-      )
+    new AccountForgeMessageBuilder(new MainchainSynchronizer(null), transactionsCompanion, networkParams, false)
+      .getPendingBlock(nodeView)
   }
 
-  private def getPendingBlockInfo(parentId: ModifierId, parentInfo: SidechainBlockInfo): SidechainBlockInfo = {
+  private def getPendingBlockInfo(nodeView: NV): SidechainBlockInfo = {
+    val parentId = nodeView.history.bestBlockId
+    val parentInfo = nodeView.history.blockInfoById(parentId)
     new SidechainBlockInfo(
       parentInfo.height + 1,
       parentInfo.score + 1,
@@ -637,29 +653,24 @@ class EthService(
     pendingStateView
   }
 
-  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
-    val txIndex = index.toNumber.intValueExact()
+  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: BigInteger): EthereumTransactionView = {
+    val txIndex = index.intValueExact()
     applyOnAccountView { nodeView =>
-      val blockId = getBlockId(nodeView)
-      val (block, blockInfo): (AccountBlock, SidechainBlockInfo) =
-        try {
-          getBlockById(nodeView, blockId)
-        } catch {
-          case _: Throwable => return null
-        }
-
-      val view: AccountStateView =
-        if (blockId == null) getPendingStateView(nodeView, block, blockInfo) else nodeView.state.getView
-
-      val ethTxView = block.transactions
-        .drop(txIndex)
-        .headOption
-        .map(_.asInstanceOf[EthereumTransaction])
-        .flatMap(tx =>
-          using(view)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
-            .map(new EthereumTransactionView(tx, _, block.header.baseFee))
-        ).orNull
-      ethTxView
+      try {
+        val blockId = getBlockId(nodeView)
+        val (block, blockInfo): (AccountBlock, SidechainBlockInfo) = getBlockById(nodeView, blockId)
+        val view = if (blockId == null) getPendingStateView(nodeView, block, blockInfo) else nodeView.state.getView
+        block.transactions
+          .drop(txIndex)
+          .headOption
+          .map(_.asInstanceOf[EthereumTransaction])
+          .flatMap(tx =>
+            using(view)(_.getTransactionReceipt(BytesUtils.fromHexString(tx.id)))
+              .map(new EthereumTransactionView(tx, _, block.header.baseFee))
+          ).orNull
+      } catch {
+        case _: BlockNotFoundException => null
+      }
     }
   }
 
@@ -682,25 +693,27 @@ class EthService(
   }
 
   @RpcMethod("eth_sendRawTransaction")
-  def sendRawTransaction(signedTxData: String): String = {
+  def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
     val tx = EthereumTransactionDecoder.decode(signedTxData)
-    implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
     // wait for submit
     val validate = Await.result(submit, timeout.duration)
     // wait for validation of the transaction
     val txHash = Await.result(validate, timeout.duration)
-    Numeric.prependHexPrefix(txHash)
+    new Hash(idToBytes(txHash))
   }
 
   @RpcMethod("eth_getCode")
   @RpcOptionalParameters(1)
-  def getCode(address: Address, tag: String): String = {
+  def getCode(address: Address, tag: String): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-        val code = Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
-        Numeric.toHexString(code)
+      try {
+        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+          Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
+        }
+      } catch {
+        case _: BlockNotFoundException => null
       }
     }
   }
@@ -713,75 +726,79 @@ class EthService(
   // - eth_getUncleCountByBlockHash and eth_getUncleCountByBlockNumber always return 0x0
   // - eth_getUncleByBlockHashAndIndex and eth_getUncleByBlockNumberAndIndex always return null (as no block was found)
   @RpcMethod("eth_getUncleCountByBlockHash")
-  def getUncleCountByBlockHash(hash: Hash) = new Quantity(0L)
+  def getUncleCountByBlockHash(hash: Hash): BigInteger = BigInteger.ZERO
 
   @RpcMethod("eth_getUncleCountByBlockNumber")
-  def eth_getUncleCountByBlockNumber(tag: String) = new Quantity(0L)
+  def eth_getUncleCountByBlockNumber(tag: String): BigInteger = BigInteger.ZERO
 
   @RpcMethod("eth_getUncleByBlockHashAndIndex")
-  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: Quantity): Null = null
+  def eth_getUncleByBlockHashAndIndex(hash: Hash, index: BigInteger): Null = null
 
   @RpcMethod("eth_getUncleByBlockNumberAndIndex")
-  def eth_getUncleByBlockNumberAndIndex(tag: String, index: Quantity): Null = null
+  def eth_getUncleByBlockNumberAndIndex(tag: String, index: BigInteger): Null = null
 
-  // Eth Syncing RPC
   @RpcMethod("eth_syncing")
   def eth_syncing() = false
 
-  private def traceBlockById(blockId: ModifierId, config: TraceOptions): List[JsonNode] = {
-    applyOnAccountView { nodeView =>
-      // get block to trace
-      val (block, blockInfo) = getBlockById(nodeView, blockId)
+  private def traceBlockById(nodeView: NV, blockId: ModifierId, config: TraceOptions): List[JsonNode] = {
+    // get block to trace
+    val (block, blockInfo) = getBlockById(nodeView, blockId)
 
-      // get state at previous block
-      getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+    // get state at previous block
+    getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
+      // enable tracing
+      blockContext.enableTracer(config)
 
-        // apply mainchain references
-        for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
-        }
-
-        val gasPool = new GasPool(block.header.gasLimit)
-
-        // apply all transaction, collecting traces on the way
-        val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
-          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
-          blockContext.getEvmResult
-        })
-
-        // return the list of tracer results from the evm
-        val tracerResultList = new ListBuffer[JsonNode]
-        for (evmResult <- evmResults) {
-          if (evmResult != null && evmResult.tracerResult != null)
-            tracerResultList += evmResult.tracerResult
-        }
-        tracerResultList.toList
+      // apply mainchain references
+      for (mcBlockRefData <- block.mainchainBlockReferencesData) {
+        tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
       }
+
+      val gasPool = new GasPool(block.header.gasLimit)
+
+      // apply all transaction, collecting traces on the way
+      val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
+        tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+        blockContext.getEvmResult
+      })
+
+      // return the list of tracer results from the evm
+      val tracerResultList = new ListBuffer[JsonNode]
+      for (evmResult <- evmResults) {
+        if (evmResult != null && evmResult.tracerResult != null)
+          tracerResultList += evmResult.tracerResult
+      }
+      tracerResultList.toList
     }
   }
 
   @RpcMethod("debug_traceBlockByNumber")
   @RpcOptionalParameters(1)
   def traceBlockByNumber(number: String, config: TraceOptions): List[JsonNode] = {
-    val blockId: ModifierId = {
-      applyOnAccountView { nodeView =>
-        getBlockIdByTag(nodeView, number)
+    applyOnAccountView { nodeView =>
+      try {
+        traceBlockById(nodeView, getBlockIdByTag(nodeView, number), config)
+      } catch {
+        case _: BlockNotFoundException => null
       }
     }
-    traceBlockById(blockId, config)
   }
 
   @RpcMethod("debug_traceBlockByHash")
   @RpcOptionalParameters(1)
   def traceBlockByHash(hash: Hash, config: TraceOptions): List[JsonNode] = {
-    traceBlockById(bytesToId(hash.toBytes), config)
+    applyOnAccountView { nodeView =>
+      try {
+        traceBlockById(nodeView, bytesToId(hash.toBytes), config)
+      } catch {
+        case _: BlockNotFoundException => null
+      }
+    }
   }
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: Hash, config: TraceOptions): Any = {
+  def traceTransaction(transactionHash: Hash, config: TraceOptions): JsonNode = {
     // get block containing the requested transaction
     val (block, blockNumber, requestedTransactionHash) = getTransactionAndReceipt(transactionHash)
       .map { case (block, tx, receipt) =>
@@ -809,61 +826,67 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+        // enable tracing
+        blockContext.enableTracer(config)
 
         // apply requested transaction with tracing enabled
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        if(blockContext.getEvmResult != null) {
-          blockContext.getEvmResult.tracerResult
-        } else Unit
+        blockContext.getEvmResult.tracerResult
       }
     }
   }
 
   @RpcMethod("debug_traceCall")
   @RpcOptionalParameters(1)
-  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): Any = {
+  def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): JsonNode = {
 
     applyOnAccountView { nodeView =>
       // get block info
       val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
 
       // get state at selected block
-      getStateViewAtTag(nodeView, if(tag=="pending") "pending" else (blockInfo.height).toString) { (tagStateView, blockContext) =>
+      getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
+        (tagStateView, blockContext) =>
+          // enable tracing
+          blockContext.enableTracer(config)
 
-        // use default trace params if none are given
-        blockContext.setTraceParams(if (config == null) new TraceOptions() else config)
+          // apply requested message with tracing enabled
+          val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+          tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
-        // apply requested message with tracing enabled
-        val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
-        tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
-
-        // return the tracer result from the evm
-        if (blockContext.getEvmResult != null) {
+          // return the tracer result from the evm
           blockContext.getEvmResult.tracerResult
-        } else Unit
       }
     }
   }
 
   @RpcMethod("zen_getForwardTransfers")
-  def getForwardTransfers(blockId: String): ForwardTransfersView = {
-    if (blockId == null) return null
+  def getForwardTransfers(blockHashOrNumber: String): ForwardTransfersView = {
     applyOnAccountView { nodeView =>
       nodeView.history
-        .getStorageBlockById(getBlockIdByTag(nodeView, blockId))
-        .map(block => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false))
+        .getStorageBlockById(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
+        .map(getForwardTransfersForBlock(_).asJava)
+        .map(new ForwardTransfersView(_))
+        .orNull
+    }
+  }
+
+  @RpcMethod("zen_getFeePayments")
+  def getFeePayments(blockHashOrNumber: String): FeePaymentsView = {
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .feePaymentsInfo(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
+        .map(new FeePaymentsView(_))
         .orNull
     }
   }
 
   @RpcMethod("eth_getStorageAt")
   @RpcOptionalParameters(1)
-  def getStorageAt(address: Address, key: Quantity, tag: String): Hash = {
-    val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
+  def getStorageAt(address: Address, key: BigInteger, tag: String): Hash = {
+    val storageKey = BigIntegerUtil.toUint256Bytes(key)
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new Hash(stateView.getAccountStorage(address, storageKey))
@@ -873,40 +896,25 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[Quantity], tag: String): EthereumAccountProofView = {
-    val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
+  def getProof(address: Address, keys: Array[BigInteger], tag: String): ProofAccountResult = {
+    val storageKeys = keys.map(BigIntegerUtil.toUint256Bytes)
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-        new EthereumAccountProofView(stateView.getProof(address, storageKeys))
+      try {
+        getStateViewAtTag(nodeView, tag) { (stateView, _) =>
+          stateView.getProof(address, storageKeys)
+        }
+      } catch {
+        case _: BlockNotFoundException => null
       }
     }
   }
 
-  @RpcMethod("zen_getFeePayments")
-  def getFeePayments(blockId: String): AccountFeePaymentsInfo = {
-    if (blockId == null) {
-      return null
-    }
-
-    var feePayments: AccountFeePaymentsInfo = null
-
-    applyOnAccountView { nodeView =>
-      nodeView.history
-        .getFeePaymentsInfo(blockId)
-        .ifPresent(p => feePayments = p)
-    }
-
-    feePayments
-  }
-
   @RpcMethod("eth_accounts")
-  def getAccounts: Array[String] = {
+  def getAccounts: Array[Address] = {
     applyOnAccountView { nodeView =>
       nodeView.vault
         .secretsOfType(classOf[PrivateKeySecp256k1])
-        .map(_.asInstanceOf[PrivateKeySecp256k1])
-        .map(_.publicImage())
-        .map(_.checksumAddress())
+        .map(_.asInstanceOf[PrivateKeySecp256k1].publicImage().address())
         .toArray
     }
   }
@@ -914,7 +922,7 @@ class EthService(
   @RpcMethod("eth_feeHistory")
   @RpcOptionalParameters(1)
   def feeHistory(
-      blockCount: Quantity,
+      blockCount: BigInteger,
       newestBlock: String,
       rewardPercentiles: Array[Double]
   ): EthereumFeeHistoryView = {
@@ -922,7 +930,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
       // limit the range of blocks by the number of available blocks and cap at 1024
-      val blocks = blockCount.toNumber.intValueExact().min(requestedBlockInfo.height).min(1024)
+      val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
       if (blocks < 1) return new EthereumFeeHistoryView()
       // calculate block number of the "oldest" block in the range
@@ -942,7 +950,7 @@ class EthService(
             .get
           baseFeePerGas(i) = block.header.baseFee
           gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
-          if (percentiles.nonEmpty) reward(i) = getRewardsForBlock(block, stateView, percentiles)
+          if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
         }
       }
       // calculate baseFee for the next block after the requested range
@@ -970,51 +978,8 @@ class EthService(
     percentiles
   }
 
-  private def getRewardsForBlock(
-      block: AccountBlock,
-      stateView: AccountStateView,
-      percentiles: Array[Double]
-  ): Array[BigInteger] = {
-    val txs = block.transactions.map(_.asInstanceOf[EthereumTransaction])
-    // return an all zero row if there are no transactions to gather data from
-    if (txs.isEmpty) return percentiles.map(_ => BigInteger.ZERO)
-
-    // collect gas used and reward (effective gas tip) per transaction, sorted ascending by reward
-    case class GasAndReward(gasUsed: Long, reward: BigInteger)
-    val sortedRewards = txs
-      .map(tx =>
-        GasAndReward(
-          stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)).get.gasUsed.longValueExact(),
-          getEffectiveGasTip(tx, block.header.baseFee)
-        )
-      )
-      .sortBy(_.reward)
-      .iterator
-
-    var current = sortedRewards.next()
-    var sumGasUsed = current.gasUsed
-    val rewards = new Array[BigInteger](percentiles.length)
-    for (i <- percentiles.indices) {
-      val thresholdGasUsed = (block.header.gasUsed.doubleValue() * percentiles(i) / 100).toLong
-      // continue summation as long as the total is below the percentile threshold
-      while (sumGasUsed < thresholdGasUsed && sortedRewards.hasNext) {
-        current = sortedRewards.next()
-        sumGasUsed += current.gasUsed
-      }
-      rewards(i) = current.reward
-    }
-    rewards
-  }
-
-  private def getEffectiveGasTip(tx: EthereumTransaction, baseFee: BigInteger): BigInteger = {
-    if (baseFee == null) tx.getMaxPriorityFeePerGas
-    // we do not need to check if MaxFeePerGas is higher than baseFee, because the tx is already included in the block
-    else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
-  }
-
   @RpcMethod("eth_getLogs")
   def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
-    query.sanitize()
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         if (query.blockHash != null) {
@@ -1022,7 +987,7 @@ class EthService(
           // geth retrieves all logs of a block by blockhash
           val block = nodeView.history
             .getStorageBlockById(bytesToId(query.blockHash.toBytes))
-            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+            .getOrElse(throw BlockNotFoundException())
           getBlockLogs(stateView, block, query)
         } else {
           val start = parseBlockTag(nodeView, query.fromBlock)
@@ -1100,9 +1065,9 @@ class EthService(
    * see: github.com/ethereum/go-ethereum@v1.10.26/eth/filters/filter.go:293
    */
   private def testLog(addresses: Array[Address], topics: Array[Array[Hash]])(log: EthereumLogView): Boolean = {
-    if (addresses.length > 0 && addresses.map(_.toString).contains(log.address)) return false
+    if (addresses.length > 0 && addresses.contains(log.address)) return false
     // skip if the number of filtered topics is greater than the amount of topics in the log
     if (topics.length > log.topics.length) return false
-    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.map(_.toString).contains(topic) })
+    topics.zip(log.topics).forall({ case (sub, topic) => sub.length == 0 || sub.contains(topic) })
   }
 }

@@ -2,22 +2,24 @@ package com.horizen.account.state
 
 import com.horizen.account.state.InvalidMessageException.toHex
 import com.horizen.account.utils.Secp256k1
-import com.horizen.evm.utils.Address
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.BytesUtils
+import io.horizen.evm.Address
 
 import java.math.BigInteger
 
 /**
- * Error message kept very close to geth implementation, see:
- * https://github.com/ethereum/go-ethereum/blob/v1.10.16/core/error.go
+ * Error message kept very close to geth implementation.
  *
- * List of evm-call-message pre-checking errors. All state transition messages will be pre-checked before execution.
- * If any invalidation is detected, the corresponding error should be returned which is defined here.
+ * List of evm-call-message pre-checking errors. All state transition messages will be pre-checked before execution. If
+ * any invalidation is detected, the corresponding error should be returned which is defined here.
  *
- *  - If the pre-checking happens in the miner, then the transaction won't be packed.
- *  - If the pre-checking happens in the block processing procedure, then a "BAD BLOCK" error should be emitted
- * */
+ *   - If the pre-checking happens in the miner, then the transaction won't be packed.
+ *   - If the pre-checking happens in the block processing procedure, then a "BAD BLOCK" error should be emitted
+ *
+ * @see
+ *   https://github.com/ethereum/go-ethereum/blob/v1.10.26/core/error.go
+ */
 class InvalidMessageException(message: String) extends TransactionSemanticValidityException(message)
 
 private object InvalidMessageException {
