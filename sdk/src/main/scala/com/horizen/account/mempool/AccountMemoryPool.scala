@@ -1,10 +1,12 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.api.rpc.types.EthereumTransactionView
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
+import io.horizen.evm.Address
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
 
@@ -13,6 +15,7 @@ import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
@@ -114,11 +117,23 @@ class AccountMemoryPool(
   def getNonExecutableTransactions: util.List[ModifierId] =
     unconfirmed.mempoolTransactions(false).toList.asJava
 
-  def getExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] =
     unconfirmed.mempoolTransactionsMap(true)
 
-  def getNonExecutableTransactionsMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap] =
+  def getNonExecutableTransactionsMap: TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] =
     unconfirmed.mempoolTransactionsMap(false)
+
+  def getExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] =
+    unconfirmed.mempoolTransactionsMapFrom(true, from)
+
+  def getNonExecutableTransactionsMapFrom(from: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] =
+    unconfirmed.mempoolTransactionsMapFrom(false, from)
+
+  def getExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(true)
+
+  def getNonExecutableTransactionsMapInspect: TrieMap[Address, mutable.SortedMap[BigInteger, String]] =
+    unconfirmed.mempoolTransactionsMapInspect(false)
 
   /**
    * Get the highest nonce from the pool or default to the current nonce in the state.

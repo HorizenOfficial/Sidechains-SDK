@@ -42,12 +42,10 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.concurrent.TrieMap
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
-import scala.jdk.CollectionConverters
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -105,21 +103,27 @@ class EthService(
     )
   }
 
-  private def convertMempoolMap(poolMap: TrieMap[SidechainTypes#SCP, MempoolMap#TxByNonceMap]) =
-    CollectionConverters.mapAsJavaMap(
-      poolMap.map { case (proposition, txByNonce) =>
-        new Address(proposition.bytes()) -> CollectionConverters.mapAsJavaMap(
-          txByNonce.mapValues(tx => new TxPoolTransaction(tx.asInstanceOf[EthereumTransaction]))
-        )
-      }
-    )
-
   @RpcMethod("txpool_content")
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
-      convertMempoolMap(nodeView.pool.getExecutableTransactionsMap),
-      convertMempoolMap(nodeView.pool.getNonExecutableTransactionsMap)
+      nodeView.pool.getExecutableTransactionsMap,
+      nodeView.pool.getNonExecutableTransactionsMap
     )
+  }
+
+  @RpcMethod("txpool_contentFrom")
+  def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
+    new TxPoolContentFrom(
+      nodeView.pool.getExecutableTransactionsMapFrom(from),
+      nodeView.pool.getNonExecutableTransactionsMapFrom(from)
+    )
+  }
+
+  @RpcMethod("txpool_inspect")
+  def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
+    new TxPoolInspect(
+      nodeView.pool.getExecutableTransactionsMapInspect,
+      nodeView.pool.getNonExecutableTransactionsMapInspect)
   }
 
   @RpcMethod("eth_getBlockByNumber")
@@ -623,7 +627,7 @@ class EthService(
             // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
             // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
             // This does not impact our case since the CREATE2 result would not be part of the receipt.
-            Option(generateContractAddress(ethTx.getFrom.address, ethTx.getNonce))
+            Option(generateContractAddress(ethTx.getFrom.address(), ethTx.getNonce))
           } else {
             // otherwise nothing
             None

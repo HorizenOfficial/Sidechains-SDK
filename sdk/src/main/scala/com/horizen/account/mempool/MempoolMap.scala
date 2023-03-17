@@ -1,10 +1,12 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.api.rpc.types.EthereumTransactionView
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import com.horizen.account.transaction.EthereumTransaction
+import io.horizen.evm.Address
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
@@ -146,9 +148,10 @@ class MempoolMap(
 
   def mempoolTransactions(executable: Boolean): Iterable[ModifierId] = {
     val txsList = new ListBuffer[ModifierId]
-    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
-    if (executable) mempoolIdsMap = executableTxs
-    else mempoolIdsMap = nonExecutableTxs
+    val mempoolIdsMap = if (executable)
+      executableTxs
+    else
+      nonExecutableTxs
     for ((_, v) <- mempoolIdsMap) {
       for ((_, innerV) <- v) {
         txsList += innerV
@@ -157,19 +160,68 @@ class MempoolMap(
     txsList
   }
 
-  def mempoolTransactionsMap(executable: Boolean): TrieMap[SidechainTypes#SCP, TxByNonceMap] = {
-    val txsMap = TrieMap.empty[SidechainTypes#SCP, TxByNonceMap]
-    var mempoolIdsMap = TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
-    if (executable) mempoolIdsMap = executableTxs
-    else mempoolIdsMap = nonExecutableTxs
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable EthereumTransaction
+  // ordered by address and nonce
+  def mempoolTransactionsMap(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]] = {
+    val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, EthereumTransactionView]]
+    val mempoolIdsMap = if (executable)
+      executableTxs
+    else
+      nonExecutableTxs
     for ((from, nonceIdsMap) <- mempoolIdsMap) {
-      val nonceTxsMap: mutable.TreeMap[BigInteger, SidechainTypes#SCAT] = new mutable.TreeMap[BigInteger, SidechainTypes#SCAT]()
-      for ((txNonce, txId) <- nonceIdsMap) {
-        nonceTxsMap.put(txNonce, getTransaction(txId).get)
-      }
-      txsMap.put(from,nonceTxsMap)
+      txsMap.put(from.asInstanceOf[AddressProposition].address(), retrieveTxPoolByNonceMap(nonceIdsMap))
     }
     txsMap
+  }
+
+  // method used by the txpool namespace rpc methods, it retrieves a map of executable or non-executable EthereumTransaction
+  // ordered by nonce filtering by from address
+  def mempoolTransactionsMapFrom(executable: Boolean, fromAddress: Address): mutable.SortedMap[BigInteger, EthereumTransactionView] = {
+    val mempoolIdByNonceMapFrom = if (executable)
+      executableTxs.get(new AddressProposition(fromAddress))
+    else
+      nonExecutableTxs.get(new AddressProposition(fromAddress))
+    mempoolIdByNonceMapFrom match {
+      case Some(map) => retrieveTxPoolByNonceMap(map)
+      case None => mutable.SortedMap.empty[BigInteger, EthereumTransactionView]
+    }
+  }
+
+  private def retrieveTxPoolByNonceMap(txIdByNonceMap: TxIdByNonceMap): mutable.SortedMap[BigInteger, EthereumTransactionView] = {
+    val txPoolByNonceMap: mutable.SortedMap[BigInteger, EthereumTransactionView] = new mutable.TreeMap[BigInteger, EthereumTransactionView]()
+    for ((txNonce, txId) <- txIdByNonceMap) {
+      val tx = getTransaction(txId).get
+      txPoolByNonceMap.put(txNonce, new EthereumTransactionView(tx.asInstanceOf[EthereumTransaction]))
+    }
+    txPoolByNonceMap
+  }
+
+  // method used by the txpool_inspect rpc method, it retrieves a map of transaction details ordered by address and nonce
+  def mempoolTransactionsMapInspect(executable: Boolean): TrieMap[Address, mutable.SortedMap[BigInteger, String]] = {
+    val txsMap = TrieMap.empty[Address, mutable.SortedMap[BigInteger, String]]
+    val mempoolIdsMap = if (executable)
+      executableTxs
+    else
+      nonExecutableTxs
+    for ((from, nonceIdsMap) <- mempoolIdsMap) {
+      txsMap.put(from.asInstanceOf[AddressProposition].address(), retrieveTxInspectByNonceMap(nonceIdsMap))
+    }
+    txsMap
+  }
+
+  // format the transaction details for txpool_inspect
+  private def retrieveTxInspectByNonceMap(txIdByNonceMap: TxIdByNonceMap): mutable.SortedMap[BigInteger, String] = {
+    val txPoolByNonceMap: mutable.SortedMap[BigInteger, String] = new mutable.TreeMap[BigInteger, String]()
+    for ((txNonce, txId) <- txIdByNonceMap) {
+      val tx = getTransaction(txId).get
+      if (tx.getTo.isPresent) {
+        val toStr = tx.getTo.get().asInstanceOf[AddressProposition].address().toString
+        txPoolByNonceMap.put(txNonce, s"${toStr}: ${tx.getValue} wei + ${tx.getGasLimit} gas × ${tx.getGasPrice} wei")
+      } else {
+        txPoolByNonceMap.put(txNonce, s"contract creation: ${tx.getValue} wei + ${tx.getGasLimit} gas × ${tx.getGasPrice} wei")
+      }
+    }
+    txPoolByNonceMap
   }
 
   /**
