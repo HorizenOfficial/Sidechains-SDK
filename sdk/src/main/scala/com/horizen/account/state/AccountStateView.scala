@@ -97,4 +97,7 @@ class AccountStateView(
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+
+  def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
+    metadataStorageView.doesScTxCommitmentTreeRootExist(hash)
 }

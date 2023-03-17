@@ -112,10 +112,10 @@ class AccountStateMetadataStorageViewTest
     assertTrue("receipts should not be in storage", stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).isEmpty)
 
     val sidechainTxCommitmentTreeRootHash = "sidechainTxCommitmentTreeRootHash".getBytes
-
     assertFalse(storageView.doesScTxCommitmentTreeRootExist(sidechainTxCommitmentTreeRootHash))
 
     storageView.addSidechainTxCommitmentTreeRootHash(sidechainTxCommitmentTreeRootHash)
+    assertTrue(storageView.getScTxCommitmentTreeRootHashes.contains(sidechainTxCommitmentTreeRootHash))
 
     storageView.commit(bytesToVersion(getVersion.data()))
 
@@ -142,7 +142,6 @@ class AccountStateMetadataStorageViewTest
     assertEquals("Wrong receipts in view after commit", receipt1.blockNumber, storageView.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
     assertEquals("Wrong receipts in storage after commit", receipt1.blockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
 
-    assertTrue(storageView.getScTxCommitmentTreeRootHashes.contains(sidechainTxCommitmentTreeRootHash))
     assertTrue(storageView.doesScTxCommitmentTreeRootExist(sidechainTxCommitmentTreeRootHash))
   }
 

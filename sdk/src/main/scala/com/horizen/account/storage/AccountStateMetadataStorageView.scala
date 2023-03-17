@@ -445,9 +445,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot: Array[Byte]) =
     calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeRoot))
 
-  private[horizen] def getCrossChainMessageHashFromRedeemMessageKey(ccMsgHash: CrossChainMessageHash) =
-    calculateKey(Bytes.concat("ccMessageHashFromRedeemMessage".getBytes, ccMsgHash.bytes))
-
   private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes)
 
   private [horizen] val lastCertificateSidechainBlockIdKey: ByteArrayWrapper = calculateKey("lastCertificateSidechainBlockId".getBytes)

@@ -14,6 +14,7 @@ trait CrossChainRedeemMessageProvider {
 }
 
 abstract class AbstractCrossChainRedeemMessageProcessor(
+                                                         accountStateView: AccountStateView,
                                                          networkParams: NetworkParams,
                                                          sc2scCircuit: Sc2scCircuit
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
@@ -65,7 +66,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     validateDoubleMessageRedeem(ccMsg, view)
 
     // Validate scCommitmentTreeRoot and nextScCommitmentTreeRoot exists
-    validateScCommitmentTreeRoot(ccRedeemMgs.scCommitmentTreeRoot, ccRedeemMgs.nextScCommitmentTreeRoot, view)
+    validateScCommitmentTreeRoot(ccRedeemMgs.scCommitmentTreeRoot, ccRedeemMgs.nextScCommitmentTreeRoot)
 
     // Validate Proof
     validateProof(ccRedeemMgs)
@@ -87,13 +88,12 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateScCommitmentTreeRoot(
                                             scCommitmentTreeRoot: Array[Byte],
-                                            nextScCommitmentTreeRoot: Array[Byte],
-                                            view: BaseAccountStateView): Unit = {
-    if (view.getAccountStorage(contractAddress, scCommitmentTreeRoot).isEmpty) {
+                                            nextScCommitmentTreeRoot: Array[Byte]): Unit = {
+    if (!accountStateView.doesScTxCommitmentTreeRootExist(scCommitmentTreeRoot)) {
       throw new IllegalArgumentException(s"Sidechain commitment tree root `${BytesUtils.toHexString(scCommitmentTreeRoot)}` does not exist")
     }
 
-    if (view.getAccountStorage(contractAddress, nextScCommitmentTreeRoot).isEmpty) {
+    if (!accountStateView.doesScTxCommitmentTreeRootExist(nextScCommitmentTreeRoot)) {
       throw new IllegalArgumentException(s"Sidechain next commitment tree root `${BytesUtils.toHexString(nextScCommitmentTreeRoot)}` does not exist")
     }
   }
