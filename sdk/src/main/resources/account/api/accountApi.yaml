@@ -42,6 +42,8 @@ paths:
                 blockId:
                   description: ID of block to return
                   type: string
+                  minLength: 64
+                  maxLength: 64
       responses:
         '200':
           description: successful operation
@@ -1505,6 +1507,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - privKey
               properties:
                 privKey:
                   description: The secret to import
@@ -1545,6 +1549,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - publickey
               properties:
                 publickey:
                   description: The proposition corresponding to the secret to export
@@ -1585,6 +1591,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - path
               properties:
                 path:
                   description: Path to the file containing the secrets
@@ -1622,6 +1630,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - path
               properties:
                 path:
                   description: Path where the files will be created
@@ -2193,6 +2203,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - hash
               properties:
                 hash:
                   type: string
@@ -2254,7 +2266,7 @@ paths:
       tags:
         - submitter
       summary: calculates and returns signing key messageToSign to be used to key rotation proof
-      description: Accepts public key and returns message to sign
+      description: Accepts public key and returns message to sign.
       operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
         content:
@@ -2271,6 +2283,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
       responses:
         '200':
@@ -2318,6 +2331,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
       responses:
         '200':
@@ -2348,7 +2362,8 @@ paths:
       tags:
         - submitter
       summary: returns certifiers keys
-      description: Searches for the certifiers keys data actual at the end of the given withdrawal epoch
+      description: "Searches for the certifiers keys data actual at the end of the given withdrawal epoch. In case\n
+       withdrawalEpoch == -1, then it returns the genesis set of certifiers keys from params."
       operationId: getCertifiersKeys
       requestBody:
         content:
@@ -2361,6 +2376,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: -1
                   description: Withdrawal epoch number
       responses:
         '200':
@@ -2393,7 +2409,8 @@ paths:
       tags:
         - submitter
       summary: returns key rotation proof
-      description: Returns key rotation proof (key type, index of key, new key value and 2 signatures proving key rotation) if type of circuit is NaiveThresholdSignatureCircuitWithKeyRotation
+      description: "Returns key rotation proof (key type, index of key, new key value and 2 signatures proving key\n
+       rotation) if type of circuit is NaiveThresholdSignatureCircuitWithKeyRotation."
       operationId: getKeyRotationProof
       requestBody:
         content:
@@ -2408,6 +2425,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
                 indexOfKey:
                   type: integer

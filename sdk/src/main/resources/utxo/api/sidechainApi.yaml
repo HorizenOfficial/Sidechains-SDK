@@ -20,6 +20,8 @@ tags:
     description: Sidechain submitter operations
   - name: csw
     description: Ceased Sidechain Withdrawal operations
+  - name: backup
+    description: Sidechain backup operations
 
 paths:
 
@@ -42,6 +44,8 @@ paths:
                 blockId:
                   description: ID of block to return
                   type: string
+                  minLength: 64
+                  maxLength: 64
       responses:
         '200':
           description: successful operation
@@ -334,6 +338,8 @@ paths:
       summary: stops forging
       description: Stops forging
       operationId: stopForging
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -439,7 +445,7 @@ paths:
                         type: boolean
                         description: True or False depending if forging is enabled
                     error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
           content:
@@ -453,7 +459,7 @@ paths:
       tags:
         - transaction
       summary: finds all transactions in memory pool
-      description: Returns an array of transaction ids if format=false, otherwise a JSONObject for each transaction
+      description: Returns an array of transaction ids if format=false, otherwise a JSONObject for each transaction.
       operationId: getMemoryPool
       requestBody:
         content:
@@ -496,10 +502,12 @@ paths:
     post:
       tags:
         - transaction
-      summary: finds transaction in memory pool, or in a block or in full blockchain
+      summary: finds transaction by id in memory pool or in the block referenced by blockHash.
       description:  "All the possible behaviours are:\n
       1) blockHash set -> Search in block referenced by blockHash\n
-      2) blockHash not set -> Search in memory pool"
+      2) blockHash not set -> Search in memory pool.\n
+      If format is set to True, a JSON representation of transaction is returned, otherwise it returns the transaction\n
+      serialized as a hex string. Default value is False."
       operationId: findById
       requestBody:
         content:
@@ -585,8 +593,11 @@ paths:
       tags:
         - transaction
       summary: creates and signs a Sidechain core transaction
-      description: Creates and signs a Sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      description: "Creates and signs a Sidechain core transaction, specifying inputs and outputs. Return the new\n
+       transaction as a hex string if format = false, otherwise its JSON representation."
       operationId: createCoreTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -648,6 +659,7 @@ paths:
                         type: string
                       blockSignPublicKey:
                         type: string
+                        default: same as publicKey
                       vrfPubKey:
                         type: string
                       value:
@@ -685,8 +697,11 @@ paths:
       tags:
         - transaction
       summary: creates and signs a Sidechain core transaction
-      description: Creates and signs a Sidechain core transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      description: "Creates and signs a Sidechain core transaction, specifying outputs and fee. Return the new\n
+       transaction as a hex string if format = false, otherwise its JSON representation."
       operationId: createCoreTransactionSimplified
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -738,6 +753,7 @@ paths:
                         type: string
                       blockSignPublicKey:
                         type: string
+                        default: same as publicKey
                       vrfPubKey:
                         type: string
                       value:
@@ -746,8 +762,10 @@ paths:
                 fee:
                   type: integer
                   format: int64
+                  minimum: 0
                 format:
                   type: boolean
+                  default: false
       responses:
         '200':
           description: successful operation
@@ -777,18 +795,23 @@ paths:
       tags:
         - transaction
       summary: sends a transaction
-      description: Creates and signs a regular transaction, specifying outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      description: "Creates and signs a regular transaction, specifying outputs and fee.\n
+       If automaticSend is set to true, it validates and sends the transaction, then returns its id. 
+       Otherwise, it returns the new transaction as a hex string if format = false, otherwise its JSON representation."
       operationId: sendCoinsToAddress
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
               required:
-                - transactionOutputs
+                - outputs
               properties:
                 outputs:
                   type: array
+                  minItems: 1
                   items:
                     type: object
                     required:
@@ -800,9 +823,17 @@ paths:
                       value:
                         type: integer
                         format: int64
+                automaticSend:
+                  type: boolean
+                  default: true
+                format:
+                  type: boolean
+                  default: false
                 fee:
                   type: integer
                   format: int64
+                  minimum: 0
+                  default: 0
       responses:
         '200':
           description: successful operation
@@ -815,6 +846,10 @@ paths:
                     type: object
                     properties:
                       transactionId:
+                        type: string
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -830,8 +865,11 @@ paths:
       tags:
         - transaction
       summary: sends a transaction
-      description: Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      description: "Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validates and\n
+       sends the transaction. Returns the id of the transaction."
       operationId: withdrawCoins
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -842,6 +880,7 @@ paths:
               properties:
                 outputs:
                   type: array
+                  minItems: 1
                   items:
                     type: object
                     required:
@@ -857,6 +896,8 @@ paths:
                 fee:
                   type: integer
                   format: int64
+                  minimum: 0
+                  default: 0
       responses:
         '200':
           description: successful operation
@@ -884,8 +925,11 @@ paths:
       tags:
         - transaction
       summary: creates transaction with forger stake
-      description: Creates and signs a Sidechain core transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      description: "Creates and signs a Sidechain core transaction, specifying forger stake outputs and fee. Then\n
+       validates and sends the transaction. Returns the id of the transaction."
       operationId: makeForgerStake
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -896,6 +940,7 @@ paths:
               properties:
                 outputs:
                   type: array
+                  minItems: 1
                   items:
                     type: object
                     required:
@@ -915,6 +960,8 @@ paths:
                 fee:
                   type: integer
                   format: int64
+                  minimum: 0
+                  default: 0
       responses:
         '200':
           description: successful operation
@@ -942,8 +989,11 @@ paths:
       tags:
         - transaction
       summary: creates and signs sidechain core transaction
-      description: Creates and signs sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      description: "Creates and signs sidechain core transaction, specifying inputs and outputs. Returns the new\n
+       transaction as a hex string if format = false, otherwise its JSON representation."
       operationId: spendForgingStake
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -956,6 +1006,7 @@ paths:
               properties:
                 transactionInputs:
                   type: array
+                  minItems: 1
                   items:
                     type: object
                     required:
@@ -1027,8 +1078,12 @@ paths:
       tags:
         - transaction
       summary: creates and signs sidechain transaction for key rotation
-      description: Creates and signs sidechain transaction for signers or masters certificate submitter key rotation
+      description: "Creates and signs sidechain transaction for signers or masters certificate submitter key rotation.\n
+      If automaticSend is set to true, it validates and sends the transaction, then returns its id. 
+       Otherwise, it returns the new transaction as a hex string if format = false, otherwise its JSON representation."
       operationId: createKeyRotationTransaction
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1081,15 +1136,18 @@ paths:
                 format:
                   type: boolean
                   nullable: true
+                  default: false
                   description: Optional field - true if format, false if non format
                 automaticSend:
                   type: boolean
                   nullable: true
+                  default: true
                   description: Optional field - true if automatic, false if not automatic
                 fee:
                   type: integer
                   format: int64
                   nullable: true
+                  default: 0
                   description: Optional field for transaction fee
       responses:
         '200':
@@ -1102,6 +1160,8 @@ paths:
                   result:
                     type: object
                     properties:
+                      transactionId:
+                        type: string
                       transaction:
                         $ref: '#/components/schemas/Transaction'
                       transactionBytes:
@@ -1120,8 +1180,11 @@ paths:
       tags:
         - transaction
       summary: sends a transaction
-      description: Validates and sends a transaction, given its serialization as input. Then return the id of the transaction
+      description: "Validates and sends a transaction, given its serialization as input. Then returns the id of the\n
+        transaction."
       operationId: sendRawTransaction
+      security:
+        - basicAuth: [ ]
       requestBody:
         content:
           application/json:
@@ -1154,6 +1217,136 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /transaction/createOpenStakeTransaction:
+    post:
+      tags:
+        - transaction
+      summary: Creates a transaction for voting to open the restrict forgers list
+      description: "Creates a transaction for voting to open the restrict forgers list. If automaticSend is set to\n
+       true, it validates and sends the transaction, then returns its id. Otherwise, it returns the new transaction\n
+        as a hex string if format = false, otherwise its JSON representation."
+      operationId: createOpenStakeTransaction
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionInput
+                - regularOutputProposition
+                - forgerIndex
+              properties:
+                transactionInput:
+                  type: object
+                  required:
+                    - boxId
+                  properties:
+                    boxId:
+                      type: string
+                regularOutputProposition:
+                  type: string
+                forgerIndex:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                format:
+                  type: boolean
+                  default: false
+                automaticSend:
+                  type: boolean
+                  default: true
+                fee:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                    error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/createOpenStakeTransactionSimplified:
+    post:
+      tags:
+        - transaction
+      summary: Creates a transaction for voting to open the restrict forgers list
+      description: "Creates a transaction for voting to open the restrict forgers list. If automaticSend is set to\n
+       true, it validates and sends the transaction, then returns its id. Otherwise, it returns the new transaction\n
+        as a hex string if format = false, otherwise its JSON representation."
+      operationId: createOpenStakeTransactionSimplified
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - forgerProposition
+                - forgerIndex
+              properties:
+                forgerProposition:
+                  type: string
+                forgerIndex:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                format:
+                  type: boolean
+                  default: false
+                automaticSend:
+                  type: boolean
+                  default: true
+                fee:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                    error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Sidechain wallet operations
   /wallet/allBoxes:
     post:
@@ -1162,6 +1355,8 @@ paths:
       summary: finds all boxes
       description: Returns all boxes, excluding those which ids are included in excludeBoxIds list
       operationId: getAllBoxes
+      security:
+        - basicAuth: [ ]
       requestBody:
         content:
           application/json:
@@ -1206,11 +1401,8 @@ paths:
       summary: the global balance of coins boxes
       description: Returns the global balance for all types of coins boxes
       operationId: getCoinsBalance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+      security:
+        - basicAuth: [ ]
       responses:
         '200':
           description: successful operation
@@ -1241,11 +1433,15 @@ paths:
       summary: the total balance of boxes of given type
       description: Returns the global balance for given type of boxes
       operationId: getBalance
+      security:
+        - basicAuth: [ ]
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - boxType
               properties:
                 boxType:
                   description: Filter balance for given box type
@@ -1280,6 +1476,8 @@ paths:
       summary: new 25519 secret
       description: Creates new secret and returns corresponding address (public key)
       operationId: createPrivateKey25519
+      security:
+        - basicAuth: [ ]
       responses:
         '200':
           description: successful operation
@@ -1309,6 +1507,8 @@ paths:
       summary: new Vrf secret
       description: Creates new Vrf secret and returns corresponding public key
       operationId: createVrfSecret
+      security:
+        - basicAuth: [ ]
       responses:
         '200':
           description: successful operation
@@ -1338,6 +1538,8 @@ paths:
       summary: finds all public keys
       description: Returns the list of all wallet’s propositions (public keys)
       operationId: getPropositions
+      security:
+        - basicAuth: [ ]
       requestBody:
         content:
           application/json:
@@ -1375,14 +1577,18 @@ paths:
     post:
       tags:
         - wallet
-      summary: Import a secret inside the wallet
-      description: Import a secret and consequentially the corresponding proposition inside the wallet
+      summary: Imports a secret inside the wallet
+      description: Imports a secret (and consequentially the corresponding proposition) inside the wallet
       operationId: importSecret
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - privKey
               properties:
                 privKey:
                   description: The secret to import
@@ -1416,11 +1622,15 @@ paths:
       summary: Returns the secret corresponding to a proposition.
       description: Returns the secret corresponding to a proposition (taken from the wallet).
       operationId: exportSecret
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - publickey
               properties:
                 publickey:
                   description: The proposition corresponding to the secret to export
@@ -1451,17 +1661,21 @@ paths:
     post:
       tags:
         - wallet
-      summary: Import all the secrets taken from a file.
-      description: Import all the secrets stored to a file. Each line of the file must be in the format "SECRET" + " " + "PROPOSITION"
+      summary: Imports all the secrets taken from a file.
+      description: Imports all the secrets stored to a file. The file format should be equal to the file format generated by the endpoint dumpSecrets. (SECRETS + " " + PUBLICKEY).
       operationId: importSecrets
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - path
               properties:
                 path:
-                  description: Path to the file contaning the secrets
+                  description: Path to the file containing the secrets
                   type: string
       responses:
         '200':
@@ -1486,14 +1700,18 @@ paths:
     post:
       tags:
         - wallet
-      summary: Export all the secrets taken from a file.
-      description: Export all the secrets stored to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
+      summary: Saves all the wallet secrets to a file.
+      description: Saves all the secrets stored in the wallet to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
       operationId: dumpSecrets
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - path
               properties:
                 path:
                   description: Path where the files will be created
@@ -1528,6 +1746,8 @@ paths:
       summary: finds all peers node
       description: Returns the list of all sidechain node peers
       operationId: allPeers
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1559,6 +1779,8 @@ paths:
       summary: connects to a node
       description: Sends the request to connect to a sidechain node
       operationId: connect
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -1599,9 +1821,11 @@ paths:
     post:
       tags:
         - node
-      summary: find all connected peers node
+      summary: finds all connected peers node
       description: Returns the list of all connected sidechain node peers
       operationId: connectedPeers
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1656,9 +1880,11 @@ paths:
     post:
       tags:
         - node
-      summary: stop the node
-      description: stop the node in a gracefully way
+      summary: stops the node
+      description: stops the node in a gracefully way
       operationId: stop
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -1680,7 +1906,7 @@ paths:
     post:
       tags:
         - node
-      summary: find versions for all node storages
+      summary: finds versions for all node storages
       description: Returns the list of all node storage versions
       operationId: getNodeStorageVersions
       responses:
@@ -1736,12 +1962,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /node/disconnect:
+    post:
+      tags:
+        - node
+      summary: Disconnects from a node
+      description: Sends the request to disconnects from a sidechain node.
+      operationId: disconnect
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - host
+                - port
+              properties:
+                host:
+                  type: string
+                port:
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      disconnectedFrom:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
       tags:
         - mainchain
-      summary: finds the best MC block header which has already been included in a SC block
+      summary: Finds the best MC block header which has already been included in a SC block
       description: "Returns the best MC block header which has already been included in a SC block. Returns:\n
         1) Mainchain block reference hash with the most height; \n
         2) Its height in mainchain; \n
@@ -1760,8 +2031,6 @@ paths:
                     properties:
                       blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
-                      blockHex:
-                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1791,8 +2060,6 @@ paths:
                     properties:
                       blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
-                      blockHex:
-                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1807,7 +2074,8 @@ paths:
       tags:
         - mainchain
       summary: finds Mainchain Block reference by its hash or by its height
-      description: Finds Mainchain Block reference by its hash or by its height
+      description: "Finds Mainchain Block reference by its hash or by its height. \n
+      If format input parameter is set to false, returns Mainchain Block reference as hex string"
       operationId: blockReferenceInfoBy
       requestBody:
         content:
@@ -1834,7 +2102,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blocReferencekInfo:
+                      blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
                       blockHex:
                         type: string
@@ -1852,7 +2120,10 @@ paths:
       tags:
         - mainchain
       summary: finds Mainchain Block by its hash
-      description: Finds Mainchain Block by its hash
+      description: "Returns:\n
+                  1)Mainchain block reference (format = False => Raw, format = True => JSON)\n
+                  2)Its height in Mainchain\n
+                  3)Sidechain block id which contains this Mainchain block reference"
       operationId: blockReferenceByHash
       requestBody:
         content:
@@ -1882,6 +2153,45 @@ paths:
                         $ref: '#/components/schemas/MainchainBlock'
                       blockHex:
                         type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/mainchainHeaderInfoByHash:
+    post:
+      tags:
+        - mainchain
+      summary: finds Mainchain Header Block by its hash
+      description: Returns Mainchain Header Block by its hash
+      operationId: mainchainHeaderInfoByHash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hash
+              properties:
+                hash:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      mainchainHeaderInfo:
+                        $ref: '#/components/schemas/MainchainHeaderInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1926,8 +2236,8 @@ paths:
     post:
       tags:
         - submitter
-      summary: calculate and return signing key messageToSign to be used to key rotation proof
-      description: Accepts public key and returns message to sign
+      summary: calculates and returns signing key messageToSign to be used to key rotation proof
+      description: Accepts public key and returns message to sign.
       operationId: getKeyRotationMessageToSignForSigningKey
       requestBody:
         content:
@@ -1944,6 +2254,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
       responses:
         '200':
@@ -1958,6 +2269,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
+                        format: byte
                         description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -1972,7 +2284,7 @@ paths:
     post:
       tags:
         - submitter
-      summary: calculate and return master key messageToSign to be used to key rotation proof
+      summary: calculates and returns master key messageToSign to be used to key rotation proof
       description: Accepts public key and returns message to sign
       operationId: getKeyRotationMessageToSignForMasterKey
       requestBody:
@@ -1990,6 +2302,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
       responses:
         '200':
@@ -2004,6 +2317,7 @@ paths:
                     properties:
                       keyRotationMessageToSign:
                         type: string
+                        format: byte
                         description: Calculated messageToSign to be used to key rotation proof
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -2019,7 +2333,8 @@ paths:
       tags:
         - submitter
       summary: returns certifiers keys
-      description: Searches for the certifiers keys data actual at the end of the given withdrawal epoch
+      description: "Searches for the certifiers keys data actual at the end of the given withdrawal epoch. In case\n
+       withdrawalEpoch == -1, then it returns the genesis set of certifiers keys from params."
       operationId: getCertifiersKeys
       requestBody:
         content:
@@ -2032,6 +2347,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: -1
                   description: Withdrawal epoch number
       responses:
         '200':
@@ -2047,6 +2363,9 @@ paths:
                       certifiersKeys:
                         $ref: '#/components/schemas/CertifiersKeys'
                         description: Signers and masters certificate submitter keys
+                      keysRootHash:
+                        type: string
+                        format: byte
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -2061,7 +2380,8 @@ paths:
       tags:
         - submitter
       summary: returns key rotation proof
-      description: Returns key rotation proof (key type, index of key, new key value and 2 signatures proving key rotation) if type of circuit is NaiveThresholdSignatureCircuitWithKeyRotation
+      description: "Returns key rotation proof (key type, index of key, new key value and 2 signatures proving key\n
+       rotation) if type of circuit is NaiveThresholdSignatureCircuitWithKeyRotation."
       operationId: getKeyRotationProof
       requestBody:
         content:
@@ -2076,6 +2396,7 @@ paths:
                 withdrawalEpoch:
                   type: integer
                   format: int32
+                  minimum: 0
                   description: Number of withdrawal epoch
                 indexOfKey:
                   type: integer
@@ -2117,7 +2438,8 @@ paths:
       tags:
         - submitter
       summary: returns if certificate submitter is enabled
-      description: Returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
+      description: "Returns if certificate submitter is enabled, so it will automatically try to create and send\n
+        certificates during the submission window."
       operationId: isCertificateSubmitterEnabled
       responses:
         '200':
@@ -2149,6 +2471,8 @@ paths:
       summary: enables automatic certificate submission
       description: Enables automatic certificate submission
       operationId: enableCertificateSubmitter
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2175,6 +2499,8 @@ paths:
       summary: disables automatic certificate submission
       description: Disables automatic certificate submission
       operationId: disableCertificateSubmitter
+      security:
+        - basicAuth: [ ]
       responses:
         '200':
           description: successful operation
@@ -2188,18 +2514,18 @@ paths:
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
+           description: any kind of http error
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/SidechainApiError'
 
   /submitter/isCertificateSignerEnabled:
     post:
       tags:
         - submitter
       summary: returns if certificate signing option is enabled
-      description: Returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
+      description: Returns if certificate signing is enabled.
       operationId: isCertificateSignerEnabled
       responses:
         '200':
@@ -2231,6 +2557,8 @@ paths:
       summary: enables automatic certificate signing
       description: Enables automatic certificate signing
       operationId: enableCertificateSigner
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2257,6 +2585,8 @@ paths:
       summary: disables automatic certificate signing
       description: Disables automatic certificate signing
       operationId: disableCertificateSigner
+      security:
+        - basicAuth: []
       responses:
         '200':
           description: successful operation
@@ -2344,6 +2674,8 @@ paths:
       summary: generates csw proof
       description: Tries to generate csw proof and returns current status of this operation
       operationId: generateCswProof
+      security:
+        - basicAuth: []
       requestBody:
         content:
           application/json:
@@ -2351,9 +2683,12 @@ paths:
               type: object
               required:
                 - boxId
+                - receiverAddress
               properties:
                 boxId:
                   type: string
+                  minLength: 64
+                  maxLength: 64
                   description: coin box id in hex
                 receiverAddress:
                   type: string
@@ -2401,6 +2736,8 @@ paths:
               properties:
                 boxId:
                   type: string
+                  minLength: 64
+                  maxLength: 64
                   description: coin box id in hex
       responses:
         '200':
@@ -2472,6 +2809,8 @@ paths:
               properties:
                 boxId:
                   type: string
+                  minLength: 64
+                  maxLength: 64
                   description: coin box id in hex
       responses:
         '200':
@@ -2497,6 +2836,12 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
 components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+
   schemas:
     # Objects
     SidechainApiError:
@@ -2617,14 +2962,16 @@ components:
       properties:
         id:
           type: string
-        fee:
+        modifierTypeId:
           type: integer
-          format: int64
-        timestamp:
+        version:
+          type: integer
+        fee:
           type: integer
           format: int64
         mc2scTransactionsMerkleRootHash:
           type: string
+          format: byte
         newBoxes:
           type: array
           items:
@@ -2633,12 +2980,21 @@ components:
           type: string
         isCustom:
           type: boolean
+        unlockers:
+          type: array
+          items:
+            type: object
+          description: Always empty
+        size:
+          type: integer
+          format: int64
 
     Box:
       type: object
       properties:
         id:
           type: string
+          format: byte
         proposition:
           $ref: '#/components/schemas/Proposition'
         value:
@@ -2682,6 +3038,8 @@ components:
       properties:
         id:
           type: string
+        modifierTypeId:
+          type: integer
         newBoxes:
           type: array
           items:
@@ -2813,8 +3171,6 @@ components:
           type: string
           format: byte
 
-
-    #ST
     VrfProof:
       type: object
       properties:
@@ -2835,6 +3191,8 @@ components:
         timestamp:
           type: integer
           format: int64
+        semanticValidity:
+          type: string
         mainchainHeaderBaseInfo:
           type: array
           items:
@@ -2974,16 +3332,22 @@ components:
           type: string
         amount:
           type: integer
+          format: int64
         scId:
           type: string
+          format: byte
         nullifier:
           type: string
+          format: byte
         proofInfo:
           $ref: '#/components/schemas/CswProofInfo'
         activeCertData:
           type: string
+          format: byte
+          nullable: true
         ceasingCumScTxCommTree:
           type: string
+          format: byte
 
     CswProofInfo:
       type: object
@@ -2992,8 +3356,11 @@ components:
           type: string
         scProof:
           type: string
+          format: byte
+          nullable: true
         receiverAddress:
           type: string
+          nullable: true
 
     MainchainHeaderBaseInfo:
       type: object
@@ -3001,6 +3368,24 @@ components:
         hash:
           type: string
           format: byte
+        cumulativeCommTreeHash:
+          type: string
+          format: byte
+
+    MainchainHeaderInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+          format: byte
+        parentHash:
+          type: string
+          format: byte
+        height:
+          type: integer
+          format: int32
+        sidechainBlockId:
+          type: string
         cumulativeCommTreeHash:
           type: string
           format: byte
