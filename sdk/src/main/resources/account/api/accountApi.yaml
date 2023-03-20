@@ -29,7 +29,7 @@ paths:
       tags:
         - block
       summary: finds block by id
-      description: Returns a single block and its height
+      description: Returns a single block and its height.
       operationId: getBlock
       requestBody:
         content:
@@ -76,7 +76,7 @@ paths:
       tags:
         - block
       summary: finds last block ids
-      description: Returns an array of number last sidechain block ids
+      description: Returns an array of number last sidechain block ids.
       operationId: getLastBlockIds
       requestBody:
         content:
@@ -90,6 +90,7 @@ paths:
                   description: The number of block ids to return
                   type: integer
                   format: int32
+                  minimum: 1
       responses:
         '200':
           description: successful operation
@@ -119,7 +120,7 @@ paths:
       tags:
         - block
       summary: finds a block id by height
-      description: Returns a sidechain block Id by its height in a blockchain
+      description: Returns a sidechain block Id by its height in a blockchain.
       operationId: getBlockIdByHeight
       requestBody:
         content:
@@ -133,6 +134,7 @@ paths:
                   description: The height, in a blockchain, of the block to return
                   type: integer
                   format: int32
+                  minimum: 1
       responses:
         '200':
           description: successful operation
@@ -160,7 +162,7 @@ paths:
       tags:
         - block
       summary: finds the best block
-      description: Returns here best sidechain block id and height in active chain
+      description: Returns best sidechain block id and its height in active chain.
       operationId: getBestBlockInfo
       responses:
         '200':
@@ -192,7 +194,7 @@ paths:
       tags:
         - block
       summary: finds the chain height
-      description: Returns the height in active chain
+      description: Returns the height in active chain.
       operationId: getCurrentHeight
       responses:
         '200':
@@ -222,7 +224,7 @@ paths:
       tags:
         - block
       summary: finds SidechainBlockInfo by id
-      description: returns SidechainBlockInfo for a single block and if it is in the active chain
+      description: Returns SidechainBlockInfo for a single block and if it is in the active chain.
       operationId: findBlockInfoById
       requestBody:
         content:
@@ -235,6 +237,9 @@ paths:
                 blockId:
                   description: ID of block to return
                   type: string
+                  minLength: 64
+                  maxLength: 64
+
       responses:
         '200':
           description: successful operation
@@ -264,7 +269,7 @@ paths:
       tags:
         - block
       summary: starts forging
-      description: Starts forging
+      description: Starts forging.
       operationId: startForging
       security:
         - basicAuth: []
@@ -292,7 +297,7 @@ paths:
       tags:
         - block
       summary: stops forging
-      description: Stops forging
+      description: Stops forging.
       operationId: stopForging
       security:
         - basicAuth: []
@@ -372,7 +377,7 @@ paths:
       tags:
         - block
       summary: gets forging info
-      description: Gets forging info
+      description: Gets forging info.
       operationId: getForgingInfo
       responses:
         '200':
@@ -413,8 +418,8 @@ paths:
     post:
       tags:
         - block
-      summary: Return the list of forward transfers in a given block
-      description: Return the list of forward transfers in a given block
+      summary: returns the list of forward transfers in a given block
+      description: Returns the list of forward transfers in a given block.
       operationId: getForwardTransfers
       requestBody:
         content:
@@ -427,6 +432,8 @@ paths:
                 blockId:
                   description: Block ID
                   type: string
+                  minLength: 64
+                  maxLength: 64
       responses:
         '200':
           description: successful operation
@@ -455,8 +462,9 @@ paths:
     post:
       tags:
         - block
-      summary: Return the list of forgers fee payments paid after the given block was applied.
-      description: Return the list of forgers fee payments paid after the given block was applied. Return empty list in case no fee payments were paid.
+      summary: returns the list of forgers fee payments paid after the given block was applied
+      description: "Returns the list of forgers fee payments paid after the given block was applied. Returns empty list\n
+       in case no fee payments were paid."
       operationId: getFeePayments
       requestBody:
         content:
@@ -469,6 +477,8 @@ paths:
                 blockId:
                   description: Block ID
                   type: string
+                  minLength: 64
+                  maxLength: 64
       responses:
         '200':
           description: successful operation
@@ -480,7 +490,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      forwardTransfers:
+                      feePayments:
                         type: array
                         items:
                           $ref: '#/components/schemas/AccountPayment'
@@ -499,7 +509,7 @@ paths:
       tags:
         - transaction
       summary: finds all transactions in memory pool
-      description: Returns an array of transaction ids if format=false, otherwise a JSONObject for each transaction
+      description: Returns an array of transaction ids if format=false, otherwise a JSONObject for each transaction.
       operationId: getMemoryPool
       requestBody:
         content:
@@ -543,7 +553,7 @@ paths:
       tags:
         - transaction
       summary: a human readable representation of the transaction
-      description: Returns a JSON representation of a transaction given its byte serialization
+      description: Returns a JSON representation of a transaction given its byte serialization.
       operationId: decodeRawTransaction
       requestBody:
         content:
@@ -582,7 +592,8 @@ paths:
       tags:
         - transaction
       summary: sends a transaction
-      description: Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      description: "Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validates and\n
+       sends the transaction. Then returns the id of the transaction."
       operationId: withdrawCoins
       security:
         - basicAuth: []
@@ -629,7 +640,7 @@ paths:
       tags:
         - transaction
       summary: creates transaction with forger stake
-      description: creates transaction with forger stake
+      description: Creates transaction with forger stake.
       operationId: makeForgerStake
       security:
         - basicAuth: []
@@ -690,7 +701,7 @@ paths:
       tags:
         - transaction
       summary: creates and signs sidechain transaction for spending forging stake
-      description: creates and signs sidechain transaction for spending forging stake
+      description: Creates and signs sidechain transaction for spending forging stake.
       operationId: spendForgingStake
       security:
         - basicAuth: []
@@ -723,7 +734,7 @@ paths:
                     properties:
                       transactionId:
                         type: string
-                    error:
+                  error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
@@ -737,7 +748,7 @@ paths:
       tags:
         - transaction
       summary: creates and signs sidechain transaction for key rotation
-      description: Creates and signs sidechain transaction for signers or masters certificate submitter key rotation
+      description: Creates and signs sidechain transaction for signers or masters certificate submitter key rotation.
       operationId: createKeyRotationTransaction
       security:
         - basicAuth: []
@@ -825,7 +836,8 @@ paths:
       tags:
         - transaction
       summary: sends a transaction
-      description: Validates and sends a transaction, given its serialization as input. Then return the id of the transaction
+      description: "Validates and sends a transaction, given its serialization as input. Then returns the id of the\n
+       transaction."
       operationId: sendRawTransaction
       security:
         - basicAuth: []
@@ -865,8 +877,10 @@ paths:
     post:
       tags:
         - transaction
-      summary: Creates an unsigned legacy eth transaction
-      description: Creates an unsigned legacy eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
+      summary: creates an unsigned legacy eth transaction
+      description: "Creates an unsigned legacy eth transaction. If the optional input parameter 'outputRawBytes' is set\n
+       to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the\n
+        network and returns the transaction id."
       operationId: createLegacyTransaction
       security:
         - basicAuth: []
@@ -892,6 +906,7 @@ paths:
                   type: integer
                 value:
                   type: integer
+                  default: 0
                 data:
                   type: string
                 signature_v:
@@ -902,6 +917,7 @@ paths:
                   type: string
                 outputRawBytes:
                   type: boolean
+                  default: false
       responses:
         '200':
           description: successful operation
@@ -931,8 +947,10 @@ paths:
     post:
       tags:
         - transaction
-      summary: Creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction
-      description: Creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
+      summary: creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction
+      description: "Creates an unsigned EIP155 (Simple replay attack protection) legacy eth transaction. If the optional\n
+       input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it\n
+        signs it, sends the resulting tx to the network and returns the transaction id."
       operationId: createLegacyEIP155Transaction
       security:
         - basicAuth: []
@@ -958,6 +976,7 @@ paths:
                   type: integer
                 value:
                   type: integer
+                  default: 0
                 data:
                   type: string
                 signature_v:
@@ -968,6 +987,7 @@ paths:
                   type: string
                 outputRawBytes:
                   type: boolean
+                  default: false
       responses:
         '200':
           description: successful operation
@@ -997,8 +1017,10 @@ paths:
     post:
       tags:
         - transaction
-      summary: Creates an unsigned EIP1559 eth transaction
-      description: Creates an unsigned EIP1559 eth transaction. If the optional input parameter 'outputRawBytes' is set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the network and returns the transaction id.
+      summary: creates an unsigned EIP1559 eth transaction
+      description: "Creates an unsigned EIP1559 eth transaction. If the optional input parameter 'outputRawBytes' is\n
+       set to True, just returns the raw hex bytes representation, otherwise it signs it, sends the resulting tx to the\n
+        network and returns the transaction id."
       operationId: createEIP1559Transaction
       security:
         - basicAuth: []
@@ -1027,6 +1049,7 @@ paths:
                   type: integer
                 value:
                   type: integer
+                  default: 0
                 data:
                   type: string
                 signature_v:
@@ -1037,6 +1060,7 @@ paths:
                   type: string
                 outputRawBytes:
                   type: boolean
+                  default: false
       responses:
         '200':
           description: successful operation
@@ -1066,8 +1090,9 @@ paths:
     post:
       tags:
         - transaction
-      summary: Signs the input transaction using the input 'from' address
-      description: Decodes the input raw eth transaction bytes into an object, signs it using the input 'from' address and returns the resulting signed raw eth transaction bytes.
+      summary: signs the input transaction using the input 'from' address
+      description: "Decodes the input raw eth transaction bytes into an object, signs it using the input 'from' address\n
+       and returns the resulting signed raw eth transaction bytes."
       operationId: signTransaction
       security:
         - basicAuth: []
@@ -1083,7 +1108,7 @@ paths:
                   type: string
                   nullable: true
                 transactionBytes:
-                  type: integer
+                  type: string
       responses:
         '200':
           description: successful operation
@@ -1097,7 +1122,6 @@ paths:
                     properties:
                       transactionBytes:
                         type: string
-
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1111,8 +1135,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: Creates a transaction that deploys a smart contract
-      description: Creates a transaction that deploys a smart contract
+      summary: creates a transaction that deploys a smart contract
+      description: Creates a transaction that deploys a smart contract.
       operationId: createSmartContract
       security:
         - basicAuth: []
@@ -1145,7 +1169,6 @@ paths:
                     properties:
                       transactionId:
                         type: string
-
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1159,8 +1182,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: Returns all withdrawal requests for a specified epoch
-      description: Returns all withdrawal requests for a specified epoch
+      summary: returns all withdrawal requests for a specified epoch
+      description: Returns all withdrawal requests for a specified epoch.
       operationId: allWithdrawalRequests
       requestBody:
         content:
@@ -1197,6 +1220,9 @@ paths:
                                   format: byte
                             value:
                               type: integer
+                            valueInZennies:
+                              type: integer
+
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1210,8 +1236,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: Returns all forging stakes
-      description: Returns all forging stakes
+      summary: returns all forging stakes
+      description: Returns all forging stakes.
       operationId: allForgingStakes
       responses:
         '200':
@@ -1241,8 +1267,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: Returns forging stakes of local wallet
-      description: Returns forging stakes of local wallet
+      summary: returns forging stakes of local wallet
+      description: Returns forging stakes of local wallet.
       operationId: myForgingStakes
       security:
         - basicAuth: []
@@ -1274,8 +1300,9 @@ paths:
     post:
       tags:
         - transaction
-      summary: Creates a transaction for voting to open the restrict forgers list.
-      description: Creates a transaction which makes a call to the forger stake native smart contract expressing the vote for opening the restrict forgers list.
+      summary: creates a transaction for voting to open the restrict forgers list
+      description: "Creates a transaction which makes a call to the forger stake native smart contract expressing the\n
+       vote for opening the restrict forgers list."
       operationId: openForgerList
       security:
         - basicAuth: []
@@ -1322,8 +1349,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: Returns list of allowed forgers
-      description: Returns list of allowed forgers
+      summary: returns list of allowed forgers
+      description: Returns list of allowed forgers.
       operationId: allowedForgerList
       responses:
         '200':
@@ -1363,7 +1390,7 @@ paths:
       tags:
         - wallet
       summary: new 25519 secret
-      description: Creates new secret and returns corresponding address (public key)
+      description: Creates new secret and returns corresponding address (public key).
       operationId: createPrivateKey25519
       security:
         - basicAuth: []
@@ -1394,7 +1421,7 @@ paths:
       tags:
         - wallet
       summary: new Vrf secret
-      description: Creates new Vrf secret and returns corresponding public key
+      description: Creates new Vrf secret and returns corresponding public key.
       operationId: createVrfSecret
       security:
         - basicAuth: []
@@ -1467,7 +1494,7 @@ paths:
       tags:
         - wallet
       summary: new Secp256k1 secret
-      description: Creates new secret and returns corresponding address (public key)
+      description: Creates new secret and returns corresponding address (public key).
       operationId: createPrivateKeySecp256k1
       security:
         - basicAuth: []
@@ -1497,8 +1524,8 @@ paths:
     post:
       tags:
         - wallet
-      summary: Imports a secret inside the wallet
-      description: Imports a secret (and consequentially the corresponding proposition) inside the wallet
+      summary: imports a secret inside the wallet
+      description: Imports a secret (and consequentially the corresponding proposition) inside the wallet.
       operationId: importSecret
       security:
         - basicAuth: []
@@ -1539,7 +1566,7 @@ paths:
     post:
       tags:
         - wallet
-      summary: Returns the secret corresponding to a proposition.
+      summary: returns the secret corresponding to a proposition
       description: Returns the secret corresponding to a proposition (taken from the wallet).
       operationId: exportSecret
       security:
@@ -1581,8 +1608,9 @@ paths:
     post:
       tags:
         - wallet
-      summary: Imports all the secrets taken from a file.
-      description: Imports all the secrets stored to a file. The file format should be equal to the file format generated by the endpoint dumpSecrets. (SECRETS + " " + PUBLICKEY).
+      summary: imports all the secrets taken from a file
+      description: "Imports all the secrets stored to a file. The file format should be equal to the file format\n
+       generated by the endpoint dumpSecrets (SECRETS + \" \" + PUBLICKEY)."
       operationId: importSecrets
       security:
         - basicAuth: []
@@ -1620,8 +1648,9 @@ paths:
     post:
       tags:
         - wallet
-      summary: Saves all the wallet secrets to a file.
-      description: Saves all the secrets stored in the wallet to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
+      summary: saves all the wallet secrets to a file
+      description: "Saves all the secrets stored in the wallet to a file. Each line of the file will be in the\n
+       format \"SECRET\" + \" \" + \"PROPOSITION\""
       operationId: dumpSecrets
       security:
         - basicAuth: []
@@ -1662,7 +1691,7 @@ paths:
     post:
       tags:
         - wallet
-      summary: Returns balance of the account
+      summary: returns balance of the account
       description: Returns balance of the account. If account doesn't exist, returns 0.
       operationId: getBalance
       security:
@@ -1672,6 +1701,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - address
               properties:
                 address:
                   type: string
@@ -1701,7 +1732,7 @@ paths:
     post:
       tags:
         - wallet
-      summary: Returns total balance of the wallet
+      summary: returns total balance of the wallet
       description: Returns total balance of the wallet.
       operationId: getTotalBalance
       security:
@@ -1732,7 +1763,7 @@ paths:
     post:
       tags:
         - wallet
-      summary: Returns balance of all accounts of the wallet
+      summary: returns balance of all accounts of the wallet
       description: Returns balance of all accounts of the wallet as list of pairs (address, balance).
       operationId: getAllBalances
       security:
@@ -1773,7 +1804,7 @@ paths:
       tags:
         - node
       summary: finds all peers node
-      description: Returns the list of all sidechain node peers
+      description: Returns the list of all sidechain node peers.
       operationId: allPeers
       security:
         - basicAuth: []
@@ -1806,7 +1837,7 @@ paths:
       tags:
         - node
       summary: connects to a node
-      description: Sends the request to connect to a sidechain node
+      description: Sends the request to connect to a sidechain node.
       operationId: connect
       security:
         - basicAuth: []
@@ -1851,7 +1882,7 @@ paths:
       tags:
         - node
       summary: finds all connected peers node
-      description: Returns the list of all connected sidechain node peers
+      description: Returns the list of all connected sidechain node peers.
       operationId: connectedPeers
       security:
         - basicAuth: []
@@ -1884,7 +1915,7 @@ paths:
       tags:
         - node
       summary: finds all blacklisted peers node
-      description: Returns the list of all blacklisted sidechain node peers
+      description: Returns the list of all blacklisted sidechain node peers.
       operationId: blacklistedPeers
       responses:
         '200':
@@ -1910,7 +1941,7 @@ paths:
       tags:
         - node
       summary: stops the node
-      description: stops the node in a gracefully way
+      description: Stops the node in a gracefully way.
       operationId: stop
       security:
         - basicAuth: []
@@ -1936,7 +1967,7 @@ paths:
       tags:
         - node
       summary: finds versions for all node storages
-      description: Returns the list of all node storage versions
+      description: Returns the list of all node storage versions.
       operationId: getNodeStorageVersions
       responses:
         '200':
@@ -1966,8 +1997,8 @@ paths:
     post:
       tags:
         - node
-      summary: Returns the sidechain id
-      description: Returns the sidechain id
+      summary: returns the sidechain id
+      description: Returns the sidechain id.
       operationId: getSidechainId
       responses:
         '200':
@@ -1995,7 +2026,7 @@ paths:
     post:
       tags:
         - node
-      summary: Disconnects from a node
+      summary: disconnects from a node
       description: Sends the request to disconnects from a sidechain node.
       operationId: disconnect
       security:
@@ -2041,7 +2072,7 @@ paths:
     post:
       tags:
         - mainchain
-      summary: Finds the best MC block header which has already been included in a SC block
+      summary: finds the best MC block header which has already been included in a SC block
       description: "Returns the best MC block header which has already been included in a SC block. Returns:\n
         1) Mainchain block reference hash with the most height; \n
         2) Its height in mainchain; \n
@@ -2059,7 +2090,7 @@ paths:
                     type: object
                     properties:
                       blockReferenceInfo:
-                        $ref: '#/components/schemas/MainchainBlockInfo'
+                        $ref: '#/components/schemas/MainchainBlockReferenceInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -2074,7 +2105,7 @@ paths:
       tags:
         - mainchain
       summary: returns genesis MC block header
-      description: Returns genesis MC block header
+      description: Returns genesis MC block header.
       operationId: genesisBlockReferenceInfo
       responses:
         '200':
@@ -2088,7 +2119,7 @@ paths:
                     type: object
                     properties:
                       blockReferenceInfo:
-                        $ref: '#/components/schemas/MainchainBlockInfo'
+                        $ref: '#/components/schemas/MainchainBlockReferenceInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -2132,7 +2163,7 @@ paths:
                     type: object
                     properties:
                       blockReferenceInfo:
-                        $ref: '#/components/schemas/MainchainBlockInfo'
+                        $ref: '#/components/schemas/MainchainBlockReferenceInfo'
                       blockHex:
                         type: string
                   error:
@@ -2150,9 +2181,9 @@ paths:
         - mainchain
       summary: finds Mainchain Block by its hash
       description: "Returns:\n
-                  1)Mainchain block reference (format = False => Raw, format = True => JSON)\n
-                  2)Its height in Mainchain\n
-                  3)Sidechain block id which contains this Mainchain block reference"
+                  1) Mainchain block reference (format = False => Raw, format = True => JSON)\n
+                  2) Its height in Mainchain\n
+                  3) Sidechain block id which contains this Mainchain block reference"
       operationId: blockReferenceByHash
       requestBody:
         content:
@@ -2196,7 +2227,7 @@ paths:
       tags:
         - mainchain
       summary: finds Mainchain Header Block by its hash
-      description: Returns Mainchain Header Block by its hash
+      description: Returns Mainchain Header Block by its hash.
       operationId: mainchainHeaderInfoByHash
       requestBody:
         content:
@@ -2236,7 +2267,7 @@ paths:
       tags:
         - submitter
       summary: returns if certificate generation is in progress
-      description: Returns if certificate generation is in progress
+      description: Returns if certificate generation is in progress.
       operationId: isCertGenerationActive
       responses:
         '200':
@@ -2314,7 +2345,7 @@ paths:
       tags:
         - submitter
       summary: calculates and returns master key messageToSign to be used to key rotation proof
-      description: Accepts public key and returns message to sign
+      description: Accepts public key and returns message to sign.
       operationId: getKeyRotationMessageToSignForMasterKey
       requestBody:
         content:
@@ -2363,7 +2394,7 @@ paths:
         - submitter
       summary: returns certifiers keys
       description: "Searches for the certifiers keys data actual at the end of the given withdrawal epoch. In case\n
-       withdrawalEpoch == -1, then it returns the genesis set of certifiers keys from params."
+       withdrawalEpoch == -1, it returns the genesis set of certifiers keys from params."
       operationId: getCertifiersKeys
       requestBody:
         content:
@@ -2498,7 +2529,7 @@ paths:
       tags:
         - submitter
       summary: enables automatic certificate submission
-      description: Enables automatic certificate submission
+      description: Enables automatic certificate submission.
       operationId: enableCertificateSubmitter
       security:
         - basicAuth: []
@@ -2526,7 +2557,7 @@ paths:
       tags:
         - submitter
       summary: disables automatic certificate submission
-      description: Disables automatic certificate submission
+      description: Disables automatic certificate submission.
       operationId: disableCertificateSubmitter
       security:
         - basicAuth: []
@@ -2584,7 +2615,7 @@ paths:
       tags:
         - submitter
       summary: enables automatic certificate signing
-      description: Enables automatic certificate signing
+      description: Enables automatic certificate signing.
       operationId: enableCertificateSigner
       security:
         - basicAuth: []
@@ -2612,7 +2643,7 @@ paths:
       tags:
         - submitter
       summary: disables automatic certificate signing
-      description: Disables automatic certificate signing
+      description: Disables automatic certificate signing.
       operationId: disableCertificateSigner
       security:
         - basicAuth: []
@@ -2640,8 +2671,8 @@ paths:
     post:
       tags:
         - eth_rpc
-      summary: Executes Ethereum rpc methods.
-      description: "Executes Ethereum rpc methods. Returns the success / error response of called rpc method or error\n
+      summary: executes Ethereum RPC methods
+      description: "Executes Ethereum RPC methods. Returns the success / error response of called RPC method or error\n
         if method does not exist. The request/response objects format follows JSON-RPC 2.0 specification."
       operationId: ethv1
       security:
@@ -2958,7 +2989,7 @@ components:
           type: integer
           format: int64
 
-    MainchainBlockInfo:
+    MainchainBlockReferenceInfo:
       type: object
       properties:
         mainchainHeaderSidechainBlockId:
@@ -3345,8 +3376,7 @@ components:
                 vrfPublicKey:
                   $ref: '#/components/schemas/VrfPublicKey'
             ownerPublicKey:
-              type: string
-              format: byte
+              $ref: '#/components/schemas/AddressProposition'
             stakedAmount:
               type: integer
 
