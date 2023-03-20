@@ -332,9 +332,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     val mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
     val goodSignature = new SignatureSecp256k1(
-      BytesUtils.fromHexString("1c"),
-      BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
-      BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d")
+      new BigInteger("1c", 16),
+      new BigInteger("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023", 16),
+      new BigInteger("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d", 16)
     )
     val txs = new ListBuffer[SidechainTypes#SCAT]()
     val txEip1559 = new EthereumTransaction(

@@ -6,7 +6,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataLog
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
 import com.horizen.fixtures.StoreFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -22,8 +22,10 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
+import sparkz.util.serialization.VLQByteBufferReader
 
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.util
 import java.util.{Optional, Random}
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -832,6 +834,18 @@ class ForgerStakeMsgProcessorTest
 
       view.commit(bytesToVersion(getVersion.data()))
     }
+  }
+
+  @Test
+  def testRemoveStakeCmdEncode(): Unit = {
+    // The tx has a signature r value whose byte array representation is 31 bytes long (not 32), and this should be supported by te ABI encoding (no exceptions)
+    val b = BytesUtils.fromHexString("f8878214920783011170941050072833849ff9bf49a55ff15d40f6d89651e880a440d097c30000000000000000000000000f6cf5090c089dfbd2c37eb58a70abad83dd79d2820d209f52759db97387354cd02079a382b1a165bac472be1da47a15a748039c6faf18a032bff10a83396a6a4a89b2f18880d6d73f7b6af9952b3f06cacc1283c86f0fa8")
+    val reader = new VLQByteBufferReader(ByteBuffer.wrap(b))
+    val ethTx = EthereumTransactionDecoder.decode(reader)
+
+    val stakeId = Keccak256.hash("test")
+    RemoveStakeCmdInput(stakeId, ethTx.getSignature).encode()
+
   }
 
   @Test

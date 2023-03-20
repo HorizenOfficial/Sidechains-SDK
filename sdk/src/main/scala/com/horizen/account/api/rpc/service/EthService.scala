@@ -11,24 +11,26 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgeMessageBuilder
 import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.{AccountMemoryPool, MempoolMap}
+import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.receipt.{Bloom, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
-import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
+import com.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
+import com.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import com.horizen.account.utils.Secp256k1.generateContractAddress
-import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils, Secp256k1}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
+import com.horizen.utils.BytesUtils.padWithZeroBytes
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import com.horizen.{EthServiceSettings, SidechainTypes}
+import com.horizen.EthServiceSettings
 import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, TraceOptions}
 import org.web3j.utils.Numeric
@@ -247,7 +249,10 @@ class EthService(
     applyOnAccountView { nodeView =>
       val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
-      signature.getR ++ signature.getS ++ signature.getV
+      // The order of r, s, v concatenations is the same as in eth
+      padWithZeroBytes(getUnsignedByteArray(signature.getR), Secp256k1.SIGNATURE_RS_SIZE) ++
+        padWithZeroBytes(getUnsignedByteArray(signature.getS), Secp256k1.SIGNATURE_RS_SIZE) ++
+        getUnsignedByteArray(signature.getV)
     }
   }
 
