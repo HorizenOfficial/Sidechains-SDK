@@ -19,9 +19,10 @@ import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils._
+import io.horizen.account.utils.{BigIntegerUInt256, _}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
@@ -32,6 +33,7 @@ import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
+import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
@@ -251,7 +253,10 @@ class EthService(
     applyOnAccountView { nodeView =>
       val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
-      signature.getR ++ signature.getS ++ signature.getV
+      // The order of r, s, v concatenations is the same as in eth
+      padWithZeroBytes(getUnsignedByteArray(signature.getR), Secp256k1.SIGNATURE_RS_SIZE) ++
+        padWithZeroBytes(getUnsignedByteArray(signature.getS), Secp256k1.SIGNATURE_RS_SIZE) ++
+        getUnsignedByteArray(signature.getV)
     }
   }
 

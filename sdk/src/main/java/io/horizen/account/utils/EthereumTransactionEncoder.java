@@ -5,14 +5,11 @@ import io.horizen.account.transaction.EthereumTransaction;
 import io.horizen.account.proposition.AddressProposition;
 import org.bouncycastle.util.BigIntegers;
 import org.web3j.rlp.*;
-import org.web3j.utils.Numeric;
 import scala.Array;
 import sparkz.util.serialization.Writer;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import static io.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionEncoder {
@@ -38,9 +35,9 @@ public class EthereumTransactionEncoder {
         result.add(RlpString.create(tx.getData()));
 
         if (accountSignature) {
-            byte[] v = new byte[0];
-            byte[] r = new byte[0];
-            byte[] s = new byte[0];
+            BigInteger v = BigInteger.ZERO;
+            BigInteger r = BigInteger.ZERO;
+            BigInteger s = BigInteger.ZERO;
 
             if (tx.isSigned()) {
 
@@ -55,7 +52,7 @@ public class EthereumTransactionEncoder {
                 }
             } else {
                 if (tx.isEIP155()) {
-                    v = EthereumTransactionUtils.convertToBytes(tx.getChainId());
+                    v = BigInteger.valueOf(tx.getChainId());
                 }
             }
 
@@ -64,9 +61,9 @@ public class EthereumTransactionEncoder {
             result.add(RlpString.create(s));
         } else {
             if (tx.isEIP155()) {
-                result.add(RlpString.create(EthereumTransactionUtils.convertToBytes(tx.getChainId())));
-                result.add(RlpString.create(new byte[] {}));
-                result.add(RlpString.create(new byte[] {}));
+                result.add(RlpString.create(BigInteger.valueOf(tx.getChainId())));
+                result.add(RlpString.create(BigInteger.ZERO));
+                result.add(RlpString.create(BigInteger.ZERO));
             }
         }
 
@@ -96,8 +93,8 @@ public class EthereumTransactionEncoder {
         result.add(new RlpList());
 
         if (accountSignature) {
-            byte[] r = new byte[0];
-            byte[] s = new byte[0];
+            BigInteger r = BigInteger.ZERO;
+            BigInteger s = BigInteger.ZERO;
 
             if (tx.isSigned()) {
 
@@ -135,18 +132,16 @@ public class EthereumTransactionEncoder {
         RlpStreamEncoder.encode(rlpList, writer);
     }
 
-    private static byte[] createEip155v(byte[] realV, long chainId) {
+    private static BigInteger createEip155v(BigInteger v, long chainId) {
         // update real `V` field with chain id
-        BigInteger v = Numeric.toBigInt(realV);
         v = v.subtract(BigInteger.valueOf(LOWER_REAL_V));
         v = v.add(BigInteger.valueOf(chainId).multiply(BigIntegers.TWO));
         v = v.add(BigInteger.valueOf(CHAIN_ID_INC));
 
-        return v.toByteArray();
+        return v;
     }
 
-    private static int getRecId(byte[] realV, long chainId) {
-        BigInteger v = Numeric.toBigInt(realV);
+    private static int getRecId(BigInteger v, long chainId) {
         BigInteger lowerRealV = BigInteger.valueOf(LOWER_REAL_V);
         BigInteger lowerRealVPlus1 = lowerRealV.add(BigInteger.ONE);
         BigInteger lowerRealVReplayProtected = BigInteger.valueOf(REAL_V_REPLAY_PROTECTED);

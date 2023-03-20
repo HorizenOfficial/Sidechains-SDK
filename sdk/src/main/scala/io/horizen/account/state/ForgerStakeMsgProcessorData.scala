@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import io.horizen.account.utils.BigIntegerUInt256
+import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
+import BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import io.horizen.json.Views
 import io.horizen.utils.{BytesUtils, Ed25519}
 import io.horizen.evm.Address
+import io.horizen.utils.BytesUtils.padWithZeroBytes
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
@@ -178,7 +180,11 @@ case class RemoveStakeCmdInput(
   extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
-    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(signature.getV), new Bytes32(signature.getR), new Bytes32(signature.getS))
+    val t_v = getUnsignedByteArray(signature.getV)
+    val t_r = padWithZeroBytes(getUnsignedByteArray(signature.getR), Secp256k1.SIGNATURE_RS_SIZE)
+    val t_s = padWithZeroBytes(getUnsignedByteArray(signature.getS), Secp256k1.SIGNATURE_RS_SIZE)
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(t_v), new Bytes32(t_r), new Bytes32(t_s))
     new StaticStruct(listOfParams)
   }
 
@@ -205,7 +211,7 @@ object RemoveStakeCmdInputDecoder
   }
 
   private[horizen] def decodeSignature(v: Bytes1, r: Bytes32, s: Bytes32): SignatureSecp256k1 = {
-    new SignatureSecp256k1(v.getValue, r.getValue, s.getValue)
+    new SignatureSecp256k1(new BigInteger(1, v.getValue), new BigInteger(1, r.getValue), new BigInteger(1, s.getValue))
   }
 }
 
