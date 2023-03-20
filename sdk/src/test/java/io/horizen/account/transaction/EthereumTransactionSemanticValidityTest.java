@@ -6,10 +6,8 @@ import io.horizen.account.state.GasUtil;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
-
 import java.math.BigInteger;
 import java.util.Optional;
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -120,55 +118,85 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
 
+        var goodR = goodTx.getSignature().getR();
+        var goodS = goodTx.getSignature().getS();
+
         // negative tests
-        // 1. negative nonce
+        // 1. invalid nonce
+        // 1.1 negative
         assertNotValid(
             copyEip1599EthereumTransaction(goodTx,
                 null, null, goodTx.getNonce().negate(),
                 null, null, null, null, null, null)
         );
+        // 1.2 not an uint64
+        assertNotValid(
+                copyEip1599EthereumTransaction(goodTx,
+                        null, null, new BigInteger(BytesUtils.fromHexString("220000000011223344")),
+                        null, null, null, null,
+                        null,null)
+        );
 
 
         // 2. Bad signature
         // 2.1 - invalid v-value
-        // The V header byte should be in the range [27, 34]
-        // (practically the only used values in ethereum signature scheme are 27 and 28)
-        var badSignOpt1 = Optional.of(new SignatureSecp256k1(
-                BytesUtils.fromHexString("07"),
-                BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-                BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
-        ));
+        // The V header byte should be in the range [27, 34] but practically the only used values in ethereum signature
+        // scheme are 27 and 28
+        try {
+            new SignatureSecp256k1(
+                    new BigInteger("07",16),
+                    goodR,
+                    goodS
+            );
 
-        assertNotValid(
-            copyEip1599EthereumTransaction(goodTx,
-                null, null, null,
-                null, null, null, null, null,
-                badSignOpt1)
-        );
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
-        // 2.2 - Semantically valid V but not used in ethereum signature scheme
-        var goodR = goodTx.getSignature().getR();
-        var goodS = goodTx.getSignature().getS();
-        var badSignOpt1B = Optional.of(new SignatureSecp256k1(
-                BytesUtils.fromHexString("1f"),
+        // 2.2 - Negative v value fitting 8 bit length
+        try {
+            new SignatureSecp256k1(
+                    BigInteger.valueOf(-129),
+                    goodR,
+                    goodS
+            );
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // 2.2 - Semantically valid V but not used in ethereum signature scheme (see above)
+        try {
+            new SignatureSecp256k1(
+                new BigInteger("1f", 16),
                 goodR,
                 goodS
-        ));
+            );
 
-        assertNotValid(
-                copyEip1599EthereumTransaction(goodTx,
-                        null, null, null,
-                        null, null, null, null, null,
-                        badSignOpt1B)
-        );
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
 
         // 2.3 - null v-value array
-
         try {
             var badSignOpt2 = Optional.of(new SignatureSecp256k1(
                     null,
-                    BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-                    BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+                    goodR,
+                    goodS
             ));
             copyEip1599EthereumTransaction(goodTx,
                     null, null, null,
@@ -187,9 +215,9 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         // 2.4 - null r-value array
         try {
             var badSignOpt3 = Optional.of(new SignatureSecp256k1(
-                    BytesUtils.fromHexString("1c"),
+                    new BigInteger("1c", 16),
                     null,
-                    BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+                    goodS
             ));
             fail("IllegalArgumentException expected");
 
@@ -207,21 +235,50 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
             fail("IllegalArgumentException expected");
         }
 
-        // 2.5 - Short s-value array
-
+        // 2.5 - Invalid r-value
+        BigInteger upper_r_value = new BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16);
         try {
-            var badSignOpt4 = Optional.of(new SignatureSecp256k1(
-                    BytesUtils.fromHexString("1c"),
-                    BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-                    BytesUtils.fromHexString("E9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
-            ));
+            new SignatureSecp256k1(
+                    new BigInteger("1c", 16),
+                    upper_r_value.add(BigInteger.ONE),
+                    goodS
+            );
             fail("IllegalArgumentException expected");
 
-            copyEip1599EthereumTransaction(goodTx,
-                    null,null, null,
-                    null, null, null, null, null,
-                    badSignOpt4
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // 2.6 - Invalid s-value
+        BigInteger upper_s_value = new BigInteger("7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0", 16);
+        try {
+            new SignatureSecp256k1(
+                new BigInteger("1c", 16),
+                goodR,
+                upper_s_value.add(BigInteger.ONE)
             );
+            fail("IllegalArgumentException expected");
+
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // 2.7 - V representation using more than 1 byte
+        try {
+            new SignatureSecp256k1(
+                    new BigInteger("0100", 16),
+                    goodR,
+                    goodS
+            );
+
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e){
             //  expected

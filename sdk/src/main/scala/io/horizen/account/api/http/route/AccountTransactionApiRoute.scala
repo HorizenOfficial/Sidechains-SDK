@@ -126,9 +126,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   EthereumTransactionUtils.getDataFromString(body.data),
                   if (body.signature_v.isDefined)
                     new SignatureSecp256k1(
-                      BytesUtils.fromHexString(body.signature_v.get),
-                      BytesUtils.fromHexString(body.signature_r.get),
-                      BytesUtils.fromHexString(body.signature_s.get))
+                      new BigInteger(body.signature_v.get, 16),
+                      new BigInteger(body.signature_r.get, 16),
+                      new BigInteger(body.signature_s.get, 16))
                   else
                     null
                 )
@@ -180,9 +180,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 EthereumTransactionUtils.getDataFromString(body.data),
                 if (body.signature_v.isDefined)
                   new SignatureSecp256k1(
-                    BytesUtils.fromHexString(body.signature_v.get),
-                    BytesUtils.fromHexString(body.signature_r.get),
-                    BytesUtils.fromHexString(body.signature_s.get))
+                    new BigInteger(body.signature_v.get, 16),
+                    new BigInteger(body.signature_r.get, 16),
+                    new BigInteger(body.signature_s.get, 16))
                 else
                   null
               )
@@ -235,9 +235,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   EthereumTransactionUtils.getDataFromString(body.data),
                   if (body.signature_v.isDefined)
                     new SignatureSecp256k1(
-                      BytesUtils.fromHexString(body.signature_v.get),
-                      BytesUtils.fromHexString(body.signature_r.get),
-                      BytesUtils.fromHexString(body.signature_s.get))
+                      new BigInteger(body.signature_v.get, 16),
+                      new BigInteger(body.signature_r.get, 16),
+                      new BigInteger(body.signature_s.get, 16))
                   else
                     null)
                 val resp = if (body.outputRawBytes.getOrElse(false)) {

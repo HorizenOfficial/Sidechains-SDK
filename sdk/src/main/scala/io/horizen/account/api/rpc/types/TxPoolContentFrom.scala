@@ -8,5 +8,5 @@ import scala.collection.mutable
 
 @JsonView(Array(classOf[Views.Default]))
 class TxPoolContentFrom(
-    val pending: mutable.SortedMap[BigInteger, TxPoolTransaction],
-    val queued: mutable.SortedMap[BigInteger, TxPoolTransaction]) { }
+    val pending: mutable.SortedMap[BigInteger, EthereumTransactionView],
+    val queued: mutable.SortedMap[BigInteger, EthereumTransactionView]) { }

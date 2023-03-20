@@ -308,7 +308,7 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
         assert_true("Internal error" in response['error']['message'])
 
         # 5.2) try sending a tx via eth rpc with trailing spurious bytes
-        raw_tx = "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"
+        raw_tx = "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcbef"
         response = sc_node_1.rpc_eth_sendRawTransaction(raw_tx)
         assert_true("error" in response)
         assert_true("Spurious bytes" in response['error']['data'])

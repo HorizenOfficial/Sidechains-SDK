@@ -126,115 +126,172 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   val txPoolStatusOutput = """{"pending":3,"queued":1}"""
   val txPoolContentOutput =
     """{
-      "pending": {
-        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
-          "16": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
-            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-            "nonce": "0x10",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0xe4e1c0"
-          },
-          "24": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
-            "input": "0x8c64fe48688ab096dfb6ac2eeefcf213",
-            "nonce": "0x18",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x493e00"
-          }
-        },
-        "0xb039865dbea73df08e23f185847bab8e6a44108d": {
-          "32": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0xb3151940f923813eca1d70ad405a852bcd2d7609",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
-            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-            "nonce": "0x20",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x112a880"
-          }
-        }
+      "pending":{
+         "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+            "16":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+               "type":"0x2",
+               "nonce":"0x10",
+               "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0xe4e1c0",
+               "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            },
+            "24":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+               "type":"0x2",
+               "nonce":"0x18",
+               "from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x493e00",
+               "input":"0x8c64fe48688ab096dfb6ac2eeefcf213",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         },
+         "0xb039865dbea73df08e23f185847bab8e6a44108d":{
+            "32":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
+               "type":"0x2",
+               "nonce":"0x20",
+               "from":"0xb3151940f923813eca1d70ad405a852bcd2d7609",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x112a880",
+               "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         }
       },
-      "queued": {
-        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
-          "40": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0xc803d7146a4df6937b609f7951bc7eda3def09fb",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
-            "input": "0x4aa64a075647e3621bbc14b03e4087903f2c9503",
-            "nonce": "0x28",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x3c14dc0"
-          }
-        }
+      "queued":{
+         "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+            "40":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+               "type":"0x2",
+               "nonce":"0x28",
+               "from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x3c14dc0",
+               "input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         }
       }
     }"""
   val txPoolContentFromOutput =
     """{
-      "pending": {
-        "16": {
-          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "blockNumber": null,
-          "from": "0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
-          "gas": "0xec0564",
-          "gasPrice": "0x3b9aca64",
-          "hash": "0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
-          "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-          "nonce": "0x10",
-          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-          "transactionIndex": null,
-          "value": "0xe4e1c0"
-        },
-        "24": {
-          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "blockNumber": null,
-          "from": "0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
-          "gas": "0xec0564",
-          "gasPrice": "0x3b9aca64",
-          "hash": "0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
-          "input": "0x8c64fe48688ab096dfb6ac2eeefcf213",
-          "nonce": "0x18",
-          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-          "transactionIndex": null,
-          "value": "0x493e00"
-        }
-      },
-      "queued": {
-        "40": {
-          "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "blockNumber": null,
-          "from": "0xc803d7146a4df6937b609f7951bc7eda3def09fb",
-          "gas": "0xec0564",
-          "gasPrice": "0x3b9aca64",
-          "hash": "0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
-          "input": "0x4aa64a075647e3621bbc14b03e4087903f2c9503",
-          "nonce": "0x28",
-          "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-          "transactionIndex": null,
-          "value": "0x3c14dc0"
-        }
-      }
+       "pending":{
+          "16":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+             "type":"0x2",
+             "nonce":"0x10",
+             "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0xe4e1c0",
+             "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          },
+          "24":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+             "type":"0x2",
+             "nonce":"0x18",
+             "from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0x493e00",
+             "input":"0x8c64fe48688ab096dfb6ac2eeefcf213",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          }
+       },
+       "queued":{
+          "40":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+             "type":"0x2",
+             "nonce":"0x28",
+             "from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0x3c14dc0",
+             "input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          }
+       }
     }"""
+
   val txPoolInspectOutput =
     """{
     "pending": {
@@ -277,9 +334,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     val mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
     val goodSignature = new SignatureSecp256k1(
-      BytesUtils.fromHexString("1c"),
-      BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
-      BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d")
+      new BigInteger("1c", 16),
+      new BigInteger("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023", 16),
+      new BigInteger("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d", 16)
     )
     val txs = new ListBuffer[SidechainTypes#SCAT]()
     val txEip1559 = new EthereumTransaction(

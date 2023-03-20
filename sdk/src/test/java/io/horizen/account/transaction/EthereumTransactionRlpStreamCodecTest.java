@@ -5,6 +5,7 @@ import io.horizen.account.fixtures.EthereumTransactionFixture;
 import io.horizen.account.utils.EthereumTransactionDecoder;
 import io.horizen.account.utils.RlpStreamDecoder;
 import io.horizen.account.utils.RlpStreamEncoder;
+import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Test;
@@ -18,6 +19,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
+import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static org.junit.Assert.*;
 
 public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactionFixture {
@@ -272,8 +274,8 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             {"TRANSCT__ZeroByteAtRLP_8", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c4400b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__ZeroByteAtRLP_9", "f861030182a7d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa0888700321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"},
             {"TRANSCT__RandomByteAtTheEnd", "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"},
-            // s byte array length: 31 != 32 [9f ..] should be [a0 00 ..]
-            {"tr201506052141PYTHON", "f8718439a6c38b88446cf2b7cba3be25847c4af09494a41e36344e8524318a21a527743b169f3a437b8684153aa6b4808189a0f5e5d736775026020ad30508a301eea73d2b096171e6ba17ac3d170f6863b55c9f5fe34e0580ce02b39acae5844a9da787ac7d1a4d97d6bfc53546ba2bc47880"},
+            // s byte array length: 31 != 32 [9f ..] if padded should be [a0 00 ..] (9f - 0x80 = 0x1f = 31 decimal)
+            //{"tr201506052141PYTHON", "f8718439a6c38b88446cf2b7cba3be25847c4af09494a41e36344e8524318a21a527743b169f3a437b8684153aa6b4808189a0f5e5d736775026020ad30508a301eea73d2b096171e6ba17ac3d170f6863b55c9f5fe34e0580ce02b39acae5844a9da787ac7d1a4d97d6bfc53546ba2bc47880"},
     };
     // RLP encoded transactions which are decoded by us but yield eth tx objects not semantically valid
     String[][] gethTestVectorsSemanticValdationFailure = {
@@ -345,6 +347,46 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
         assertFalse(ethTx.isSigned());
+
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        ethTx.encode(true, writer);
+        byte[] result = writer.toBytes();
+        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(result));
+    }
+
+    @Test
+    public void checktr201506052141PYTHON()  {
+        // this test is taken from list gethTestVectorsWrongRlp above, and should fail.
+        // The resulting eth tx is parsed OK and is semantically valid instead
+        byte[] b = BytesUtils.fromHexString("f8718439a6c38b88446cf2b7cba3be25847c4af09494a41e36344e8524318a21a527743b169f3a437b8684153aa6b4808189a0f5e5d736775026020ad30508a301eea73d2b096171e6ba17ac3d170f6863b55c9f5fe34e0580ce02b39acae5844a9da787ac7d1a4d97d6bfc53546ba2bc47880");
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
+        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
+        try {
+            ethTx.semanticValidity();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            fail("Should not fail");
+        }
+
+        VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
+        ethTx.encode(true, writer);
+        byte[] result = writer.toBytes();
+        assertEquals(BytesUtils.toHexString(b), BytesUtils.toHexString(result));
+    }
+
+    @Test
+    public void checkIssueEVM823()  {
+        // The tx has a signature r value whose byte array representation is 31 bytes long (not 32), and this should be supported
+        byte[] b = BytesUtils.fromHexString("f8878214920783011170941050072833849ff9bf49a55ff15d40f6d89651e880a440d097c30000000000000000000000000f6cf5090c089dfbd2c37eb58a70abad83dd79d2820d209f52759db97387354cd02079a382b1a165bac472be1da47a15a748039c6faf18a032bff10a83396a6a4a89b2f18880d6d73f7b6af9952b3f06cacc1283c86f0fa8");
+        Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
+        EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
+        try {
+            ethTx.semanticValidity();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            fail("Should not fail");
+        }
+        assertTrue(getUnsignedByteArray(ethTx.getSignature().getR()).length == 31);
 
         VLQByteBufferWriter writer = new VLQByteBufferWriter(new ByteArrayBuilder());
         ethTx.encode(true, writer);
