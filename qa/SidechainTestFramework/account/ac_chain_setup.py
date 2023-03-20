@@ -26,7 +26,8 @@ class AccountChainSetup(SidechainTestFramework):
                  allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
                  connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
-                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = []):
+                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = [], cert_max_keys=7, cert_sig_threshold=5,
+                 submitter_private_keys_indexes=7):
 
         super().__init__()
 
@@ -60,6 +61,9 @@ class AccountChainSetup(SidechainTestFramework):
             websocket_server_port = [None] * number_of_sidechain_nodes
         assert(len(websocket_server_port) == number_of_sidechain_nodes)
         self.websocket_server_port = websocket_server_port
+        self.cert_max_keys = cert_max_keys
+        self.cert_sig_threshold = cert_sig_threshold
+        self.submitter_private_keys_indexes = submitter_private_keys_indexes
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -80,6 +84,9 @@ class AccountChainSetup(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = []
 
+        if self.submitter_private_keys_indexes > self.cert_max_keys:
+            raise ValueError("submitter_private_keys_indexes must be <= cert_max_keys")
+
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
                sc_node_configuration.append(SCNodeConfiguration(
@@ -94,9 +101,9 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime =  self.tx_lifetime,
-                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port = self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
+                    tx_lifetime=self.tx_lifetime,
+                    websocket_server_enabled=True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port=self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
                 ))
 
             else:
@@ -114,9 +121,10 @@ class AccountChainSetup(SidechainTestFramework):
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime = self.tx_lifetime,
-                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port = self.websocket_server_port[x]
+                    tx_lifetime=self.tx_lifetime,
+                    websocket_server_enabled=True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port=self.websocket_server_port[x],
+                    submitter_private_keys_indexes=self.submitter_private_keys_indexes
                 ))
    
         if self.circuittype_override is not None:
@@ -132,8 +140,11 @@ class AccountChainSetup(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength,
                                                         sc_creation_version=sc_creation_version,
                                                         is_non_ceasing=self.options.nonceasing,
-                                                        circuit_type=circuit_type),
+                                                        circuit_type=circuit_type,
+                                                        cert_max_keys=self.cert_max_keys,
+                                                        cert_sig_threshold=self.cert_sig_threshold),
                                          *sc_node_configuration)
+
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
                                                                  block_timestamp_rewind=self.block_timestamp_rewind,
                                                                  model=AccountModel)

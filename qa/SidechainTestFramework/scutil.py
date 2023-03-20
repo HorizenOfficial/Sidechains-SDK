@@ -374,6 +374,8 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
 
+
+
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
                                                   public_signing_keys, master_secrets, public_master_keys)
     return certificate_proof_info
@@ -459,7 +461,6 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
 
     if bootstrap_info.genesis_evm_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_evm_account.secret)
-
 
     all_signers_private_keys = bootstrap_info.certificate_proof_info.schnorr_signers_secrets
     signer_private_keys = [all_signers_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]

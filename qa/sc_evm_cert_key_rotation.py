@@ -87,8 +87,13 @@ class SCKeyRotationTest(AccountChainSetup):
         self.remote_keys_host = "127.0.0.1"
         self.remote_keys_port = 5000
         self.remote_keys_address = f"http://{self.remote_keys_host}:{self.remote_keys_port}"
+        self.cert_max_keys = 10
+        self.submitter_private_keys_indexes = 10
+        self.cert_sig_threshold = 6
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
-                         remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_keys_address)
+                         remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_keys_address,
+                         cert_max_keys=self.cert_max_keys, cert_sig_threshold=self.cert_sig_threshold,
+                         submitter_private_keys_indexes=self.submitter_private_keys_indexes)
 
     def secure_enclave_create_signature(self, message_to_sign, public_key="", key=""):
         post_data = {
@@ -119,7 +124,6 @@ class SCKeyRotationTest(AccountChainSetup):
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
         epoch_mc_blocks_left = self.withdrawalEpochLength - 1
-        cert_max_keys = 7
 
         private_signing_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets
         private_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_masters_secrets
@@ -145,7 +149,7 @@ class SCKeyRotationTest(AccountChainSetup):
         # Change ALL the signing keys and ALL tee master keys
         new_signing_keys = []
         new_master_keys = []
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             new_s_key = generate_cert_signer_secrets(f"random_seed5{i}", 1)[0]
             new_signing_keys += [new_s_key]
             private_master_keys.append(new_s_key.secret)
@@ -169,7 +173,7 @@ class SCKeyRotationTest(AccountChainSetup):
         epoch_mc_blocks_left -= 1
 
         # # Split the FT in multiple boxes
-        # sendCointsToMultipleAddress(sc_node, [sc_address_1 for _ in range(20)], [1000 for _ in range(20)], 0)
+        # sendCoinsToMultipleAddress(sc_node, [sc_address_1 for _ in range(20)], [1000 for _ in range(20)], 0)
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
@@ -177,11 +181,11 @@ class SCKeyRotationTest(AccountChainSetup):
         # Call getCertificateSigners endpoint
         certificate_signers_keys = http_get_certifiers_keys(sc_node, -1)
         epoch_zero_keys_root_hash = certificate_signers_keys["keysRootHash"]
-        assert_equal(len(certificate_signers_keys["certifiersKeys"]["signingKeys"]), cert_max_keys)
-        assert_equal(len(certificate_signers_keys["certifiersKeys"]["masterKeys"]), cert_max_keys)
+        assert_equal(len(certificate_signers_keys["certifiersKeys"]["signingKeys"]), self.cert_max_keys)
+        assert_equal(len(certificate_signers_keys["certifiersKeys"]["masterKeys"]), self.cert_max_keys)
 
         # Call getKeyRotationProof endpoint and verify we don't have any KeyRotationProof
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 0, i, 0)["result"]
             master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 0, i, 1)["result"]
             assert_equal(signer_key_rotation_proof, {})
@@ -403,7 +407,7 @@ class SCKeyRotationTest(AccountChainSetup):
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
         assert_equal(epoch_one_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
-        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
+        assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -414,7 +418,7 @@ class SCKeyRotationTest(AccountChainSetup):
         check_mcreference_presence(we1_2_mcblock_hash, scblock_id, sc_node)
 
         # Verify that we don't have any key rotation in this epoch
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 1, i, 0)["result"]
             master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 1, i, 1)["result"]
             assert_equal(signer_key_rotation_proof, {})
@@ -476,7 +480,7 @@ class SCKeyRotationTest(AccountChainSetup):
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
         assert_equal(epoch_two_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
-        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
+        assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -487,14 +491,14 @@ class SCKeyRotationTest(AccountChainSetup):
         check_mcreference_presence(we1_2_mcblock_hash, scblock_id, sc_node)
 
         # Verify that we don't have any key rotation in this epoch
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 2, i, 0)["result"]
             master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 2, i, 1)["result"]
             assert_equal(signer_key_rotation_proof, {})
             assert_equal(master_key_rotation_proof, {})
 
         epoch = get_withdrawal_epoch(sc_node)
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             new_signing_key = new_signing_keys[i]
             new_signing_key_hash = \
                 http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_signing_key.publicKey, epoch)[
@@ -567,7 +571,7 @@ class SCKeyRotationTest(AccountChainSetup):
         generate_next_blocks(sc_node, "first node", 1)
 
         # Verify that we changed all the signing keys
-        for i in range(cert_max_keys):
+        for i in range(self.cert_max_keys):
             signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 2, i, 0)["result"]["keyRotationProof"]
             assert_equal(signer_key_rotation_proof["index"], i)
             assert_equal(signer_key_rotation_proof["keyType"]["value"], "SigningKeyRotationProofType")
@@ -610,7 +614,7 @@ class SCKeyRotationTest(AccountChainSetup):
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
         assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
-        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
+        assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
         # Generate MC and SC blocks with Cert
         we1_2_mcblock_hash = mc_node.generate(1)[0]
@@ -640,7 +644,7 @@ class SCKeyRotationTest(AccountChainSetup):
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
         assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
-        assert_equal(cert_max_keys, cert['quality'], "Certificate quality is wrong.")
+        assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
 
 if __name__ == "__main__":
