@@ -14,13 +14,14 @@ import java.security.SignatureException;
 import java.util.Arrays;
 import java.security.*;
 
+import static com.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
+import static com.horizen.utils.BytesUtils.padWithZeroBytes;
+
 public final class Secp256k1 {
     private static final int COORD_SIZE = 32;
     public static final int PRIVATE_KEY_SIZE = COORD_SIZE;
     public static final int PUBLIC_KEY_SIZE = COORD_SIZE * 2;
 
-    // signature's v might be set to {0,1} + CHAIN_ID * 2 + 35 (see EIP155)
-    public static final int SIGNATURE_V_MAXSIZE = Long.BYTES;
     public static final int SIGNATURE_RS_SIZE = 32;
 
     public static final int CHAIN_ID_INC = Sign.CHAIN_ID_INC;
@@ -30,14 +31,14 @@ public final class Secp256k1 {
     public static final int REAL_V_REPLAY_PROTECTED = 35;
 
     public static class Signature {
-        public final byte[] v;
-        public final byte[] r;
-        public final byte[] s;
+        public final BigInteger v;
+        public final BigInteger r;
+        public final BigInteger s;
 
         public Signature(byte[] v, byte[] r, byte[] s) {
-            this.v = v;
-            this.r = r;
-            this.s = s;
+            this.v = new BigInteger(1, v);
+            this.r = new BigInteger(1, r);
+            this.s = new BigInteger(1, s);
         }
     }
 
@@ -59,13 +60,19 @@ public final class Secp256k1 {
         }
     }
 
-    public static byte[] signedMessageToAddress(byte[] message, byte[] v, byte[] r, byte[] s) throws SignatureException {
-        Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
+    public static byte[] signedMessageToAddress(byte[] message, BigInteger v, BigInteger r, BigInteger s) throws SignatureException {
+        byte[] v_barr = getUnsignedByteArray(v);
+
+        // w3j wants only 32 bytes long array, pad with 0x00 if necessary
+        byte[] r_barr = padWithZeroBytes(getUnsignedByteArray(r), SIGNATURE_RS_SIZE);
+        byte[] s_barr = padWithZeroBytes(getUnsignedByteArray(s), SIGNATURE_RS_SIZE);
+
+        Sign.SignatureData signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr);
         BigInteger pubKey = Sign.signedMessageToKey(message, signatureData);
         return getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE));
     }
 
-    public static boolean verify(byte[] message, byte[] v, byte[] r, byte[] s, byte[] address) {
+    public static boolean verify(byte[] message, BigInteger v, BigInteger r, BigInteger s, byte[] address) {
         try {
             byte[] signingAddress = signedMessageToAddress(message, v, r, s);
             return Arrays.equals(signingAddress, address);

@@ -4,18 +4,15 @@ import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 
+import java.math.BigInteger;
+
 import static org.junit.Assert.assertEquals;
 
 public class EthereumTransactionUtilsTest {
     @Test
     public void ethereumTransactionConversionUtilsTest() {
-        long lv = 1997;
-        byte[] res = EthereumTransactionUtils.convertToBytes(lv);
-        long lv2 = EthereumTransactionUtils.convertToLong(res);
-        assertEquals(lv, lv2);
 
-        byte[] bv = BytesUtils.fromHexString("01");
-        long lv3 = EthereumTransactionUtils.convertToLong(bv);
+        long lv3 = (new BigInteger("0001", 16)).longValueExact();
         assertEquals(lv3, 1);
         // minimal encoding
         byte[] bv2 = EthereumTransactionUtils.convertToBytes(lv3);

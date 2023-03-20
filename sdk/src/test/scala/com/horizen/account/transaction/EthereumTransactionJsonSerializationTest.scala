@@ -60,14 +60,6 @@ class EthereumTransactionJsonSerializationTest
   }
 
   @Test
-  def testPartiallySignedEip155TxToJson(): Unit = {
-    val transaction = getPartiallySignedEip155LegacyTransaction
-    assertTrue(transaction.isEIP155)
-    assertNull(transaction.getFromAddress)
-    evalJsonRepr(transaction)
-  }
-
-  @Test
   def testUnsignedEip155TxToJson(): Unit = {
     val transaction = getUnsignedEip155LegacyTransaction
     evalJsonRepr(transaction)
@@ -165,15 +157,15 @@ class EthereumTransactionJsonSerializationTest
       assertEquals("Transaction signature v json value must be the same.",
         // in case of EIP155 tx signature data getV is the byte array carrying the chain id
         // (actual V value is in getSignature())
-        SparkzEncoder.default.encode(transaction.getSignature.getV), sig_v)
+        SparkzEncoder.default.encode(transaction.getSignature.getV.toString(16)), sig_v)
 
       val sig_r = node.path("signature").path("r").asText()
       assertEquals("Transaction signature r json value must be the same.",
-        SparkzEncoder.default.encode(transaction.getSignature.getR), sig_r)
+        SparkzEncoder.default.encode(transaction.getSignature.getR.toString(16)), sig_r)
 
       val sig_s = node.path("signature").path("s").asText()
       assertEquals("Transaction signature s json value must be the same.",
-        SparkzEncoder.default.encode(transaction.getSignature.getS), sig_s)
+        SparkzEncoder.default.encode(transaction.getSignature.getS.toString(16)), sig_s)
     }
 
     try {

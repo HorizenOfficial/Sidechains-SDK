@@ -11,6 +11,8 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
+import static com.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
+import static com.horizen.utils.BytesUtils.padWithZeroBytes;
 import static org.junit.Assert.*;
 
 public class BytesUtilsTest {
@@ -348,5 +350,35 @@ public class BytesUtilsTest {
         assertEquals("Different byte size expected.", 1, BytesUtils.getBytesFromBits(3));
         assertEquals("Different byte size expected.", 1, BytesUtils.getBytesFromBits(8));
         assertEquals("Different byte size expected.", 2, BytesUtils.getBytesFromBits(9));
+    }
+
+    @Test
+    public void padByteArray() {
+        byte[] barr = BytesUtils.fromHexString("abcd");
+
+       // null obj input
+        assertTrue(null == padWithZeroBytes(null, 100));
+
+        // negative or null length
+        assertArrayEquals(barr, padWithZeroBytes(barr, 0));
+        assertArrayEquals(barr, padWithZeroBytes(barr, -1));
+
+        // empty array with size > 0
+        byte[] res1 = BytesUtils.fromHexString("0000");
+        assertArrayEquals(res1, padWithZeroBytes(new byte[]{}, res1.length));
+        // empty array with zero size
+        byte[] res2 = new byte[]{};
+        assertArrayEquals(res2, padWithZeroBytes(new byte[]{}, 0));
+
+        // full size array
+        assertArrayEquals(barr, padWithZeroBytes(barr, barr.length));
+
+        // array longer than size
+        assertArrayEquals(barr, padWithZeroBytes(barr, barr.length-1));
+
+        // array shorter than size
+        byte[] res3 = BytesUtils.fromHexString("0000abcd");
+        assertArrayEquals(res3, padWithZeroBytes(barr, res3.length));
+
     }
 }

@@ -32,9 +32,9 @@ public class EthereumTransactionView {
     public final BigInteger maxFeePerGas;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public final BigInteger chainId;
-    public final byte[] v;
-    public final byte[] r;
-    public final byte[] s;
+    public final BigInteger v;
+    public final BigInteger r;
+    public final BigInteger s;
 
     /**
      * Note for the correct JSON representation of the accessList property:
