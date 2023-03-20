@@ -885,7 +885,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567891011121314151617181920212223241", "latest", "\"0x16345785d89ffff\"")
     )
 
-    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+    val invalidCases = Table(
+      ("Address", "Tag"),
+      ("0x", "latest"),
+      ("0x1234567890123456789012345678901234567890", ""),
+      ("0x1234567891011121314151617181920212223242", "0x1337")
+    )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
@@ -910,7 +915,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567890123456789012345678901234567890", "latest", "\"0x\"")
     )
 
-    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+    val invalidCases = Table(
+      ("Address", "Tag"),
+      ("0x", "latest"),
+      ("0x1234567890123456789012345678901234567890", ""),
+      ("0x1234567891011121314151617181920212223242", "0x1337")
+    )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
@@ -935,7 +945,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567890123456789012345678901234567890", "latest", "\"0x0\"")
     )
 
-    val invalidCases = Table(("Address", "Tag"), ("0x", "latest"), ("0x1234567890123456789012345678901234567890", ""))
+    val invalidCases = Table(
+      ("Address", "Tag"),
+      ("0x", "latest"),
+      ("0x1234567890123456789012345678901234567890", ""),
+      ("0x1234567891011121314151617181920212223242", "0x1337")
+    )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
@@ -1049,7 +1064,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x2", "null"),
     )
 
-    val invalidCases = Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "latest")
+    val invalidCases =
+      Table("Block id", "null", "dc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "latest")
 
     forAll(validCases) { (id, expectedOutput) =>
       assertJsonEquals(
@@ -1085,7 +1101,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
             {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
           ]}"""
         )
-
       )
 
     val invalidCases = Table("Block id", "0x1337", "1337abcd", "latest", "pending")
@@ -1318,10 +1333,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def txpool_contentFrom(): Unit = {
-    val method = "txpool_contentFrom"
     assertJsonEquals(
       txPoolContentFromOutput,
-      ethService.execute(getRpcRequest(paramValues = Array("0x15532e34426cd5c37371ff455a5ba07501c0f522"), method = method)))
+      ethService.execute(getRpcRequest(paramValues = Array("0x15532e34426cd5c37371ff455a5ba07501c0f522")))
+    )
   }
 
   @Test

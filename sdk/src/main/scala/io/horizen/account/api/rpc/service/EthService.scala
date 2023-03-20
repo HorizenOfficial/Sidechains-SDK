@@ -378,12 +378,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getBalance(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getBalance(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getBalance(address)
       }
     }
   }
@@ -392,12 +388,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getNonce(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getNonce(address)
       }
     }
   }
@@ -721,12 +713,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
-        }
-      } catch {
-        case _: BlockNotFoundException => null
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
     }
   }
