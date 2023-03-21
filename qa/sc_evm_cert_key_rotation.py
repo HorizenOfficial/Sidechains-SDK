@@ -88,7 +88,7 @@ class SCKeyRotationTest(AccountChainSetup):
         self.remote_keys_port = 5000
         self.remote_keys_address = f"http://{self.remote_keys_host}:{self.remote_keys_port}"
         self.cert_max_keys = 10
-        self.submitter_private_keys_indexes = 10
+        self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
         self.cert_sig_threshold = 6
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
                          remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_keys_address,

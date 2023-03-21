@@ -27,7 +27,7 @@ class AccountChainSetup(SidechainTestFramework):
                  connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
                  tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = [], cert_max_keys=7, cert_sig_threshold=5,
-                 submitter_private_keys_indexes=7):
+                 submitter_private_keys_indexes=list(range(7))):
 
         super().__init__()
 
@@ -84,7 +84,7 @@ class AccountChainSetup(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = []
 
-        if self.submitter_private_keys_indexes > self.cert_max_keys:
+        if len(self.submitter_private_keys_indexes) > self.cert_max_keys:
             raise ValueError("submitter_private_keys_indexes must be <= cert_max_keys")
 
         for x in range(self.number_of_sidechain_nodes):
@@ -103,7 +103,8 @@ class AccountChainSetup(SidechainTestFramework):
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
                     tx_lifetime=self.tx_lifetime,
                     websocket_server_enabled=True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port=self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
+                    websocket_server_port=self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0,
+                    submitter_private_keys_indexes=self.submitter_private_keys_indexes
                 ))
 
             else:
