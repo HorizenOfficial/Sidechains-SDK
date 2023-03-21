@@ -34,7 +34,7 @@ public class SimpleCustomApi extends SidechainApplicationApiGroup
     private ApiResponse getNSecretsFunction(GetSecretRequest ent) {
         try {
             RespAllSecret resp = new RespAllSecret();
-            List<io.horizen.secret.Secret> res = new ArrayList<>(getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> (v).getNodeWallet().allSecrets()));
+            List<Secret> res = new ArrayList<>(getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> (v).getNodeWallet().allSecrets()));
             resp.setSecrets(res.subList(0, ent.getSecretCount()));
             return resp;
         } catch (Exception e) {
@@ -86,6 +86,7 @@ public class SimpleCustomApi extends SidechainApplicationApiGroup
     }
 
     @JsonView(Views.Default.class)
+    static
     class RespAllSecret implements SuccessResponse
     {
 
@@ -101,10 +102,10 @@ public class SimpleCustomApi extends SidechainApplicationApiGroup
     }
 
     @JsonView(Views.Default.class)
-    public class ErrorAllSecrets implements ErrorResponse
+    public static class ErrorAllSecrets implements ErrorResponse
     {
-        private String description;
-        private Optional<Throwable> exception;
+        private final String description;
+        private final Optional<Throwable> exception;
 
         public ErrorAllSecrets(String description, Optional<Throwable> exception) {
             this.description = description;
