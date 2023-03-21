@@ -4,25 +4,19 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.pattern.ask
-import io.horizen.api.http.FunctionsApplierOnSidechainNodeView
+import io.horizen.api.http.route.ApplicationBaseApiRoute
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node._
 import io.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
-import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
-import sparkz.util.SparkzEncoding
-
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
 case class SidechainApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: SidechainApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
-                                       (implicit val context: ActorRefFactory)
-  extends ApiRoute
-    with ApiDirectives
-    with SparkzEncoding
-    with FunctionsApplierOnSidechainNodeView[
+                                       (implicit override val context: ActorRefFactory)
+  extends ApplicationBaseApiRoute[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
@@ -31,7 +25,7 @@ case class SidechainApplicationApiRoute(override val settings: RESTApiSettings, 
     NodeState,
     NodeWallet,
     NodeMemoryPool,
-    SidechainNodeView] {
+    SidechainNodeView] (settings, applicationApiGroup, sidechainNodeViewHolderRef){
 
 
   override def route: Route = convertRoutes

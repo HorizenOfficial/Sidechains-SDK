@@ -9,21 +9,15 @@ import io.horizen.account.api.http.AccountApplicationApiGroup
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import io.horizen.api.http.FunctionsApplierOnSidechainNodeView
+import io.horizen.api.http.route.ApplicationBaseApiRoute
 import io.horizen.node.NodeWalletBase
-import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
-import sparkz.util.SparkzEncoding
-
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
 case class AccountApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: AccountApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
-                                       (implicit val context: ActorRefFactory)
-  extends ApiRoute
-    with ApiDirectives
-    with SparkzEncoding
-    with FunctionsApplierOnSidechainNodeView[
+                                       (implicit override val context: ActorRefFactory)
+  extends ApplicationBaseApiRoute[
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
@@ -33,7 +27,7 @@ case class AccountApplicationApiRoute(override val settings: RESTApiSettings, ap
     NodeWalletBase,
     NodeAccountMemoryPool,
     AccountNodeView
-  ] {
+  ] (settings, applicationApiGroup, sidechainNodeViewHolderRef) {
 
 
   override def route: Route = convertRoutes
