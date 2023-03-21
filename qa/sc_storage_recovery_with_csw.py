@@ -10,7 +10,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
     connect_sc_nodes, assert_true, stop_sc_node, launch_db_tool, start_sc_node, \
     wait_for_sc_node_initialization
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, fail
 
 # import raw_input
 
@@ -341,15 +341,15 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         storages_list = ["state", "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 13)
 
-
         try:
             # restart SC2
             self.forgeBlockAndCheckSync()
-
         except Exception as e:
             logging.info("Expected exception caught during negative testing: " + str(e))
             logging.info("Stopping SC2")
             stop_sc_node(sc_node2, 1)
+        else:
+            fail("Exception should have been thrown")
 
 
 if __name__ == "__main__":

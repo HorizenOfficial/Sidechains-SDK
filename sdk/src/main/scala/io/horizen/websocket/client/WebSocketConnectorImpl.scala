@@ -1,11 +1,10 @@
 package io.horizen.websocket.client
 
-import java.net.URI
-
-import javax.websocket._
+import jakarta.websocket._
 import org.glassfish.tyrus.client.{ClientManager, ClientProperties}
 import sparkz.util.SparkzLogging
 
+import java.net.URI
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
@@ -37,16 +36,15 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
     override def onConnectFailure(exception: Exception): Boolean = reconnectionHandler.onConnectionFailed(exception)
   }
 
-  override def isStarted: Boolean =
+  override def isStarted(): Boolean =
     userSession != null && userSession.isOpen
 
   override def start(): Try[Unit] = Try {
-
-    if (isStarted) throw new IllegalStateException("Connector is already started.")
+    if (isStarted()) throw new IllegalStateException("Connector is already started.")
 
     client.getProperties.put(ClientProperties.RECONNECT_HANDLER, reconnectHandler)
     client.getProperties.put(ClientProperties.HANDSHAKE_TIMEOUT, String.valueOf(connectionTimeout.toMillis))
-    log.info(s"Starting web socket connector, ws address = ${bindAddress}...")
+    log.info(s"Starting web socket connector, ws address = $bindAddress...")
     userSession = client.connectToServer(this, new URI(bindAddress))
     reconnectionHandler.onConnectionSuccess()
     log.info("Web socket connector started.")
@@ -57,7 +55,6 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
         messageHandler.onReceivedMessage(t)
       }
     })
-
   }
 
   override def asyncStart(): Future[Try[Unit]] = {
@@ -80,20 +77,16 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
 
   override def sendMessage(message: String): Unit = {
     try {
-      userSession.getAsyncRemote().sendText(message, new SendHandler {
-        override def onResult(sendResult: SendResult): Unit = {
-          if (!sendResult.isOK) {
-            log.info("Send message failed.")
-            messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
-          }
-          else log.info("Message sent")
+      userSession.getAsyncRemote.sendText(message, (sendResult: SendResult) => {
+        if (!sendResult.isOK) {
+          log.info("Send message failed.")
+          messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
         }
+        else log.info("Message sent")
       }
       )
     } catch {
       case e: Throwable => messageHandler.onSendMessageErrorOccurred(message, e)
     }
-
   }
-
 }

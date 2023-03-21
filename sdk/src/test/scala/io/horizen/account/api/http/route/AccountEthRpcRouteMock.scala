@@ -6,10 +6,10 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.horizen.fixtures.BasicAuthenticationFixture
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import io.horizen.account.api.http.AccountNodeViewUtilMocks
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fixtures.BasicAuthenticationFixture
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.AccountStateMetadataStorage
@@ -19,8 +19,6 @@ import io.horizen.api.http._
 import io.horizen.evm.LevelDBDatabase
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.json.serializer.ApplicationJsonSerializer
-import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
 import io.horizen.params.MainNetParams
 import io.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.runner.RunWith
@@ -155,7 +153,8 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
     mockedSyncStatusActorRef,
     metadataStorage,
     stateDb,
-    messageProcessors
+    messageProcessors,
+    sidechainTransactionsCompanion
   ).route
 
   val basePath = "/ethv1"

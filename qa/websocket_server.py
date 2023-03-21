@@ -101,6 +101,8 @@ class SCWsServer(SidechainTestFramework):
         #check that the wallet balance is doubled now (forging stake + the forward transfer) (we need to convert to zentoshi also)
         assert_equal(http_wallet_balance(sc_node1),  (self.sc_nodes_bootstrap_info.genesis_account_balance * 2) * 100000000)
 
+        time.sleep(5)
+
         #Start websocket client
         ws = WebsocketClient()
         ws_connection = ws.create_connection(f"ws://localhost:{self.websocket_server_port}/")

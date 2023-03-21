@@ -19,6 +19,7 @@ import io.horizen.account.utils._
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.block._
 import io.horizen.consensus._
+import io.horizen.evm.{Address, Hash}
 import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -38,7 +39,6 @@ import io.horizen.utils.{
   WithdrawalEpochUtils
 }
 import io.horizen.vrf.VrfOutput
-import io.horizen.evm.Hash
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
 import sparkz.util.{ModifierId, bytesToId}
@@ -194,13 +194,16 @@ class AccountForgeMessageBuilder(
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
       inputBlockSize: Int,
-      signatureOption: Option[Signature25519]
+      signatureOption: Option[Signature25519],
+      isPending: Boolean = false
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    if (addressList.isEmpty) throw new IllegalArgumentException("No addresses in wallet!")
-    val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
+    val forgerAddress = addressList.asScala.headOption.map(_.publicImage().asInstanceOf[AddressProposition]).getOrElse(
+      if (isPending) new AddressProposition(Address.ZERO)
+      else throw new IllegalArgumentException("No addresses in wallet!")
+    )
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)
@@ -479,7 +482,8 @@ class AccountForgeMessageBuilder(
       vrfProof,
       vrfOutput,
       mcRefDataRetrievalTimeout,
-      Seq()
+      Seq(),
+      isPending = true
     ) match {
       case ForgeSuccess(block) => Option.apply(block.asInstanceOf[AccountBlock])
       case _: ForgeFailure => Option.empty

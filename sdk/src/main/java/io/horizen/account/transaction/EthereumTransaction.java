@@ -8,11 +8,11 @@ import io.horizen.account.state.Message;
 import io.horizen.account.utils.BigIntegerUtil;
 import io.horizen.account.utils.EthereumTransactionEncoder;
 import io.horizen.account.utils.Secp256k1;
+import io.horizen.evm.Address;
 import io.horizen.json.Views;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
-import io.horizen.evm.Address;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
@@ -208,7 +208,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("version")
     public byte version() {
-        return (byte)this.type.ordinal();
+        return (byte) this.type.ordinal();
     }
 
     @Override
@@ -241,6 +241,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getNonce().signum() < 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "negative nonce", id()));
+        if (!BigIntegerUtil.isUint64(getNonce()))
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "nonce uint64 overflow", id()));
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
@@ -289,7 +292,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Override
     @JsonProperty("size")
     public synchronized long size() {
-        if (this.size == -1){
+        if (this.size == -1) {
             this.size = serializer().toBytes(this).length;
         }
         return size;
@@ -339,6 +342,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     /**
      * Calculate effective gas price, this will work for both legacy and EIP1559 transactions.
+     *
      * @param base base fee applicable for this transaction
      * @return effective gas price
      */
@@ -429,7 +433,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonIgnore
     public String getDataString() {
         if (this.data != null)
-          return BytesUtils.toHexString(this.data);
+            return BytesUtils.toHexString(this.data);
         return "";
     }
 
@@ -484,22 +488,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     public Message asMessage(BigInteger baseFee) {
-        var gasFeeCap = isEIP1559() ? getMaxFeePerGas() : getGasPrice();
-        var gasTipCap = isEIP1559() ? getMaxPriorityFeePerGas() : getGasPrice();
-        // calculate effective gas price as baseFee + tip capped at the fee cap
-        // this will default to gasPrice if the transaction is not EIP-1559
-        var effectiveGasPrice = getEffectiveGasPrice(baseFee);
         return new Message(
-                getFrom() == null ? Address.ZERO : getFrom().address(),
-                getTo().map(AddressProposition::address),
-                effectiveGasPrice,
-                gasFeeCap,
-                gasTipCap,
-                getGasLimit(),
-                getValue(),
-                getNonce(),
-                getData(),
-                false
+            getFrom() == null ? Address.ZERO : getFrom().address(),
+            getTo().map(AddressProposition::address),
+            getEffectiveGasPrice(baseFee),
+            getMaxFeePerGas(),
+            getMaxPriorityFeePerGas(),
+            getGasLimit(),
+            getValue(),
+            getNonce(),
+            getData(),
+            false
         );
     }
 

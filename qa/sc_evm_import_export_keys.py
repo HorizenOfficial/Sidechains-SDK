@@ -13,7 +13,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConne
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.authproxy import AuthServiceProxy
 from test_framework.util import assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, fail
 from SidechainTestFramework.scutil import generate_next_blocks, bootstrap_sidechain_nodes, AccountModel, \
     EVM_APP_BINARY, start_sc_node, wait_for_sc_node_initialization
 from httpCalls.wallet.exportSecret import http_wallet_exportSecret
@@ -156,12 +156,12 @@ class EvmSidechainImportExportKeysTest(AccountChainSetup):
 
         # Test authentication on exportSecret endpoint
         logging.info("# Test authentication on exportSecret endpoint")
-        exception = False
         try:
             http_wallet_exportSecret(sc_node2, evm_address_2, "fake_api_key")
         except SCAPIException:
-            exception = True
-        assert_true(exception)
+            pass
+        else:
+            fail("SCAPIException expected.")
 
         # Call the endpoint exportSecret and store the secret of the new address
         logging.info("# Call the endpoint exportSecret and store the secret of the new address")
@@ -170,12 +170,12 @@ class EvmSidechainImportExportKeysTest(AccountChainSetup):
 
         # Test authentication on importSecret endpoint
         logging.info("# Test authentication on importSecret endpoint")
-        exception = False
         try:
             http_wallet_importSecret(sc_node1, sc_secret_2, "fake_api_key")
         except SCAPIException:
-            exception = True
-        assert_true(exception)
+            pass
+        else:
+            fail("SCAPIException expected.")
 
         # Import the secret in the sc_node1 and verify that it owns also the new address
         logging.info("# Import the secret in the sc_node1 and verify that it owns also the new address")
@@ -243,12 +243,12 @@ class EvmSidechainImportExportKeysTest(AccountChainSetup):
         # Test authentication on dumpSecrets endpoint
         logging.info("# Test authentication on dumpSecrets endpoint")
 
-        exception = False
         try:
             http_wallet_dumpSecrets(sc_node1, DUMP_PATH, "fake_api_key")
         except SCAPIException:
-            exception = True
-        assert_true(exception)
+            pass
+        else:
+            fail("SCAPIException expected.")
 
         # Test that we dumped all the secrets
         logging.info("# Test that we dumped all the secrets")
@@ -285,12 +285,12 @@ class EvmSidechainImportExportKeysTest(AccountChainSetup):
         # Test authentication on importSecrets endpoint
         logging.info("# Test authentication on importSecrets endpoint")
 
-        exception = False
         try:
             http_wallet_importSecrets(sc_node2, DUMP_PATH, "fake_api_key")
         except SCAPIException:
-            exception = True
-        assert_true(exception)
+            pass
+        else:
+            fail("SCAPIException expected.")
 
         # Test that we stop the execution of importSecrets if the file is corrupted.
         logging.info("# Test that we stop the execution of importSecrets if the file is corrupted.")
@@ -299,12 +299,12 @@ class EvmSidechainImportExportKeysTest(AccountChainSetup):
         f.write("Corrupted_line C_\n")
         f.close()
 
-        exception = False
         try:
             http_wallet_importSecrets(sc_node2, DUMP_PATH_CORRUPTED, self.API_KEY_NODE2)
         except SCAPIException:
-            exception = True
-        assert_true(exception)
+            pass
+        else:
+            fail("SCAPIException expected.")
 
         # Test that we imported in the sc_node2 only the 5 missing keys
         logging.info("# Test that we imported in the sc_node2 only the 5 missing keys")

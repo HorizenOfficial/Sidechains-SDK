@@ -20,8 +20,9 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
+import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
 import io.horizen.network.SyncStatus
-import io.horizen.network.SyncStatusActor.ReceivableMessages.ReturnSyncStatus
+import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
@@ -125,69 +126,189 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   val txPoolStatusOutput = """{"pending":3,"queued":1}"""
   val txPoolContentOutput =
     """{
-      "pending": {
-        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
-          "16": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
-            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-            "nonce": "0x10",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0xe4e1c0"
-          },
-          "24": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
-            "input": "0x8c64fe48688ab096dfb6ac2eeefcf213",
-            "nonce": "0x18",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x493e00"
-          }
-        },
-        "0xb039865dbea73df08e23f185847bab8e6a44108d": {
-          "32": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0xb3151940f923813eca1d70ad405a852bcd2d7609",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
-            "input": "0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-            "nonce": "0x20",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x112a880"
-          }
-        }
+      "pending":{
+         "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+            "16":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+               "type":"0x2",
+               "nonce":"0x10",
+               "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0xe4e1c0",
+               "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            },
+            "24":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+               "type":"0x2",
+               "nonce":"0x18",
+               "from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x493e00",
+               "input":"0x8c64fe48688ab096dfb6ac2eeefcf213",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         },
+         "0xb039865dbea73df08e23f185847bab8e6a44108d":{
+            "32":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xa401453d0258ceb1efbd58500fc60290a8579692ac129dc2317b4df8f16dadbd",
+               "type":"0x2",
+               "nonce":"0x20",
+               "from":"0xb3151940f923813eca1d70ad405a852bcd2d7609",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x112a880",
+               "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         }
       },
-      "queued": {
-        "0x15532e34426cd5c37371ff455a5ba07501c0f522": {
-          "40": {
-            "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "blockNumber": null,
-            "from": "0xc803d7146a4df6937b609f7951bc7eda3def09fb",
-            "gas": "0xec0564",
-            "gasPrice": "0x3b9aca64",
-            "hash": "0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
-            "input": "0x4aa64a075647e3621bbc14b03e4087903f2c9503",
-            "nonce": "0x28",
-            "to": "0x15532e34426cd5c37371ff455a5ba07501c0f522",
-            "transactionIndex": null,
-            "value": "0x3c14dc0"
-          }
-        }
+      "queued":{
+         "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+            "40":{
+               "blockHash":null,
+               "blockNumber":null,
+               "transactionIndex":null,
+               "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+               "type":"0x2",
+               "nonce":"0x28",
+               "from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+               "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+               "value":"0x3c14dc0",
+               "input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+               "gas":"0xec0564",
+               "gasPrice":"0x3b9aca64",
+               "maxPriorityFeePerGas":"0x6ef91",
+               "maxFeePerGas":"0x3b9aca64",
+               "chainId":"0x7cd",
+               "v":"0x1c",
+               "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+               "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+               "accessList":[]
+            }
+         }
       }
     }"""
+  val txPoolContentFromOutput =
+    """{
+       "pending":{
+          "16":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+             "type":"0x2",
+             "nonce":"0x10",
+             "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0xe4e1c0",
+             "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          },
+          "24":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0xc8a7edb4bd87f30671879a1b12767591a4d73fc12153885ec96e556a97fc5b37",
+             "type":"0x2",
+             "nonce":"0x18",
+             "from":"0x081d8a5b696ec5dfce641568e6665b6be2410ce2",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0x493e00",
+             "input":"0x8c64fe48688ab096dfb6ac2eeefcf213",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          }
+       },
+       "queued":{
+          "40":{
+             "blockHash":null,
+             "blockNumber":null,
+             "transactionIndex":null,
+             "hash":"0xa96d74a993d579d052ce37b28463a1e3ef4e0066cf2390ed7057a4013cb5b165",
+             "type":"0x2",
+             "nonce":"0x28",
+             "from":"0xc803d7146a4df6937b609f7951bc7eda3def09fb",
+             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+             "value":"0x3c14dc0",
+             "input":"0x4aa64a075647e3621bbc14b03e4087903f2c9503",
+             "gas":"0xec0564",
+             "gasPrice":"0x3b9aca64",
+             "maxPriorityFeePerGas":"0x6ef91",
+             "maxFeePerGas":"0x3b9aca64",
+             "chainId":"0x7cd",
+             "v":"0x1c",
+             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+             "accessList":[]
+          }
+       }
+    }"""
+
+  val txPoolInspectOutput =
+    """{
+    "pending": {
+       "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+          "16":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 15000000 wei + 15467876 gas × 1000000100 wei",
+          "24":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 4800000 wei + 15467876 gas × 1000000100 wei"
+       },
+       "0xb039865dbea73df08e23f185847bab8e6a44108d":{
+          "32":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 18000000 wei + 15467876 gas × 1000000100 wei"
+       }
+    },
+    "queued": {
+       "0x15532e34426cd5c37371ff455a5ba07501c0f522":{
+          "40":"0x15532e34426cd5c37371ff455a5ba07501c0f522: 63000000 wei + 15467876 gas × 1000000100 wei"
+       }
+    }
+  }"""
   var ethService: EthService = _
   var txJson: String = _
   var senderWithSecret: String = _
@@ -213,9 +334,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     val mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
     val goodSignature = new SignatureSecp256k1(
-      BytesUtils.fromHexString("1c"),
-      BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
-      BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d")
+      new BigInteger("1c", 16),
+      new BigInteger("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023", 16),
+      new BigInteger("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d", 16)
     )
     val txs = new ListBuffer[SidechainTypes#SCAT]()
     val txEip1559 = new EthereumTransaction(
@@ -308,7 +429,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActor = TestProbe()
     mockedSyncStatusActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
-        case ReturnSyncStatus =>
+        case GetSyncStatus =>
           sender ! new SyncStatus(true, BigInt(250), BigInt(200), BigInt(300))
       }
       TestActor.KeepRunning
@@ -316,6 +437,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val mockedSyncStatusActorRef: ActorRef = mockedSyncStatusActor.ref
 
     val ethServiceSettings = EthServiceSettings()
+    val transactionsCompanion = getDefaultAccountTransactionsCompanion
 
     ethService = new EthService(
       nodeViewHolderRef,
@@ -326,7 +448,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       10,
       "testVersion",
       transactionActorRef,
-      mockedSyncStatusActorRef
+      mockedSyncStatusActorRef,
+      transactionsCompanion
     )
   }
 
@@ -562,16 +685,16 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag", "Full transaction objects", "Expected output"),
       ("latest", true, expectedBlockViewTxHydrated),
       ("latest", false, expectedBlockViewTxHashes),
-      ("0x2", true, expectedBlockViewTxHydrated)
+      ("0x2", true, expectedBlockViewTxHydrated),
+      ("safe", true, "null"),
+      ("finalized", true, "null"),
+      ("0x1337", true, "null"),
     )
 
     val invalidCases =
       Table(
         ("Block tag / number", "Full transaction objects"),
-        ("safe", true),
-        ("finalized", true),
         ("aaaa", true),
-        ("0x1337", true)
       )
 
     forAll(validCases) { (tag, fullTx, expectedOutput) =>
@@ -594,8 +717,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block hash", "Full transaction objects", "Expected output"),
       ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, expectedBlockViewTxHydrated),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes),
-      ("0x12345677de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", true, "null")
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", false, expectedBlockViewTxHashes)
     )
 
     val invalidCases =
@@ -622,11 +744,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("Block tag / index", "Expected output"),
       ("latest", "\"0x1\""),
       ("0x2", "\"0x1\""),
-      ("0x1", "\"0x0\"")
+      ("0x1", "\"0x0\""),
+      ("0x1337", "null")
     )
 
     val invalidCases =
-      Table("Block tag / index", "0x1337", "1337abcd")
+      Table("Block tag / index", "1337abcd")
 
     forAll(validCases) { (tag, expectedOutput) =>
       assertJsonEquals(
@@ -1191,6 +1314,19 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   @Test
   def txpool_content(): Unit = {
     assertJsonEquals(txPoolContentOutput, ethService.execute(getRpcRequest()))
+  }
+
+  @Test
+  def txpool_contentFrom(): Unit = {
+    val method = "txpool_contentFrom"
+    assertJsonEquals(
+      txPoolContentFromOutput,
+      ethService.execute(getRpcRequest(paramValues = Array("0x15532e34426cd5c37371ff455a5ba07501c0f522"), method = method)))
+  }
+
+  @Test
+  def txpool_inspect(): Unit = {
+    assertJsonEquals(txPoolInspectOutput, ethService.execute(getRpcRequest()))
   }
 
 }

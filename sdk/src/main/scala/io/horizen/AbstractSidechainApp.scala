@@ -273,24 +273,27 @@ abstract class AbstractSidechainApp
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
-  lazy val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
+  lazy val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocketClient)
 
   // Create the web socket connector and configure it
-  lazy val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
-    sidechainSettings.websocket.address,
-    sidechainSettings.websocket.connectionTimeout,
-    communicationClient,
-    webSocketReconnectionHandler
-  )
+  if(sidechainSettings.websocketClient.enabled) {
+    val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+      sidechainSettings.websocketClient.address,
+      sidechainSettings.websocketClient.connectionTimeout,
+      communicationClient,
+      webSocketReconnectionHandler
+    )
+    // Start the web socket connector
+    val connectorStarted : Try[Unit] = webSocketConnector.start()
 
-  // Start the web socket connector
-  val connectorStarted : Try[Unit] = webSocketConnector.start()
-
-  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-  if(connectorStarted.isSuccess)
-    communicationClient.setWebSocketChannel(webSocketConnector)
-  else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
-    throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
+    // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+    if(connectorStarted.isSuccess)
+      communicationClient.setWebSocketChannel(webSocketConnector)
+    else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+      throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
+  } else {
+    log.info("Websocket client is disabled.")
+  }
 
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)

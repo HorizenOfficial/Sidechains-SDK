@@ -38,7 +38,6 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -208,8 +207,8 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator

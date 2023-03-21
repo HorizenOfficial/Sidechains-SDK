@@ -32,9 +32,10 @@ public class EvmAppModule extends AccountAppModule {
 
     @Override
     public void configureApp() {
-        long regTestId = 1997L;
-        long testNetId = 1662L;
-        long mainNetId = 7331L;
+
+        long regTestId = 1000000001;
+        long testNetId = 1000000002;
+        long mainNetId = 1000000003;
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 

@@ -92,9 +92,9 @@ trait EthereumTransactionFixture {
       BigInteger.TEN.pow(19), // value
       new Array[Byte](0),
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1c"),
-        BytesUtils.fromHexString("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5"),
-        BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
+        new BigInteger("1c", 16),
+        new BigInteger("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5", 16),
+        new BigInteger("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9", 16))
     )
   }
 
@@ -120,9 +120,9 @@ trait EthereumTransactionFixture {
       BigInteger.ZERO, // value
       EthereumTransactionUtils.getDataFromString("0xa9059cbb0000000000000000000000000ee513f5366075aa80565f2b0cc2dc0adc76a475000000000000000000000000000000000000000000000000b917d212e0933000"),
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1b"),
-        BytesUtils.fromHexString("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295"),
-        BytesUtils.fromHexString("22d794fa14567f77d7a6e6e9f780094010d70991c3028b4ea50faf62f1631e52"))
+        new BigInteger("1b", 16),
+        new BigInteger("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295", 16),
+        new BigInteger("22d794fa14567f77d7a6e6e9f780094010d70991c3028b4ea50faf62f1631e52", 16))
     )
   }
 
@@ -137,9 +137,9 @@ trait EthereumTransactionFixture {
       BigInteger.ZERO, // value
       EthereumTransactionUtils.getDataFromString("c7265637420783d223136302220793d22323335222077696474683d2231383022206865696768743d22353022207374796c653d226"),
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1c"),
-        BytesUtils.fromHexString("1f9202e5b7e4d65e381c63b9a6235838e7bc5d6a0ee0f070be40fd3913855d3c"),
-        BytesUtils.fromHexString("1f9202e5b7e4d65e381c63b9a6235838e7bc5d6a0ee0f070be40fd3913855d3c"))
+        new BigInteger("1c", 16),
+        new BigInteger("1f9202e5b7e4d65e381c63b9a6235838e7bc5d6a0ee0f070be40fd3913855d3c", 16),
+        new BigInteger("1f9202e5b7e4d65e381c63b9a6235838e7bc5d6a0ee0f070be40fd3913855d3c", 16))
     )
   }
 
@@ -154,9 +154,9 @@ trait EthereumTransactionFixture {
       new BigInteger(BytesUtils.fromHexString("320ec7c4e2a000")), // value
       new Array[Byte](0),
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1c"),
-        BytesUtils.fromHexString("e430ed7a69eb23bd96d543d6acb605af31d3eb6b1967ca4a69f31245527d942e"),
-        BytesUtils.fromHexString("06d2c6034ad1905b4121aa036a382795d8f9fb2f801eafb256febb09f88f6d46"))
+        new BigInteger("1c", 16),
+        new BigInteger("e430ed7a69eb23bd96d543d6acb605af31d3eb6b1967ca4a69f31245527d942e", 16),
+        new BigInteger("06d2c6034ad1905b4121aa036a382795d8f9fb2f801eafb256febb09f88f6d46", 16))
     )
   }
 
@@ -185,9 +185,9 @@ trait EthereumTransactionFixture {
       BigInteger.TEN.pow(18), // value
       new Array[Byte](0),
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1b"),
-        BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
-        BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83")
+        new BigInteger("1b", 16),
+        new BigInteger("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276", 16),
+        new BigInteger("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83", 16)
       )
     )
   }
@@ -217,7 +217,10 @@ trait EthereumTransactionFixture {
       GasUtil.TxGas,  // gasLimit
       BigInteger.TEN.pow(18), // value
       new Array[Byte](0),
-      new SignatureSecp256k1(Array[Byte](88), Array.fill[Byte](32)(0), Array.fill[Byte](32)(0))
+      new SignatureSecp256k1(
+        new BigInteger(1, Array[Byte](88)),
+        new BigInteger(1, Array.fill[Byte](32)(0)),
+        new BigInteger(1, Array.fill[Byte](32)(0)))
     )
   }
 
@@ -233,9 +236,9 @@ trait EthereumTransactionFixture {
       BigInteger.ONE, // value
       randomData,
       new SignatureSecp256k1(
-        BytesUtils.fromHexString("1b"),
-        BytesUtils.fromHexString("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295"),
-        BytesUtils.fromHexString("22d794fa14567f77d7a6e6e9f780094010d70991c3028b4ea50faf62f1631e52"))
+        new BigInteger("1b", 16),
+        new BigInteger("b83e51baa9bb20d7b281032f44c1ed75f25f69ac47ac26d97e66859ea80c1295", 16),
+        new BigInteger("22d794fa14567f77d7a6e6e9f780094010d70991c3028b4ea50faf62f1631e52", 16))
     )
   }
 
