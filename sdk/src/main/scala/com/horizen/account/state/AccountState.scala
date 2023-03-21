@@ -102,7 +102,7 @@ class AccountState(
           mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
 
           // Save the scTxCommitmentTreeRootHash of every mainchain header in a block
-          mod.mainchainHeaders.foreach(mcHeader => stateView.addSidechainTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment))
+          mod.mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
         } else {
           // For ceasing sidechains submission window concept is used.
           // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -525,7 +525,6 @@ class AccountState(
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
     if (sc2scConfig.canSendMessages) using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash)) else false
-
 }
 
 object AccountState extends SparkzLogging {

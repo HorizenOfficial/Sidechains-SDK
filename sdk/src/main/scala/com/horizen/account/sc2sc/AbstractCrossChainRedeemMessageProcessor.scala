@@ -10,11 +10,11 @@ import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import com.horizen.utils.BytesUtils
 
 trait CrossChainRedeemMessageProvider {
+  def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit
   def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean
 }
 
 abstract class AbstractCrossChainRedeemMessageProcessor(
-                                                         accountStateView: AccountStateView,
                                                          networkParams: NetworkParams,
                                                          sc2scCircuit: Sc2scCircuit
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
@@ -66,7 +66,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     validateDoubleMessageRedeem(ccMsg, view)
 
     // Validate scCommitmentTreeRoot and nextScCommitmentTreeRoot exists
-    validateScCommitmentTreeRoot(ccRedeemMgs.scCommitmentTreeRoot, ccRedeemMgs.nextScCommitmentTreeRoot)
+    validateScCommitmentTreeRoot(ccRedeemMgs.scCommitmentTreeRoot, ccRedeemMgs.nextScCommitmentTreeRoot, view)
 
     // Validate Proof
     validateProof(ccRedeemMgs)
@@ -86,14 +86,18 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     }
   }
 
+  override def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit =
+    view.updateAccountStorage(contractAddress, hash, Array.emptyByteArray)
+
   private def validateScCommitmentTreeRoot(
                                             scCommitmentTreeRoot: Array[Byte],
-                                            nextScCommitmentTreeRoot: Array[Byte]): Unit = {
-    if (!accountStateView.doesScTxCommitmentTreeRootExist(scCommitmentTreeRoot)) {
+                                            nextScCommitmentTreeRoot: Array[Byte],
+                                            view: BaseAccountStateView): Unit = {
+    if (view.getAccountStorage(contractAddress, scCommitmentTreeRoot).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain commitment tree root `${BytesUtils.toHexString(scCommitmentTreeRoot)}` does not exist")
     }
 
-    if (!accountStateView.doesScTxCommitmentTreeRootExist(nextScCommitmentTreeRoot)) {
+    if (view.getAccountStorage(contractAddress, nextScCommitmentTreeRoot).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain next commitment tree root `${BytesUtils.toHexString(nextScCommitmentTreeRoot)}` does not exist")
     }
   }

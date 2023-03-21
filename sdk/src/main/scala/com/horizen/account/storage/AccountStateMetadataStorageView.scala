@@ -51,7 +51,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var topCertificateMainchainHashes: Map[Int, Array[Byte]] = Map()
   //Contains the base fee to be used when forging the next block
   private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
-  private[horizen] var scTxCommitmentTreeRootHashesSeq: Seq[Array[Byte]] = Seq()
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -62,8 +61,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     withdrawalEpochInfoOpt.orElse(getWithdrawalEpochInfoFromStorage).getOrElse(WithdrawalEpochInfo(0, 0))
   }
-
-  def getScTxCommitmentTreeRootHashes: Seq[Array[Byte]] = scTxCommitmentTreeRootHashesSeq
 
   private[horizen] def getWithdrawalEpochInfoFromStorage: Option[WithdrawalEpochInfo] = {
     storage.get(withdrawalEpochInformationKey).asScala match {
@@ -269,9 +266,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     nextBaseFeeOpt.orElse(getNextBaseFeeFromStorage).getOrElse(FeeUtils.INITIAL_BASE_FEE)
   }
 
-  def addSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit =
-    scTxCommitmentTreeRootHashesSeq = scTxCommitmentTreeRootHashesSeq :+ hash
-
   def setCeased(): Unit = hasCeasedOpt = Some(true)
 
   // update the database with "dirty" records new values
@@ -301,7 +295,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt = None
     receiptsOpt = None
     nextBaseFeeOpt = None
-    scTxCommitmentTreeRootHashesSeq = Seq()
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -356,8 +349,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
-
-    scTxCommitmentTreeRootHashesSeq.foreach(hash => updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(hash), hash)))
 
     // update the height unless we have the very first version of the db
     //--

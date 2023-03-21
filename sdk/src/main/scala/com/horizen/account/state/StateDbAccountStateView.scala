@@ -10,7 +10,7 @@ import com.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
@@ -78,6 +78,10 @@ class StateDbAccountStateView(
       case Some(x) => x.getCrossChainMessageHashEpoch(msgHash, this)
       case None => Option.empty
     }
+  }
+
+  def applyMainchainHeader(mcHeader: MainchainHeader): Unit = {
+    crossChainRedeemMessageProviders.foreach(provider => provider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this))
   }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {

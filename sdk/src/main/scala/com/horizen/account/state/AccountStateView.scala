@@ -7,7 +7,6 @@ import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.StateDB
-import com.horizen.sc2sc.CrossChainMessageHash
 import com.horizen.state.StateView
 import com.horizen.utils.WithdrawalEpochInfo
 import sparkz.core.VersionTag
@@ -65,8 +64,6 @@ class AccountStateView(
 
   def updateNextBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateNextBaseFee(baseFee)
 
-  def addSidechainTxCommitmentTreeRootHash(hash: Array[Byte]): Unit = metadataStorageView.addSidechainTxCommitmentTreeRootHash(hash)
-
   def getNextBaseFee: BigInteger = metadataStorageView.getNextBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
@@ -97,7 +94,4 @@ class AccountStateView(
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
-
-  def doesScTxCommitmentTreeRootExist(hash: Array[Byte]): Boolean =
-    metadataStorageView.doesScTxCommitmentTreeRootExist(hash)
 }
