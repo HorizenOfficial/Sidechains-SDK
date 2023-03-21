@@ -23,6 +23,7 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage.StorageIterator
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.horizen.utxo.SidechainApp
+import io.horizen.utxo.api.http
 import io.horizen.utxo.api.http.SimpleCustomApi
 import io.horizen.utxo.api.http.route._
 import io.horizen.utxo.backup.BoxIterator
@@ -390,7 +391,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
     SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo, NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val applicationApiRoute: Route = SidechainApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
+  val applicationApiRoute: Route = http.route.SidechainApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef, params).route
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator, params).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route

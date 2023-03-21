@@ -1,15 +1,15 @@
-package io.horizen.api.http.route
+package io.horizen.utxo.api.http.route
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
-import io.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import akka.pattern.ask
 import io.horizen.api.http.FunctionsApplierOnSidechainNodeView
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
-import io.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import io.horizen.utxo.node._
+import io.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding

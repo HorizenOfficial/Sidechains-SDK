@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen.api.http._
-import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainApplicationApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
+import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
@@ -16,6 +16,7 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen.utxo.api.http
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import io.horizen.utxo.backup.BoxIterator
@@ -213,7 +214,7 @@ class SidechainApp @Inject()
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
-  override lazy val applicationApiRoutes: Seq[SidechainApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+  override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
