@@ -1,7 +1,9 @@
 package io.horizen.account.utils
 
+import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.utils.Bloom.BLOOM_BYTE_LENGTH
+import io.horizen.json.Views
 import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Keccak256
@@ -12,6 +14,7 @@ import java.util
 /**
  * Bloom represents a 2048 bit bloom filter.
  */
+@JsonView(Array(classOf[Views.Default]))
 class Bloom(private val filter: Array[Byte]) extends BytesSerializable {
   require(filter.length == BLOOM_BYTE_LENGTH)
 

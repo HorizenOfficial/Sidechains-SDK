@@ -110,7 +110,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
    *        withdrawal epoch number, at the end of which the certifiers keys where defined/stored
    * @return certifier keys in case the given withdrawal epoch has been finished and the record is still in the database,
    *         None otherwise.
-   * @note in case {@code witdrawalEpoch == -1}, than returns the genesis set of certifiers keys from params.
+   * @note in case {@code withdrawalEpoch == -1}, then returns the genesis set of certifiers keys from params.
    */
   override def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     if (withdrawalEpoch == -1)

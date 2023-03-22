@@ -7,7 +7,6 @@ import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.companion._
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fork.ForkConfigurator
@@ -17,7 +16,6 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
-import io.horizen.utxo.api.http._
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
@@ -33,7 +31,6 @@ import io.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProv
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
-import io.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
 import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
@@ -43,7 +40,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import scala.util.Try
+import scala.io.{Codec, Source}
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -91,6 +88,8 @@ class SidechainApp @Inject()
   override type NVHT = SidechainNodeViewHolder
 
   log.info(s"Starting application with settings \n$sidechainSettings")
+
+  override val swaggerConfig: String = Source.fromResource("utxo/api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
   protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
