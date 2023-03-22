@@ -40,6 +40,7 @@ import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.io.{Codec, Source}
 
 
 class AccountSidechainApp @Inject()
@@ -68,6 +69,8 @@ class AccountSidechainApp @Inject()
   override type TX = SidechainTypes#SCAT
   override type PMOD = AccountBlock
   override type NVHT = AccountSidechainNodeViewHolder
+
+  override val swaggerConfig: String = Source.fromResource("account/api/accountApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   protected lazy val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
 

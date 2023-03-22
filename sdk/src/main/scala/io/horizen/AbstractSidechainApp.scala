@@ -1,6 +1,5 @@
 package io.horizen
 
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
@@ -15,8 +14,7 @@ import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvi
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.fork.{ForkConfigurator, ForkManager}
-import io.horizen.helper.TransactionSubmitProvider
-import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl}
+import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
 import io.horizen.proposition._
@@ -28,13 +26,13 @@ import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
 import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
-import sparkz.util.SparkzLogging
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.app.Application
 import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.message.MessageSpec
 import sparkz.core.settings.SparkzSettings
+import sparkz.util.SparkzLogging
 
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
@@ -45,7 +43,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.io.{Codec, Source}
 import scala.util.{Failure, Success, Try}
 
 
@@ -298,8 +295,6 @@ abstract class AbstractSidechainApp
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
 //  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
 //  val applicationApiRoutes: Seq[ApplicationApiRoute]
