@@ -875,6 +875,30 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     }
   }
 
+  /**
+   * invalid cases for functions that should return errors if address or block number / tag parameter are invalid, e.g.
+   *   - eth_getBalance
+   *   - eth_getTransactionCount
+   *   - eth_getCode
+   */
+  private val invalidCasesAddressAndTag = Table(
+    ("Address", "Tag"),
+    // address: empty is not valid
+    ("", "latest"),
+    // address: invalid
+    ("0x", "latest"),
+    // address: missing prefix
+    ("1234567890123456789012345678901234567890", "latest"),
+    // address: too short
+    ("0x123456789012345678901234567890123456789", "latest"),
+    // address: too long
+    ("0x12345678901234567890123456789012345678900", "latest"),
+    // tag: empty string is not valid
+    ("0x1234567890123456789012345678901234567890", ""),
+    // tag: block with number 0x1337 does not exist
+    ("0x1234567891011121314151617181920212223242", "0x1337")
+  )
+
   @Test
   def eth_getBalance(): Unit = {
     val method = "eth_getBalance"
@@ -885,13 +909,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567891011121314151617181920212223241", "latest", "\"0x16345785d89ffff\"")
     )
 
-    val invalidCases = Table(
-      ("Address", "Tag"),
-      ("0x", "latest"),
-      ("0x1234567890123456789012345678901234567890", ""),
-      ("0x1234567891011121314151617181920212223242", "0x1337")
-    )
-
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
         expectedOutput,
@@ -899,7 +916,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     }
 
-    forAll(invalidCases) { (address, tag) =>
+    forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
         ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       }
@@ -915,13 +932,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567890123456789012345678901234567890", "latest", "\"0x\"")
     )
 
-    val invalidCases = Table(
-      ("Address", "Tag"),
-      ("0x", "latest"),
-      ("0x1234567890123456789012345678901234567890", ""),
-      ("0x1234567891011121314151617181920212223242", "0x1337")
-    )
-
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
         expectedOutput,
@@ -929,7 +939,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     }
 
-    forAll(invalidCases) { (address, tag) =>
+    forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
         ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       }
@@ -945,13 +955,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       ("0x1234567890123456789012345678901234567890", "latest", "\"0x0\"")
     )
 
-    val invalidCases = Table(
-      ("Address", "Tag"),
-      ("0x", "latest"),
-      ("0x1234567890123456789012345678901234567890", ""),
-      ("0x1234567891011121314151617181920212223242", "0x1337")
-    )
-
     forAll(validCases) { (address, tag, expectedOutput) =>
       assertJsonEquals(
         expectedOutput,
@@ -959,7 +962,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       )
     }
 
-    forAll(invalidCases) { (address, tag) =>
+    forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
         ethService.execute(getRpcRequest(paramValues = Array(address, tag), method = method))
       }
