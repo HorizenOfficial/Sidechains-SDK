@@ -699,7 +699,11 @@ class EthService(
 
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
-    val tx = EthereumTransactionDecoder.decode(signedTxData)
+    val tx = try {
+      EthereumTransactionDecoder.decode(signedTxData)
+    } catch {
+      case err: RuntimeException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage))
+    }
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
     // wait for submit
