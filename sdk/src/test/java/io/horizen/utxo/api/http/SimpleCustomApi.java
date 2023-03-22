@@ -86,8 +86,7 @@ public class SimpleCustomApi extends SidechainApplicationApiGroup
     }
 
     @JsonView(Views.Default.class)
-    static
-    class RespAllSecret implements SuccessResponse
+    public static class RespAllSecret implements SuccessResponse
     {
 
         private List<Secret> secrets;
