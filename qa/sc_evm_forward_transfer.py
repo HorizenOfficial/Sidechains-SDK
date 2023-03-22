@@ -32,10 +32,11 @@ Test:
 
 class SCEvmForwardTransfer(AccountChainSetup):
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20)
+        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2)
 
     def run_test(self):
-        sc_node = self.sc_nodes[0]
+        sc_node1 = self.sc_nodes[0]
+        sc_node2 = self.sc_nodes[1]
 
         self.sc_ac_setup()
 
@@ -43,24 +44,24 @@ class SCEvmForwardTransfer(AccountChainSetup):
         ft_amount_in_wei = convertZenniesToWei(ft_amount_in_zennies)
 
         # verify forward transfer was received
-        balance = sc_node.rpc_eth_getBalance(self.evm_address, "latest")
+        balance = sc_node1.rpc_eth_getBalance(self.evm_address, "latest")
         logging.info(balance)
         #assert_equal(hex(ft_amount_in_wei), balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
         # Try with block hash
-        forward_transfer = sc_node.rpc_zen_getForwardTransfers(add_0x_prefix(self.block_id))['result']['forwardTransfers'][0]
+        forward_transfer = sc_node1.rpc_zen_getForwardTransfers(add_0x_prefix(self.block_id))['result']['forwardTransfers'][0]
         #assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         #assert_equal(self.evm_address.lower(), forward_transfer['to'])
 
         # Try with block number
-        block_number = sc_node.block_best()["result"]["height"]
-        forward_transfer = sc_node.rpc_zen_getForwardTransfers(block_number)['result']['forwardTransfers'][0]
+        block_number = sc_node1.block_best()["result"]["height"]
+        forward_transfer = sc_node1.rpc_zen_getForwardTransfers(block_number)['result']['forwardTransfers'][0]
         #assert_equal(hex(ft_amount_in_wei), forward_transfer['value'])
         #assert_equal(self.evm_address.lower(), forward_transfer['to'])
 
         # Try with tag
-        result = sc_node.rpc_zen_getForwardTransfers("latest")
+        result = sc_node1.rpc_zen_getForwardTransfers("latest")
         #assert_true("error" in result, "rpc_zen_getForwardTransfers should fail when using tag parameter")
         #assert_true("Invalid block input parameter" in result["error"]["message"], "Wrong error")
 
@@ -69,7 +70,7 @@ class SCEvmForwardTransfer(AccountChainSetup):
             "blockId": self.block_id
         }
         request = json.dumps(j)
-        forward_transfer = sc_node.block_getForwardTransfers(request)['result']['forwardTransfers'][0]
+        forward_transfer = sc_node1.block_getForwardTransfers(request)['result']['forwardTransfers'][0]
         #assert_equal(ft_amount_in_wei, int(forward_transfer['value']))
         #assert_equal(format_eoa(self.evm_address), forward_transfer['to'])
 
@@ -79,20 +80,20 @@ class SCEvmForwardTransfer(AccountChainSetup):
         smart_contract = SmartContract(smart_contract_type)
         logging.info(smart_contract)
         test_message = 'Initial message'
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
+        tx_hash, smart_contract_address = smart_contract.deploy(sc_node1, test_message,
                                                                 fromAddress=self.evm_address,
                                                                 gasLimit=10000000,
                                                                 gasPrice=900000000)
 
         logging.info("Mempool node before")
-        logging.info(allTransactions(sc_node))
+        logging.info(allTransactions(sc_node1))
 
-        generate_next_blocks(sc_node, "first node", 1)
+        generate_next_blocks(sc_node1, "first node", 1)
         logging.info("Mempool node after")
-        logging.info(allTransactions(sc_node))
+        logging.info(allTransactions(sc_node1))
 
         # verify smart contract has a balance of zero
-        balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
+        balance = sc_node1.rpc_eth_getBalance(smart_contract_address, "latest")
         logging.info(balance)
         #assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
 
@@ -103,15 +104,15 @@ class SCEvmForwardTransfer(AccountChainSetup):
                                       self.ft_amount_in_zen,
                                       self.mc_return_address)
 
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
 
         # verify that the smart contract account balance has not changed
-        balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
+        balance = sc_node1.rpc_eth_getBalance(smart_contract_address, "latest")
         logging.info(balance)
         #assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
 
         # verify that such amount has been burned, that means credited to 0xdead address
-        balance = sc_node.rpc_eth_getBalance(to_checksum_address(NULL_ADDRESS), "latest")
+        balance = sc_node1.rpc_eth_getBalance(to_checksum_address(NULL_ADDRESS), "latest")
         logging.info(balance)
         #assert_equal(hex(int(forward_transfer['value'])), balance["result"], "dead address has zero balance")
 

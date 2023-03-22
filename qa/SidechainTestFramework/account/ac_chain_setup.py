@@ -145,14 +145,15 @@ class AccountChainSetup(SidechainTestFramework):
                               extra_args=self.debug_extra_args)
 
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
-        sc_node = self.sc_nodes[0]
+        sc_node1 = self.sc_nodes[0]
+        sc_node2 = self.sc_nodes[1]
         mc_node = self.nodes[0]
         self.mc_return_address = mc_node.getnewaddress()
         mc_block = mc_node.getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = mc_node.getblock(mc_block["hash"], False)
         logging.info("SC genesis mc block hex = " + mc_block_hex)
 
-        sc_best_block = sc_node.block_best()["result"]
+        sc_best_block = sc_node1.block_best()["result"]
 
         assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
 
@@ -160,13 +161,13 @@ class AccountChainSetup(SidechainTestFramework):
         res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
         assert_true(res, "The mainchain block is not included in SC node.")
 
-        sc_mc_best_block_ref_info = sc_node.mainchain_bestBlockReferenceInfo()["result"]
+        sc_mc_best_block_ref_info = sc_node1.mainchain_bestBlockReferenceInfo()["result"]
         assert_true(
             check_mainchain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
             "The mainchain block is not included inside SC block reference info.")
 
         if wallet:
-            self.evm_address = '0x' + sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+            self.evm_address = '0x' + sc_node1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
             logging.info("pubkey = {}".format(self.evm_address))
         else:
             forwardTransfer = False
@@ -174,15 +175,24 @@ class AccountChainSetup(SidechainTestFramework):
         if forwardTransfer:
             self.ft_amount_in_zen = ft_amount_in_zen
             # transfer some fund from MC to SC using the evm address created before
-            print("forward transfer address: " + self.evm_address[2:])
+            print("forward transfer address node 1: " + self.evm_address)
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                           self.nodes[0],
                                           self.evm_address[2:],
                                           1200,
                                           self.mc_return_address)
 
-            self.block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            # transfer some fund from MC to SC node 2
+            evm_address_node_2 = '0x' + sc_node2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+            print("forward transfer address node 2: " + evm_address_node_2)
+            forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                          self.nodes[0],
+                                          evm_address_node_2[2:],
+                                          ft_amount_in_zen,
+                                          self.mc_return_address)
+
+            self.block_id = generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
-            sc_best_block = sc_node.block_best()["result"]
+            sc_best_block = sc_node1.block_best()["result"]
             logging.info(sc_best_block)
