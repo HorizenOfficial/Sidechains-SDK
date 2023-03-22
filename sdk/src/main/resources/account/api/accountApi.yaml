@@ -2918,6 +2918,7 @@ components:
       properties:
         id:
           type: string
+          format: byte
         proposition:
           $ref: '#/components/schemas/Proposition'
         value:
@@ -3036,8 +3037,7 @@ components:
           description: Array of Ommer objects
           type: array
           items:
-            type: object
-
+            $ref: '#/components/schemas/Ommer'
         size:
           type: integer
           format: int64

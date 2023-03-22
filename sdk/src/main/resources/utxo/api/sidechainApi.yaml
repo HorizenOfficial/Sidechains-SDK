@@ -63,7 +63,7 @@ paths:
                         $ref: '#/components/schemas/SidechainBlock'
                       height:
                         type: integer
-                        format: int64
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -92,6 +92,7 @@ paths:
                   description: The number of block ids to return
                   type: integer
                   format: int32
+                  minimum: 1
       responses:
         '200':
           description: successful operation
@@ -135,6 +136,7 @@ paths:
                   description: The height, in a blockchain, of the block to return
                   type: integer
                   format: int32
+                  minimum: 1
       responses:
         '200':
           description: successful operation
@@ -2987,15 +2989,25 @@ components:
     SidechainPeerNode:
       type: object
       properties:
-        address:
+        remoteAddress:
           type: string
-        lastSeen:
+        localAddress:
+          type: string
+        lastHandshake:
+          type: integer
+          format: int64
+        lastMessage:
           type: integer
           format: int64
         name:
           type: string
+        agentName:
+          type: string
+        protocolVersion:
+          type: string
         connectionType:
           type: string
+          nullable: true
 
     Proposition:
       type: object
@@ -3008,6 +3020,7 @@ components:
       properties:
         signature:
           type: string
+          format: byte
 
     MainchainHeader:
       type: object
@@ -3150,15 +3163,19 @@ components:
       properties:
         mainchainHeaderSidechainBlockId:
           type: string
+          format: byte
         mainchainReferenceDataSidechainBlockId:
           type: string
+          format: byte
         hash:
           type: string
+          format: byte
         parentHash:
           type: string
+          format: byte
         height:
           type: integer
-          format: int64
+          format: int32
 
     SidechainBlock:
       type: object
@@ -3293,6 +3310,9 @@ components:
 
     MainchainBlockReferenceData:
       type: object
+      required:
+        - headerHash
+        - lowerCertificateLeaves
       properties:
         headerHash:
           type: string
@@ -3362,40 +3382,6 @@ components:
         ftMinAmount:
           type: integer
           format: int64
-        transactionInputs:
-          type: array
-          items:
-            type: object
-            properties:
-              inputBytes:
-                type: string
-                format: byte
-              prevTxHash:
-                type: string
-                format: byte
-              prevTxOutputIndex:
-                type: integer
-                format: int32
-              txScript:
-                type: string
-                format: byte
-              sequence:
-                type: integer
-                format: int32
-        transactionOutputs:
-          type: array
-          items:
-            type: object
-            properties:
-              outputBytes:
-                type: string
-                format: byte
-              value:
-                type: integer
-                format: int64
-              script:
-                type: string
-                format: byte
         backwardTransferOutputs:
           type: array
           items:
@@ -3486,6 +3472,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MainchainHeader'
+        ommers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ommer'
 
 
     WithdrawalEpochInfo:
@@ -3493,8 +3483,10 @@ components:
       properties:
         epoch:
           type: integer
+          format: int32
         lastEpochIndex:
           type: integer
+          format: int32
 
     VrfOutput:
       type: object
@@ -3511,6 +3503,14 @@ components:
           items:
             type: string
             format: byte
+
+    SchnorrProof:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+
 
     CertifiersKeys:
       type: object
@@ -3536,8 +3536,8 @@ components:
           type: integer
           format: int32
         newKey:
-          type: string
+          $ref: '#/components/schemas/SchnorrProposition'
         signingKeySignature:
-          type: string
+          $ref: '#/components/schemas/SchnorrProof'
         masterKeySignature:
-          type: string
+          $ref: '#/components/schemas/SchnorrProof'
