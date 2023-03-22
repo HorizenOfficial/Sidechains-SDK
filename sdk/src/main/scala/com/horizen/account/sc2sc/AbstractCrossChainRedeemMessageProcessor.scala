@@ -1,5 +1,6 @@
 package com.horizen.account.sc2sc
 
+import com.google.common.primitives.Bytes
 import com.horizen.account.events.AddCrossChainRedeemMessage
 import com.horizen.account.state._
 import com.horizen.cryptolibprovider.utils.FieldElementUtils
@@ -8,6 +9,7 @@ import com.horizen.merkletreenative.MerklePath
 import com.horizen.params.NetworkParams
 import com.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import com.horizen.utils.BytesUtils
+import sparkz.crypto.hash.Keccak256
 
 trait CrossChainRedeemMessageProvider {
   def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit
@@ -87,17 +89,17 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   }
 
   override def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit =
-    view.updateAccountStorage(contractAddress, hash, Array.emptyByteArray)
+    view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), Array.emptyByteArray)
 
   private def validateScCommitmentTreeRoot(
                                             scCommitmentTreeRoot: Array[Byte],
                                             nextScCommitmentTreeRoot: Array[Byte],
                                             view: BaseAccountStateView): Unit = {
-    if (view.getAccountStorage(contractAddress, scCommitmentTreeRoot).isEmpty) {
+    if (view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain commitment tree root `${BytesUtils.toHexString(scCommitmentTreeRoot)}` does not exist")
     }
 
-    if (view.getAccountStorage(contractAddress, nextScCommitmentTreeRoot).isEmpty) {
+    if (view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(nextScCommitmentTreeRoot)).isEmpty) {
       throw new IllegalArgumentException(s"Sidechain next commitment tree root `${BytesUtils.toHexString(nextScCommitmentTreeRoot)}` does not exist")
     }
   }
@@ -121,9 +123,18 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     }
   }
 
+  private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
+    Keccak256.hash(keySeed)
+
+  private[sc2sc] def getCrossChainMessageFromRedeemKey(hash: Array[Byte]): Array[Byte] =
+    calculateKey(Bytes.concat("crossChainMessageFromRedeem".getBytes, hash))
+
+  private[sc2sc] def getScTxCommitmentTreeRootHashKey(hash: Array[Byte]): Array[Byte] =
+    calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))
+
   private def setCrossChainMessageHash(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Unit =
-    view.updateAccountStorage(contractAddress, messageHash.getValue, Array.emptyByteArray)
+    view.updateAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(messageHash.getValue), Array.emptyByteArray)
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean =
-    view.getAccountStorage(contractAddress, hash.getValue).nonEmpty
+    view.getAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(hash.getValue)).nonEmpty
 }

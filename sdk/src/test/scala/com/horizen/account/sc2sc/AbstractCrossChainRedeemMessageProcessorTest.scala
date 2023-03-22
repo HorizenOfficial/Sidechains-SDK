@@ -53,7 +53,9 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.getAccountStorage(contractAddress, crossChainMessageHash.getValue)).thenReturn("someBytes".getBytes)
+    when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
+    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
+    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn("someBytes".getBytes)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -74,9 +76,12 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.getAccountStorage(contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
+    when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
+    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
+    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.getAccountStorage(contractAddress, scCommitmentTreeRoot)).thenReturn(Array.emptyByteArray)
+    val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn(Array.emptyByteArray)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -97,10 +102,14 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
+    when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
+    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
+    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.getAccountStorage(contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes)
-    when(mockStateView.getAccountStorage(contractAddress, nextScCommitmentTreeRoot)).thenReturn(Array.emptyByteArray)
+    val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn("someBytes".getBytes)
+    val nextScTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(nextScCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, nextScTxKey)).thenReturn(Array.emptyByteArray)
 
     // Act
     val exception = intercept[IllegalArgumentException] {
@@ -121,10 +130,14 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
+    when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
+    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
+    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.getAccountStorage(contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes)
-    when(mockStateView.getAccountStorage(contractAddress, nextScCommitmentTreeRoot)).thenReturn("someBytes".getBytes)
+    val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn("someBytes".getBytes)
+    val nextScTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(nextScCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, nextScTxKey)).thenReturn("someBytes".getBytes)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
     when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any(), any())).thenReturn(false)
@@ -148,10 +161,14 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(mockStateView.getAccountStorage(CrossChainRedeemMessageProcessorImpl.contractAddress, crossChainMessageHash.getValue)).thenReturn(Array.emptyByteArray)
+    when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
+    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
+    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn(Array.emptyByteArray)
 
-    when(mockStateView.getAccountStorage(contractAddress, scCommitmentTreeRoot)).thenReturn("someBytes".getBytes)
-    when(mockStateView.getAccountStorage(contractAddress, nextScCommitmentTreeRoot)).thenReturn("someBytes".getBytes)
+    val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn("someBytes".getBytes)
+    val nextScTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(nextScCommitmentTreeRoot)
+    when(mockStateView.getAccountStorage(contractAddress, nextScTxKey)).thenReturn("someBytes".getBytes)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
     when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any(), any())).thenReturn(true)
