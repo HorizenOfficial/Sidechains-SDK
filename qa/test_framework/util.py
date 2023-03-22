@@ -589,7 +589,7 @@ Output: an array of two information:
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
                                           sc_creation_version, is_csw_enabled, circuit_type, account_public_key=None):
-    number_of_blocks_to_enable_sc_logic = 479
+    number_of_blocks_to_enable_sc_logic = 6000
 
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks

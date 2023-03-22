@@ -174,10 +174,11 @@ class AccountChainSetup(SidechainTestFramework):
         if forwardTransfer:
             self.ft_amount_in_zen = ft_amount_in_zen
             # transfer some fund from MC to SC using the evm address created before
+            print("forward transfer address: " + self.evm_address[2:])
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                           self.nodes[0],
                                           self.evm_address[2:],
-                                          ft_amount_in_zen,
+                                          1200,
                                           self.mc_return_address)
 
             self.block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)

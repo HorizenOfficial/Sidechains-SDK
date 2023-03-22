@@ -97,10 +97,10 @@ case class EthServiceSettings(
 
 // Default values are the same as in Geth/Erigon
 case class AccountMempoolSettings(
-    maxNonceGap: Int = 16,
-    maxAccountSlots: Int = 16,
-    maxMemPoolSlots: Int = 6144, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
-    maxNonExecMemPoolSlots: Int = 1024,
+    maxNonceGap: Int = 11000,
+    maxAccountSlots: Int = 11000,
+    maxMemPoolSlots: Int = 20000, // It is the sum of the default values of GlobalQueue and GlobalSlots in Geth
+    maxNonExecMemPoolSlots: Int = 15000,
     txLifetime: FiniteDuration = 3.hours,
     allowUnprotectedTxs: Boolean = false
 ){
