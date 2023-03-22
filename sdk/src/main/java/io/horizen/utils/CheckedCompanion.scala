@@ -18,7 +18,7 @@ trait CheckedCompanion[
     val parsedObj = parse(reader)
     val size = reader.remaining
     if (size > 0) {
-      throw new IllegalArgumentException(s"Spurious data found in byte stream after obj parsing: $size bytes")
+      throw new IllegalArgumentException(s"Spurious bytes found in byte stream after obj parsing: $size byte(s)")
     }
     parsedObj
   }
