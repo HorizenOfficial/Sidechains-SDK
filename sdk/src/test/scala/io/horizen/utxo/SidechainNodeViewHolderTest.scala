@@ -1,13 +1,14 @@
 package io.horizen.utxo
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.TestProbe
+import akka.testkit.{TestActorRef, TestProbe}
 import akka.util.Timeout
 import io.horizen.MempoolSettings
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.SidechainTypes
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.ZenBox
@@ -15,6 +16,7 @@ import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
+import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.utils.BlockFeeInfo
 import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -33,12 +35,14 @@ import java.nio.charset.StandardCharsets
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
+import scala.collection.mutable
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
   with CompanionsFixture
   with SparkzEncoding
+  with TransactionFixture
 {
   var history: SidechainHistory = _
   var state: SidechainState = _
@@ -635,4 +639,64 @@ class SidechainNodeViewHolderTest extends JUnitSuite
         }
     }
   }
+
+  @Test
+  def applyWithFullMempool(): Unit = {
+    // Filling mempool
+    val list = mutable.MutableList[RegularTransaction]()
+    val lowestFeeTx = getRegularRandomTransaction(10, 10)
+    val secondLowestFeeTx = getRegularRandomTransaction(20, 10)
+    val compatibleTransactin = getCompatibleTransaction(30, 10)
+    val incompatibleTransactin = getIncompatibleTransaction(30, 10)
+    val highFeeTransaction = getRegularRandomTransaction(40, 9)
+    list += lowestFeeTx
+    list += secondLowestFeeTx
+    list += compatibleTransactin
+    val totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size() + compatibleTransactin.size()
+    mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(1))
+    mempool.maxPoolSizeBytes = totalTxSize
+
+    val mockedNodeViewHolderTestRef: TestActorRef[MockedSidechainNodeViewHolder] = getMockedSidechainNodeViewHolderTestRef(history, state, wallet, mempool)
+    val nodeViewHolder:MockedSidechainNodeViewHolder = mockedNodeViewHolderTestRef.underlyingActor
+
+    //put all transaction
+    for (i <- 0 to (list.size - 1)) {
+      assertEquals("Put tx operation must be success.", true, mempool.put(list.apply(i)).isSuccess)
+    }
+    assertEquals("MemoryPool must have correct size ", list.size, mempool.size)
+    assertEquals("Lowest fee transaction must be present ", true, mempool.getTransactionById(lowestFeeTx.id()).isPresent)
+
+    val commontransaction = getRegularRandomTransaction(15, 10)
+
+    Mockito.when(state.validate(ArgumentMatchers.any[SidechainTypes#SCBT])).thenReturn(Try{})
+
+    // Test blocks
+    val removedBlock1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(commontransaction))
+    val appliedBlock1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(commontransaction))
+    val appliedBlock2 = generateNextSidechainBlock(appliedBlock1, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
+
+    nodeViewHolder.updateMempool(Seq(removedBlock1), Seq(appliedBlock1, appliedBlock2), state)
+    assertEquals("MemoryPool must have correct size ", list.size, nodeViewHolder.mempool.size)
+    assertEquals("Common transaction must not be present ", false, nodeViewHolder.mempool.getTransactionById(commontransaction.id()).isPresent)
+    assertEquals("Lowest fee transaction must be present ", true, nodeViewHolder.mempool.getTransactionById(lowestFeeTx.id()).isPresent)
+
+    val removedBlock2 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(incompatibleTransactin))
+    val appliedBlock3 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
+
+    nodeViewHolder.mempool.maxPoolSizeBytes = totalTxSize
+    nodeViewHolder.updateMempool(Seq(removedBlock2), Seq(appliedBlock3), state)
+    assertEquals("MemoryPool must have correct size ", list.size, nodeViewHolder.mempool.size)
+    assertEquals("IncompatibleTransactin transaction must not be present ", false, nodeViewHolder.mempool.getTransactionById(incompatibleTransactin.id()).isPresent)
+    assertEquals("Lowest fee transaction must be present ", true, nodeViewHolder.mempool.getTransactionById(lowestFeeTx.id()).isPresent)
+
+    val removedBlock3 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(highFeeTransaction))
+    val appliedBlock4 = generateNextSidechainBlock(appliedBlock1, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
+
+    nodeViewHolder.mempool.maxPoolSizeBytes = totalTxSize
+    nodeViewHolder.updateMempool(Seq(removedBlock3), Seq(appliedBlock4), state)
+    assertEquals("MemoryPool must have correct size ", list.size, nodeViewHolder.mempool.size)
+    assertEquals("HighFeeTransaction transaction must be present ", true, nodeViewHolder.mempool.getTransactionById(highFeeTransaction.id()).isPresent)
+    assertEquals("Lowest fee transaction must not be present ", false, nodeViewHolder.mempool.getTransactionById(lowestFeeTx.id()).isPresent)
+  }
+
 }

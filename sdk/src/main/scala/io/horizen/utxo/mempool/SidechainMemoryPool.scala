@@ -141,20 +141,34 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
    * Lowest fee-rate txs are removed in case max mempool size is reached.
    * @return true if the transaction has been inserted succesfully
    */
-  def addWithSizeCheck(entry: SidechainMemoryPoolEntry) : Boolean = {
-    while (unconfirmed.usedSizeBytes + entry.feeRate.getSize() > maxPoolSizeBytes){
-      val lastEntry = unconfirmed.headOption
-      if (lastEntry.isEmpty || (lastEntry.get.feeRate.getFeeRate() > entry.feeRate.getFeeRate())){
-        //the pool is empty but txsize exceeds its  limit,
-        //or the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
-        //In both cases the insert will fail
+  def addWithSizeCheck(entry: SidechainMemoryPoolEntry): Boolean = {
+    if (entry.feeRate.getSize() > maxPoolSizeBytes) {
+      // txsize exceeds its  limit,
+      return false
+    }
+
+    var lastEntriesSize: Long = 0
+    var lastEntriesNum = 0
+    var lastEntries: Seq[SidechainMemoryPoolEntry] = Seq()
+
+    while (unconfirmed.usedSizeBytes - lastEntriesSize + entry.feeRate.getSize() > maxPoolSizeBytes) {
+      lastEntriesNum += 1
+      lastEntries = unconfirmed.takeLowest(lastEntriesNum)
+
+      if (lastEntries(lastEntriesNum - 1).feeRate.getFeeRate() > entry.feeRate.getFeeRate()) {
+        //the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
+        //insert will fail
         return false
       }
-      unconfirmed.remove(lastEntry.get.getUnconfirmedTx().id())
+
+      lastEntriesSize += lastEntries(lastEntriesNum - 1).getUnconfirmedTx().size()
     }
+
+    lastEntries.foreach(lsEntry => unconfirmed.remove(lsEntry.getUnconfirmedTx().id()))
     unconfirmed.add(entry)
     true
   }
+
 
   // TO DO: check usage in Sparkz core
   // Probably, we need to do a Global check inside for both new and existing transactions.
