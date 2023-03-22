@@ -35,6 +35,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import org.bouncycastle.crypto.digests.KeccakDigest
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -1027,4 +1028,16 @@ class EthService(
       }
     }
   }
+
+  @RpcMethod("eth_web3_sha3")
+  def getSHA3(data: String): String = {
+    require(data.substring(0, 2) == "0x", "cannot unmarshal hex string without 0x prefix")
+    val input = BytesUtils.fromHexString(data.substring(2))
+    val keccak = new KeccakDigest(256)
+    keccak.update(input, 0, input.length)
+    val output = new Array[Byte](keccak.getDigestSize)
+    keccak.doFinal(output, 0)
+    "0x" + BytesUtils.toHexString(output)
+  }
+
 }
