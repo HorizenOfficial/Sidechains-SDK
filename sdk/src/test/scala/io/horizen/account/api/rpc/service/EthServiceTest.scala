@@ -447,42 +447,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   }
 
   /**
-   * Helper for constructing an rpc request. Takes up to two Arrays containing the parameter names, values and the
-   * method name
-   * @param params
-   *   default is empty Array
-   * @param method
-   *   RPC method, default is calling method name
-   * @return
-   *   RpcRequest instance
-   */
-  private[this] def getRpcRequest(
-      params: Array[String] = null,
-      paramValues: Array[Any] = null,
-      method: String = Thread.currentThread.getStackTrace()(2).getMethodName
-  ): RpcRequest = {
-    val jsonParams = if (params != null) {
-      if (params.length != paramValues.length)
-        throw new IllegalArgumentException("Number of parameters given must be equal to number of values given")
-      (params zip paramValues)
-        .map { case (key, value) => s""""$key":"$value"""" }
-        .mkString("[{", ", ", "}]")
-    } else if (paramValues != null) {
-      paramValues
-        .collect {
-          case stringValue: String => if (stringValue.length > 255) stringValue else s""""$stringValue""""
-          case arrayValue: Array[_] => arrayValue.mkString("[", ", ", "]")
-          case value => value
-        }
-        .mkString("[", ", ", "]")
-    } else {
-      "[]"
-    }
-    val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
-    new RpcRequest((new ObjectMapper).readTree(json))
-  }
-
-  /**
    * Helper for executing an RPC request.
    * @param method
    *   name of RPC method to execute
