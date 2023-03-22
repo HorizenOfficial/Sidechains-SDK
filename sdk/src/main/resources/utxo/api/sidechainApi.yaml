@@ -1283,7 +1283,7 @@ paths:
                         $ref: '#/components/schemas/Transaction'
                       transactionBytes:
                         type: string
-                    error:
+                  error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
@@ -1344,7 +1344,7 @@ paths:
                         $ref: '#/components/schemas/Transaction'
                       transactionBytes:
                         type: string
-                    error:
+                  error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
