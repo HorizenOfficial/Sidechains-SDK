@@ -1,24 +1,26 @@
-package com.horizen.validation;
+package com.horizen.validation.crosschain.receiver;
 
 import com.horizen.SidechainSettings;
+import com.horizen.block.SidechainBlock;
 import com.horizen.box.data.CrossChainRedeemMessageBoxData;
 import com.horizen.cryptolibprovider.Sc2scCircuit;
 import com.horizen.cryptolibprovider.utils.FieldElementUtils;
-import com.horizen.merkletreenative.MerklePath;
+import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
+import scala.collection.JavaConverters;
 import com.horizen.sc2sc.CrossChainMessage;
 import com.horizen.sc2sc.CrossChainMessageHash;
 import com.horizen.storage.SidechainStateStorage;
-import com.horizen.transaction.AbstractCrossChainRedeemTransaction;
 import com.horizen.utils.BytesUtils;
+import com.horizen.validation.crosschain.CrossChainValidator;
 
 import java.util.Arrays;
 
-public class AbstractCrossChainRedeemTransactionValidator implements TransactionValidator<AbstractCrossChainRedeemTransaction> {
+public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
     private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
 
-    public AbstractCrossChainRedeemTransactionValidator(
+    public CrossChainRedeemMessageValidator(
             SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
             Sc2scCircuit sc2scCircuit
@@ -29,24 +31,28 @@ public class AbstractCrossChainRedeemTransactionValidator implements Transaction
     }
 
     @Override
-    public void validate(AbstractCrossChainRedeemTransaction txToBeValidated) throws IllegalArgumentException {
-        CrossChainRedeemMessageBoxData redeemMessageBox = txToBeValidated.getRedeemMessageBox();
-        CrossChainMessage ccMsg = redeemMessageBox.getMessage();
+    public void validate(SidechainBlock objectToValidate) throws IllegalArgumentException {
+        JavaConverters.seqAsJavaList(objectToValidate.transactions()).forEach(tx -> {
+            if (tx instanceof AbstractCrossChainRedeemTransaction) {
+                CrossChainRedeemMessageBoxData boxData = ((AbstractCrossChainRedeemTransaction) tx).getRedeemMessageBox();
+                CrossChainMessage ccMsg = boxData.getMessage();
 
-        // CrossChainRedeemMsg.message.receivingScId = current sidechain
-        validateCorrectSidechain(ccMsg);
+                // CrossChainRedeemMsg.message.receivingScId = current sidechain
+                validateCorrectSidechain(ccMsg);
 
-        // hash(CrossChainMsg) has not already been redeemed
-        validateMsgDoubleRedeem(ccMsg);
+                // hash(CrossChainMsg) has not already been redeemed
+                validateMsgDoubleRedeem(ccMsg);
 
-        // CrossChainRedeemMsg.sc_commitment_tree_root and CrossChainRedeemMsg.next_sc_commitment_tree_root have been seen before
-        verifyCommitmentTreeRootAndNextCommitmentTreeRoot(
-                redeemMessageBox.getScCommitmentTreeRoot(),
-                redeemMessageBox.getNextScCommitmentTreeRoot()
-        );
+                // CrossChainRedeemMsg.sc_commitment_tree_root and CrossChainRedeemMsg.next_sc_commitment_tree_root have been seen before
+                verifyCommitmentTreeRootAndNextCommitmentTreeRoot(
+                        boxData.getScCommitmentTreeRoot(),
+                        boxData.getNextScCommitmentTreeRoot()
+                );
 
-        // CrossChainRedeemMsg.proof is valid (requires zk circuit invocation)
-        verifyProof(redeemMessageBox);
+                // CrossChainRedeemMsg.proof is valid (requires zk circuit invocation)
+                verifyProof(boxData);
+            }
+        });
     }
 
     private void validateCorrectSidechain(CrossChainMessage msg) {
