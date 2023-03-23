@@ -42,6 +42,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
+import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
@@ -1029,15 +1030,15 @@ class EthService(
     }
   }
 
-  @RpcMethod("eth_web3_sha3")
+  @RpcMethod("web3_sha3")
   def getSHA3(data: String): String = {
-    require(data.substring(0, 2) == "0x", "cannot unmarshal hex string without 0x prefix")
-    val input = BytesUtils.fromHexString(data.substring(2))
-    val keccak = new KeccakDigest(256)
-    keccak.update(input, 0, input.length)
-    val output = new Array[Byte](keccak.getDigestSize)
-    keccak.doFinal(output, 0)
-    "0x" + BytesUtils.toHexString(output)
+    if (!data.substring(0,2).equalsIgnoreCase("0x"))
+      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "cannot unmarshal hex string without 0x prefix"))
+    try {
+      Numeric.toHexString(Keccak256.hash(BytesUtils.fromHexString(data.substring(2))))
+    } catch {
+      case e: IllegalArgumentException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, e.getCause.getMessage))
+    }
   }
 
 }
