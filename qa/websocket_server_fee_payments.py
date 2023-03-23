@@ -37,18 +37,19 @@ Workflow modelled in this test:
         -Ask for fee payments block using its height
 """
 
+
 class SCWsServerFeePayments(SidechainTestFramework):
     blocks = []
     number_of_sidechain_nodes = 1
     withdrawal_epoch_length = 10
+    websocket_server_port = 8025
 
     def sc_setup_chain(self):
         mc_node_1 = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            cert_submitter_enabled=False,
-            cert_signing_enabled=False
-        )
+            cert_submitter_enabled=False,cert_signing_enabled=False, websocket_server_enabled=True,
+            websocket_server_port=self.websocket_server_port)
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, self.withdrawal_epoch_length), sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
@@ -94,7 +95,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
 
         # Start websocket client
         ws = WebsocketClient()
-        ws_connection = ws.create_connection("ws://localhost:8025/")
+        ws_connection = ws.create_connection(f"ws://localhost:{self.websocket_server_port}/")
 
         ###########################################################
         #       Check new tip event for fee payments info         #

@@ -62,6 +62,9 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
     cert_max_keys = 7
+    remote_keys_host = "127.0.0.1"
+    remote_keys_port = 5003
+    remote_address = f"http://{remote_keys_host}:{remote_keys_port}"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -99,7 +102,7 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json=post_data)
+        response = requests.post(f"{self.remote_address}/api/v1/createSignature", json=post_data)
         json_response = json.loads(response.text)
         return json_response
 
@@ -116,6 +119,8 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         api_server = SecureEnclaveApiServer(
             private_master_keys,
             public_master_keys,
+            self.remote_keys_host,
+            self.remote_keys_port
         )
         api_server.start()
 
@@ -308,20 +313,20 @@ class SCKeyRotationAcrossEpochTest(SidechainTestFramework):
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
         # Try to force the inclusion of transaction T3 inside the next SC block and verify that we have an error
-        error = False
         try:
             generate_next_block(sc_node, "first node", 1, forced_tx=[across_epoch_txhex_t3])[0]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         # Try to force the inclusion of transaction T4 inside the next SC block and verify that we have an error
-        error = False
         try:
             generate_next_block(sc_node, "first node", 1, forced_tx=[across_epoch_txhex_t4])[0]
         except:
-            error = True
-        assert_true(error)
+            pass
+        else:
+            fail("Exception expected")
 
         # Generate a SC block
         generate_next_blocks(sc_node, "first node", 1)

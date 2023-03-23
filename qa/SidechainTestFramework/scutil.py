@@ -52,6 +52,11 @@ EVM_APP_SLOT_TIME = 12  # seconds
 
 DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
 DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
+
+# Parallel Testing
+parallel_test = 0
+
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -64,12 +69,33 @@ class LogInfo(object):
         self.logConsoleLevel = logConsoleLevel
 
 
+def set_sc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        # Adjust this multiplier if port clashing due to many nodes
+        return (parallel_test - 1) * 20
+
+
 def sc_p2p_port(n):
-    return 8300 + n + os.getpid() % 999
+    start_port = 8300
+    if parallel_test > 0:
+        start_port = 8500 + start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def sc_rpc_port(n):
-    return 8200 + n + os.getpid() % 999
+    start_port = 8200
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 # To be removed
@@ -106,7 +132,7 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
     while True:
         if time.time() - start >= wait_for:
             raise TimeoutException("Syncing blocks")
-        counts = [int(x.block_best()["result"]["height"]) for x in api_connections]
+        counts = [int(x.block_currentHeight()["result"]["height"]) for x in api_connections]
         if p:
             logging.info(counts)
         if counts == [counts[0]] * len(counts):
@@ -114,18 +140,29 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
         time.sleep(WAIT_CONST)
 
 
-def sync_sc_mempools(api_connections, wait_for=25):
+def sync_sc_mempools(api_connections, wait_for=25, mempool_cardinality_only=False):
     """
     Wait for maximum wait_for seconds for everybody to have the same transactions in their memory pools
     """
+    if mempool_cardinality_only:
+        format = False
+        tag = "transactionIds"
+    else:
+        format = True
+        tag = "transactions"
+
+
+    j = {"format": format}
+    request = json.dumps(j)
+
     start = time.time()
     while True:
-        refpool = api_connections[0].transaction_allTransactions()["result"]["transactions"]
+        refpool = api_connections[0].transaction_allTransactions(request)["result"][tag]
         if time.time() - start >= wait_for:
             raise TimeoutException("Syncing mempools")
         num_match = 1
         for i in range(1, len(api_connections)):
-            nodepool = api_connections[i].transaction_allTransactions()["result"]["transactions"]
+            nodepool = api_connections[i].transaction_allTransactions(request)["result"][tag]
             if nodepool == refpool:
                 num_match = num_match + 1
         if num_match == len(api_connections):
@@ -140,7 +177,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.6.0-SNAPSHOT.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.7.0-SNAPSHOT.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -162,7 +199,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.6.0-SNAPSHOT.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.7.0-SNAPSHOT.jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -393,7 +430,7 @@ Parameters:
 """
 
 
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
+def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     apiAddress = "127.0.0.1"
     configsData = []
@@ -440,7 +477,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         sc_node_config.forger_options.allowed_forgers.append(
             '{ blockSignProposition = "' + bootstrap_info.genesis_account.publicKey + '" NEW_LINE vrfPublicKey = "' + bootstrap_info.genesis_vrf_account.publicKey + '" }')
 
-    if bootstrap_info.genesis_evm_account is not None:
+    if model == AccountModel:
         max_modifiers_spec_message_size = DEFAULT_ACCOUNT_MODEL_MAX_PACKET_SIZE
     else:
         max_modifiers_spec_message_size = DEFAULT_MAX_PACKET_SIZE
@@ -463,6 +500,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'KNOWN_PEERS': json.dumps(sc_node_config.known_peers),
         'STORAGE_BACKUP_INTERVAL': json.dumps(sc_node_config.storage_backup_interval),
         'STORAGE_BACKUP_DELAY': json.dumps(sc_node_config.storage_backup_delay),
+        'ALLOW_UNPROTECTED_TXS': json.dumps(sc_node_config.allow_unprotected_txs),
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'MAX_TX_FEE': sc_node_config.max_fee,
@@ -480,6 +518,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
+        'WEBSOCKET_SERVER_ENABLED': "true" if sc_node_config.websocket_server_enabled else "false",
+        'WEBSOCKET_SERVER_PORT': sc_node_config.websocket_server_port,
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
@@ -498,7 +538,13 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
         "CIRCUIT_TYPE": bootstrap_info.circuit_type,
-        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false")
+        "REMOTE_KEY_MANAGER_ENABLED": ("true" if sc_node_config.remote_keys_manager_enabled else "false"),
+        "REMOTE_SERVER_ADDRESS": (sc_node_config.remote_keys_server_address if sc_node_config.remote_keys_manager_enabled else ""),
+        'MAX_NONCE_GAP': sc_node_config.max_nonce_gap,
+        'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
+        'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
+        'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
+        'TX_LIFETIME': sc_node_config.tx_lifetime
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -550,6 +596,7 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         'KNOWN_PEERS': [],
         'STORAGE_BACKUP_INTERVAL': "15m",
         'STORAGE_BACKUP_DELAY': "5m",
+        'ALLOW_UNPROTECTED_TXS': "true",
         'GET_PEERS_INTERVAL': "2m",
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
@@ -561,7 +608,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "RESTRICT_FORGERS": "false",
         "ALLOWED_FORGERS_LIST": [],
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": DEFAULT_MAX_PACKET_SIZE,
-        "REMOTE_KEY_MANAGER_ENABLED": "false"
+        "REMOTE_KEY_MANAGER_ENABLED": "false",
+        "REMOTE_SERVER_ADDRESS": ""
     }
 
     configsData.append({
@@ -583,14 +631,14 @@ def initialize_default_sc_chain_clean(test_dir, num_nodes, api_key=""):
         initialize_default_sc_datadir(test_dir, i, api_key)
 
 
-def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info, array_of_MCConnectionInfo=[]):
+def initialize_sc_chain_clean(test_dir, num_nodes, model, genesis_secrets, genesis_info, array_of_MCConnectionInfo=[]):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
         sc_node_config = SCNodeConfiguration(get_websocket_configuration(i, array_of_MCConnectionInfo))
-        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], sc_node_config)
+        initialize_sc_datadir(test_dir, i, model, genesis_secrets[i], genesis_info[i], sc_node_config)
 
 
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
@@ -607,8 +655,8 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* io.horizen.examples.EvmApp"
 
 
 
@@ -772,7 +820,7 @@ def assert_true(condition, message=""):
 Verify if a mainchain block data is equal to mainchain block reference info data.
 
 Parameters:
- - mc_block_reference_info: the JSON representation of a mainchain block reference info. See com.horizen.node.util.MainchainBlockReferenceInfo
+ - mc_block_reference_info: the JSON representation of a mainchain block reference info. See io.horizen.node.util.MainchainBlockReferenceInfo
  - expected_mc_block: the JSON representation of a mainchain block
 """
 
@@ -803,7 +851,7 @@ def check_mainchain_block_reference_info(mc_block_reference_info, expected_mc_bl
 Verify if a mainchain block is included in a sidechain block.
 
 Parameters:
- - sc_block: the JSON representation of a sidechain block. See com.horizen.block.SidechainBlock
+ - sc_block: the JSON representation of a sidechain block. See io.horizen.block.SidechainBlock
  - expected_mc_block: the JSON representation of a mainchain block
 """
 
@@ -988,10 +1036,10 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
+            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, model, log_info,
                                      options.restapitimeout)
         else:
-            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
+            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, model, log_info,
                                      options.restapitimeout)
     return sc_nodes_bootstrap_info
 
@@ -1107,9 +1155,9 @@ Parameters:
 """
 
 
-def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
+def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration, model,
                              log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
+    initialize_sc_datadir(dirname, n, model, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 
 def generate_forging_request(epoch, slot, forced_tx):

@@ -84,11 +84,13 @@ def check_key_rotation_event(event, key_type, key_index, key_value, epoch):
 class SCKeyRotationTest(AccountChainSetup):
 
     def __init__(self):
+        self.remote_keys_host = "127.0.0.1"
+        self.remote_keys_port = 5000
+        self.remote_keys_address = f"http://{self.remote_keys_host}:{self.remote_keys_port}"
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
-                         remote_keys_manager_enabled=True)
+                         remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_keys_address)
 
-    @staticmethod
-    def secure_enclave_create_signature(message_to_sign, public_key="", key=""):
+    def secure_enclave_create_signature(self, message_to_sign, public_key="", key=""):
         post_data = {
             "message": message_to_sign,
             "type": "schnorr"
@@ -101,7 +103,8 @@ class SCKeyRotationTest(AccountChainSetup):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post("http://127.0.0.1:5000/api/v1/createSignature", json=post_data)
+        response = requests.post(f"{self.remote_keys_address}/api/v1/createSignature",
+                                 json=post_data)
         json_response = json.loads(response.text)
         return json_response
 
@@ -153,7 +156,8 @@ class SCKeyRotationTest(AccountChainSetup):
             private_master_keys.append(new_m_key.secret)
             public_master_keys.append(new_m_key.publicKey)
 
-        SecureEnclaveApiServer(private_master_keys, public_master_keys).start()
+        SecureEnclaveApiServer(private_master_keys, public_master_keys, self.remote_keys_host,
+                               self.remote_keys_port).start()
 
         current_epoch_number = 0
         list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)

@@ -40,7 +40,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
@@ -78,7 +78,7 @@ sparkz {
 
 **Examples**
 
-You can find an example of a sidechain implementation without any custom business logic here: [Simple App](examples/simpleapp/README.md). A detailed description of how to set up and run a sidechain node with a connection to the mainchain [can be found here](examples/simpleapp/mc_sc_workflow_example.md).
+You can find an example of a sidechain implementation without any custom business logic here: [Simple App](examples/README.md). A detailed description of how to set up and run a sidechain node with a connection to the mainchain [can be found here](examples/mc_sc_workflow_example.md).
 
 ## Extras
 
@@ -93,5 +93,10 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 5. cd jni
 6. mvn clean install -Dmaven.test.skip=true
 7. Go to project Sidechains-SDK
-7. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
-8. mvn clean install -Dmaven.test.skip=true
+8. sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to version in line 6 of zendoo-sc-cryptolib/jni/pom.xml
+9. mvn clean install -Dmaven.test.skip=true
+
+## Backward Compatibility
+
+Version 0.7.0 is not backward compatible with any previous versions.
+Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.0 into a >=0.7.0
