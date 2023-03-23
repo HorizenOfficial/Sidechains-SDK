@@ -8,28 +8,47 @@ import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
-import io.horizen.utxo.node.SidechainNodeView;
+import io.horizen.SidechainNodeViewBase;
+import io.horizen.block.SidechainBlockBase;
+import io.horizen.block.SidechainBlockHeaderBase;
+import io.horizen.chain.AbstractFeePaymentsInfo;
+import io.horizen.node.NodeHistoryBase;
+import io.horizen.node.NodeMemoryPoolBase;
+import io.horizen.node.NodeStateBase;
+import io.horizen.node.NodeWalletBase;
+import io.horizen.transaction.Transaction;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static akka.http.javadsl.server.Directives.*;
-import java.util.Optional;
 
-public abstract class ApplicationApiGroup {
-    private FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView;
+public abstract class ApplicationBaseApiGroup<
+        TX extends Transaction,
+        H extends SidechainBlockHeaderBase,
+        PM extends SidechainBlockBase<TX, H>,
+        FPI extends AbstractFeePaymentsInfo,
+        NH extends NodeHistoryBase<TX, H, PM, FPI>,
+        S extends NodeStateBase,
+        W extends NodeWalletBase,
+        P extends NodeMemoryPoolBase<TX>,
+        NV extends SidechainNodeViewBase<TX, H, PM, FPI, NH, S, W, P>
+        > {
+
+    private FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> functionsApplierOnSidechainNodeView;
 
     public abstract String basePath();
 
     public abstract List<Route> getRoutes();
 
-    public final FunctionsApplierOnSidechainNodeView getFunctionsApplierOnSidechainNodeView() {
+    public final FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> getFunctionsApplierOnSidechainNodeView() {
         return functionsApplierOnSidechainNodeView;
     }
 
-    public final void setFunctionsApplierOnSidechainNodeView(FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView) {
+    public final void setFunctionsApplierOnSidechainNodeView(FunctionsApplierOnSidechainNodeView<TX, H, PM, FPI, NH, S, W, P, NV> functionsApplierOnSidechainNodeView) {
         this.functionsApplierOnSidechainNodeView = functionsApplierOnSidechainNodeView;
     }
 
@@ -52,7 +71,7 @@ public abstract class ApplicationApiGroup {
         Unmarshaller<HttpEntity, T> unmarshaller = Jackson.unmarshaller(requestBodyClazz);
         return Directives.path(path,
             () -> Directives.post(
-                () -> entity(unmarshaller, functionToBind.andThen(ApplicationApiGroup::buildRouteForApiResponse))));
+                () -> entity(unmarshaller, functionToBind.andThen(ApplicationBaseApiGroup::buildRouteForApiResponse))));
     }
 
     /**
@@ -64,21 +83,21 @@ public abstract class ApplicationApiGroup {
      * anonymous function object which save functionToBind function as internal variable and expect input parameter T and use way described in applyBiFunctionOnSidechainNodeView.
      * 4. Anonymous transformed function is used for creating Akka route as in previous createAkkaRoute function.
      */
-    protected final <T> Route bindPostRequest(String path, BiFunction<SidechainNodeView, T, ApiResponse> functionToBind, Class<T> clazz) {
+    protected final <T> Route bindPostRequest(String path, BiFunction<NV, T, ApiResponse> functionToBind, Class<T> clazz) {
         Function<T, ApiResponse> transformedFunction = secondArgumentPartialApply(this::applyBiFunctionOnSidechainNodeView, functionToBind);
         return bindPostRequest(path, transformedFunction, clazz);
     }
 
-    protected final Route bindPostRequest(String path, Function<SidechainNodeView, ApiResponse> functionToBind) {
+    protected final Route bindPostRequest(String path, Function<NV, ApiResponse> functionToBind) {
         return Directives.path(path,
             () -> Directives.post(
                 () -> requestEntityEmpty(
                     () -> onSuccess(CompletableFuture.supplyAsync(
                         () -> applyFunctionOnSidechainNodeView(functionToBind)),
-                        ApplicationApiGroup::buildRouteForApiResponse))));
+                        ApplicationBaseApiGroup::buildRouteForApiResponse))));
     }
 
-    private ApiResponse applyFunctionOnSidechainNodeView(Function<SidechainNodeView, ApiResponse> func) {
+    private ApiResponse applyFunctionOnSidechainNodeView(Function<NV, ApiResponse> func) {
         try
         {
             return getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
@@ -88,7 +107,7 @@ public abstract class ApplicationApiGroup {
         }
     }
 
-    private <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<SidechainNodeView, T, ApiResponse> func) {
+    private <T> ApiResponse applyBiFunctionOnSidechainNodeView(T functionParameter, BiFunction<NV, T, ApiResponse> func) {
         try
         {
             return getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);

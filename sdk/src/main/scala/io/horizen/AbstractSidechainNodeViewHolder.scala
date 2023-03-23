@@ -112,7 +112,7 @@ abstract class AbstractSidechainNodeViewHolder[
       A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l)
         }
         catch {
@@ -124,14 +124,14 @@ abstract class AbstractSidechainNodeViewHolder[
 
 
 
-  protected def getNodeView(): NV
+  protected def getNodeView: NV
 
   protected def applyFunctionOnNodeView[A]: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[NV,
       A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l)
         }
         catch {
@@ -148,7 +148,7 @@ abstract class AbstractSidechainNodeViewHolder[
       T, A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l, functionParams)
         }
         catch {

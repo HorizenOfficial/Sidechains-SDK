@@ -3,10 +3,9 @@ package io.horizen.utxo.mempool
 import io.horizen.utxo.box.{Box, WithdrawalRequestBox}
 import io.horizen.utxo.node.NodeMemoryPool
 import io.horizen.utxo.transaction.BoxTransaction
-import io.horizen.{MempoolSettings, SidechainTypes, utxo}
+import io.horizen.{MempoolSettings, SidechainTypes}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
-
 import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}

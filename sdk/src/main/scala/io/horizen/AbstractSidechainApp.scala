@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
-import io.horizen.api.http.route.{ApplicationApiRoute, SidechainRejectionApiRoute}
+import io.horizen.api.http.route.SidechainRejectionApiRoute
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
@@ -49,7 +49,6 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractSidechainApp
   (val sidechainSettings: SidechainSettings,
    val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   val customApiGroups: JList[ApplicationApiGroup],
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
@@ -305,7 +304,7 @@ abstract class AbstractSidechainApp
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  lazy val applicationApiRoutes: Seq[ApplicationApiRoute] = customApiGroups.asScala.map(apiRoute => ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+  val applicationApiRoutes: Seq[ApiRoute]
 
   val coreApiRoutes: Seq[ApiRoute]
 
@@ -340,10 +339,10 @@ abstract class AbstractSidechainApp
     Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).bind(combinedRoute)
 
     //Remove the Logger shutdown hook
-    val factory = LogManager.getFactory
-    if (factory.isInstanceOf[Log4jContextFactory]) {
-      val contextFactory = factory.asInstanceOf[Log4jContextFactory]
-      contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
+    LogManager.getFactory match {
+      case contextFactory: Log4jContextFactory =>
+        contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
+      case _ => // do nothing
     }
 
     //Add a new Shutdown hook that closes all the storages and stops all the interfaces and actors.
