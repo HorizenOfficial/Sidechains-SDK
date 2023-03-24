@@ -13,6 +13,16 @@ KEY_ROTATION_CIRCUIT = 'NaiveThresholdSignatureCircuitWithKeyRotation'
 
 DEFAULT_API_KEY = "TopSecret"
 
+# Default value of max difference between tx nonce and state nonce allowed by mempool.
+DEFAULT_MAX_NONCE_GAP = 16
+# Default value of max number of slots a single account transactions can occupy
+DEFAULT_MAX_ACCOUNT_SLOTS = 16
+# Default value of max number of mempool slots transactions can occupy
+DEFAULT_MAX_MEMPOOL_SLOTS = 6144
+# Default value of max number of non exec sub slots transactions can occupy
+DEFAULT_MAX_NONEXEC_POOL_SLOTS = 1024
+# Default value of max time a tx can stay in the mempool waiting to be included in a block, in seconds
+DEFAULT_TX_LIFETIME = 10800
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -131,11 +141,21 @@ class SCNodeConfiguration(object):
                  max_fee=10000000,
                  initial_private_keys=[],
                  remote_keys_manager_enabled=False,
+                 remote_keys_server_address=None,
                  known_peers=[],
                  declared_address=None,
                  initial_signing_private_keys=[],
                  storage_backup_interval='15m',
-                 storage_backup_delay='5m'):
+                 storage_backup_delay='5m',
+                 websocket_server_enabled=False,
+                 websocket_server_port=0,
+                 allow_unprotected_txs=True,
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
+                 max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
+                 max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME
+                 ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -155,11 +175,25 @@ class SCNodeConfiguration(object):
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        if remote_keys_manager_enabled:
+            self.remote_keys_server_address = remote_keys_server_address
         self.known_peers = known_peers
         if declared_address is not None:
             self.declared_address = declared_address
         self.storage_backup_interval = storage_backup_interval
         self.storage_backup_delay = storage_backup_delay
+        self.websocket_server_enabled = websocket_server_enabled
+        self.websocket_server_port = websocket_server_port
+        self.allow_unprotected_txs = allow_unprotected_txs
+        self.max_nonce_gap = max_nonce_gap
+        self.max_account_slots = max_account_slots
+        self.max_mempool_slots = max_mempool_slots
+        self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
+
+    def update_websocket_config(self, websocket_server_enabled, websocket_server_port):
+        self.websocket_server_enabled = websocket_server_enabled
+        self.websocket_server_port = websocket_server_port
 
 
 """

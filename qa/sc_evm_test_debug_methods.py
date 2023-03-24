@@ -245,6 +245,10 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "4byteTracer"})['result']
         assert_true(res is not None, "4byteTracer response empty")
 
+        # invalid tracer should return an error
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "theBestTracer"})
+        assert_true(res['error'] is not None, "invalid tracer should fail")
+
 
 if __name__ == "__main__":
     SCEvmDebugMethods().main()

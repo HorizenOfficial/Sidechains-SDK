@@ -183,13 +183,12 @@ class MCSCForgingDelegation(SidechainTestFramework):
 
         # Generate SC block on SC node 1 for the next consensus epoch.
         # Must fail, because of all forger stakes were spent 2 consensus epochs before.
-        exception_occurs = False
         try:
             generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
         except:
-            exception_occurs = True
-        finally:
-            assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+            pass
+        else:
+            fail("No forging stakes expected for SC node 1.")
 
         # now spend all of the remaining forging stakes delegated by SC1 to SC2
         forger_boxes_1 = sc_node1.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"]
@@ -219,14 +218,12 @@ class MCSCForgingDelegation(SidechainTestFramework):
         # Try to generate one more block switching epoch, that should fail because even if the forging itself would
         # take place (the SC2 forger info points to two epoch earlier, and back then we had stakes delegated by SC1
         # to him), yet the block will not be applied since consensus epoch info are not valid (empty list of stakes)
-        exception_occurs = False
         try:
             generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
         except Exception as e:
-            exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-        finally:
-            assert_true(exception_occurs, "Forging should not happen")
+        else:
+            fail("Forging should not happen")
 
 
 

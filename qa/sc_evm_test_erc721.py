@@ -10,7 +10,7 @@ from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, cont
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.utils import convertZenToZennies, computeForgedTxFee, convertZenToWei
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal, assert_true, fail
 
 """
 Check an EVM ERC721 Smart Contract.
@@ -212,18 +212,14 @@ class SCEvmERC721Contract(AccountChainSetup):
         logging.info("gas_fee_paid_1 {}".format(gas_fee_paid_1))
         minted_ids_user1.append(2)
 
-        exception_thrown = False
         try:
-            exception_thrown = False
             mint_payable(sc_node, smart_contract, smart_contract_address, self.evm_address, minting_price,
                          minted_ids_user1[1], static_call=True)
         except EvmExecutionError as err:
-            exception_thrown = True
             logging.info("Expected exception thrown: {}".format(err))
 
-        finally:
-            assert_true(exception_thrown, "Exception should have been thrown")
-            pass
+        else:
+            fail("Exception should have been thrown")
 
         # Contract paused, minting contract call should fail
         tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, self.evm_address, minting_price,

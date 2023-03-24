@@ -32,7 +32,7 @@ Build SDK components by using a command (in the root of the Sidechains-SDK folde
 
 Run Bootstrapping tool using the command:
 
-`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.6.0-SNAPSHOT.jar`
+`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.7.0-SNAPSHOT.jar`
 
 All other commands are performed as commands for Bootstrapping tool in the next format: `"command name"  "parameters for command in JSON format"`.
 For any help, you could use the command `help`, for the exit just print `exit`
@@ -128,17 +128,17 @@ The creation of Sidechains requires data for proving backward transfer operation
 Note:
 - `signersPublicKeys` - list of Schnorr public keys of certificate Signers generated on step 5;
 - `threshold` - the minimum set of participants required for a valid proof creation;
-- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise. For non ceasing sidechains, it's always false.
+- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
 
 *If circuit with key rotation:*
 
-`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": false}`
+`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk"}`
 
 Note:
 - `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
 - `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, mastersKeys have to be different from signersKeys;
 - `threshold` - the minimum set of participants required for a valid proof creation;
-- `isCSWEnabled` - Its value should be always false.
+- `isCSWEnabled` - For non ceasing sidechains, it's always false and is not specified for generateCertWithKeyRotationProofInfo.
 
 *Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys and signersPublicKeys and mastersPublicKeys size should be equal.*
 
@@ -506,30 +506,30 @@ Run an Example App with the `my_settings.conf`:
 
 * For Windows:
  ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 
 **Model: Account**
 
 * For Windows:
  ```
-    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar;./examples/evmapp/target/lib/* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/\* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/evmapp/target/sidechains-sdk-evmapp-0.6.0-SNAPSHOT.jar:./examples/evmapp/target/lib/* com.horizen.examples.EvmApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 
 

@@ -7,10 +7,10 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
     initialize_chain_clean, \
     start_nodes, stop_nodes, \
-    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
+    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO, set_sc_parallel_test
 import os
 import tempfile
 import traceback
@@ -40,6 +40,10 @@ Default behavior: the framework starts 1 SC node connected to 1 MC node.
 
 '''
 class SidechainTestFramework(BitcoinTestFramework):
+
+    def set_parallel_test(self, n):
+        set_mc_parallel_test(n)
+        set_sc_parallel_test(n)
 
     def add_options(self, parser):
         pass
@@ -89,9 +93,9 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_split_network(self):
         pass
 
-    def sc_sync_all(self):
+    def sc_sync_all(self, mempool_cardinality_only=False):
         sync_sc_blocks(self.sc_nodes)
-        sync_sc_mempools(self.sc_nodes)
+        sync_sc_mempools(self.sc_nodes, mempool_cardinality_only=mempool_cardinality_only)
 
     def sc_sync_nodes(self, sc_nodes):
         sync_sc_blocks(sc_nodes)
@@ -104,7 +108,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def setup_logger(self,  options):
-        logfile = os.path.abspath(os.path.join(os.path.dirname(__file__), '../', 'sc_test.log'))
+        logfile = os.path.abspath(os.path.join(os.path.dirname(__file__), "../", "sc_test.log"))
         filehandler = logging.FileHandler(logfile, "a+")
         streamhandler = logging.StreamHandler()
 
@@ -115,7 +119,11 @@ class SidechainTestFramework(BitcoinTestFramework):
             filehandler.setLevel(options.testlogfilelevel.upper())
             streamhandler.setLevel(options.testlogconsolelevel.upper())
 
-        logging.basicConfig(format="[%(asctime)s] : [%(levelname)s] : %(message)s",
+        logging_format = "[%(asctime)s] : [%(levelname)s] : %(message)s"
+        if options.parallel > 0:
+            logging_format = f"[ParallelGroup: {self.options.parallel}] : {logging_format}"
+
+        logging.basicConfig(format=logging_format,
                             handlers=[filehandler, streamhandler],
                             level=logging.DEBUG
                             )
@@ -147,7 +155,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.6.0-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
@@ -170,6 +178,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--certcircuittype", dest="certcircuittype", default="NaiveThresholdSignatureCircuit", action="store",
                           help="Type of certificate circuit: NaiveThresholdSignatureCircuit"
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
+        parser.add_option("--parallel", dest="parallel", type=int, default=0, action="store",
+                          help="Stores parallel process integer assigned to current test")
 
         self.add_options(parser)
         self.sc_add_options(parser)
@@ -188,6 +198,10 @@ class SidechainTestFramework(BitcoinTestFramework):
                 os.makedirs(self.options.tmpdir)
 
             logging.info("Initializing test directory "+self.options.tmpdir)
+
+            parallel_group = int(self.options.parallel)
+            if parallel_group > 0:
+                self.set_parallel_test(parallel_group)
 
             self.setup_chain()
 
@@ -228,7 +242,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         else:
             logging.info("Note: client processes were not stopped and may still be running")
 
-        if not self.options.nocleanup and not self.options.noshutdown:
+        if success and not self.options.nocleanup and not self.options.noshutdown:
             logging.info("Cleaning up")
             shutil.rmtree(self.options.tmpdir)
 

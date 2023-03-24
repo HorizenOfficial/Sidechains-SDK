@@ -1,6 +1,8 @@
 import logging
 from decimal import Decimal
 
+from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
+    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -11,7 +13,8 @@ from test_framework.util import start_nodes, websocket_port_by_mc_node_index, as
     forward_transfer_to_sidechain
 
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
+    SC_CREATION_VERSION_1, DEFAULT_MAX_NONCE_GAP, DEFAULT_MAX_ACCOUNT_SLOTS, \
+    DEFAULT_MAX_MEMPOOL_SLOTS, DEFAULT_MAX_NONEXEC_POOL_SLOTS, DEFAULT_TX_LIFETIME
 
 
 class AccountChainSetup(SidechainTestFramework):
@@ -19,7 +22,14 @@ class AccountChainSetup(SidechainTestFramework):
     def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
                  withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
                  block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False):
+                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
+                 allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
+                 connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = []):
+
+        super().__init__()
+
 
         self.evm_address = None
         self.sc_nodes = None
@@ -37,32 +47,58 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
-
+        self.remote_keys_server_address = remote_keys_server_address
+        self.allow_unprotected_txs = allow_unprotected_txs
+        self.max_incoming_connections = max_incoming_connections
+        self.connect_nodes = connect_nodes
+        self.max_nonce_gap = max_nonce_gap
+        self.max_account_slots = max_account_slots
+        self.max_mempool_slots = max_mempool_slots
+        self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
+        if len(websocket_server_port) == 0:
+            websocket_server_port = [None] * number_of_sidechain_nodes
+        assert(len(websocket_server_port) == number_of_sidechain_nodes)
+        self.websocket_server_port = websocket_server_port
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_network(self):
         self.sc_nodes = self.sc_setup_nodes()
-        if self.number_of_sidechain_nodes > 2:
-            for i in range(self.number_of_sidechain_nodes - 1):
-                connect_sc_nodes(self.sc_nodes[i], i + 1)
-            connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
-            self.sync_all()
-        elif self.number_of_sidechain_nodes == 2:
-            connect_sc_nodes(self.sc_nodes[0], 1)
-            self.sync_all()
+        if self.connect_nodes:
+            if self.number_of_sidechain_nodes > 2:
+                for i in range(self.number_of_sidechain_nodes - 1):
+                    connect_sc_nodes(self.sc_nodes[i], i + 1)
+                connect_sc_nodes(self.sc_nodes[self.number_of_sidechain_nodes - 1], 0)
+                self.sync_all()
+            elif self.number_of_sidechain_nodes == 2:
+                connect_sc_nodes(self.sc_nodes[0], 1)
+                self.sync_all()
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = []
+
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
-                sc_node_configuration.append(SCNodeConfiguration(
+               sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
-                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    allow_unprotected_txs=self.allow_unprotected_txs,
+                    max_incoming_connections=self.max_incoming_connections,
+                    max_nonce_gap=self.max_nonce_gap,
+                    max_account_slots=self.max_account_slots,
+                    max_mempool_slots=self.max_mempool_slots,
+                    max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime =  self.tx_lifetime,
+                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port = self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
+                ))
+
             else:
                 sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
@@ -70,8 +106,19 @@ class AccountChainSetup(SidechainTestFramework):
                     forger_options=self.forger_options,
                     api_key=self.API_KEY,
                     initial_private_keys=self.initial_private_keys,
-                    remote_keys_manager_enabled=self.remote_keys_manager_enabled))
-
+                    remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                    allow_unprotected_txs=self.allow_unprotected_txs,
+                    remote_keys_server_address=self.remote_keys_server_address,
+                    max_incoming_connections=self.max_incoming_connections,
+                    max_nonce_gap=self.max_nonce_gap,
+                    max_account_slots=self.max_account_slots,
+                    max_mempool_slots=self.max_mempool_slots,
+                    max_nonexec_pool_slots=self.max_nonexec_pool_slots,
+                    tx_lifetime = self.tx_lifetime,
+                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
+                    websocket_server_port = self.websocket_server_port[x]
+                ))
+   
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
         else:

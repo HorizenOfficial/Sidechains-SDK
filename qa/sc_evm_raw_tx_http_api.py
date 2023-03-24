@@ -257,10 +257,10 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
                                             value=convertZenToWei(Decimal('0.1')))
         chainId_ok = decodeTransaction(sc_node_2, payload=raw_tx)['chainId']
 
-        # get the last byte of chain id value in the hex representation and decrement it (bytes 43 and 44 in this tx)
-        #  - 1997 = [07cd]  --> 1996 = [07cc]
+        # get the last byte of chain id value in the hex representation and decrement it (bytes [43; 46] in this tx)
+        #  - 1000000001 = [3B9ACA01]  --> 1000000000 = [3B9ACA00]
         tx_hex_array = list(bytearray(a2b_hex(raw_tx)))
-        tx_hex_array[44] -= 1
+        tx_hex_array[46] -= 1
         new_eip155_raw_tx = b2x(bytearray(tx_hex_array))
 
         # decode the modified unsigned tx via http api
@@ -308,7 +308,7 @@ class SCEvmRawTxHttpApi(AccountChainSetup):
         assert_true("Internal error" in response['error']['message'])
 
         # 5.2) try sending a tx via eth rpc with trailing spurious bytes
-        raw_tx = "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3ef"
+        raw_tx = "f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcbef"
         response = sc_node_1.rpc_eth_sendRawTransaction(raw_tx)
         assert_true("error" in response)
         assert_true("Spurious bytes" in response['error']['data'])

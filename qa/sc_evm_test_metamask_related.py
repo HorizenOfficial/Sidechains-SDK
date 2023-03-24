@@ -23,6 +23,7 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 Test:
     For the smart contract:
         - Do an EOA to EOA transfer via RPC
+        - Check specific output fields for the different transaction types
         - Test minting of an NFT
         - Check minting results
         - Test transferring of an ERC20
@@ -94,6 +95,18 @@ class SCEvmMetamaskTest(AccountChainSetup):
     def __init__(self):
         super().__init__(withdrawalEpochLength=20)
 
+    def __check_tx_type_specific_outputs(self, tx_hash, tx_type):
+        tx = self.sc_nodes[0].rpc_eth_getTransactionByHash(tx_hash)['result']
+        keys = ['maxFeePerGas', 'maxPriorityFeePerGas', 'chainId']
+        if tx_type == 'eip1559':
+            assert_true(keys[0] in tx and keys[1] in tx)
+        else:
+            assert_true(keys[0] not in tx and keys[1] not in tx)
+        if tx_type == 'legacy':
+            assert_true(keys[2] not in tx)
+        else:
+            assert_true(keys[2] in tx)
+
     def run_test(self):
         # Setting up
         sc_node = self.sc_nodes[0]
@@ -117,6 +130,8 @@ class SCEvmMetamaskTest(AccountChainSetup):
         status = generate_block_and_get_tx_receipt(sc_node, tx_hash_legacy, True)
         assert_true(status, "Contract call failed")
 
+        self.__check_tx_type_specific_outputs(tx_hash_legacy, 'legacy')
+
         (gas_used_legacy, _, _) = computeForgedTxFee(sc_node, tx_hash_legacy)
 
         eoa_assert_native_balance(sc_node, self.evm_address, initial_balance - (transfer_amount + gas_used_legacy))
@@ -127,6 +142,8 @@ class SCEvmMetamaskTest(AccountChainSetup):
                                       call_method=CallMethod.RPC_EIP155)
         status = generate_block_and_get_tx_receipt(sc_node, tx_hash_eip155, True)
         assert_true(status, "Contract call failed")
+
+        self.__check_tx_type_specific_outputs(tx_hash_eip155, 'eip155')
 
         (gas_used_eip155, _, _) = computeForgedTxFee(sc_node, tx_hash_eip155)
 
@@ -141,6 +158,8 @@ class SCEvmMetamaskTest(AccountChainSetup):
                                        call_method=CallMethod.RPC_EIP1559)
         status = generate_block_and_get_tx_receipt(sc_node, tx_hash_eip1559, True)
         assert_true(status, "Contract call failed")
+
+        self.__check_tx_type_specific_outputs(tx_hash_eip1559, 'eip1559')
 
         (gas_used_eip1559, _, _) = computeForgedTxFee(sc_node, tx_hash_eip1559)
 
