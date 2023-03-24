@@ -378,12 +378,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getBalance(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getBalance(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getBalance(address)
       }
     }
   }
@@ -392,12 +388,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getNonce(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getNonce(address)
       }
     }
   }
@@ -707,7 +699,11 @@ class EthService(
 
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
-    val tx = EthereumTransactionDecoder.decode(signedTxData)
+    val tx = try {
+      EthereumTransactionDecoder.decode(signedTxData)
+    } catch {
+      case err: RuntimeException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage))
+    }
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
     // wait for submit
@@ -721,12 +717,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
-        }
-      } catch {
-        case _: BlockNotFoundException => null
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
     }
   }
