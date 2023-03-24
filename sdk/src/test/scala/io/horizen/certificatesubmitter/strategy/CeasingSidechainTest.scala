@@ -82,7 +82,7 @@ class CeasingSidechainTest extends JUnitSuite
         TopQualityCertificates(None, None)
       }
     )
-    var status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    var status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
 
     // No top quality certificates
@@ -91,7 +91,7 @@ class CeasingSidechainTest extends JUnitSuite
       _ => Try {TopQualityCertificates(None, None)}
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificates in previous epoch
@@ -105,7 +105,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in mempool(lower quality)
@@ -121,7 +121,7 @@ class CeasingSidechainTest extends JUnitSuite
 
     knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in mempool(equal quality)
@@ -135,7 +135,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in chain(low quality)
@@ -149,7 +149,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in chain(low quality)
@@ -163,7 +163,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
   }
 

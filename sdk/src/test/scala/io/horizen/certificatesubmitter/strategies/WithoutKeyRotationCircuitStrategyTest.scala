@@ -71,7 +71,8 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
     val signaturesStatus = SignaturesStatus(
       referencedEpoch = WithoutKeyRotationCircuitStrategyTest.epochNumber,
       messageToSign = Array(135.toByte),
-      knownSigs = ArrayBuffer(certificateSignatureInfo)
+      knownSigs = ArrayBuffer(certificateSignatureInfo),
+      params.signersPublicKeys
     )
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
     val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView().history, sidechainNodeView().state, signaturesStatus)
@@ -172,7 +173,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       new io.horizen.utils.Pair(Array(67.toByte), 425L)
     })
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
-    keyRotationStrategy.getMessageToSign(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber)
+    keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber)
   }
 
   private def settings(): SidechainSettings = {

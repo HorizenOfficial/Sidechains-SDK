@@ -96,7 +96,7 @@ class WithKeyRotationCircuitStrategy[
     )
   }
 
-  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -111,7 +111,14 @@ class WithKeyRotationCircuitStrategy[
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
-    message
+
+    // For circuit with key rotation signing keys are mutable
+    val signersPublicKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
+      case Some(actualKeys) => actualKeys.signingKeys
+      case None => params.signersPublicKeys
+    }
+
+    (message, signersPublicKeys)
   }
 
   private def getSchnorrKeysSignaturesListBytes(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {

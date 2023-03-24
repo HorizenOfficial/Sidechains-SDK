@@ -8,6 +8,7 @@ import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
+import io.horizen.proposition.SchnorrProposition
 import io.horizen.transaction.Transaction
 
 import java.util.Optional
@@ -82,7 +83,7 @@ class WithoutKeyRotationCircuitStrategy[
       utxoMerkleTreeRoot)
   }
 
-  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -106,7 +107,7 @@ class WithoutKeyRotationCircuitStrategy[
       }
     }
 
-    cryptolibCircuit.generateMessageToBeSigned(
+    val messageToSign = cryptolibCircuit.generateMessageToBeSigned(
       backwardTransfers.asJava,
       sidechainId,
       referencedWithdrawalEpochNumber,
@@ -115,6 +116,9 @@ class WithoutKeyRotationCircuitStrategy[
       ftMinAmount,
       Optional.ofNullable(utxoMerkleTreeRoot.orNull)
     )
+
+    // For circuit with key rotation, signing keys are always the same
+    (messageToSign, params.signersPublicKeys)
   }
 
   private def getUtxoMerkleTreeRoot(state: MS, referencedWithdrawalEpochNumber: Int): Option[Array[Byte]] = {

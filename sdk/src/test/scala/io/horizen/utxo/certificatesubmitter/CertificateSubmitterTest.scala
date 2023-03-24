@@ -369,7 +369,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seeeeed".getBytes(StandardCharsets.UTF_8))
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret.sign(messageToSign)))
 
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys))
 
     statusOpt = Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]]
     assertTrue("Status expected to be defined", statusOpt.isDefined)
@@ -832,7 +832,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Test 2: Retrieve signature from remote with different message to sign when inside the Submission Window
     // Emulate in window status
     val referencedEpochNumber = 10
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer(), params.signersPublicKeys))
 
     val anotherMessageToSign = FieldElementFixture.generateFieldElement()
     val anotherSignature = schnorrSecrets.head.sign(anotherMessageToSign)
@@ -959,7 +959,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Test 2: Try to generate Certificate when there is not enough known sigs (< threshold) - should skip
     val referencedEpochNumber = 100
     val messageToSign = FieldElementFixture.generateFieldElement()
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer(), params.signersPublicKeys))
 
     certificateSubmitterRef ! TryToGenerateCertificate
     certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }

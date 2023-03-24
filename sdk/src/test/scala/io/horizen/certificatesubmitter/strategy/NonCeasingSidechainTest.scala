@@ -75,13 +75,13 @@ class NonCeasingSidechainTest extends JUnitSuite
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
     knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))
 
-    val signaturesStatusSuccess = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    val signaturesStatusSuccess = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
 
     assertTrue("Quality check must be successful.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusSuccess))
 
     knownSigs.clear()
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
-    val signaturesStatusFail = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    val signaturesStatusFail = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
     assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusFail))
   }
 

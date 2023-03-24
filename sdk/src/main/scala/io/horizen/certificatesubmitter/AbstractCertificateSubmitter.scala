@@ -216,13 +216,13 @@ abstract class AbstractCertificateSubmitter[
               case Some(status) if status.referencedEpoch == submissionWindowStatus.referencedWithdrawalEpochNumber => // Nothing changes -> do nothing
               case _ =>
                 val referencedWithdrawalEpochNumber = submissionWindowStatus.referencedWithdrawalEpochNumber
-                getMessageToSign(referencedWithdrawalEpochNumber) match {
-                  case Success(messageToSign) =>
-                    signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
+                getMessageToSignAndPublicKeys(referencedWithdrawalEpochNumber) match {
+                  case Success((messageToSign, signersPublicKeys)) =>
+                    signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer(), signersPublicKeys))
 
                     // Try to calculate signatures if signing is enabled
                     if(certificateSigningEnabled) {
-                      calculateSignatures(messageToSign, referencedWithdrawalEpochNumber) match {
+                      calculateSignatures(messageToSign, signersPublicKeys, referencedWithdrawalEpochNumber) match {
                         case Success(signaturesInfo) =>
                           signaturesInfo.foreach(sigInfo => {
                             self ! LocallyGeneratedSignature(sigInfo)
@@ -251,9 +251,9 @@ abstract class AbstractCertificateSubmitter[
       }
   }
 
-  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.getMessageToSign(view.history, view.state, referencedWithdrawalEpochNumber)),
-      timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
+  private def getMessageToSignAndPublicKeys(referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => keyRotationStrategy.getMessageToSignAndPublicKeys(view.history, view.state, referencedWithdrawalEpochNumber)),
+      timeoutDuration).asInstanceOf[Try[(Array[Byte], Seq[SchnorrProposition])]].get
   }
 
   // Take withdrawal epoch info for block from the History.
@@ -267,13 +267,10 @@ abstract class AbstractCertificateSubmitter[
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  protected def calculateSignatures(messageToSign: Array[Byte], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
+  // TODO: remove referencedWithdrawalEpochNumber
+  protected def calculateSignatures(messageToSign: Array[Byte], signersPublicKeys: Seq[SchnorrProposition], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[CertificateSignatureInfo] = {
       val wallet = sidechainNodeView.vault
-      val signersPublicKeys = sidechainNodeView.state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
-        case Some(actualKeys) => actualKeys.signingKeys
-        case None => params.signersPublicKeys
-      }
       val privateKeysWithIndexes = signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
         case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
       }
@@ -291,7 +288,6 @@ abstract class AbstractCertificateSubmitter[
 
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
     if (!secureEnclaveApiClient.isEnabled) return Seq()
-
     val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
       .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
       .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
@@ -488,7 +484,7 @@ object AbstractCertificateSubmitter {
 
   // Data
 
-  case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
+  case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo], signersPublicKeys: Seq[SchnorrProposition])
 
   case class CertificateSignatureInfo(pubKeyIndex: Int, signature: SchnorrProof)
 

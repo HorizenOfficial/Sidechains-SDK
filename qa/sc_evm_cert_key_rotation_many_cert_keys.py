@@ -69,15 +69,15 @@ class SCKeyRotationManyKeysTest(AccountChainSetup):
 
     def __init__(self):
         self.remote_keys_host = "127.0.0.1"
-        self.remote_keys_port = 5000
+        self.remote_keys_port = 5200
         self.remote_keys_address = f"http://{self.remote_keys_host}:{self.remote_keys_port}"
         self.cert_max_keys = 7
-        self.submitter_private_keys_indexes = self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
+        self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
         self.cert_sig_threshold = 5
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
-                         remote_keys_manager_enabled=True, remote_keys_server_address=self.remote_keys_address,
+                         remote_keys_manager_enabled=True, remote_keys_server_addresses=[self.remote_keys_address],
                          cert_max_keys=self.cert_max_keys, cert_sig_threshold=self.cert_sig_threshold,
-                         submitter_private_keys_indexes=self.submitter_private_keys_indexes)
+                         submitters_private_keys_indexes=[self.submitter_private_keys_indexes])
 
     def secure_enclave_create_signature(self, message_to_sign, public_key="", key=""):
         post_data = {
