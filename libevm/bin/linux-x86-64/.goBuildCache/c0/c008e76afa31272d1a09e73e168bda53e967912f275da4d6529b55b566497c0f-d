@@ -1,0 +1,14 @@
+./arithmetic_fallback.go
+./bls12_381.go
+./field_element.go
+./fp.go
+./fp12.go
+./fp2.go
+./fp6.go
+./g1.go
+./g2.go
+./gt.go
+./isogeny.go
+./pairing.go
+./swu.go
+./utils.go

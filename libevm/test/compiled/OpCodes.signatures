@@ -1,0 +1,10 @@
+Function signatures:
+15e812ad: getBaseFee()
+9663f88f: getBlockHash()
+42cbb15c: getBlockNumber()
+564b81ef: getChainID()
+d1a82a9d: getCoinbase()
+1a93d1c3: getGasLimit()
+455259cb: getGasPrice()
+aacc5a17: getRandom()
+557ed1ba: getTime()

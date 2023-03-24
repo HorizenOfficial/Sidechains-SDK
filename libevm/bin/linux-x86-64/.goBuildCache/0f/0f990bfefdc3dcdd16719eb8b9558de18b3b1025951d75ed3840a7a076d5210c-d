@@ -1,0 +1,5 @@
+./doc.go
+./edwards25519.go
+./scalar.go
+./scalarmult.go
+./tables.go

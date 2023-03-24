@@ -1,0 +1,8 @@
+./binarymarshaler.go
+./binaryunmarshaler.go
+./bloomfilter.go
+./conformance.go
+./fileio.go
+./iscompatible.go
+./new.go
+./statistics.go

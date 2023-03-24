@@ -1,0 +1,8 @@
+Function signatures:
+371303c0: inc()
+2e64cec1: retrieve()
+6057361d: store(uint256)
+
+Event signatures:
+fe1a3ad11e425db4b8e6af35d11c50118826a496df73006fc724cb27f2b99946: AnotherLog()
+0738f4da267a110d810e6e89fc59e46be6de0c37b1d5cd559b267dc3688e74e0: Log(address,string)

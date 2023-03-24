@@ -27,23 +27,47 @@ from test_framework.authproxy import AuthServiceProxy
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, NO_KEY_ROTATION_CIRCUIT
 
 COIN = 100000000  # 1 zen in zatoshis, aka zennies
-
 certificate_field_config_csw_enabled = [255, 255]
-
 certificate_field_config_csw_disabled = []
 certificate_with_key_rotation_field_config = [255] * 32  # 32 elements of size 255 bits each
+parallel_test = 0
+
+
+def set_mc_parallel_test(n):
+    global parallel_test
+    parallel_test = n
+
+
+def start_port_modifier():
+    if parallel_test > 0:
+        return (parallel_test - 1) * 100
 
 
 def p2p_port(n):
-    return 11000 + n + os.getpid() % 999
+    start_port = 11000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def rpc_port(n):
-    return 12000 + n + os.getpid() % 999
+    start_port = 12000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def websocket_port_by_mc_node_index(n):
-    return 13000 + n + os.getpid() % 999
+    start_port = 13000
+    if parallel_test > 0:
+        start_port += start_port_modifier()
+        return start_port + n
+    else:
+        return start_port + n + os.getpid() % 999
 
 
 def obj_to_hex(obj):
@@ -354,7 +378,7 @@ def gather_inputs(from_node, amount_needed, confirmations_required=1):
     inputs = []
     total_in = Decimal("0.00000000")
     while total_in < amount_needed and len(utxo) > 0:
-        t = utxo.pop()
+        t = pop()
         total_in += t["amount"]
         inputs.append({"txid": t["txid"], "vout": t["vout"], "address": t["address"]})
     if total_in < amount_needed:

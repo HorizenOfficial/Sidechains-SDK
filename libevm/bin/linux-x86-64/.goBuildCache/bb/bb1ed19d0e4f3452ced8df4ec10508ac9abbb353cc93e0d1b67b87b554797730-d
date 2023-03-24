@@ -1,0 +1,3 @@
+./doc.go
+./syslog.go
+./syslog_unix.go

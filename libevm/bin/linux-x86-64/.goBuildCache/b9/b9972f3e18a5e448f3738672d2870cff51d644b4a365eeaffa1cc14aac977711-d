@@ -1,0 +1,2 @@
+./numcpus.go
+./numcpus_linux.go

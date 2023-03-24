@@ -1,0 +1,3 @@
+./abi.go
+./abi_amd64.go
+./abi_test.s

@@ -1,0 +1,11 @@
+./doc.go
+./hashes.go
+./hashes_generic.go
+./keccakf_amd64.go
+./register.go
+./sha3.go
+./shake.go
+./shake_generic.go
+./xor_generic.go
+./xor_unaligned.go
+./keccakf_amd64.s

@@ -53,7 +53,7 @@ Test:
 
 class SCEvmBWTCornerCases(AccountChainSetup):
     def __init__(self):
-        super().__init__(withdrawalEpochLength=10)
+        super().__init__(withdrawalEpochLength=10, max_nonce_gap=1500, max_account_slots=1500)
 
     def run_test(self):
         time.sleep(0.1)
@@ -83,13 +83,11 @@ class SCEvmBWTCornerCases(AccountChainSetup):
         mc_address1 = mc_node.getnewaddress()
         bt_amount = ft_amount_in_zen + 3
         sc_bt_amount1 = convertZenToZennies(bt_amount)
-        error_occur = False
         try:
             withdrawcoins(sc_node, mc_address1, sc_bt_amount1)
+            fail("Withdrawal request with insufficient balance should fail")
         except RuntimeError as e:
-            error_occur = True
-
-        assert_true(error_occur, "Withdrawal request with insufficient balance should fail")
+            pass
 
         generate_next_block(sc_node, "first node")
 

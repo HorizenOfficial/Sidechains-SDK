@@ -1,0 +1,2 @@
+./syscall_linux.go
+./asm_linux_amd64.s
