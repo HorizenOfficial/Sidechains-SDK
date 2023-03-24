@@ -1,8 +1,9 @@
 package io.horizen.cryptolibprovider;
 
-
 import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.commitmenttreenative.ScCommitmentCertPath;
 import com.horizen.librustsidechains.FieldElement;
+import com.horizen.merkletreenative.InMemoryAppendOnlyMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
@@ -10,29 +11,42 @@ import io.horizen.sc2sc.CrossChainMessageHash;
 import java.util.List;
 
 public interface Sc2scCircuit {
+    boolean generateSc2ScKeys(
+            String provingKeyPath,
+            String verificationKeyPath
+    ) throws Exception;
 
     int getMaxMessagesPerCertificate();
 
-    CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg);
+    InMemoryAppendOnlyMerkleTree initMerkleTree();
 
-    byte[] getCrossChainMessageTreeRoot(List<CrossChainMessage> messages);
+    CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg) throws Exception;
 
-    MerklePath getCrossChainMessageMerklePath(List<CrossChainMessage> messages, CrossChainMessage leaf);
+    byte[] getCrossChainMessageTreeRoot(InMemoryAppendOnlyMerkleTree tree) throws Exception;
+
+    MerklePath getCrossChainMessageMerklePath(InMemoryAppendOnlyMerkleTree tree, int leaf) throws Exception;
+
+    int insertMessagesInMerkleTreeWithIndex(InMemoryAppendOnlyMerkleTree tree, List<CrossChainMessage> messages, CrossChainMessage leafMsg) throws Exception;
+
+    void insertMessagesInMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception;
+
+    FieldElement getCrossChainMessageTreeRootAsFieldElement(InMemoryAppendOnlyMerkleTree tree);
 
     byte[] createRedeemProof(CrossChainMessageHash messageHash,
-                             MerklePath messageMerkePath,
-                             WithdrawalCertificate topQuality_cert_epochN,
-                             MerklePath merklePath_topQuality_cert_epochN,
-                             FieldElement sc_tx_commitment_root_cert_epochN,
-                             WithdrawalCertificate cert_epoch_N1,
-                             MerklePath merklePath_cert_epochN1,
-                             FieldElement sc_tx_commitment_root_cert_epochN1
+                             byte[] scTxCommitmentRoot,
+                             byte[] nextScTxCommitmentRoot,
+                             WithdrawalCertificate currWithdrawalCertificate,
+                             WithdrawalCertificate nextWithdrawalCertificate,
+                             ScCommitmentCertPath merklePathTopQualityCert,
+                             ScCommitmentCertPath nextMerklePathTopQualityCert,
+                             MerklePath messageMerklePath,
+                             String provingKeyPath
     );
 
     boolean verifyRedeemProof(CrossChainMessageHash messageHash,
-                              FieldElement sc_tx_commitment_root_cert_epochN,
-                              FieldElement sc_tx_commitment_root_cert_epochN1,
-                              byte[] proof
+                              byte[] sc_tx_commitment_root_cert_epochN,
+                              byte[] sc_tx_commitment_root_cert_epochN1,
+                              byte[] proof,
+                              String verifyKeyPath
     );
-
 }

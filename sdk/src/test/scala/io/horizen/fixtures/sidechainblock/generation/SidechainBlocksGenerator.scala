@@ -538,6 +538,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val signersThreshold: Int = params.signersThreshold
       override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
       override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
+      override val sc2ScProvingKeyFilePath: String = params.sc2ScProvingKeyFilePath
+      override val sc2ScVerificationKeyFilePath: String = params.sc2ScVerificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32) //calculate if we need for some reason that data
       override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
       override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()

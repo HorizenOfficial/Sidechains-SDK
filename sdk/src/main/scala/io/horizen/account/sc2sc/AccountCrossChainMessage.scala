@@ -10,14 +10,16 @@ case class AccountCrossChainMessage
 (
   messageType: Int,
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
-  receiverSidechain:  Array[Byte],
+  receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
-  payload:  Array[Byte]
+  payload: Array[Byte]
 ) extends BytesSerializable with ABIEncodable[StaticStruct] {
 
   override type M = AccountCrossChainMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
+
+  override def bytes: Array[Byte] = serializer.toBytes(this)
 
   private[horizen] def asABIType(): StaticStruct = {
     new StaticStruct(

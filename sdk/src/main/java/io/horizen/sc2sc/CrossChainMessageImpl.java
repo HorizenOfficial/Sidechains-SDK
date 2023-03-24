@@ -6,7 +6,7 @@ import io.horizen.utils.BytesUtils;
 @JsonView(Views.Default.class)
 public class CrossChainMessageImpl implements CrossChainMessage {
 
-    private CrossChainProtocolVersion version;
+    private final CrossChainProtocolVersion version;
     private int messageType;
     private byte[] senderSidechain;
     private byte[] sender;
