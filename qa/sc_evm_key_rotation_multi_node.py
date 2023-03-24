@@ -115,8 +115,9 @@ class SCKeyRotationManyKeysTest(AccountChainSetup):
         public_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.public_master_keys
 
         # Secure Enclave containing master keys
-        SecureEnclaveApiServer(private_master_keys, public_master_keys, self.remote_keys_host,
-                               self.remote_keys_port).start()
+        api_server = SecureEnclaveApiServer(private_master_keys, public_master_keys, self.remote_keys_host,
+                                            self.remote_keys_port)
+        api_server.start()
 
         current_epoch_number = 0
         list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)
@@ -199,6 +200,7 @@ class SCKeyRotationManyKeysTest(AccountChainSetup):
         # Create 1 new Signing Key
         new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
         new_public_key = new_signing_key.publicKey
+        api_server.add_new_key(new_signing_key.secret, new_signing_key.publicKey)
 
         # Try to change the signing key 0
         epoch = get_withdrawal_epoch(sc_node)

@@ -77,6 +77,10 @@ class SecureEnclaveApiServer(object):
         self.host = host
         self.port = port
 
+    def add_new_key(self, schnorr_secret, schnorr_public_key):
+        self.schnorr_public_keys.append(schnorr_public_key)
+        self.schnorr_secrets.append(schnorr_secret)
+
 
 def launch_signing_tool(json_parameters):
     json_param = json.dumps(json_parameters)
@@ -93,3 +97,5 @@ def launch_signing_tool(json_parameters):
         logging.error("Signing tool error occurred for command= {}\nparams: {}\nError: {}\n"
                       .format("createSignature", json_param, db_tool_output.decode()))
         raise Exception("Signing tool error occurred")
+
+
