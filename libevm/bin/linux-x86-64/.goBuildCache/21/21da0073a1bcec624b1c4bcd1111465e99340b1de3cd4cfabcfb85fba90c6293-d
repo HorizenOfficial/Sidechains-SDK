@@ -1,7 +1,0 @@
-./algorithm.go
-./api.go
-./consensus.go
-./difficulty.go
-./ethash.go
-./mmap_help_linux.go
-./sealer.go

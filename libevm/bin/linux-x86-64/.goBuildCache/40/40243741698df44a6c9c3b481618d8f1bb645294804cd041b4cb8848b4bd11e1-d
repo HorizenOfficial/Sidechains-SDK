@@ -1,6 +1,0 @@
-./4byte.go
-./call.go
-./noop.go
-./prestate.go
-./revertreason.go
-./tracer.go

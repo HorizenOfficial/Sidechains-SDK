@@ -1,6 +1,0 @@
-./accounts.go
-./errors.go
-./hd.go
-./manager.go
-./sort.go
-./url.go

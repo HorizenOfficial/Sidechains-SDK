@@ -1,9 +1,0 @@
-./dir_unix.go
-./fileutil.go
-./flock.go
-./flock_unix.go
-./mmap.go
-./mmap_unix.go
-./preallocate.go
-./preallocate_linux.go
-./sync_linux.go

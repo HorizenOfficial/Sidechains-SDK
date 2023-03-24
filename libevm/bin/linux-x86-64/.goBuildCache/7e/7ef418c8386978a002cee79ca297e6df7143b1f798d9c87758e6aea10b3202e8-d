@@ -1,5 +1,0 @@
-./bits_go1.13.go
-./poly1305.go
-./sum_amd64.go
-./sum_generic.go
-./sum_amd64.s

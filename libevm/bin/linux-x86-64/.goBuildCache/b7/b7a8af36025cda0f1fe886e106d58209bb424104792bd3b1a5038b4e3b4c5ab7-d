@@ -1,9 +1,0 @@
-./account_cache.go
-./file_cache.go
-./key.go
-./keystore.go
-./passphrase.go
-./plain.go
-./presale.go
-./wallet.go
-./watch.go

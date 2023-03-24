@@ -1,5 +1,0 @@
-./binary.go
-./common.go
-./common_linux.go
-./common_unix.go
-./sleep.go

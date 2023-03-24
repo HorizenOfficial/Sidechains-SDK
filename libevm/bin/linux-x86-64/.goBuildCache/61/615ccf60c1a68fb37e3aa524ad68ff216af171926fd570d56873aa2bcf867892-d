@@ -1,4 +1,0 @@
-./iterator.go
-./set.go
-./threadsafe.go
-./threadunsafe.go

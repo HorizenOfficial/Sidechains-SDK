@@ -1,4 +1,0 @@
-./file_storage.go
-./file_storage_unix.go
-./mem_storage.go
-./storage.go

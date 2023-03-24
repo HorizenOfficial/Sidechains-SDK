@@ -1,6 +1,0 @@
-./curve.go
-_cgo_gotypes.go
-panic_cb.cgo1.go
-scalar_mult_cgo.cgo1.go
-secp256.cgo1.go
-_cgo_import.go

@@ -1,6 +1,0 @@
-./sysconf.go
-./sysconf_generic.go
-./sysconf_linux.go
-./sysconf_posix.go
-./zsysconf_defs_linux.go
-./zsysconf_values_linux_amd64.go
