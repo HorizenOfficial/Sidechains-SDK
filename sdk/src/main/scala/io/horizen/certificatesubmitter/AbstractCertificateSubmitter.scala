@@ -327,9 +327,9 @@ abstract class AbstractCertificateSubmitter[
           } retrieved from remote.")
           if (!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
             sender() ! DifferentMessageToSign
-          } else if (remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
+          } else if (remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= status.signersPublicKeys.size) {
             sender() ! InvalidPublicKeyIndex
-          } else if (!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
+          } else if (!remoteSigInfo.signature.isValid(status.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
             sender() ! InvalidSignature
           } else if (!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
             status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
