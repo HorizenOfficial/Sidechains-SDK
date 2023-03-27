@@ -42,7 +42,7 @@ import scala.language.postfixOps
 
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
-  var params: RegTestParams = RegTestParams()
+  var params: RegTestParams = _
 
   @Before
   def init(): Unit = {

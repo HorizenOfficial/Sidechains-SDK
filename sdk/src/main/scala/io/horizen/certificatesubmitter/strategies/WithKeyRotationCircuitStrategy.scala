@@ -72,8 +72,7 @@ class WithKeyRotationCircuitStrategy[
 
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
-
-    val schnorrKeysSignatures = getSchnorrKeysSignaturesListBytes(state, status.referencedEpoch)
+    val schnorrKeysSignatures = getSchnorrKeysSignatures(state, status.referencedEpoch)
 
     val signersPublicKeyWithSignatures = schnorrKeysSignatures.schnorrSigners.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -105,23 +104,19 @@ class WithKeyRotationCircuitStrategy[
     val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
+    val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
+      .getSchnorrKeysHash(keysAndSignatures)
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
 
-    // For circuit with key rotation signing keys are mutable
-    val signersPublicKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1) match {
-      case Some(actualKeys) => actualKeys.signingKeys
-      case None => params.signersPublicKeys
-    }
-
-    (message, signersPublicKeys)
+    // For circuit with key rotation signing keys can be changed
+    (message, keysAndSignatures.schnorrSigners)
   }
 
-  private def getSchnorrKeysSignaturesListBytes(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
+  private def getSchnorrKeysSignatures(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
     val prevCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1)
       .getOrElse(throw new RuntimeException(s"Certifiers keys for previous withdrawal epoch are not present"))
     val newCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber)

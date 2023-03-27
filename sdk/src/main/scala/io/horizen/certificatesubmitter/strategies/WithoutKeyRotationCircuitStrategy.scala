@@ -67,7 +67,7 @@ class WithoutKeyRotationCircuitStrategy[
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
 
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
+    val signersPublicKeyWithSignatures = status.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
@@ -97,7 +97,7 @@ class WithoutKeyRotationCircuitStrategy[
       Try {
         getUtxoMerkleTreeRoot(state, referencedWithdrawalEpochNumber)
       } match {
-        case Failure(e: IllegalStateException) =>
+        case Failure(_: IllegalStateException) =>
           throw new Exception("CertificateSubmitter is too late against the State. " +
             s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
             s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")

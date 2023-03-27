@@ -8,6 +8,7 @@ import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
 import io.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolder, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
 import io.horizen.params.MainNetParams
+import io.horizen.proposition.SchnorrProposition
 import io.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
@@ -75,6 +76,7 @@ class CeasingSidechainTest extends JUnitSuite
 
     val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
     val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
+    val signersPublicKeys: Seq[SchnorrProposition] = Seq(schnorrSecret1.publicImage(), schnorrSecret2.publicImage())
 
     // Too few keys
     when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String])).thenAnswer(
@@ -82,7 +84,7 @@ class CeasingSidechainTest extends JUnitSuite
         TopQualityCertificates(None, None)
       }
     )
-    var status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    var status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
 
     // No top quality certificates
@@ -91,7 +93,7 @@ class CeasingSidechainTest extends JUnitSuite
       _ => Try {TopQualityCertificates(None, None)}
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificates in previous epoch
@@ -105,7 +107,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in mempool(lower quality)
@@ -121,7 +123,7 @@ class CeasingSidechainTest extends JUnitSuite
 
     knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in mempool(equal quality)
@@ -135,7 +137,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in chain(low quality)
@@ -149,7 +151,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertTrue("Quality check must be successful.", ceasingSidechainStrategy.checkQuality(status))
 
     // Top quality certificate in chain(low quality)
@@ -163,7 +165,7 @@ class CeasingSidechainTest extends JUnitSuite
       }
     )
 
-    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys)
+    status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertFalse("Quality check must fail.", ceasingSidechainStrategy.checkQuality(status))
   }
 

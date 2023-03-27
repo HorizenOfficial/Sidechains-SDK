@@ -222,7 +222,7 @@ abstract class AbstractCertificateSubmitter[
 
                     // Try to calculate signatures if signing is enabled
                     if(certificateSigningEnabled) {
-                      calculateSignatures(messageToSign, signersPublicKeys, referencedWithdrawalEpochNumber) match {
+                      calculateSignatures(messageToSign, signersPublicKeys) match {
                         case Success(signaturesInfo) =>
                           signaturesInfo.foreach(sigInfo => {
                             self ! LocallyGeneratedSignature(sigInfo)
@@ -267,8 +267,7 @@ abstract class AbstractCertificateSubmitter[
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  // TODO: remove referencedWithdrawalEpochNumber
-  protected def calculateSignatures(messageToSign: Array[Byte], signersPublicKeys: Seq[SchnorrProposition], referencedWithdrawalEpochNumber: Int): Try[Seq[CertificateSignatureInfo]] = Try {
+  protected def calculateSignatures(messageToSign: Array[Byte], signersPublicKeys: Seq[SchnorrProposition]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[CertificateSignatureInfo] = {
       val wallet = sidechainNodeView.vault
       val privateKeysWithIndexes = signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
@@ -484,7 +483,10 @@ object AbstractCertificateSubmitter {
 
   // Data
 
-  case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo], signersPublicKeys: Seq[SchnorrProposition])
+  case class SignaturesStatus(referencedEpoch: Int,
+                              messageToSign: Array[Byte],
+                              knownSigs: ArrayBuffer[CertificateSignatureInfo],
+                              signersPublicKeys: Seq[SchnorrProposition])
 
   case class CertificateSignatureInfo(pubKeyIndex: Int, signature: SchnorrProof)
 
