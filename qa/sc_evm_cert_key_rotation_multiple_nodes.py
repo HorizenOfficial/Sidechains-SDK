@@ -106,33 +106,33 @@ class SCKeyRotationTestMultipleNodes(AccountChainSetup):
             self.remote_keys_ports.append(5100 + x)
             remote_keys_addresses.append(f"http://{self.remote_keys_host}:{self.remote_keys_ports[x]}")
 
-        # cert_max_keys = 7
-        # cert_sig_threshold = 5
-        #
-        # self.first_node_first_key_idx = 0
-        # self.second_node_first_key_idx = 3
-        # self.third_node_first_key_idx = 6
-        #
-        # submitters_private_keys_indexes = [
-        #     range(self.first_node_first_key_idx, self.second_node_first_key_idx),   # first node  -   3 keys
-        #     range(self.second_node_first_key_idx, self.third_node_first_key_idx),   # second node -   3 keys
-        #     range(self.third_node_first_key_idx, cert_max_keys)                     # thirst node -   2 keys
-        # ]
+        cert_max_keys = 7
+        cert_sig_threshold = 5
+
+        self.first_node_first_key_idx = 0
+        self.second_node_first_key_idx = 3
+        self.third_node_first_key_idx = 6
+
+        submitters_private_keys_indexes = [
+            range(self.first_node_first_key_idx, self.second_node_first_key_idx),   # first node  -   3 keys
+            range(self.second_node_first_key_idx, self.third_node_first_key_idx),   # second node -   3 keys
+            range(self.third_node_first_key_idx, cert_max_keys)                     # thirst node -   2 keys
+        ]
 
         # Uncomment for the test with a bit signers set.
         # Note: run the test with --restapitimeout=30 until https://horizenlabs.atlassian.net/browse/SDK-826 is done
 
-        cert_max_keys = 47
-        cert_sig_threshold = 24
-        self.first_node_first_key_idx = 0
-        self.second_node_first_key_idx = 15
-        self.third_node_first_key_idx = 30
-
-        submitters_private_keys_indexes = [
-            range(self.first_node_first_key_idx, self.second_node_first_key_idx),  # first node  -   15 keys
-            range(self.second_node_first_key_idx, self.third_node_first_key_idx),  # second node -   15 keys
-            range(self.third_node_first_key_idx, cert_max_keys)                    # thirst node -   17 keys
-        ]
+        # cert_max_keys = 47
+        # cert_sig_threshold = 24
+        # self.first_node_first_key_idx = 0
+        # self.second_node_first_key_idx = 15
+        # self.third_node_first_key_idx = 30
+        #
+        # submitters_private_keys_indexes = [
+        #     range(self.first_node_first_key_idx, self.second_node_first_key_idx),  # first node  -   15 keys
+        #     range(self.second_node_first_key_idx, self.third_node_first_key_idx),  # second node -   15 keys
+        #     range(self.third_node_first_key_idx, cert_max_keys)                    # thirst node -   17 keys
+        # ]
 
         super().__init__(number_of_sidechain_nodes=number_of_sidechain_nodes,
                          withdrawalEpochLength=10,
