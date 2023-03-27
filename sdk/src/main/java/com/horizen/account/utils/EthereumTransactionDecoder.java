@@ -120,10 +120,10 @@ public class EthereumTransactionDecoder {
             realSignature = null;
         } else {
             // we check the size here even if an assertion would be thrown when instantiating the signature obj below
-            if (r.length != 32)
-                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
-            if (s.length != 32)
-                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
+            if (r.length > 32)
+                throw new IllegalArgumentException("r byte array length: " + r.length + " > 32");
+            if (s.length > 32)
+                throw new IllegalArgumentException("s byte array length: " + s.length + " > 32");
 
             realSignature = new SignatureSecp256k1(v, r, s);
         }
@@ -188,10 +188,10 @@ public class EthereumTransactionDecoder {
             realSignature = null;
         } else {
             // we check the size here even if an assertion would be thrown when instantiating the signature obj below
-            if (r.length != 32)
-                throw new IllegalArgumentException("r byte array length: " + r.length + " != 32");
-            if (s.length != 32)
-                throw new IllegalArgumentException("s byte array length: " + s.length + " != 32");
+            if (r.length > 32)
+                throw new IllegalArgumentException("r byte array length: " + r.length + " > 32");
+            if (s.length > 32)
+                throw new IllegalArgumentException("s byte array length: " + s.length + " > 32");
 
             chainId = decodeEip155ChainId(v);
             realSignature = new SignatureSecp256k1(getRealV(v), r, s);
