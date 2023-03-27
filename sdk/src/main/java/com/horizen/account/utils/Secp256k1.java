@@ -14,6 +14,8 @@ import java.security.SignatureException;
 import java.util.Arrays;
 import java.security.*;
 
+import static com.horizen.utils.BytesUtils.padWithZeroBytes;
+
 public final class Secp256k1 {
     private static final int COORD_SIZE = 32;
     public static final int PRIVATE_KEY_SIZE = COORD_SIZE;
@@ -60,6 +62,9 @@ public final class Secp256k1 {
     }
 
     public static byte[] signedMessageToAddress(byte[] message, byte[] v, byte[] r, byte[] s) throws SignatureException {
+        // w3j wants only 32 bytes long array, pad with 0x00 if necessary
+        byte[] r_barr = padWithZeroBytes(r, SIGNATURE_RS_SIZE);
+        byte[] s_barr = padWithZeroBytes(s, SIGNATURE_RS_SIZE);
         Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
         BigInteger pubKey = Sign.signedMessageToKey(message, signatureData);
         return getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE));

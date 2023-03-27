@@ -26,7 +26,9 @@ public final class SignatureSecp256k1Serializer implements ProofSerializer<Signa
         // variable length, as per EIP155
         writer.putInt(signature.getV().length);
         writer.putBytes(signature.getV());
+        writer.putInt(signature.getR().length);
         writer.putBytes(signature.getR());
+        writer.putInt(signature.getS().length);
         writer.putBytes(signature.getS());
     }
 
@@ -34,8 +36,10 @@ public final class SignatureSecp256k1Serializer implements ProofSerializer<Signa
     public SignatureSecp256k1 parse(Reader reader) {
         var vl = reader.getInt();
         var v = reader.getBytes(vl);
-        var r = reader.getBytes(Secp256k1.SIGNATURE_RS_SIZE);
-        var s = reader.getBytes(Secp256k1.SIGNATURE_RS_SIZE);
+        var rl = reader.getInt();
+        var r = reader.getBytes(rl);
+        var sl = reader.getInt();
+        var s = reader.getBytes(sl);
         return new SignatureSecp256k1(v, r, s);
     }
 }

@@ -20,13 +20,14 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import com.horizen.account.utils.Secp256k1.generateContractAddress
-import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils}
+import com.horizen.account.utils.{BigIntegerUtil, EthereumTransactionDecoder, FeeUtils, Secp256k1}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
+import com.horizen.utils.BytesUtils.padWithZeroBytes
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import com.horizen.{EthServiceSettings, SidechainTypes}
 import io.horizen.evm.results.ProofAccountResult
@@ -247,7 +248,8 @@ class EthService(
     applyOnAccountView { nodeView =>
       val secret = getFittingSecret(nodeView.vault, nodeView.state, sender, BigInteger.ZERO)
       val signature = secret.sign(messageToSign)
-      signature.getR ++ signature.getS ++ signature.getV
+      // The order of r, s, v concatenations is the same as in eth
+      padWithZeroBytes(signature.getR, Secp256k1.SIGNATURE_RS_SIZE) ++ padWithZeroBytes(signature.getS, Secp256k1.SIGNATURE_RS_SIZE) ++ signature.getV
     }
   }
 

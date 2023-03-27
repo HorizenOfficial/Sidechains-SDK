@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.utils.BigIntegerUInt256
+import com.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils.padWithZeroBytes
 import com.horizen.utils.{BytesUtils, Ed25519}
 import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
@@ -176,7 +177,11 @@ case class RemoveStakeCmdInput(
   extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
-    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(signature.getV), new Bytes32(signature.getR), new Bytes32(signature.getS))
+    val t_v = signature.getV
+    val t_r = padWithZeroBytes(signature.getR, Secp256k1.SIGNATURE_RS_SIZE)
+    val t_s = padWithZeroBytes(signature.getS, Secp256k1.SIGNATURE_RS_SIZE)
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(t_v), new Bytes32(t_r), new Bytes32(t_s))
     new StaticStruct(listOfParams)
   }
 

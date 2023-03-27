@@ -25,7 +25,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
 
     private static boolean checkSignatureDataSizes(byte[] v, byte[] r, byte[] s) {
         return (v.length > 0 && v.length <= Secp256k1.SIGNATURE_V_MAXSIZE) &&
-                (r.length == Secp256k1.SIGNATURE_RS_SIZE && s.length == Secp256k1.SIGNATURE_RS_SIZE);
+                (r.length <= Secp256k1.SIGNATURE_RS_SIZE && s.length <= Secp256k1.SIGNATURE_RS_SIZE);
     }
 
     public static void verifySignatureData(byte[] v, byte[] r, byte[] s) {
