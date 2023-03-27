@@ -1,5 +1,4 @@
 import json
-import logging
 
 
 def http_create_key_rotation_transaction_evm(sidechainNode, key_type, key_index, new_key,
@@ -25,5 +24,4 @@ def http_create_key_rotation_transaction_evm(sidechainNode, key_type, key_index,
         response = sidechainNode.transaction_createKeyRotationTransaction(request, api_key)
     else:
         response = sidechainNode.transaction_createKeyRotationTransaction(request)
-    logging.debug(response)
     return response

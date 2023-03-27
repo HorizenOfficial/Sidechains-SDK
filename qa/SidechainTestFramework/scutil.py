@@ -374,8 +374,6 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
 
-
-
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
                                                   public_signing_keys, master_secrets, public_master_keys)
     return certificate_proof_info

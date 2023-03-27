@@ -19,15 +19,35 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CRE
 
 class AccountChainSetup(SidechainTestFramework):
 
-    def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
-                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
-                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 allow_unprotected_txs=True, remote_keys_server_addresses=[], max_incoming_connections=100,
-                 connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
-                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
-                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = [], cert_max_keys=7, cert_sig_threshold=5,
-                 submitters_private_keys_indexes=[]):
+    def __init__(self,
+                 API_KEY='Horizen',
+                 number_of_mc_nodes=1,
+                 number_of_sidechain_nodes=1,
+                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 forward_amount=100,
+                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+                 forger_options=None,
+                 initial_private_keys=None,
+                 circuittype_override=None,
+                 remote_keys_manager_enabled=False,
+                 remote_keys_server_addresses=[],
+                 max_incoming_connections=100,
+                 connect_nodes=True,
+                 allow_unprotected_txs=True,
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
+                 max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
+                 max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME,
+                 # Array of websocket ports. Node N will establish the connection to port N, if defined.
+                 # Otherwise, websocket connection is skipped. For example, [5100, None, 5101]
+                 websocket_server_ports=[],
+                 cert_max_keys=7,
+                 cert_sig_threshold=5,
+                 # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
+                 # If no value for given Node N index is present then the default value is assigned later: range(7)
+                 submitters_private_keys_indexes=[]
+                 ):
 
         super().__init__()
 
@@ -57,10 +77,10 @@ class AccountChainSetup(SidechainTestFramework):
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
-        if len(websocket_server_port) == 0:
-            websocket_server_port = [None] * number_of_sidechain_nodes
-        assert(len(websocket_server_port) == number_of_sidechain_nodes)
-        self.websocket_server_port = websocket_server_port
+        if len(websocket_server_ports) == 0:
+            websocket_server_ports = [None] * number_of_sidechain_nodes
+        assert(len(websocket_server_ports) == number_of_sidechain_nodes)
+        self.websocket_server_ports = websocket_server_ports
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.submitters_private_keys_indexes = submitters_private_keys_indexes
@@ -105,8 +125,8 @@ class AccountChainSetup(SidechainTestFramework):
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
                     tx_lifetime=self.tx_lifetime,
-                    websocket_server_enabled=True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port=self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0,
+                    websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
+                    websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
                     cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
                     submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
                 ))
@@ -127,8 +147,8 @@ class AccountChainSetup(SidechainTestFramework):
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
                     tx_lifetime=self.tx_lifetime,
-                    websocket_server_enabled=True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port=self.websocket_server_port[x],
+                    websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
+                    websocket_server_port=self.websocket_server_ports[x],
                     ccert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
                     submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
                 ))

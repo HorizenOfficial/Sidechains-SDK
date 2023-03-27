@@ -87,9 +87,17 @@ class SCKeyRotationTest(AccountChainSetup):
         self.remote_keys_host = "127.0.0.1"
         self.remote_keys_port = 5000
         self.remote_keys_address = f"http://{self.remote_keys_host}:{self.remote_keys_port}"
-        self.cert_max_keys = 10
+        self.cert_max_keys = 7
         self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
-        self.cert_sig_threshold = 6
+        self.cert_sig_threshold = 5
+
+        # Uncomment for the test with a bit signers set.
+        # Note: run the test with --restapitimeout=30 until https://horizenlabs.atlassian.net/browse/SDK-826 is done
+
+        # self.cert_max_keys = 47
+        # self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
+        # self.cert_sig_threshold = 24
+
         super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
                          remote_keys_manager_enabled=True, remote_keys_server_addresses=[self.remote_keys_address],
                          cert_max_keys=self.cert_max_keys, cert_sig_threshold=self.cert_sig_threshold,
@@ -171,9 +179,6 @@ class SCKeyRotationTest(AccountChainSetup):
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
         epoch_mc_blocks_left -= 1
-
-        # # Split the FT in multiple boxes
-        # sendCoinsToMultipleAddress(sc_node, [sc_address_1 for _ in range(20)], [1000 for _ in range(20)], 0)
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()

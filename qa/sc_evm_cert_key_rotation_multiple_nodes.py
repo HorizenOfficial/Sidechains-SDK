@@ -25,17 +25,20 @@ from test_framework.util import assert_equal, assert_true, assert_false, hex_str
 Configuration:
     Start 1 MC node and 3 SC node.
     SC node 1 connected to the MC node 1.
+    SC nodes are connected between each other.
+    Every SC node has its own remote key manager.
+    Certificate signer/master keys pairs are split between all 3 SC nodes
 
+Note:
+    This test is a copy of "sc_evm_cert_key_rotation.py" with an adaptation to 3 SC nodes and without some negative cases.
+    
 Test:
-    # TODO:
     ######## WITHDRAWAL EPOCH 0 ##########
     - Perform a FT and split the FT box into multiple boxes.    
     - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored.
     - Call the getCertificateSigners endpoint and verify that the signers and master keys correspond to the genesis ones.
     - Call the signSchnorrPublicKey endpoint and creates the signature necessary for the CertificateKeyRotationTransaction.
-    - Negative test for CertificateKeyRotationTransaction.
     - Create a keyRotationTransaction and change the signer key 0 (SK0 -> SK1).
-    - Try to create another keyRotationTransaction that change the same signer key and verify that is not accepted into the mempool due to the transaction incompatibility checker (SK0 -> SK2).
     - Call the getKeyRotationProof and verify that we have a keyRotationProof for the signer key 0 (SK1).
     - Create a keyRotationTransaction that change again the signer key 0 (SK0 -> SK3).
     - Call the getKeyRotationProof and verify that we have a keyRotationProof for the signer key 0 (SK3).
@@ -49,7 +52,7 @@ Test:
     ######## WITHDRAWAL EPOCH 2 ##########
     - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored for epoch 2.
     - Call the getCertificateSigners endpoint and verify that the signers key 0 = SK4.
-    - Update ALL the signing and master keys.
+    - Update ALL the signing and master keys of all the nodes
     - Call the getKeyRotationProof endpoint and verify that we have a KeyRotationProof for each signing and master keys.
     - End the WE and verify that the certificates is added to the MC and SC.
      ######## WITHDRAWAL EPOCH 3 ##########
@@ -82,7 +85,7 @@ def check_key_rotation_event(event, key_type, key_index, key_value, epoch):
     assert_equal(epoch, epoch_actual, "Wrong epoch in event")
 
 
-class SCKeyRotationTestMultiNodes(AccountChainSetup):
+class SCKeyRotationTestMultipleNodes(AccountChainSetup):
 
     def __init__(self):
         number_of_sidechain_nodes = 3
@@ -93,17 +96,34 @@ class SCKeyRotationTestMultiNodes(AccountChainSetup):
             self.remote_keys_ports.append(5100 + x)
             remote_keys_addresses.append(f"http://{self.remote_keys_host}:{self.remote_keys_ports[x]}")
 
-        cert_max_keys = 47
+        cert_max_keys = 7
+        cert_sig_threshold = 5
+
         self.first_node_first_key_idx = 0
-        self.second_node_first_key_idx = 15
-        self.third_node_first_key_idx = 30
+        self.second_node_first_key_idx = 3
+        self.third_node_first_key_idx = 6
 
         submitters_private_keys_indexes = [
-            range(self.first_node_first_key_idx, self.second_node_first_key_idx),  # first node  -   15 keys
-            range(self.second_node_first_key_idx, self.third_node_first_key_idx),  # second node -   15 keys
-            range(self.third_node_first_key_idx, cert_max_keys)                    # thirst node -   17 keys
+            range(self.first_node_first_key_idx, self.second_node_first_key_idx),   # first node  -   3 keys
+            range(self.second_node_first_key_idx, self.third_node_first_key_idx),   # second node -   3 keys
+            range(self.third_node_first_key_idx, cert_max_keys)                     # thirst node -   2 keys
         ]
-        cert_sig_threshold = 6
+
+        # Uncomment for the test with a bit signers set.
+        # Note: run the test with --restapitimeout=30 until https://horizenlabs.atlassian.net/browse/SDK-826 is done
+
+        # cert_max_keys = 47
+        # cert_sig_threshold = 24
+        # self.first_node_first_key_idx = 0
+        # self.second_node_first_key_idx = 15
+        # self.third_node_first_key_idx = 30
+        #
+        # submitters_private_keys_indexes = [
+        #     range(self.first_node_first_key_idx, self.second_node_first_key_idx),  # first node  -   15 keys
+        #     range(self.second_node_first_key_idx, self.third_node_first_key_idx),  # second node -   15 keys
+        #     range(self.third_node_first_key_idx, cert_max_keys)                    # thirst node -   17 keys
+        # ]
+
         super().__init__(number_of_sidechain_nodes=number_of_sidechain_nodes,
                          withdrawalEpochLength=10,
                          circuittype_override=KEY_ROTATION_CIRCUIT,
@@ -651,4 +671,4 @@ class SCKeyRotationTestMultiNodes(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    SCKeyRotationTestMultiNodes().main()
+    SCKeyRotationTestMultipleNodes().main()
