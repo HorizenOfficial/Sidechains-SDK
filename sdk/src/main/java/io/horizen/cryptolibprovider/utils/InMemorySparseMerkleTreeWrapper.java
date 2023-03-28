@@ -15,8 +15,13 @@ public class InMemorySparseMerkleTreeWrapper implements AutoCloseable {
     private final InMemorySparseMerkleTree merkleTree;
     private final long leavesNumber;
     private final RangeSet<Long> emptyLeaves;
+    public static final int MAX_TREE_HEIGHT = 22;
 
     public InMemorySparseMerkleTreeWrapper(int height) {
+        if (height < 0 || height > MAX_TREE_HEIGHT) {
+            throw new IllegalArgumentException("Height must be not less than 0 and less or equal to " + MAX_TREE_HEIGHT);
+        }
+
         merkleTree = InMemorySparseMerkleTree.init(height);
         leavesNumber = 1L << height;
         emptyLeaves = TreeRangeSet.create(Arrays.asList(Range.closedOpen(0L, leavesNumber)));
