@@ -2,7 +2,8 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.fixtures.AccountCrossChainMessageFixture
 import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{contractAddress, nextScCommitmentTreeRoot, receiverSidechain, scCommitmentTreeRoot}
-import io.horizen.account.state.{AccountStateView, BaseAccountStateView, BlockContext, ExecutionFailedException, GasPool, Message, MessageProcessorFixture}
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import io.horizen.account.state.{AccountStateView, BaseAccountStateView, BlockContext, ExecutionFailedException, ExecutionRevertedException, GasPool, Message, MessageProcessorFixture}
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
@@ -35,13 +36,13 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(networkParamsMock.sidechainId).thenReturn(badScId)
 
     // Act
-    val exception = intercept[IllegalArgumentException] {
+    val exception = intercept[ExecutionRevertedException] {
       withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
     // Assert
     val expectedMsg = s"This scId `${BytesUtils.toHexString(badScId)}` and receiving scId `${BytesUtils.toHexString(receiverSidechain)}` do not match"
-    assertEquals(expectedMsg, exception.getMessage)
+    assertEquals(expectedMsg, exception.getCause.getMessage)
   }
 
   @Test
@@ -58,13 +59,13 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn("someBytes".getBytes)
 
     // Act
-    val exception = intercept[IllegalArgumentException] {
+    val exception = intercept[ExecutionRevertedException] {
       withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
     // Assert
     val expectedMsg = s" has already been redeemed"
-    assertTrue(exception.getMessage.contains(expectedMsg))
+    assertTrue(exception.getCause.getMessage.contains(expectedMsg))
   }
 
   @Test
@@ -81,16 +82,16 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn(Array.emptyByteArray)
 
     val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
-    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn(Array.emptyByteArray)
+    when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn(NULL_HEX_STRING_32)
 
     // Act
-    val exception = intercept[IllegalArgumentException] {
+    val exception = intercept[ExecutionRevertedException] {
       withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
     // Assert
     val expectedMsg = s"Sidechain commitment tree root `${BytesUtils.toHexString("scCommitmentTreeRoot".getBytes)}` does not exist"
-    assertEquals(expectedMsg, exception.getMessage)
+    assertEquals(expectedMsg, exception.getCause.getMessage)
   }
 
   @Test
@@ -109,16 +110,16 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     val scTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(scCommitmentTreeRoot)
     when(mockStateView.getAccountStorage(contractAddress, scTxKey)).thenReturn("someBytes".getBytes)
     val nextScTxKey = ccRedeemMsgProcessor.getScTxCommitmentTreeRootHashKey(nextScCommitmentTreeRoot)
-    when(mockStateView.getAccountStorage(contractAddress, nextScTxKey)).thenReturn(Array.emptyByteArray)
+    when(mockStateView.getAccountStorage(contractAddress, nextScTxKey)).thenReturn(NULL_HEX_STRING_32)
 
     // Act
-    val exception = intercept[IllegalArgumentException] {
+    val exception = intercept[ExecutionRevertedException] {
       withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
     // Assert
     val expectedMsg = s"Sidechain next commitment tree root `${BytesUtils.toHexString("nextScCommitmentTreeRoot".getBytes)}` does not exist"
-    assertEquals(expectedMsg, exception.getMessage)
+    assertEquals(expectedMsg, exception.getCause.getMessage)
   }
 
   @Test
@@ -143,13 +144,13 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any())).thenReturn(false)
 
     // Act
-    val exception = intercept[IllegalArgumentException] {
+    val exception = intercept[ExecutionRevertedException] {
       withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
     // Assert
     val expectedMsg = s"Cannot verify this cross-chain message"
-    assertTrue(exception.getMessage.contains(expectedMsg))
+    assertTrue(exception.getCause.getMessage.contains(expectedMsg))
   }
 
   @Test

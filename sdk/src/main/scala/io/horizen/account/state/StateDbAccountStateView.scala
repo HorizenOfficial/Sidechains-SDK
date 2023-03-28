@@ -379,7 +379,5 @@ class StateDbAccountStateView(
     new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
-    crossChainRedeemMessageProviders.foldLeft(false) { (acc, provider) =>
-      acc || provider.doesCrossChainMessageHashFromRedeemMessageExist(hash, this)
-    }
+    crossChainRedeemMessageProviders.exists(_.doesCrossChainMessageHashFromRedeemMessageExist(hash, this))
 }

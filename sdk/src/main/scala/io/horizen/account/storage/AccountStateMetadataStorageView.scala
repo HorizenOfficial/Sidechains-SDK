@@ -186,10 +186,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
   }
 
-  private[horizen] def doesScTxCommitmentTreeRootExist(scTxCommitmentTreeRoot: Array[Byte]): Boolean = {
-    storage.get(getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot)).isPresent
-  }
-
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
   override def getHeight: Int = {
