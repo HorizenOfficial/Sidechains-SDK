@@ -100,7 +100,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
                 ccMsgBoxData.getScCommitmentTreeRoot(),
                 ccMsgBoxData.getNextScCommitmentTreeRoot(),
                 ccMsgBoxData.getProof(),
-                networkParams.sc2ScVerificationKeyFilePath()
+                networkParams.sc2ScVerificationKeyFilePath().get()
         );
 
         if (!isProofVerified) {

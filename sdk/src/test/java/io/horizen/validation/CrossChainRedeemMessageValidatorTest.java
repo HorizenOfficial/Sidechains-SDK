@@ -3,7 +3,6 @@ package io.horizen.validation;
 import io.horizen.GenesisDataSettings;
 import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.params.NetworkParams;
 import io.horizen.proof.Signature25519;
 import io.horizen.sc2sc.CrossChainMessage;
@@ -16,6 +15,7 @@ import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator;
 import org.junit.Test;
+import scala.Option;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 
@@ -238,13 +238,14 @@ public class CrossChainRedeemMessageValidatorTest {
         when(redeemMessageBox.getCertificateDataHash()).thenReturn(certificateDataHash);
         when(redeemMessageBox.getNextCertificateDataHash()).thenReturn(nextCertificateDataHash);
         when(redeemMessageBox.getProof()).thenReturn(proof);
+        when(networkParams.sc2ScVerificationKeyFilePath()).thenReturn(Option.apply("path"));
 
         when(sc2scCircuit.verifyRedeemProof(
                 crossChainMsgHash,
                 redeemMessageBox.getScCommitmentTreeRoot(),
                 redeemMessageBox.getNextScCommitmentTreeRoot(),
                 redeemMessageBox.getProof(),
-                networkParams.sc2ScVerificationKeyFilePath()
+                networkParams.sc2ScVerificationKeyFilePath().get()
         )).thenReturn(false);
 
         // Act
@@ -286,6 +287,7 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(redeemMessageBox.getCertificateDataHash()).thenReturn(certificateDataHash);
         when(redeemMessageBox.getNextCertificateDataHash()).thenReturn(nextCertificateDataHash);
+        when(networkParams.sc2ScVerificationKeyFilePath()).thenReturn(Option.apply("path"));
         when(redeemMessageBox.getProof()).thenReturn(proof);
 
         when(sc2scCircuit.verifyRedeemProof(
@@ -293,7 +295,7 @@ public class CrossChainRedeemMessageValidatorTest {
                 redeemMessageBox.getScCommitmentTreeRoot(),
                 redeemMessageBox.getNextScCommitmentTreeRoot(),
                 redeemMessageBox.getProof(),
-                networkParams.sc2ScVerificationKeyFilePath()
+                networkParams.sc2ScVerificationKeyFilePath().get()
         )).thenReturn(true);
 
         // Act & Assert

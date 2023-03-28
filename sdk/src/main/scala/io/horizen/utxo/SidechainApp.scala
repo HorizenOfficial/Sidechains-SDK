@@ -122,20 +122,6 @@ class SidechainApp @Inject()
         throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
       }
     }
-
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    val keyFilesAlreadyExist = !Files.exists(Paths.get(params.sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(params.sc2ScVerificationKeyFilePath))
-    val shouldCreateSc2ScKeys = keyFilesAlreadyExist && sc2scIsActive
-    if (shouldCreateSc2ScKeys) {
-      log.info("Generating Sc2Sc snark keys. It may take some time.")
-      val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(
-        params.sc2ScProvingKeyFilePath, params.sc2ScVerificationKeyFilePath
-      )
-
-      if (!keysCreated) {
-        throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-      }
-    }
   }
   else {
     log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")

@@ -19,8 +19,6 @@ case class AccountCrossChainMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
-  override def bytes: Array[Byte] = serializer.toBytes(this)
-
   private[horizen] def asABIType(): StaticStruct = {
     new StaticStruct(
       new Uint32(messageType),

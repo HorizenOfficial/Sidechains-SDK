@@ -7,12 +7,12 @@ import io.horizen.utils.BytesUtils;
 public class CrossChainMessageImpl implements CrossChainMessage {
 
     private final CrossChainProtocolVersion version;
-    private int messageType;
-    private byte[] senderSidechain;
-    private byte[] sender;
-    private byte[] receiverSidechain;
-    private byte[] receiver;
-    private byte[] payload;
+    private final int messageType;
+    private final byte[] senderSidechain;
+    private final byte[] sender;
+    private final byte[] receiverSidechain;
+    private final byte[] receiver;
+    private final byte[] payload;
 
     public CrossChainMessageImpl(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
         this.version = version;
@@ -34,17 +34,9 @@ public class CrossChainMessageImpl implements CrossChainMessage {
         return messageType;
     }
 
-    public void setMessageType(int messageType) {
-        this.messageType = messageType;
-    }
-
     @Override
     public byte[] getSenderSidechain() {
         return senderSidechain;
-    }
-
-    public void setSenderSidechain(byte[] senderSidechain) {
-        this.senderSidechain = senderSidechain;
     }
 
     @Override
@@ -52,35 +44,19 @@ public class CrossChainMessageImpl implements CrossChainMessage {
         return sender;
     }
 
-    public void setSender(byte[]  sender) {
-        this.sender = sender;
-    }
-
     @Override
     public byte[] getReceiverSidechain() {
         return receiverSidechain;
     }
 
-    public void setReceiverSidechain(byte[] receiverSidechain) {
-        this.receiverSidechain = receiverSidechain;
-    }
-
     @Override
-    public byte[]  getReceiver() {
+    public byte[] getReceiver() {
         return receiver;
-    }
-
-    public void setReceiver(byte[]  receiver) {
-        this.receiver = receiver;
     }
 
     @Override
     public byte[] getPayload() {
         return payload;
-    }
-
-    public void setPayload(byte[] payload) {
-        this.payload = payload;
     }
 
     @Override
