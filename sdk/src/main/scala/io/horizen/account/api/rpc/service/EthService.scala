@@ -1031,11 +1031,9 @@ class EthService(
   }
 
   @RpcMethod("web3_sha3")
-  def getSHA3(data: String): String = {
-    if (!data.substring(0,2).equalsIgnoreCase("0x"))
-      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "cannot unmarshal hex string without 0x prefix"))
+  def getSHA3(data: Array[Byte]): String = {
     try {
-      Numeric.toHexString(Keccak256.hash(BytesUtils.fromHexString(data.substring(2))))
+      Numeric.toHexString(Keccak256.hash(data))
     } catch {
       case e: IllegalArgumentException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, e.getCause.getMessage))
     }
