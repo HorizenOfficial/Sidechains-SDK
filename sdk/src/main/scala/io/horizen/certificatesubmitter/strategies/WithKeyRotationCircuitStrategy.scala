@@ -23,9 +23,10 @@ class WithKeyRotationCircuitStrategy[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
-  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
-                              cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
-                             ) extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) {
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
+                                      params: NetworkParams,
+                                      circuit: ThresholdSignatureCircuitWithKeyRotation)
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -42,7 +43,7 @@ class WithKeyRotationCircuitStrategy[
 
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    cryptolibCircuit.createProof(
+    circuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -72,8 +73,7 @@ class WithKeyRotationCircuitStrategy[
 
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
-
-    val schnorrKeysSignatures = getSchnorrKeysSignaturesListBytes(state, status.referencedEpoch)
+    val schnorrKeysSignatures = getSchnorrKeysSignatures(state, status.referencedEpoch)
 
     val signersPublicKeyWithSignatures = schnorrKeysSignatures.schnorrSigners.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -90,13 +90,13 @@ class WithKeyRotationCircuitStrategy[
       signersPublicKeyWithSignatures,
       schnorrKeysSignatures,
       previousCertificateOption,
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+      circuit.generateKeysRootHash(
         params.signersPublicKeys.map(_.pubKeyBytes()).toList.asJava,
         params.mastersPublicKeys.map(_.pubKeyBytes()).toList.asJava)
     )
   }
 
-  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -105,16 +105,17 @@ class WithKeyRotationCircuitStrategy[
     val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
-    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
+    val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
+    val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
-    val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
-    message
+    val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId,
+      referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
+
+    // For circuit with key rotation signing keys can be changed
+    (message, keysAndSignatures.schnorrSigners)
   }
 
-  private def getSchnorrKeysSignaturesListBytes(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
+  private def getSchnorrKeysSignatures(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
     val prevCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1)
       .getOrElse(throw new RuntimeException(s"Certifiers keys for previous withdrawal epoch are not present"))
     val newCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber)

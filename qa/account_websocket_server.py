@@ -97,7 +97,7 @@ websocket_server_port = 8026
 class SCWsAccountServerTest(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_port=[websocket_server_port, None])
+        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_ports=[websocket_server_port, None])
     
     def checkWsResponseStaticField(self, response, method, subscription):
         assert_equal(response["jsonrpc"], "2.0")
