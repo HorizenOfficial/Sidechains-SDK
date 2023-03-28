@@ -65,7 +65,7 @@ public final class Secp256k1 {
         // w3j wants only 32 bytes long array, pad with 0x00 if necessary
         byte[] r_barr = padWithZeroBytes(r, SIGNATURE_RS_SIZE);
         byte[] s_barr = padWithZeroBytes(s, SIGNATURE_RS_SIZE);
-        Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
+        Sign.SignatureData signatureData = new Sign.SignatureData(v, r_barr, s_barr);
         BigInteger pubKey = Sign.signedMessageToKey(message, signatureData);
         return getAddress(Numeric.toBytesPadded(pubKey, PUBLIC_KEY_SIZE));
     }

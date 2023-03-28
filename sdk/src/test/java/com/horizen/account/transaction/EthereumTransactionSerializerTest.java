@@ -228,6 +228,13 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertEquals("<32 bytes expected", Secp256k1.SIGNATURE_RS_SIZE-1, tx.getSignature().getR().length);
 
         assertEquals("Tx encoded wrongly", txHex, BytesUtils.toHexString(tx.bytes()));
+
+        try {
+            tx.semanticValidity();
+        }
+        catch (Exception e) {
+            fail("semantic validity failed:" + e);
+        }
     }
 
     @Test
@@ -239,6 +246,13 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertEquals("<32 bytes expected", Secp256k1.SIGNATURE_RS_SIZE-1, tx.getSignature().getS().length);
 
         assertEquals("Tx encoded wrongly", txHex, BytesUtils.toHexString(tx.bytes()));
+
+        try {
+            tx.semanticValidity();
+        }
+        catch (Exception e) {
+            fail("semantic validity failed:" + e);
+        }
     }
 
     @Test
@@ -250,6 +264,13 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertEquals("<32 bytes expected", Secp256k1.SIGNATURE_RS_SIZE-1, tx.getSignature().getR().length);
 
         assertEquals("Tx encoded wrongly", txHex, BytesUtils.toHexString(tx.bytes()));
+
+        try {
+            tx.semanticValidity();
+        }
+        catch (Exception e) {
+            fail("semantic validity failed:" + e);
+        }
     }
 
     @Test
@@ -261,5 +282,32 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         assertEquals("<32 bytes expected", Secp256k1.SIGNATURE_RS_SIZE-1, tx.getSignature().getS().length);
 
         assertEquals("Tx encoded wrongly", txHex, BytesUtils.toHexString(tx.bytes()));
+
+        try {
+            tx.semanticValidity();
+        }
+        catch (Exception e) {
+            fail("semantic validity failed:" + e);
+        }
+    }
+
+    @Test
+    public void shorterScaseFromSteve() {
+        // Tx was generated using w3js
+        String txHex = "f8878219810783013880941050072833849ff9bf49a55ff15d40f6d89651e880a440d097c3000000000000000000000000edeb4bf692a4a1bfecad78e09be5c946ecf6c6da820d1fa05e8f393c34e42a8f99b114fad543f0b6e657100f2b661f7da8fd4eea3634a8779ff0df2df46a08ddb0fb80466b66c1c2f4cfab627bc183f1a54b47820243a205";
+        EthereumTransaction tx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(txHex));
+
+        assertEquals("<32 bytes expected", Secp256k1.SIGNATURE_RS_SIZE-1, tx.getSignature().getS().length);
+
+        assertEquals("Tx encoded wrongly", txHex, BytesUtils.toHexString(tx.bytes()));
+
+        try {
+            tx.semanticValidity();
+        }
+        catch (Exception e) {
+            fail("semantic validity failed:" + e);
+        }
+
+        assertEquals("Different from address", "0x0E4f99Bf9BA9b075478DBc6f70c3B6d7A7E75848".toLowerCase(), tx.getFrom().address().toString());
     }
 }
