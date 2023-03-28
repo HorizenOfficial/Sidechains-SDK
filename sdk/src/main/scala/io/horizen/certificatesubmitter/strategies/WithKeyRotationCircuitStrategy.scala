@@ -23,9 +23,10 @@ class WithKeyRotationCircuitStrategy[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
-  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
-                              cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
-                             ) extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) {
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
+                                      params: NetworkParams,
+                                      circuit: ThresholdSignatureCircuitWithKeyRotation)
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -42,7 +43,7 @@ class WithKeyRotationCircuitStrategy[
 
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    cryptolibCircuit.createProof(
+    circuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -89,7 +90,7 @@ class WithKeyRotationCircuitStrategy[
       signersPublicKeyWithSignatures,
       schnorrKeysSignatures,
       previousCertificateOption,
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+      circuit.generateKeysRootHash(
         params.signersPublicKeys.map(_.pubKeyBytes()).toList.asJava,
         params.mastersPublicKeys.map(_.pubKeyBytes()).toList.asJava)
     )
@@ -105,12 +106,10 @@ class WithKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
 
     val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
-    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getSchnorrKeysHash(keysAndSignatures)
+    val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
-    val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
+    val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId,
+      referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
 
     // For circuit with key rotation signing keys can be changed
     (message, keysAndSignatures.schnorrSigners)

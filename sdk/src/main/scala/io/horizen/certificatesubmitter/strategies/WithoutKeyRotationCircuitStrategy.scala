@@ -21,8 +21,9 @@ class WithoutKeyRotationCircuitStrategy[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
-  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings, params: NetworkParams,
-                            cryptolibCircuit: ThresholdSignatureCircuit)
+  MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
+                                      params: NetworkParams,
+                                      circuit: ThresholdSignatureCircuit)
   extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
@@ -40,7 +41,7 @@ class WithoutKeyRotationCircuitStrategy[
       s"It can take a while.")
 
     //create and return proof with quality
-    cryptolibCircuit.createProof(
+    circuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -107,7 +108,7 @@ class WithoutKeyRotationCircuitStrategy[
       }
     }
 
-    val messageToSign = cryptolibCircuit.generateMessageToBeSigned(
+    val messageToSign = circuit.generateMessageToBeSigned(
       backwardTransfers.asJava,
       sidechainId,
       referencedWithdrawalEpochNumber,
@@ -117,7 +118,7 @@ class WithoutKeyRotationCircuitStrategy[
       Optional.ofNullable(utxoMerkleTreeRoot.orNull)
     )
 
-    // For circuit with key rotation, signing keys are always the same
+    // For circuit without key rotation, signing keys are always the same
     (messageToSign, params.signersPublicKeys)
   }
 

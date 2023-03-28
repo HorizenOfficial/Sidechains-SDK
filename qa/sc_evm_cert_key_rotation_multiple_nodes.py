@@ -156,7 +156,7 @@ class SCKeyRotationTestMultipleNodes(AccountChainSetup):
         else:
             raise Exception("Either public key or private key should be provided to call createSignature")
 
-        response = requests.post(f"{self.remote_keys_server_address[0]}/api/v1/createSignature",
+        response = requests.post(f"{self.remote_keys_server_addresses[0]}/api/v1/createSignature",
                                  json=post_data)
         json_response = json.loads(response.text)
         return json_response

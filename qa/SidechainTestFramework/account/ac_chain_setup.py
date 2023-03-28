@@ -68,7 +68,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
-        self.remote_keys_server_address = remote_keys_server_addresses
+        self.remote_keys_server_addresses = remote_keys_server_addresses
         self.allow_unprotected_txs = allow_unprotected_txs
         self.max_incoming_connections = max_incoming_connections
         self.connect_nodes = connect_nodes
@@ -117,7 +117,7 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=self.remote_keys_server_address[x] if len(self.remote_keys_server_address) > x else "",
+                    remote_keys_server_address=self.remote_keys_server_addresses[x] if len(self.remote_keys_server_addresses) > x else "",
                     allow_unprotected_txs=self.allow_unprotected_txs,
                     max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
@@ -140,7 +140,7 @@ class AccountChainSetup(SidechainTestFramework):
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                     allow_unprotected_txs=self.allow_unprotected_txs,
-                    remote_keys_server_address=self.remote_keys_server_address[x] if len(self.remote_keys_server_address) > x else "",
+                    remote_keys_server_address=self.remote_keys_server_addresses[x] if len(self.remote_keys_server_addresses) > x else "",
                     max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,

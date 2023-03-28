@@ -16,14 +16,15 @@ import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
 import com.horizen.schnorrnative.SchnorrKeyPair
+import io.horizen.fixtures.FieldElementFixture
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.utxo.wallet.SidechainWallet
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -39,6 +40,7 @@ import java.util.{Optional => JOptional}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
@@ -160,20 +162,27 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
 
   @Test
   def getMessageToSignTest(): Unit = {
+    val msg: Array[Byte] = FieldElementFixture.generateFieldElement()
     val mockedCryptolibCircuit = mock[ThresholdSignatureCircuit]
     Mockito.when(mockedCryptolibCircuit.generateMessageToBeSigned(ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-      ArgumentMatchers.any())) thenAnswer (answer => {
-      assertResult(32)(answer.getArgument(1).asInstanceOf[Array[Byte]].length)
-      assertResult(10)(answer.getArgument(2).asInstanceOf[Integer])
-      assertResult(32)(answer.getArgument(3).asInstanceOf[Array[Byte]].length)
-      assertResult(2L)(answer.getArgument(4).asInstanceOf[Long])
-      assertResult(2L)(answer.getArgument(5).asInstanceOf[Long])
-      assert(answer.getArgument(6).asInstanceOf[java.util.Optional[Byte]].isPresent)
-      new io.horizen.utils.Pair(Array(67.toByte), 425L)
+      ArgumentMatchers.any())) thenAnswer (args => {
+      assertEquals(32, args.getArgument(1).asInstanceOf[Array[Byte]].length)
+      assertEquals(10, args.getArgument(2).asInstanceOf[Integer])
+      assertEquals(32, args.getArgument(3).asInstanceOf[Array[Byte]].length)
+      assertEquals(0L, args.getArgument(4).asInstanceOf[Long])
+      assertEquals(0L, args.getArgument(5).asInstanceOf[Long])
+      assertTrue(args.getArgument(6).asInstanceOf[java.util.Optional[Byte]].isPresent)
+      msg.clone
     })
+
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
-    keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber)
+    keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber) match {
+      case Success((resMsg: Array[Byte], resPubKeys: Seq[SchnorrProposition])) =>
+        assertArrayEquals("Invalid message to sign.", msg, resMsg)
+        assertEquals("Invalid public keys", params.signersPublicKeys, resPubKeys)
+      case Failure(ex) => fail("getMessageToSignAndPublicKeys failed", ex)
+    }
   }
 
   private def settings(): SidechainSettings = {
@@ -229,7 +238,7 @@ object WithoutKeyRotationCircuitStrategyTest {
   val CERT_SEGMENT_SIZE: Int = 1 << 15
   val CSW_SEGMENT_SIZE: Int = 1 << 18
   private val keyCount = 4
-  val tresholdCircuit = new ThresholdSignatureCircuitImplZendoo
+
   val signing: SchnorrKeyPair = SchnorrKeyPair.generate()
   val master: SchnorrKeyPair = SchnorrKeyPair.generate()
 }
