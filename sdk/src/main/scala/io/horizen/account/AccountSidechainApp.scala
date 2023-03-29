@@ -6,8 +6,6 @@ import com.google.inject.name.Named
 import io.horizen._
 import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
-import io.horizen.account.api.http.route
-import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import io.horizen.account.api.rpc.handler.RpcHandler
 import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
@@ -45,7 +43,6 @@ import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.io.{Codec, Source}
-import scala.util.Try
 
 
 class AccountSidechainApp @Inject()
