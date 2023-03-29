@@ -120,7 +120,7 @@ trait Sc2ScUtils[
             ele.data.topQualityCertificate match {
               case Some(topCert) =>
                 val merklePath: Array[Byte] =
-                  if (calculateMerklePath) buildEntireMerklePath(networkParams, ele)
+                  if (calculateMerklePath) buildEntireMerklePath(networkParams, ele, topCert)
                   else Array.emptyByteArray
                 Some(TopQualityCertificateInfos(topCert, ele.header.hashScTxsCommitment, merklePath))
               case None => Option.empty
@@ -131,26 +131,16 @@ trait Sc2ScUtils[
     }
   }
 
-  private def buildEntireMerklePath(networkParams: NetworkParams, mcBlockRef: MainchainBlockReference): Array[Byte] = {
+  private def buildEntireMerklePath(networkParams: NetworkParams, mcBlockRef: MainchainBlockReference, topCert: WithdrawalEpochCertificate): Array[Byte] = {
+    val existenceProof = mcBlockRef.data.existenceProof.getOrElse(
+      throw new IllegalArgumentException(s"There is no existence proof in the MainchainBlockReference $mcBlockRef")
+    )
     Using.resource(
-      mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree,
+      mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
-      Using.resources(
-        commTree.getScCommitmentMerklePath(networkParams.sidechainId).get,
-        CommitmentTree.init()
-      ) { (certificateToScIdPath, commTreePartial) =>
-        val existenceProof = mcBlockRef.data.existenceProof.getOrElse(
-          throw new IllegalArgumentException(s"There is no existence proof in the MainchainBlockReference $mcBlockRef")
-        )
-        commTreePartial.addCertLeaf(networkParams.sidechainId, existenceProof)
-
-        Using.resource(
-          commTreePartial.getScCommitmentCertPath(networkParams.sidechainId, existenceProof).get()
-        ) { pathCert1 =>
-          pathCert1.updateScCommitmentPath(certificateToScIdPath)
-          pathCert1.serialize()
-        }
-      }
+      val pathCert = commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
+      pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
+      pathCert.serialize()
     }
   }
 }
