@@ -3,7 +3,7 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider}
+import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider, ScTxCommitmentTreeRootHashMessageProvider}
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
@@ -45,6 +45,8 @@ class StateDbAccountStateView(
   lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] = messageProcessors.filter(_.isInstanceOf[CrossChainMessageProvider]).map(_.asInstanceOf[CrossChainMessageProvider])
   lazy val crossChainRedeemMessageProviders: Seq[CrossChainRedeemMessageProvider] =
     messageProcessors.filter(_.isInstanceOf[CrossChainRedeemMessageProvider]).map(_.asInstanceOf[CrossChainRedeemMessageProvider])
+  lazy val scTxCommTreeRootProvider: ScTxCommitmentTreeRootHashMessageProvider =
+    messageProcessors.find(_.isInstanceOf[ScTxCommitmentTreeRootHashMessageProvider]).get.asInstanceOf[ScTxCommitmentTreeRootHashMessageProvider]
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -81,7 +83,7 @@ class StateDbAccountStateView(
   }
 
   def applyMainchainHeader(mcHeader: MainchainHeader): Unit = {
-    crossChainRedeemMessageProviders.foreach(provider => provider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this))
+    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
   }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
