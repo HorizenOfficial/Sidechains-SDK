@@ -85,7 +85,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateDoubleMessageRedeem(ccMsg: CrossChainMessage, view: BaseAccountStateView): Unit = {
     val currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg)
-    val ccMsgFromRedeemAlreadyExists = doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash, view)
+    val ccMsgFromRedeemAlreadyExists = view.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash)
     if (ccMsgFromRedeemAlreadyExists) {
       throw new IllegalArgumentException(s"Message $ccMsg has already been redeemed")
     }

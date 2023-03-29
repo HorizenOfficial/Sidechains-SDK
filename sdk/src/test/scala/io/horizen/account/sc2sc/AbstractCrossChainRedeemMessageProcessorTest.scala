@@ -56,8 +56,7 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
     when(crossChainMessageHash.getValue).thenReturn("someBytes".getBytes)
-    val ccMsgHash = ccRedeemMsgProcessor.getCrossChainMessageFromRedeemKey(crossChainMessageHash.getValue)
-    when(mockStateView.getAccountStorage(contractAddress, ccMsgHash)).thenReturn("someBytes".getBytes)
+    when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMessageHash)).thenReturn(true)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {

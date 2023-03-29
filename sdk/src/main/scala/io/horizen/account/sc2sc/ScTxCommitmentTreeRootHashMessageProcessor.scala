@@ -2,7 +2,7 @@ package io.horizen.account.sc2sc
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.state.{BaseAccountStateView, BlockContext, ExecutionFailedException, GasPool, Message, NativeSmartContractMsgProcessor}
+import io.horizen.account.state._
 import io.horizen.account.utils.WellKnownAddresses.SC_TX_COMMITMENT_TREE_ROOT_HASH_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import sparkz.crypto.hash.Keccak256
@@ -24,7 +24,7 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
    * The process just raise an exception because this smart contract is not meant to be called outside
    */
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] =
-    throw new ExecutionFailedException("Cannot call ScTxCommitmentTreeRootHashMessageProcessor directly")
+    throw new ExecutionRevertedException("Cannot call ScTxCommitmentTreeRootHashMessageProcessor directly")
 
   override def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit =
     view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), Array.emptyByteArray)
@@ -37,6 +37,4 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
 
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
   Keccak256.hash(keySeed)
-
-  override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = false
 }

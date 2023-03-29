@@ -17,6 +17,6 @@ object MessageProcessorUtil {
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
-    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ customMessageProcessors ++ sc2ScMsgProcessors
+    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ sc2ScMsgProcessors ++ customMessageProcessors
   }
 }
