@@ -72,6 +72,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     // used in both generateCertProofInfo and generateCswProofInfo cmds
     private static boolean dlogKeyInit = false;
     private static int maxSeedLength = 1000;
+    private static int minSeedLength = 6;
 
     private static boolean initDlogKey() {
         if (dlogKeyInit) {
@@ -196,7 +197,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
                 "\tgeneratekey {\"seed\":\"my seed\"}" +
-                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -207,6 +208,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         String seed = json.get("seed").asText();
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
         if (seed.length() > maxSeedLength) {
             printGenerateKeyUsageMsg("seed is too long.");
             return;
@@ -259,7 +265,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
                 "\tgenerateAccountKey {\"seed\":\"my seed\"}" +
-                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateAccountKey(JsonNode json) {
@@ -269,6 +275,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
 
         String seed = json.get("seed").asText();
+
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
         if (seed.length() > maxSeedLength) {
             printGenerateKeyUsageMsg("seed is too long.");
             return;
