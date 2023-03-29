@@ -3,7 +3,7 @@ package io.horizen.account.fixtures
 import akka.actor.ActorRef
 import io.horizen.SidechainSettings
 import io.horizen.account.api.rpc.handler.RpcHandler
-import io.horizen.account.api.rpc.service.{EthService, RpcProcessor}
+import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -29,11 +29,11 @@ case class MockedRpcProcessor(mockedSidechainNodeViewHolderRef: ActorRef,
       params,
       mockedSidechainSettings.ethService,
       mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections,
-      RpcProcessor.getClientVersion,
+      RpcUtils.getClientVersion,
       mockedSidechainTransactionActorRef,
       mockedSyncStatusActorRef,
       sidechainTransactionsCompanion
     )
   )
-  def initialize(): Unit = RpcProcessor(rpcHandler)
+  val rpcProcessor: RpcProcessor = RpcProcessor(rpcHandler)
 }

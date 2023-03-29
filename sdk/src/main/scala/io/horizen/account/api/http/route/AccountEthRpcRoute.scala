@@ -22,7 +22,8 @@ import scala.reflect.ClassTag
 
 case class AccountEthRpcRoute(
     override val settings: RESTApiSettings,
-    sidechainNodeViewHolderRef: ActorRef
+    sidechainNodeViewHolderRef: ActorRef,
+    rpcProcessor: RpcProcessor
 )(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
     extends SidechainApiRoute[
       SidechainTypes#SCAT,
@@ -53,7 +54,7 @@ case class AccountEthRpcRoute(
       _ =>
         {
           entity(as[JsonNode]) { body =>
-            SidechainApiResponse(RpcProcessor.processEthRpc(body));
+            SidechainApiResponse(rpcProcessor.processEthRpc(body));
           }
         }
     }

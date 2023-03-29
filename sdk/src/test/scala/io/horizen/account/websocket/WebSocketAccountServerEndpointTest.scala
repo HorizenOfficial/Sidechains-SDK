@@ -72,15 +72,16 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
   Mockito.when(mockedSidechainSettings.sparkzSettings.network).thenReturn(mock[NetworkSettings])
   Mockito.when(mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections).thenReturn(10)
 
-  MockedRpcProcessor(
+
+  private val rpcProcessor = MockedRpcProcessor(
     mockedSidechainNodeViewHolderRef = mockedSidechainNodeViewHolderRef,
     mockedNetworkControllerRef = mockedDummyActorRef,
     mockedSidechainSettings = mockedSidechainSettings,
     mockedSidechainTransactionActorRef = mockedDummyActorRef,
     mockedSyncStatusActorRef = mockedDummyActorRef,
-  ).initialize()
+  ).rpcProcessor
 
-  private val server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, 9035)
+  private val server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035)
 
   @After
   def after(): Unit = {

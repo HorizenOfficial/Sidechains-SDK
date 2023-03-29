@@ -67,8 +67,8 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
             }
           }
         case _ =>
-          val response = RpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
-          WebSocketAccountServerEndpoint.sendRpc(response, session)
+          val response = WebSocketAccountServerRef.rpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
+          WebSocketAccountServerEndpoint.sendRpcResponse(response, session)
       }
     } catch {
       case ex: Throwable =>
@@ -309,7 +309,7 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
     })
   }
 
-  def sendRpc(rpcResponse: Object, session: Session): Unit = {
+  def sendRpcResponse(rpcResponse: Object, session: Session): Unit = {
     session.getAsyncRemote.sendObject(rpcResponse, new SendHandler {
       override def onResult(sendResult: SendResult): Unit = {
         if (!sendResult.isOK) {

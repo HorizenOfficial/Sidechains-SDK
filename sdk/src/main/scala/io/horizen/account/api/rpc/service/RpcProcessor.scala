@@ -12,12 +12,7 @@ import scala.jdk.CollectionConverters.asScalaIteratorConverter
 import scala.util.{Failure, Success, Try}
 
 
-object RpcProcessor extends SparkzLogging {
-  var rpcHandler = new RpcHandler(null)
-
-  def apply(rpcHandler: RpcHandler): Unit = {
-    this.rpcHandler = rpcHandler
-  }
+case class RpcProcessor(val rpcHandler: RpcHandler) extends SparkzLogging {
 
   def processEthRpc(body: JsonNode): String = {
     val requests = if (body.isArray && !body.isEmpty) {
@@ -48,16 +43,4 @@ object RpcProcessor extends SparkzLogging {
     json
   }
 
-  def getClientVersion: String = {
-    val default = "dev"
-    val architecture = Try(System.getProperty("os.arch")).getOrElse(default)
-    val javaVersion = Try(System.getProperty("java.specification.version")).getOrElse(default)
-    val sdkPackage = this.getClass.getPackage
-    val sdkTitle = sdkPackage.getImplementationTitle match {
-      case null => default
-      case title => Try(title.split(":")(1)).getOrElse(title)
-    }
-    val sdkVersion = sdkPackage.getImplementationVersion
-    s"$sdkTitle/$sdkVersion/$architecture/jdk$javaVersion"
-  }
 }

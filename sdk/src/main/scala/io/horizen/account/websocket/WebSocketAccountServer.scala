@@ -3,6 +3,7 @@ package io.horizen.account.websocket
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import io.horizen.SidechainTypes
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
+import io.horizen.account.api.rpc.service.RpcProcessor
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.network.SyncStatus
@@ -76,18 +77,20 @@ class WebSocketAccountServer(wsPort: Int)
 object WebSocketAccountServerRef {
 
   var sidechainNodeViewHolderRef: ActorRef = null
+  var rpcProcessor: RpcProcessor = null
 
-  def props(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def props(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
            (implicit ec: ExecutionContext): Props = {
     this.sidechainNodeViewHolderRef = sidechainNodeViewHolderRef
+    this.rpcProcessor = rpcProcessor
     Props(new WebSocketAccountServer(wsPort))
   }
 
-  def apply(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def apply(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, wsPort))
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort))
 
-  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, wsPort), name)
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort), name)
 }

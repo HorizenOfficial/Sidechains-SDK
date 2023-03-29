@@ -137,18 +137,21 @@ abstract class AccountEthRpcRouteMock extends AnyWordSpec with Matchers with Sca
   val stateDb = mock[LevelDBDatabase]
   val messageProcessors = mock[Seq[MessageProcessor]]
 
-  val ethRpcRoute: Route = AccountEthRpcRoute(
-    mockedRESTSettings,
-    mockedSidechainNodeViewHolderRef
-  ).route
-
-  MockedRpcProcessor(
+  private val rpcProcessor = MockedRpcProcessor(
     mockedSidechainNodeViewHolderRef = mockedSidechainNodeViewHolderRef,
     mockedNetworkControllerRef = mockedNetworkControllerRef,
     mockedSidechainSettings = mockedSidechainSettings,
     mockedSidechainTransactionActorRef = mockedSidechainTransactionActorRef,
     mockedSyncStatusActorRef = mockedSyncStatusActorRef,
-    ).initialize()
+  ).rpcProcessor
+
+  val ethRpcRoute: Route = AccountEthRpcRoute(
+    mockedRESTSettings,
+    mockedSidechainNodeViewHolderRef,
+    rpcProcessor
+  ).route
+
+
 
   val basePath = "/ethv1"
 
