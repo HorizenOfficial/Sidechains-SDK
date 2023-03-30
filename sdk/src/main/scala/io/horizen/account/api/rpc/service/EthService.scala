@@ -87,7 +87,7 @@ class EthService(
           case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
-              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.revertReason))
+              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.returnData))
             )
           case err: ExecutionFailedException =>
             throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
@@ -350,7 +350,7 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
+          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }
