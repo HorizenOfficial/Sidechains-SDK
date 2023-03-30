@@ -108,7 +108,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
   @Test
   def allowedOriginsTest(): Unit = {
-    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, 9035, Seq("127.0.0.2"))
+    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035, Seq("127.0.0.2"))
 
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
