@@ -23,9 +23,13 @@ class SCEvmRpcWeb3Methods(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1, withdrawalEpochLength=10)
 
-    def validate(self, response, expected):
-        assert_false("error" in response)
-        assert_equal(expected, response["result"], "unexpected response")
+
+    def validate(self, response, expected=None):
+        if expected is not None:
+            assert_false("error" in response)
+            assert_equal(expected, response["result"], "unexpected response")
+        else:
+            assert_true("error" in response, response['error'])
 
 
     def run_test(self):
@@ -45,16 +49,16 @@ class SCEvmRpcWeb3Methods(AccountChainSetup):
         # Check web3_sha3 method
         self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c64"),
                       "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad")
-        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c64"),
+        self.validate(sc_node_1.rpc_web3_sha3("0x68656C6C6F20776F726C64"),
                       "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad")
-        self.validate(sc_node_1.rpc_web3_sha3("0xZZXX68656c6c6f20776f726c64"),
-                      "0x8bc0488d7a81d4c07855cf17f63c41b5f6cc6c0d15c764ce43ab668c9e6809ba")
         self.validate(sc_node_1.rpc_web3_sha3("0x"),
                       "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
-        self.validate(sc_node_1.rpc_web3_sha3(""),
-                      "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
-        self.validate(sc_node_1.rpc_web3_sha3("text"),
-                      "0x2c7a9a0b269b5b740e242917d5b704ce4329a174526cd76ba1f042dfd88795bb")
+        self.validate(sc_node_1.rpc_web3_sha3("0X68656C6C6F20776F726C64"))
+        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c642"))
+        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c6w"))
+        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c6w"))
+        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c64"))
+        self.validate(sc_node_1.rpc_web3_sha3(""))
 
 
 if __name__ == "__main__":
