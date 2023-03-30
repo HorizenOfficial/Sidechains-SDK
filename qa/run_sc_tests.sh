@@ -114,6 +114,7 @@ testScriptsEvm=(
     'sc_evm_txpool.py'
     'account_websocket_server.py'
     'account_websocket_server_sync.py'
+    'account_websocket_server_rpc.py'
 );
 
 testScriptsUtxo=(
