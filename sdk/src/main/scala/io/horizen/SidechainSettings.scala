@@ -26,8 +26,9 @@ case class WebSocketClientSettings(
 
 case class WebSocketServerSettings(
     wsServer: Boolean = false,
-    wsServerPort: Int = 8025
-) extends SensitiveStringer
+    wsServerPort: Int = 8025,
+    wsServerAllowedOrigins: Seq[String] = Seq("127.0.0.1")
+)
 
 case class GenesisDataSettings(
     scGenesisBlockHex: String,
