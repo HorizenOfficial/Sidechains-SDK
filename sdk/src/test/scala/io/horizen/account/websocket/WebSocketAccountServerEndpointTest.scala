@@ -81,7 +81,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     mockedSyncStatusActorRef = mockedDummyActorRef,
   ).rpcProcessor
 
-  private val server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035)
+  private var server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035, Seq("127.0.0.1"))
 
   @After
   def after(): Unit = {
@@ -104,6 +104,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     }
     Assert.fail("Not able to connect to server")
     null
+  }
+
+  @Test
+  def allowedOriginsTest(): Unit = {
+    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, 9035, Seq("127.0.0.2"))
+
+    val cec = ClientEndpointConfig.Builder.create.build
+    val client = ClientManager.createClient
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    assertThrows[DeploymentException](client.connectToServer(endpoint, cec, new URI("ws://localhost:9035/")))
+
   }
 
   @Test

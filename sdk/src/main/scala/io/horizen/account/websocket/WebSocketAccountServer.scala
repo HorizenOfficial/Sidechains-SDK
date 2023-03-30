@@ -13,9 +13,10 @@ import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
-class WebSocketAccountServer(wsPort: Int)
+class WebSocketAccountServer(wsPort: Int, wsAllowedOrigins: Seq[String])
   extends Actor
   with SparkzLogging {
+  WebSocketAccountConfigurator.apply(wsAllowedOrigins)
   val websocket = new WebSocketAccountServerImpl(wsPort, classOf[WebSocketAccountServerEndpoint]);
 
   try {
@@ -79,18 +80,18 @@ object WebSocketAccountServerRef {
   var sidechainNodeViewHolderRef: ActorRef = null
   var rpcProcessor: RpcProcessor = null
 
-  def props(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
+  def props(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int, wsAllowedOrigins: Seq[String])
            (implicit ec: ExecutionContext): Props = {
     this.sidechainNodeViewHolderRef = sidechainNodeViewHolderRef
     this.rpcProcessor = rpcProcessor
-    Props(new WebSocketAccountServer(wsPort))
+    Props(new WebSocketAccountServer(wsPort, wsAllowedOrigins))
   }
 
-  def apply(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
+  def apply(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int, wsAllowedOrigins: Seq[String])
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort))
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort, wsAllowedOrigins))
 
-  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int)
+  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsPort: Int, wsAllowedOrigins: Seq[String])
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort), name)
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsPort, wsAllowedOrigins), name)
 }

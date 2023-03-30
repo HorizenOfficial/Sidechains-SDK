@@ -31,7 +31,7 @@ case object NEW_PENDING_TRANSACTIONS_SUBSCRIPTION extends WebSocketAccountSubscr
 case object LOGS_SUBSCRIPTION extends WebSocketAccountSubscription("logs")
 case object SYNCING_SUBSCRIPTION extends WebSocketAccountSubscription("syncing")
 
-@ServerEndpoint("/")
+@ServerEndpoint(value = "/", configurator = classOf[WebSocketAccountConfigurator])
 class WebSocketAccountServerEndpoint() extends SparkzLogging {
 
   @OnClose
