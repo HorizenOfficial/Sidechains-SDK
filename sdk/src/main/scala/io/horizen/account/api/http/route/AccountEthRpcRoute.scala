@@ -3,6 +3,8 @@ package io.horizen.account.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.databind.JsonNode
+import io.horizen.SidechainTypes
+import io.horizen.account.api.http.route.AccountEthRpcRejectionHandler.rejectionHandler
 import io.horizen.account.api.rpc.service.RpcProcessor
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
@@ -12,7 +14,6 @@ import io.horizen.api.http.SidechainApiResponse
 import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.node.NodeWalletBase
 import io.horizen.utils.ClosableResourceHandler
-import io.horizen.SidechainTypes
 import sparkz.core.api.http.ApiDirectives
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzLogging
@@ -49,14 +50,16 @@ case class AccountEthRpcRoute(
   /**
    * Returns the success / error response of called rpc method or error if method does not exist
    */
-  def ethRpc: Route = post {
-    withBasicAuth {
-      _ =>
+  def ethRpc: Route = handleRejections(rejectionHandler) {
+    post {
+      withBasicAuth {
+        _ =>
         {
           entity(as[JsonNode]) { body =>
             SidechainApiResponse(rpcProcessor.processEthRpc(body));
           }
         }
+      }
     }
   }
 
