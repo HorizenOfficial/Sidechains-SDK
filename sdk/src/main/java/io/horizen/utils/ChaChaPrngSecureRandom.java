@@ -215,10 +215,10 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
 //        System.arraycopy(seed, 0, toHash, 32, seed.length);
 //        seed = Blake2b256.hash(toHash);
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
-            intSeed[j] = seed[i] << 24;
-            intSeed[j] |= seed[i + 1] << 16;
-            intSeed[j] |= seed[i + 2] << 8;
-            intSeed[j] |= seed[i + 3];
+            intSeed[j] = seed[i];
+            intSeed[j] |= seed[i + 1] << 8;
+            intSeed[j] |= seed[i + 2] << 16;
+            intSeed[j] |= seed[i + 3] << 24;
         }
         mStream = 0;
         mState = defaultState(intSeed, mStream);
