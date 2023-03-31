@@ -9,8 +9,138 @@ public class ChaChaPrngSecureRandomTest {
         return (data[0] & 0xff) | ((data[1] & 0xff) << 8) | ((data[2] & 0xff) << 16) | ((data[3] & 0xff) << 24);
     }
 
+    static double log2(double v) {
+        return Math.log(v) / Math.log(2);
+    }
+
+    static boolean shannon(byte[] data) {
+        // See Donald Knuth "A mathematical theory of communication"
+        // p. 379-423
+        final double THRESHOLD = 7.9;
+        int[] buckets = new int[256];
+        for (byte b : data) {
+            int i = b & 0xff;
+            buckets[i]++;
+        }
+        double length = data.length;
+        double entropy = 0;
+        for (int i : buckets) {
+            double probability = ((double)i) / length;
+            if (probability > 0.0) {
+                entropy += probability * log2((1.0/probability));
+            }
+        }
+        return entropy >= THRESHOLD;
+    }
+
+    static boolean mean(byte[] data) {
+        // See Donald Knuth "A mathematical theory of communication"
+        // p. 379-423
+        final double THRESHOLD = 126;
+        int[] buckets = new int[256];
+        for (byte b : data) {
+            int i = b & 0xff;
+            buckets[i]++;
+        }
+        double length = data.length;
+        double sum = 0;
+        for (int i = 0; i < buckets.length; i++) {
+            sum += ((double)i) * ((double)buckets[i]);
+        }
+        sum /= length;
+        return sum >= THRESHOLD;
+    }
+
+    // See <https://www.geeksforgeeks.org/estimating-value-pi-using-monte-carlo>
+    static boolean monteCarlo(byte[] data) {
+        // (256**3-1)**2
+        final double IN_CIRCLE_DISTANCE = 281474943156225.0;
+        int[] monte = new int[6];
+        int accumulator = 0;
+        int tries = 0;
+        int inCount = 0;
+
+        for (byte b : data) {
+            monte[accumulator] = b & 0xff;
+            accumulator++;
+
+            if (accumulator == monte.length) {
+                accumulator = 0;
+                tries++;
+
+                double x = 0.0;
+                double y = 0.0;
+                for (int j = 0; j < monte.length / 2; j++) {
+                    x = x * 256.0 + ((double)monte[j]);
+                    y = y * 256.0 + ((double)monte[j + 3]);
+                }
+
+                if ((x * x + y * y) < IN_CIRCLE_DISTANCE) {
+                    inCount++;
+                }
+            }
+        }
+        double result = 4.0 * (((double)inCount) / ((double)tries));
+        return 3.1 <= result && result <= 3.2;
+    }
+
+    // Computes the serial correlation coefficient. In the event of input all 0s, reports 1.0
+    // See Knuth, D. E. (1969). The art of computer programming, volume 2 / seminumerical
+    // algorithms. Addison-Wesley
+    static boolean serialCorrelationCoefficient(byte[] data) {
+        // term 1
+        double t1 = 0.0;
+        // term 2
+        double t2 = 0.0;
+        // term 3
+        double t3 = 0.0;
+        // last byte
+        double last = 0.0;
+        // first byte
+        double u0 = data[0] & 0xff;
+        // total bytes processed
+        double total = data.length;
+        // Data index
+        int i = 1;
+
+        for (; i < data.length; i++) {
+            double un = data[i] & 0xff;
+            t1 += last * un;
+            t2 += un;
+            t3 += un * un;
+            last = un;
+        }
+        t1 = t1 + last * u0;
+        t2 = t2 * t2;
+        double scc = total * t3 - t2;
+
+        if (scc == 0.0) {
+            // Should never see scc == 0.0 for non-zero input
+            // Declare as positively correlated
+            scc = 1.0;
+        } else {
+            scc = (total * t1 - t2) / scc;
+        }
+
+        return -0.004 <= scc && scc <= 0.004;
+    }
+
     @Test
-    public void simple32() throws Exception {
+    public void entropyTests() {
+        byte[] seed = {
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
+        byte[] data = new byte[524288];
+        rng.nextBytes(data);
+        assertTrue(shannon(data));
+        assertTrue(mean(data));
+        assertTrue(monteCarlo(data));
+        assertTrue(serialCorrelationCoefficient(data));
+    }
+
+    @Test
+    public void simple32() {
         byte[] seed = {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 0, 0, 0, 0, 0, 0, 0,

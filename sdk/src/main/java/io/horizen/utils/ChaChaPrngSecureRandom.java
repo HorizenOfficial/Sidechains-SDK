@@ -3,6 +3,7 @@ package io.horizen.utils;
 import org.jetbrains.annotations.NotNull;
 import sparkz.crypto.hash.Blake2b256;
 import java.security.*;
+import java.util.Arrays;
 
 public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRandomParameters {
     private int[] mState = new int[16];
