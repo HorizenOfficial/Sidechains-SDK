@@ -136,11 +136,18 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     @Override
     protected void engineSetSeed(byte[] seed) {
         int[] intSeed = new int[]{0, 0, 0, 0, 0, 0, 0, 0};
+        if (seed.length != 32) {
+            byte[] toHash = new byte[32 + seed.length];
+            // Add a prefix for domain separation
+            Arrays.fill(toHash, 0, 32, (byte)0xff);
+            System.arraycopy(seed, 0, toHash, 32, seed.length);
+            seed = Blake2b256.hash(toHash);
+        }
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
-            intSeed[j] = seed[i];
-            intSeed[j] |= seed[i + 1] << 8;
-            intSeed[j] |= seed[i + 2] << 16;
-            intSeed[j] |= seed[i + 3] << 24;
+            intSeed[j] = (seed[i] & 0xff);
+            intSeed[j] |= (seed[i + 1] & 0xff) << 8;
+            intSeed[j] |= (seed[i + 2] & 0xff) << 16;
+            intSeed[j] |= (seed[i + 3] & 0xff) << 24;
         }
         mStream = 0;
         mState = defaultState(intSeed, mStream);

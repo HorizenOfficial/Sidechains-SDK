@@ -5,63 +5,6 @@ import java.security.SecureRandom;
 import static org.junit.Assert.*;
 
 public class ChaChaPrngSecureRandomTest {
-//    @Test
-//    public void outputExpected() throws Exception {
-//        byte[] seed = {
-//               3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
-//        };
-//        byte[] expected1 = {
-//                -23, 10, 77, -86, 22, 44, -100, 103, -85, -32, 33, -109, -98, -21, -48, -50, -74, -1, -1, -1, -85, -1, -1, -1, 99, 81, 81, -121, -26, 60, -91, -8
-//        };
-//        byte[] expected2 = {
-//                7,-78,14,-84,-100,53,35,-110,85,10,79,49,-78,-21,-38,28,96,99,-59,16,-26,-1,-1,-1,-100,-1,-1,-1,-73,-1,-1,-1
-//        };
-//        byte[] output = new byte[32];
-//        SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
-//        rng.nextBytes(output);
-//        if (output[0] != expected1[0]) {
-//            throw new Exception(printArray(output));
-//        }
-//        assertArrayEquals(expected1, output);
-//        rng.nextBytes(output);
-//        if (output[0] != expected2[0]) {
-//            throw new Exception(printArray(output));
-//        }
-//        assertArrayEquals(expected2, output);
-//    }
-//
-//    @Test
-//    public void ensureStreamVaries() {
-//        byte[] seed = {
-//                3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
-//        };
-//        byte[] output = new byte[32];
-//        byte[] output2 = new byte[32];
-//        SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
-//        for (int i = 0; i < 10; i++) {
-//            rng.nextBytes(output);
-//            rng.nextBytes(output2);
-//            int equal = 0;
-//            for (int j = 0; j < output.length; j++) {
-//                equal |= output[j] ^ output2[j];
-//            }
-//            assertNotEquals(0, equal);
-//        }
-//    }
-
-    static String printArray(byte[] array) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("[");
-        String sep = "";
-        for (byte b : array) {
-            builder.append(sep);
-            builder.append(b);
-            sep = ",";
-        }
-        builder.append("]");
-        return builder.toString();
-    }
-
     static int littleEndianToInt(byte[] data) {
         return (data[0] & 0xff) | ((data[1] & 0xff) << 8) | ((data[2] & 0xff) << 16) | ((data[3] & 0xff) << 24);
     }
@@ -160,7 +103,7 @@ public class ChaChaPrngSecureRandomTest {
             0xa25ab213, 0x48a6b46c, 0x1b9d9bcb, 0x092c5be6,
             0x546ca624, 0x1bec45d5, 0x87f47473, 0x96f0992e,
         };
-        // Test block 2 by skipping block 0 and 1
+        // Test block 2 by skipping blocks 0 and 1
         SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
         for (int i = 0; i < 32; i++) {
             rng.nextInt();
@@ -169,6 +112,32 @@ public class ChaChaPrngSecureRandomTest {
         for (int e : expected) {
             rng.nextBytes(bytes);
             assertEquals(e, littleEndianToInt(bytes));
+        }
+    }
+
+    @Test
+    public void testMultipleBlocks() {
+        byte[] seed = {
+            0, 0, 0, 0, 1, 0, 0, 0,
+            2, 0, 0, 0, 3, 0, 0, 0,
+            4, 0, 0, 0, 5, 0, 0, 0,
+            6, 0, 0, 0, 7, 0, 0, 0,
+        };
+        int[] expected = {
+            0xf225c81a, 0x6ab1be57, 0x04d42951, 0x70858036,
+            0x49884684, 0x64efec72, 0x4be2d186, 0x3615b384,
+            0x11cfa18e, 0xd3c50049, 0x75c775f6, 0x434c6530,
+            0x2c5bad8f, 0x898881dc, 0x5f1c86d9, 0xc1f8e7f4,
+        };
+        SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
+        byte[] bytes = new byte[4];
+        // Test every 17th word
+        for (int i = 0; i < 16; i++) {
+            rng.nextBytes(bytes);
+            assertEquals(expected[i], littleEndianToInt(bytes));
+            for (int j = 0; j < 16; j++) {
+                rng.nextInt();
+            }
         }
     }
 }
