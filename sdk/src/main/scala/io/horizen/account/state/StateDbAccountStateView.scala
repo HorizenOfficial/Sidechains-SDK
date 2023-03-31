@@ -208,7 +208,7 @@ class StateDbAccountStateView(
       } catch {
         // any other exception will bubble up and invalidate the block
         case err: ExecutionFailedException =>
-          log.error(s"applying message failed, tx.id=${ethTx.id}", err)
+          log.debug(s"applying message failed, tx id: ${ethTx.id}, reason: ${err.getMessage}")
           ReceiptStatus.FAILED
       } finally {
         // finalize pending changes, clear the journal and reset refund counter
