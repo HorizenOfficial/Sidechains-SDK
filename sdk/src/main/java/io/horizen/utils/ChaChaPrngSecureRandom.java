@@ -128,7 +128,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
                     repackState();
                 } else {
                     mState[14] = (int)mStream;
-                    mState[15] = (int)(mStream >> 32);
+                    mState[15] = (int)(mStream >>> 32);
                 }
             }
         }
@@ -157,7 +157,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         final int n = 32;
 
         int s = k & (n - 1);
-        return x << s | x >>(n - s);
+        return (x << s) | (x >>> (n - s));
     }
 
     private static int[] defaultState(int[] seed, long stream) {
@@ -177,7 +177,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
                 0,
                 0,
                 (int)stream,
-                (int)(stream >> 32),
+                (int)(stream >>> 32),
         };
     }
 
@@ -211,7 +211,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         // Add a prefix for domain separation
         Arrays.fill(toHash, 0, 32, (byte)0xff);
         System.arraycopy(seed, 0, toHash, 32, seed.length);
-        seed = (byte[]) Blake2b256.hash(toHash);
+        seed = Blake2b256.hash(toHash);
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
             intSeed[j] = seed[i] << 24;
             intSeed[j] |= seed[i + 1] << 16;
