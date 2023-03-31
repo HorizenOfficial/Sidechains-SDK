@@ -1,5 +1,6 @@
 package io.horizen.utils;
 
+import org.jetbrains.annotations.NotNull;
 import sparkz.crypto.hash.Blake2b256;
 import java.security.*;
 import java.util.Arrays;
@@ -18,6 +19,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         ChaChaPrngSecureRandomProvider.init();
     }
 
+    @NotNull
     public static SecureRandom getInstance(byte[] seed) throws SecurityException {
         SecureRandom rng;
         try {
@@ -207,11 +209,11 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     @Override
     protected void engineSetSeed(byte[] seed) {
         int[] intSeed = new int[]{0, 0, 0, 0, 0, 0, 0, 0};
-        byte[] toHash = new byte[32 + seed.length];
-        // Add a prefix for domain separation
-        Arrays.fill(toHash, 0, 32, (byte)0xff);
-        System.arraycopy(seed, 0, toHash, 32, seed.length);
-        seed = Blake2b256.hash(toHash);
+//        byte[] toHash = new byte[32 + seed.length];
+//         Add a prefix for domain separation
+//        Arrays.fill(toHash, 0, 32, (byte)0xff);
+//        System.arraycopy(seed, 0, toHash, 32, seed.length);
+//        seed = Blake2b256.hash(toHash);
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
             intSeed[j] = seed[i] << 24;
             intSeed[j] |= seed[i + 1] << 16;
