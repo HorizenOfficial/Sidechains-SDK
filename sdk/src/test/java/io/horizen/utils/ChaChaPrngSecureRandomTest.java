@@ -62,15 +62,22 @@ public class ChaChaPrngSecureRandomTest {
         return builder.toString();
     }
 
+    static int littleEndianToInt(byte[] data) {
+        return data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
+    }
+
     @Test
     public void simple32() throws Exception {
         byte[] seed = {
-                0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
-                0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0,
+                2, 0, 0, 0, 0, 0, 0, 0,
+                3, 0, 0, 0, 0, 0, 0, 0,
         };
         SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
-        int t = rng.nextInt();
-        assertEquals(t, 137206642);
+        byte[] bytes = new byte[4];
+        rng.nextBytes(bytes);
+        assertEquals(littleEndianToInt(bytes), 137206642);
     }
 
     @Test
@@ -90,8 +97,10 @@ public class ChaChaPrngSecureRandomTest {
             0x7c5941da, 0x8d485751, 0x3fe02477, 0x374ad8b8,
             0xf4b8436a, 0x1ca11815, 0x69b687c3, 0x8665eeb2,
         };
+        byte[] bytes = new byte[4];
         for (int e : expected) {
-            assertEquals(e, rng.nextInt());
+            rng.nextBytes(bytes);
+            assertEquals(e, littleEndianToInt(bytes));
         }
         expected = new int[]{
             0xbee7079f, 0x7a385155, 0x7c97ba98, 0x0d082d73,
@@ -100,7 +109,8 @@ public class ChaChaPrngSecureRandomTest {
             0x281fed31, 0x45fb0a51, 0x1f0ae1ac, 0x6f4d794b,
         };
         for (int e : expected) {
-            assertEquals(e, rng.nextInt());
+            rng.nextBytes(bytes);
+            assertEquals(e, littleEndianToInt(bytes));
         }
     }
 
@@ -127,8 +137,10 @@ public class ChaChaPrngSecureRandomTest {
             0xbb00ca8e, 0xda3ba7b4, 0xc4b592d1, 0xfdf2732f,
             0x4436274e, 0x2561b3c8, 0xebdd4aa6, 0xa0136c00,
         };
+        byte[] bytes = new byte[4];
         for (int e : expected) {
-            assertEquals(e, rng.nextInt());
+            rng.nextBytes(bytes);
+            assertEquals(e, littleEndianToInt(bytes));
         }
     }
 
@@ -153,8 +165,10 @@ public class ChaChaPrngSecureRandomTest {
         for (int i = 0; i < 32; i++) {
             rng.nextInt();
         }
+        byte[] bytes = new byte[4];
         for (int e : expected) {
-            assertEquals(e, rng.nextInt());
+            rng.nextBytes(bytes);
+            assertEquals(e, littleEndianToInt(bytes));
         }
     }
 }
