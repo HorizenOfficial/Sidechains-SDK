@@ -36,7 +36,8 @@ public class ChaChaPrngSecureRandomTest {
     static boolean mean(byte[] data) {
         // See Donald Knuth "A mathematical theory of communication"
         // p. 379-423
-        final double THRESHOLD = 126;
+        final double UPPER_THRESHOLD = 130;
+        final double LOWER_THRESHOLD = 126;
         int[] buckets = new int[256];
         for (byte b : data) {
             int i = b & 0xff;
@@ -48,7 +49,7 @@ public class ChaChaPrngSecureRandomTest {
             sum += ((double)i) * ((double)buckets[i]);
         }
         sum /= length;
-        return sum >= THRESHOLD;
+        return LOWER_THRESHOLD <= sum && sum <= UPPER_THRESHOLD;
     }
 
     // See <https://www.geeksforgeeks.org/estimating-value-pi-using-monte-carlo>
@@ -147,6 +148,7 @@ public class ChaChaPrngSecureRandomTest {
                 2, 0, 0, 0, 0, 0, 0, 0,
                 3, 0, 0, 0, 0, 0, 0, 0,
         };
+        // Compare against a value generated from OpenSSL and Rust.
         SecureRandom rng = ChaChaPrngSecureRandom.getInstance(seed);
         byte[] bytes = new byte[4];
         rng.nextBytes(bytes);
@@ -156,7 +158,7 @@ public class ChaChaPrngSecureRandomTest {
     @Test
     public void trueValuesA() {
         // Test vectors 1 and 2 from
-        // https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-04
+        // https://www.rfc-editor.org/rfc/rfc7539#appendix-A.1
         byte[] seed = {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
@@ -190,7 +192,7 @@ public class ChaChaPrngSecureRandomTest {
     @Test
     public void trueValuesB() {
         // Test vector 3 from
-        // https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-04
+        // https://www.rfc-editor.org/rfc/rfc7539#appendix-A.1
         byte[] seed = {
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -220,7 +222,7 @@ public class ChaChaPrngSecureRandomTest {
     @Test
     public void trueValuesC() {
         // Test vector 4 from
-        // https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-04
+        // https://www.rfc-editor.org/rfc/rfc7539#appendix-A.1
         byte[] seed = {
             0, (byte)0xff, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -253,6 +255,7 @@ public class ChaChaPrngSecureRandomTest {
             4, 0, 0, 0, 5, 0, 0, 0,
             6, 0, 0, 0, 7, 0, 0, 0,
         };
+        // Random test to sample every 17th word
         int[] expected = {
             0xf225c81a, 0x6ab1be57, 0x04d42951, 0x70858036,
             0x49884684, 0x64efec72, 0x4be2d186, 0x3615b384,
