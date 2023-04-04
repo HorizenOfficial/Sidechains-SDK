@@ -30,8 +30,8 @@ class CswCircuitUtilsTest {
       BytesUtils.toHexString(pk.publicImage().pubKeyBytes()), BytesUtils.toHexString(pubKey))
 
     // Regression
-    assertEquals("Different pub key", "415bf2bf63fc5b566a94e6f2d18e15c6d2b819bad38f93b1fb277b34fbe68504", BytesUtils.toHexString(pk.publicImage().pubKeyBytes()))
-    assertEquals("Different private key", "e5a75e0836c59813dd775e888b9c5fda325565b4ca159d1bc8c81923e5ffffff", BytesUtils.toHexString(pk.privateKey()))
-    assertEquals("Different transformation result", "80fb501f4849d8b83c035930cce66c9ba1c79c2e7c9004ba22015baa16da7656", BytesUtils.toHexString(scalar))
+    assertEquals("Different pub key", "c50c85c213a1ec64ab56b4394a56720089dfebc87d091572250e44dee9bbac35", BytesUtils.toHexString(pk.publicImage().pubKeyBytes()))
+    assertEquals("Different private key", "5145339a938b376be547e90e8ab5603bdbdf94a6e73daec73c393864f1c7b646", BytesUtils.toHexString(pk.privateKey()))
+    assertEquals("Different transformation result", "506d13eaa8d9998f7b1fa0677a149f8f5ae2167ce5ee453d56aa913d8690d564", BytesUtils.toHexString(scalar))
   }
 }

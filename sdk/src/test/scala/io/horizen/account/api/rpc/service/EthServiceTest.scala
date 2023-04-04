@@ -764,7 +764,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
           "data" -> "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
           "nonce" -> "0x1",
         ),
-        "\"0x2fe27cbdd1034b4077f3b37b531de7ee751f2d36068d3793ac5a9b23713c61e1\""
+        "\"0x052ad22aed5bce6bbbf38d1da630396178b6667dda7bbf573b90d77dd8bf39e4\""
       ),
       (
         Map(
@@ -776,7 +776,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
           "data" -> "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
           "nonce" -> "0x1",
         ),
-        "\"0x629a4e92ea4968420d29e0986f20fffed84f01296c24e51363a9369be4daca6c\""
+        "\"0x84aac7c250a74cc3587a937ae7e071b9a348be2b91bba389b3d385beacdfde76\""
       ),
       (
         Map(
@@ -787,7 +787,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
           "data" -> "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
           "nonce" -> "0x1",
         ),
-        "\"0x629a4e92ea4968420d29e0986f20fffed84f01296c24e51363a9369be4daca6c\""
+        "\"0x84aac7c250a74cc3587a937ae7e071b9a348be2b91bba389b3d385beacdfde76\""
       ),
     )
 
@@ -831,7 +831,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
           "data" -> "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
           "nonce" -> "0x1",
         ),
-        "\"0xf892018609184e72a0008276c09452cceccf519c4575a3cbf3bff5effa5e9181cec4849184e72aa9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f0724456751ca016a663f0c1372024737b6498df67128b64ad77fa4e29cce26195efc3d47b36eda02bb2a98dd10ae161d98adb4d127ede506ab155dc4730e5978167a27b965916c8\""
+        "\"0xf892018609184e72a0008276c09452cceccf519c4575a3cbf3bff5effa5e9181cec4849184e72aa9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f0724456751ca06b99b1a501574e74b24eb9bbceb5b837524cde8291b7109526ba267074ca0912a015ad0e3b3022712765ee9f5a2a37a96bde67b6bd11318c2ce48ec61352a78271\""
       )
     )
 
@@ -869,7 +869,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         senderWithSecret,
         "0xdeadbeef",
-        "\"0x7bc625667af8bd9665fdded8dde91683d78c1186765679dc610e1eda1b4ea3ad5632a25794a6daad146c9e829bce987f56314f4824938e38b7fdbcf79f8133031c\""
+        "\"0x57e2789fde98a9a15be9b451b16caf27e603a4fd6af3dca9ccc844e751e2713c302ea4c6ee32e33e56feef840cc4c2ad49df2100ee826657a5610577904d8f5d1c\""
       )
     )
 
@@ -1073,15 +1073,15 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       (
         "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
         """{"forwardTransfers":[
-          {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
-          {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
+          {"to":"0xb9cbf762841096a7d849bee210f1da59d4f373e6","value":"0x51b7d5554400"},
+          {"to":"0x8a74b95bc0d088ce1a980437f479321d9f6f2332","value":"0x378d4bb3f000"}
         ]}"""
       ),
       (
         "0x2",
         """{"forwardTransfers":[
-          {"to":"0x5d3eff12e7c2f48e1bd660694101049f8fb678c9","value":"0x51b7d5554400"},
-          {"to":"0xaea09d1e14cbf1604dc36c76cc9d5cb1e7e493a7","value":"0x378d4bb3f000"}
+          {"to":"0xb9cbf762841096a7d849bee210f1da59d4f373e6","value":"0x51b7d5554400"},
+          {"to":"0x8a74b95bc0d088ce1a980437f479321d9f6f2332","value":"0x378d4bb3f000"}
         ]}"""
       )
     )
