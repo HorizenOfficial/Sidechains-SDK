@@ -1303,10 +1303,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     )
 
     val invalidCases = Table("Input",
-        "0X68656C6C6F20776F726C64",
-        "0x68656c6c6f20776f726c642",
-        "0x68656c6c6f20776f726c6w",
-        "68656c6c6f20776f726c6w",
+        "0X68656C6C6F20776F726C64", // prefix '0x' is case-sensitive
+        "0x68656c6c6f20776f726c642", // input length must be even number
+        "0x68656c6c6f20776f726c6w", // method only accepts hexadecimal alphabetic characters (A-F)
+        "68656c6c6f20776f726c6w", // prefix '0x' is mandatory
         ""
       )
 

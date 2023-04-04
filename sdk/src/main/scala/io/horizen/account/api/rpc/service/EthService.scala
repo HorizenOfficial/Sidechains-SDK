@@ -1032,11 +1032,7 @@ class EthService(
 
   @RpcMethod("web3_sha3")
   def getSHA3(data: Array[Byte]): Hash = {
-    try {
       new Hash(Keccak256.hash(data))
-    } catch {
-      case e: IllegalArgumentException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, e.getCause.getMessage))
-    }
   }
 
 }

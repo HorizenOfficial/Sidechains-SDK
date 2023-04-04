@@ -23,14 +23,12 @@ class SCEvmRpcWeb3Methods(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1, withdrawalEpochLength=10)
 
-
     def validate(self, response, expected=None):
         if expected is not None:
             assert_false("error" in response)
             assert_equal(expected, response["result"], "unexpected response")
         else:
             assert_true("error" in response, response['error'])
-
 
     def run_test(self):
         sc_node_1 = self.sc_nodes[0]
@@ -53,11 +51,11 @@ class SCEvmRpcWeb3Methods(AccountChainSetup):
                       "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad")
         self.validate(sc_node_1.rpc_web3_sha3("0x"),
                       "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
-        self.validate(sc_node_1.rpc_web3_sha3("0X68656C6C6F20776F726C64"))
-        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c642"))
-        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c6w"))
-        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c6w"))
-        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c64"))
+        self.validate(sc_node_1.rpc_web3_sha3("0X68656C6C6F20776F726C64"))  # prefix '0x' is case-sensitive
+        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c642"))  # input length must be even number
+        self.validate(sc_node_1.rpc_web3_sha3("0x68656c6c6f20776f726c6w"))  # method only accepts hexadecimal alphabetic characters (A-F)
+        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c6w"))  # prefix '0x' is mandatory
+        self.validate(sc_node_1.rpc_web3_sha3("68656c6c6f20776f726c64"))  # prefix '0x' is mandatory
         self.validate(sc_node_1.rpc_web3_sha3(""))
 
 
