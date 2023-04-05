@@ -139,32 +139,31 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   /**
    * Add tx to the mempool.
    * Lowest fee-rate txs are removed in case max mempool size is reached.
-   * @return true if the transaction has been inserted succesfully
+   * @return true if the transaction has been inserted successfully
    */
   def addWithSizeCheck(entry: SidechainMemoryPoolEntry): Boolean = {
-    if (entry.feeRate.getSize() > maxPoolSizeBytes) {
-      // txsize exceeds its  limit,
-      return false
-    }
+    var removingEntriesSize: Long = 0
+    var removingEntriesNum = 0
+    val mempoolEntries = unconfirmed.takeLowest(unconfirmed.size)
 
-    var lastEntriesSize: Long = 0
-    var lastEntriesNum = 0
-    var lastEntries: Seq[SidechainMemoryPoolEntry] = Seq()
+    while (unconfirmed.usedSizeBytes - removingEntriesSize + entry.feeRate.getSize() > maxPoolSizeBytes) {
+      removingEntriesNum += 1
 
-    while (unconfirmed.usedSizeBytes - lastEntriesSize + entry.feeRate.getSize() > maxPoolSizeBytes) {
-      lastEntriesNum += 1
-      lastEntries = unconfirmed.takeLowest(lastEntriesNum)
+      if (removingEntriesNum > unconfirmed.size) {
+        // all entries were processed and there is still not enough space in the mempool
+        return false
+      }
 
-      if (lastEntries(lastEntriesNum - 1).feeRate.getFeeRate() > entry.feeRate.getFeeRate()) {
+      if (mempoolEntries(removingEntriesNum - 1).feeRate.getFeeRate() > entry.feeRate.getFeeRate()) {
         //the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
         //insert will fail
         return false
       }
 
-      lastEntriesSize += lastEntries(lastEntriesNum - 1).getUnconfirmedTx().size()
+      removingEntriesSize += mempoolEntries(removingEntriesNum - 1).getUnconfirmedTx().size()
     }
 
-    lastEntries.foreach(lsEntry => unconfirmed.remove(lsEntry.getUnconfirmedTx().id()))
+    mempoolEntries.take(removingEntriesNum).foreach(lsEntry => unconfirmed.remove(lsEntry.getUnconfirmedTx().id()))
     unconfirmed.add(entry)
     true
   }

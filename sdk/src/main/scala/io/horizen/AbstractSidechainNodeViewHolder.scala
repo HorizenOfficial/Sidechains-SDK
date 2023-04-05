@@ -234,7 +234,9 @@ abstract class AbstractSidechainNodeViewHolder[
     val txToMempool = rolledBackTxs.filter(tx =>
       !appliedTxs.exists(t => t.id == tx.id))
 
-    memPool.putWithoutCheck(txToMempool).filter(tx =>
+    val filteredMempool = memPool.filter(tx => !appliedTxs.exists(t => t.id == tx.id))
+
+    filteredMempool.putWithoutCheck(txToMempool).filter(tx =>
       {
         state match {
           case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess

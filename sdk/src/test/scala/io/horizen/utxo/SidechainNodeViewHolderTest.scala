@@ -643,18 +643,27 @@ class SidechainNodeViewHolderTest extends JUnitSuite
   @Test
   def applyWithFullMempool(): Unit = {
     // Filling mempool
-    val list = mutable.MutableList[RegularTransaction]()
-    val lowestFeeTx = getRegularRandomTransaction(10, 10)
-    val secondLowestFeeTx = getRegularRandomTransaction(20, 10)
-    val compatibleTransactin = getCompatibleTransaction(30, 10)
-    val incompatibleTransactin = getIncompatibleTransaction(30, 10)
-    val highFeeTransaction = getRegularRandomTransaction(40, 9)
+    var list = mutable.MutableList[RegularTransaction]()
+    val lowestFeeTx = getRegularRandomTransaction(10, 580) // Approximate size 19940 bytes
+    val secondLowestFeeTx = getRegularRandomTransaction(20, 580)
+    val compatibleTransactin = getCompatibleTransaction(30, 580)
+    val incompatibleTransactin = getIncompatibleTransaction(30, 580)
+    val highFeeTransaction = getRegularRandomTransaction(40, 580)
     list += lowestFeeTx
     list += secondLowestFeeTx
     list += compatibleTransactin
-    val totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size() + compatibleTransactin.size()
+    var totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size() + compatibleTransactin.size()
     mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(1))
-    mempool.maxPoolSizeBytes = totalTxSize
+
+    // Create list of transactions to fill mempool
+    while (totalTxSize <= mempool.maxPoolSizeBytes) {
+      val newTx = getRegularRandomTransaction(30, 580)
+      list += newTx
+      totalTxSize = totalTxSize + newTx.size()
+    }
+
+    // Last transaction will overwhelmed mempool. It should be removed.
+    list = list.dropRight(1)
 
     val mockedNodeViewHolderTestRef: TestActorRef[MockedSidechainNodeViewHolder] = getMockedSidechainNodeViewHolderTestRef(history, state, wallet, mempool)
     val nodeViewHolder:MockedSidechainNodeViewHolder = mockedNodeViewHolderTestRef.underlyingActor
@@ -666,7 +675,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     assertEquals("MemoryPool must have correct size ", list.size, mempool.size)
     assertEquals("Lowest fee transaction must be present ", true, mempool.getTransactionById(lowestFeeTx.id()).isPresent)
 
-    val commontransaction = getRegularRandomTransaction(15, 10)
+    val commontransaction = getRegularRandomTransaction(15, 580)
 
     Mockito.when(state.validate(ArgumentMatchers.any[SidechainTypes#SCBT])).thenReturn(Try{})
 
