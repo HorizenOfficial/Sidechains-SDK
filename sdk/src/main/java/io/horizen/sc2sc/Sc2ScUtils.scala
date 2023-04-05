@@ -138,9 +138,13 @@ trait Sc2ScUtils[
     Using.resource(
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
-      val pathCert = commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
-      pathCert.serialize()
+      Using.resource(
+        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
+      ) {
+        pathCert =>
+          pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
+          pathCert.serialize()
+      }
     }
   }
 }
