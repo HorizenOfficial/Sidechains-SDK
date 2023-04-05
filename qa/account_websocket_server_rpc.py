@@ -47,7 +47,7 @@ websocket_server_port = 8028
 class SCWsAccountServerRpcTest(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=1, websocket_server_port=[websocket_server_port])
+        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=1, websocket_server_ports=[websocket_server_port])
 
     def checkRPCResponseFields(self, json_response):
         assert_true("id" in json_response)

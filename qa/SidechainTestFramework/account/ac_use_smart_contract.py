@@ -165,7 +165,7 @@ class SmartContract:
                 logging.info("No return data in static_call: {}".format(str(response)))
                 return None
         else:
-            if response['error']['message'] == 'execution reverted' and response['error']['data'].startswith(
+            if response['error']['message'].startswith('execution reverted') and response['error']['data'].startswith(
                     '0x08c379a0'):
                 logging.info(response['error'])
                 if len(response['error']['data']) < 68:
