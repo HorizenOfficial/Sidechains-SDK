@@ -14,10 +14,10 @@ import io.horizen.validation.crosschain.CrossChainValidator
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
-                                  networkParams: NetworkParams,
+                                  scStateStorage: SidechainStateStorage,
                                   sc2ScConfig: Sc2ScConfigurator,
                                   scState: SidechainState,
-                                  scStateStorage: SidechainStateStorage
+                                  networkParams: NetworkParams
                                 ) extends CrossChainValidator[SidechainBlock] {
   override def validate(scBlock: SidechainBlock): Unit = {
     validateNoMoreThanOneMessagePerBlock(scBlock)

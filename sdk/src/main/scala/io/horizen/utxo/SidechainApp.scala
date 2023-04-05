@@ -121,7 +121,6 @@ class SidechainApp @Inject()
         params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
         throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
       }
-
     }
   }
   else {
