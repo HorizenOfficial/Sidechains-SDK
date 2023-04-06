@@ -148,8 +148,8 @@ class AccountChainSetup(SidechainTestFramework):
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
                     tx_lifetime=self.tx_lifetime,
                     websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
-                    websocket_server_port=self.websocket_server_ports[x],
-                    ccert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
+                    websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
+                    cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
                     submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
                 ))
    
