@@ -1292,4 +1292,33 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   def txpool_inspect(): Unit = {
     assertJsonEquals(txPoolInspectOutput, rpc("txpool_inspect"))
   }
+
+  @Test
+  def eth_getSHA3(): Unit = {
+    val validCases = Table(
+      ("Input", "Expected output"),
+      ("0x68656c6c6f20776f726c64", "\"0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad\""),
+      ("0x68656C6C6F20776F726C64", "\"0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad\""),
+      ("0x", "\"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470\""),
+    )
+
+    val invalidCases = Table("Input",
+        "0X68656C6C6F20776F726C64", // prefix '0x' is case-sensitive
+        "0x68656c6c6f20776f726c642", // input length must be even number
+        "0x68656c6c6f20776f726c6w", // method only accepts hexadecimal alphabetic characters (A-F)
+        "68656c6c6f20776f726c6w", // prefix '0x' is mandatory
+        ""
+      )
+
+    forAll(validCases) { (input, expectedOutput) =>
+      assertJsonEquals(expectedOutput, rpc("web3_sha3", input))
+    }
+
+    forAll(invalidCases) { input =>
+      assertThrows[RpcException] {
+        rpc("web3_sha3", input)
+      }
+    }
+  }
+
 }
