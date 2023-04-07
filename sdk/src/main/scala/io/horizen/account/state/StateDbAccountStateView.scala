@@ -72,7 +72,7 @@ class StateDbAccountStateView(
     forgerStakesProvider.getAllowedForgerListIndexes(this)
 
   override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] =
-    crossChainMessageProviders.flatMap(_.getCrossChainMesssages(withdrawalEpoch, this))
+    crossChainMessageProviders.flatMap(_.getCrossChainMessages(withdrawalEpoch, this))
 
   override def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash): Option[Int] = {
     val providerWithMessage : Option[CrossChainMessageProvider] =  crossChainMessageProviders.find(_.getCrossChainMessageHashEpoch(msgHash, this).nonEmpty)

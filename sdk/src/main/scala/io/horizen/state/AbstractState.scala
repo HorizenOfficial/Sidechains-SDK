@@ -15,6 +15,7 @@ import sparkz.core.transaction.state.MinimalState
 
 import java.util
 import scala.collection.JavaConverters._
+import scala.util.Using
 
 abstract class AbstractState[
   TX <: Transaction,
@@ -72,10 +73,16 @@ abstract class AbstractState[
       throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect previousCertificateHash field")
     }
     val expectedCrosschainMessages = getCrossChainMessages(certReferencedEpochNumber)
-    val expectedMessageTreeroot = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageTreeRoot(expectedCrosschainMessages.toList.asJava)
-    if (!util.Arrays.equals(messageTreeRoot, expectedMessageTreeroot)) {
-      throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect crosschain message tree root field")
-    }
-  }
 
+    Using.resource(
+      CryptoLibProvider.sc2scCircuitFunctions.initMerkleTree()
+    ) { tree => {
+      CryptoLibProvider.sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, expectedCrosschainMessages.asJava)
+      val expectedMessageTreeRoot = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
+
+      if (!util.Arrays.equals(messageTreeRoot, expectedMessageTreeRoot)) {
+        throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect crosschain message tree root field")
+      }
+    }}
+  }
 }

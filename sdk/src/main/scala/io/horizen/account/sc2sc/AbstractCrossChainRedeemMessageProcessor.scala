@@ -127,7 +127,8 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       ccMsgHash,
       ccRedeemMessage.scCommitmentTreeRoot,
       ccRedeemMessage.nextScCommitmentTreeRoot,
-      ccRedeemMessage.proof
+      ccRedeemMessage.proof,
+      networkParams.sc2ScVerificationKeyFilePath.get
     )
 
     if (!isProofValid) {

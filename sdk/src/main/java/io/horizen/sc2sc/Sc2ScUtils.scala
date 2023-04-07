@@ -1,17 +1,21 @@
 package io.horizen.sc2sc
 
+import com.google.common.primitives.Bytes
+import com.horizen.commitmenttreenative.{CommitmentTree, ScCommitmentCertPath}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.merkletreenative.MerklePath
 import io.horizen.AbstractState
-import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.util.{Success, Try}
+import scala.util.{Success, Try, Using}
 
 trait Sc2ScUtils[
   TX <: Transaction,
@@ -21,8 +25,8 @@ trait Sc2ScUtils[
   HIS <: AbstractHistory[TX, H, PM, _, _, _]
 ] {
 
-  var sc2scCircuitFunctions :  Sc2scCircuit  = CryptoLibProvider.sc2scCircuitFunctions
-  var commonCircuitFunctions :  CommonCircuit  = CryptoLibProvider.commonCircuitFunctions
+  var sc2scCircuitFunctions: Sc2scCircuit = CryptoLibProvider.sc2scCircuitFunctions
+  var commonCircuitFunctions: CommonCircuit = CryptoLibProvider.commonCircuitFunctions
 
   /**
    * Get all the the additional data to be inserted in a certificate for sidechain2sidechain pourpuses
@@ -31,12 +35,18 @@ trait Sc2ScUtils[
    */
   def getDataForCertificateCreation(epoch: Int, state: MS, history: HIS, params: NetworkParams): Sc2ScDataForCertificate = {
     val crossChainMessages: Seq[CrossChainMessage] = state.getCrossChainMessages(epoch)
-    val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(crossChainMessages.toList.asJava);
-    val previousCertificateHash : Option[Array[Byte]]   = getTopCertInfoByEpoch(epoch - 1, state, history, false) match {
-      case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
-      case _ => None
+    Using.resource(
+      sc2scCircuitFunctions.initMerkleTree()
+    ) { tree => {
+      sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, crossChainMessages.asJava)
+      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree);
+      val previousCertificateHash: Option[Array[Byte]] = getTopCertInfoByEpoch(epoch - 1, state, history, calculateMerklePath = false, params) match {
+        case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
+        case _ => None
+      }
+      Sc2ScDataForCertificate(messageRootHash, previousCertificateHash)
     }
-    Sc2ScDataForCertificate(messageRootHash,previousCertificateHash)
+    }
   }
 
   /**
@@ -50,73 +60,93 @@ trait Sc2ScUtils[
     state.getCrossChainMessageHashEpoch(messageHash) match {
       case None => throw new Sc2ScException("Message was not found inside state")
       case Some(messagePostedEpoch) =>
-        if (currentEpoch < messagePostedEpoch+2) {
+        if (currentEpoch < messagePostedEpoch + 2) {
           throw new Sc2ScException("Unable to build redeem message, epoch too recent")
-        }else{
+        } else {
           //collect all the data needed for proof creation
-          val messageMerklePath : MerklePath = sc2scCircuitFunctions.getCrossChainMessageMerklePath(
-              state.getCrossChainMessages(messagePostedEpoch).asJava, sourceMessage);
-          val topCertInfos =  getTopCertInfoByEpoch(messagePostedEpoch, state, history, true).getOrElse(
-            throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch")
-          )
-          val nextTopCertInfos = getTopCertInfoByEpoch(messagePostedEpoch+1, state, history, true).getOrElse(
-            throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch+1")
-          )
-          val topCertMerklePath = MerklePath.deserialize(topCertInfos.merklePath)
-          val topCertscCommitmentRoot = FieldElement.deserialize(topCertInfos.scCommitmentRoot)
-          val nextCertMerklePath = MerklePath.deserialize(nextTopCertInfos.merklePath)
-          val nextCertscCommitmentRoot = FieldElement.deserialize(nextTopCertInfos.scCommitmentRoot)
+          Using.resource(
+            sc2scCircuitFunctions.initMerkleTree()
+          ) { tree => {
+            val messages = state.getCrossChainMessages(messagePostedEpoch).asJava
+            val msgLeafIndex = sc2scCircuitFunctions.insertMessagesInMerkleTreeWithIndex(tree, messages, sourceMessage)
+            val messageMerklePath: MerklePath = sc2scCircuitFunctions.getCrossChainMessageMerklePath(tree, msgLeafIndex)
+            val topCertInfos = getTopCertInfoByEpoch(messagePostedEpoch, state, history, calculateMerklePath = true, params).getOrElse(
+              throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch")
+            )
+            val nextTopCertInfos = getTopCertInfoByEpoch(messagePostedEpoch + 1, state, history, calculateMerklePath = true, params).getOrElse(
+              throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch+1")
+            )
+            val topCertscCommitmentRoot = topCertInfos.scCommitmentRoot
+            val nextCertscCommitmentRoot = nextTopCertInfos.scCommitmentRoot
 
+            val currWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion)
+            val nextWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion)
 
-          //compute proof
-          val proof :Array[Byte]= sc2scCircuitFunctions.createRedeemProof(
-             messageHash,
-             messageMerklePath,
-             CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion),
-             topCertMerklePath,
-             topCertscCommitmentRoot,
-             CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion),
-             nextCertMerklePath,
-             nextCertscCommitmentRoot,
-          )
+            //compute proof
+            val proof: Array[Byte] = sc2scCircuitFunctions.createRedeemProof(
+              messageHash,
+              topCertscCommitmentRoot,
+              nextCertscCommitmentRoot,
+              currWithdrawalCertificate,
+              nextWithdrawalCertificate,
+              ScCommitmentCertPath.deserialize(topCertInfos.merklePath),
+              ScCommitmentCertPath.deserialize(nextTopCertInfos.merklePath),
+              messageMerklePath,
+              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("You need to set a proving key file path to generate a redeem message"))
+            )
 
-          //build and return final message
-          val retMessage = new CrossChainRedeemMessageImpl(
-             sourceMessage,
-             CryptoLibProvider.commonCircuitFunctions.getCertDataHash(topCertInfos.certificate, params.sidechainCreationVersion),
-             CryptoLibProvider.commonCircuitFunctions.getCertDataHash(nextTopCertInfos.certificate, params.sidechainCreationVersion),
-             topCertInfos.scCommitmentRoot,
-             nextTopCertInfos.scCommitmentRoot,
-             proof
-          )
-          Success(retMessage)
+            //build and return final message
+            val retMessage = new CrossChainRedeemMessageImpl(
+              sourceMessage,
+              CryptoLibProvider.commonCircuitFunctions.getCertDataHash(topCertInfos.certificate, params.sidechainCreationVersion),
+              CryptoLibProvider.commonCircuitFunctions.getCertDataHash(nextTopCertInfos.certificate, params.sidechainCreationVersion),
+              topCertInfos.scCommitmentRoot,
+              nextTopCertInfos.scCommitmentRoot,
+              proof
+            )
 
+            Success(retMessage)
+          }
+          }
         }
     }
   }
 
-  private def getTopCertInfoByEpoch(epoch: Int, state: MS, history: HIS, calculateMerklePath: Boolean): Option[TopQualityCertificateInfos] ={
+  private def getTopCertInfoByEpoch(epoch: Int, state: MS, history: HIS, calculateMerklePath: Boolean, networkParams: NetworkParams): Option[TopQualityCertificateInfos] = {
     state.getTopCertificateMainchainHash(epoch) match {
-      case Some(mainchainHeaderHash) => {
+      case Some(mainchainHeaderHash) =>
         history.getMainchainBlockReferenceByHash(mainchainHeaderHash).asScala match {
-          case Some(ele) => {
+          case Some(ele) =>
             ele.data.topQualityCertificate match {
               case Some(topCert) =>
-                val certPath: Array[Byte] = null
-                if (calculateMerklePath){
-                  //TODO: add this method: ele.data.commitmentTree(sidechainId, sidechainCreationVersion).getCertMerklePath(topCert).get
-                }
-                Some(TopQualityCertificateInfos(topCert, ele.header.hashScTxsCommitment, certPath))
+                val merklePath: Array[Byte] =
+                  if (calculateMerklePath) buildEntireMerklePath(networkParams, ele, topCert)
+                  else Array.emptyByteArray
+                Some(TopQualityCertificateInfos(topCert, ele.header.hashScTxsCommitment, merklePath))
               case None => Option.empty
             }
-          }
           case None => Option.empty
         }
-      }
       case None => Option.empty
     }
   }
 
+  private def buildEntireMerklePath(networkParams: NetworkParams, mcBlockRef: MainchainBlockReference, topCert: WithdrawalEpochCertificate): Array[Byte] = {
+    val existenceProof = mcBlockRef.data.existenceProof.getOrElse(
+      throw new IllegalArgumentException(s"There is no existence proof in the MainchainBlockReference $mcBlockRef")
+    )
+    Using.resource(
+      mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
+    ) { commTree =>
+      Using.resource(
+        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
+      ) {
+        pathCert =>
+          pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
+          pathCert.serialize()
+      }
+    }
+  }
 }
 
 case class TopQualityCertificateInfos(
@@ -124,4 +154,3 @@ case class TopQualityCertificateInfos(
                                        scCommitmentRoot: Array[Byte],
                                        merklePath: Array[Byte]
                                      )
-

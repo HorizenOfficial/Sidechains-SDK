@@ -2,13 +2,17 @@ package io.horizen.validation.crosschain.receiver;
 
 import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
+import io.horizen.params.NetworkParams;
+import io.horizen.proposition.Proposition;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.block.SidechainBlock;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
+import io.horizen.utxo.transaction.BoxTransaction;
 import io.horizen.validation.crosschain.CrossChainValidator;
 import scala.collection.JavaConverters;
 
@@ -18,20 +22,23 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
+    private final NetworkParams networkParams;
 
     public CrossChainRedeemMessageValidator(
             SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
-            Sc2scCircuit sc2scCircuit
+            Sc2scCircuit sc2scCircuit,
+            NetworkParams networkParams
     ) {
         this.sidechainSettings = sidechainSettings;
         this.scStateStorage = scStateStorage;
         this.sc2scCircuit = sc2scCircuit;
+        this.networkParams = networkParams;
     }
 
     @Override
-    public void validate(SidechainBlock objectToValidate) throws IllegalArgumentException {
-        JavaConverters.seqAsJavaList(objectToValidate.transactions()).forEach(tx -> {
+    public void validate(SidechainBlock objectToValidate) throws Exception {
+        for (BoxTransaction<Proposition, Box<Proposition>> tx : JavaConverters.seqAsJavaList(objectToValidate.transactions())) {
             if (tx instanceof AbstractCrossChainRedeemTransaction) {
                 CrossChainRedeemMessageBoxData boxData = ((AbstractCrossChainRedeemTransaction) tx).getRedeemMessageBox();
                 CrossChainMessage ccMsg = boxData.getMessage();
@@ -51,7 +58,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
                 // CrossChainRedeemMsg.proof is valid (requires zk circuit invocation)
                 verifyProof(boxData);
             }
-        });
+        }
     }
 
     private void validateCorrectSidechain(CrossChainMessage msg) {
@@ -66,7 +73,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
         }
     }
 
-    private void validateMsgDoubleRedeem(CrossChainMessage ccMsg) {
+    private void validateMsgDoubleRedeem(CrossChainMessage ccMsg) throws Exception {
         CrossChainMessageHash currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg);
         boolean ccMsgFromRedeemAlreadyExists = scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash);
         if (ccMsgFromRedeemAlreadyExists) {
@@ -84,14 +91,15 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
         }
     }
 
-    private void verifyProof(CrossChainRedeemMessageBoxData ccMsgBoxData) {
+    private void verifyProof(CrossChainRedeemMessageBoxData ccMsgBoxData) throws Exception {
         CrossChainMessage ccMsg = ccMsgBoxData.getMessage();
         CrossChainMessageHash ccMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg);
         boolean isProofVerified = sc2scCircuit.verifyRedeemProof(
                 ccMsgHash,
                 ccMsgBoxData.getScCommitmentTreeRoot(),
                 ccMsgBoxData.getNextScCommitmentTreeRoot(),
-                ccMsgBoxData.getProof()
+                ccMsgBoxData.getProof(),
+                networkParams.sc2ScVerificationKeyFilePath().get()
         );
 
         if (!isProofVerified) {

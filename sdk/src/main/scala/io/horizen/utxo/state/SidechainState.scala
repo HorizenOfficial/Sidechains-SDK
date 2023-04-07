@@ -60,8 +60,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
-    new CrossChainMessageValidator(params, sc2scConfig, this, stateStorage),
-    new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions)
+    new CrossChainMessageValidator(stateStorage, sc2scConfig, this, params),
+    new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
   lazy val verificationKeyFullFilePath: String = {

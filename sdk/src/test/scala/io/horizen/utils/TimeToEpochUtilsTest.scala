@@ -42,6 +42,8 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val signersThreshold: Int = 0
     override val certProvingKeyFilePath: String = ""
     override val certVerificationKeyFilePath: String = ""
+    override val sc2ScProvingKeyFilePath: Option[String] = None
+    override val sc2ScVerificationKeyFilePath: Option[String] = None
     override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32)
     override val initialCumulativeCommTreeHash: Array[Byte] = Array()
     override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()

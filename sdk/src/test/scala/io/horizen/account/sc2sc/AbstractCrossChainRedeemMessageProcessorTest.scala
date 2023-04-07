@@ -135,7 +135,9 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(true)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any())).thenReturn(false)
+    when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any())).thenReturn(false)
+
+    when(networkParamsMock.sc2ScVerificationKeyFilePath).thenReturn(Some("sc2ScVerificationKeyFilePath"))
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -164,7 +166,9 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(true)
 
     when(sc2scCircuitMock.getCrossChainMessageHash(any())).thenReturn(crossChainMessageHash)
-    when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any())).thenReturn(true)
+    when(sc2scCircuitMock.verifyRedeemProof(ArgumentMatchers.eq(crossChainMessageHash), any(), any(), any(), any())).thenReturn(true)
+
+    when(networkParamsMock.sc2ScVerificationKeyFilePath).thenReturn(Some("sc2ScVerificationKeyFilePath"))
 
     // Act & Assert
     try withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))

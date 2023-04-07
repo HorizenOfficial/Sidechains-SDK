@@ -22,7 +22,7 @@ import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait CrossChainMessageProvider {
-  private[horizen] def getCrossChainMesssages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
+  private[horizen] def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
   private[horizen] def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int]
 }
 abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
@@ -42,7 +42,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
     CrosschainMessagesListEncoder.encode(list.asJava)
   }
 
-  override def getCrossChainMesssages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
+  override def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
     getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(msg, networkParams))
   }
 

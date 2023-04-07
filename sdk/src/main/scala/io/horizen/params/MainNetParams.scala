@@ -31,10 +31,11 @@ case class MainNetParams(
                           override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte]
                           (CumulativeHashFunctions.hashLength()),
-                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
-                          = Seq(),
+                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
+                          override val sc2ScProvingKeyFilePath: Option[String] = None,
+                          override val sc2ScVerificationKeyFilePath: Option[String] = None,
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,

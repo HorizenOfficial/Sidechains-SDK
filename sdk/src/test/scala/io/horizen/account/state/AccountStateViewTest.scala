@@ -22,7 +22,7 @@ import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
 
 class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProcessorFixture with StoreFixture
-      with AccountFixture with AccountCrossChainMessageFixture {
+  with AccountFixture with AccountCrossChainMessageFixture {
 
   var stateView: AccountStateView = _
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
@@ -40,7 +40,8 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     val stateDb: StateDB = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors) {
       override lazy val withdrawalReqProvider: WithdrawalRequestProvider = mockWithdrawalReqProvider
-      override lazy val crossChainMessageProviders = Seq(mocCrossChainReqProvider1, mocCrossChainReqProvider2)
+      override lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] =
+        Seq(mocCrossChainReqProvider1, mocCrossChainReqProvider2)
     }
   }
 
@@ -94,44 +95,47 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     // No messages
     Mockito
-      .when(stateView.crossChainMessageProviders(0).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(0).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq())
     Mockito
-      .when(stateView.crossChainMessageProviders(1).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(1).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq())
 
     var res = stateView.getCrossChainMessages(epochNum)
     assertTrue("The list of crosschain messages is not empty", res.isEmpty)
 
+    Mockito
+      .when(mockNetworkParams.sidechainId).thenReturn("scId".getBytes)
+
     // With some cross chain messages from different providers
-    var fakeMessages : List[CrossChainMessage] = List()
+    var fakeMessages: List[CrossChainMessage] = List()
     (0 until 3).foreach(index => {
-      fakeMessages = fakeMessages :+  AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount( getRandomAccountCrossMessage(index), mockNetworkParams)
+      fakeMessages = fakeMessages :+ AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(getRandomAccountCrossMessage(index), mockNetworkParams)
     })
 
     Mockito
-      .when(stateView.crossChainMessageProviders(0).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(0).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq(fakeMessages(0), fakeMessages(1)))
     Mockito
-      .when(stateView.crossChainMessageProviders(1).getCrossChainMesssages(epochNum, stateView))
+      .when(stateView.crossChainMessageProviders(1).getCrossChainMessages(epochNum, stateView))
       .thenReturn(Seq(fakeMessages(2)))
 
     res = stateView.getCrossChainMessages(epochNum)
 
     assertEquals("Wrong list of crosschain messages size", 3, res.size)
     (0 until 3).foreach(index => {
-      val wr : CrossChainMessage = res(index)
+      val wr: CrossChainMessage = res(index)
       assertEquals("wrong address", fakeMessages(index).getMessageType, wr.getMessageType)
       assertEquals("wrong payload", fakeMessages(index).getPayload, wr.getPayload)
     })
 
-    val messageHash =  CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(res(1))
+    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(res(1))
     Mockito
       .when(stateView.crossChainMessageProviders(0).getCrossChainMessageHashEpoch(messageHash, stateView))
       .thenReturn(Some(epochNum))
 
-    assertTrue("Crosschain message hash not found", stateView.getCrossChainMessageHashEpoch(messageHash).isDefined )
-    assertEquals("Crosschain message hash epoch incorrect",  epochNum, stateView.getCrossChainMessageHashEpoch(messageHash).get)
+    assertTrue("Crosschain message hash not found", stateView.getCrossChainMessageHashEpoch(messageHash).isDefined)
+    assertEquals("Crosschain message hash epoch incorrect", epochNum, stateView.getCrossChainMessageHashEpoch(messageHash).get)
 
   }
 
