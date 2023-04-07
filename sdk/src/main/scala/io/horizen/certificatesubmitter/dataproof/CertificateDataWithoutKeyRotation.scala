@@ -22,14 +22,13 @@ case class CertificateDataWithoutKeyRotation(override val referencedEpochNumber:
   extends CertificateData (referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, sc2ScDataForCertificate, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
-    //TODO: use sc2ScDataForCertificate to add custom fields for sc2sc
     CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot.asJava).toSeq
   }
 
   override def toString: String = {
     "CertificateDataWithKeyRotation(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
-      s"sidechainId = $sidechainId, " +
+      s"sidechainId = ${BytesUtils.toHexString(sidechainId)}, " +
       s"withdrawalRequests = {${backwardTransfers.mkString(",")}}, " +
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +

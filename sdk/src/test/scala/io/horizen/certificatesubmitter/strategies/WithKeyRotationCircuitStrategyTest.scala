@@ -45,7 +45,7 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
 
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = _
-  var sc2scConfig_noSc2sc = Sc2ScConfigurator(false, false)
+  var sc2scConfig_noSc2sc: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
 
   @Before
   def init(): Unit = {
@@ -153,7 +153,7 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-      ArgumentMatchers.any())) thenAnswer (answer => {
+      ArgumentMatchers.any(), ArgumentMatchers.any())) thenAnswer (answer => {
       assertResult(32)(answer.getArgument(1).asInstanceOf[Array[Byte]].length)
       assertResult(10)(answer.getArgument(2).asInstanceOf[Integer])
       assertResult(100L)(answer.getArgument(4).asInstanceOf[Long])
@@ -170,8 +170,8 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
       assertResult(Optional.empty())(answer.getArgument(9).asInstanceOf[Optional[Integer]])
       assertResult(2)(answer.getArgument(10).asInstanceOf[Integer])
       assertResult(32)(answer.getArgument(11).asInstanceOf[Array[Byte]].length)
-      assertResult("filePath")(answer.getArgument(12).asInstanceOf[String])
-      assertResult(true)(answer.getArgument(13).asInstanceOf[Boolean])
+      assertResult("filePath")(answer.getArgument(13).asInstanceOf[String])
+      assertResult(true)(answer.getArgument(14).asInstanceOf[Boolean])
       new io.horizen.utils.Pair(key, 429L)
     })
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)

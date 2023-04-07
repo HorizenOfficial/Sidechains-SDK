@@ -2,9 +2,10 @@ package io.horizen.validation.crosschain.receiver;
 
 import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.params.NetworkParams;
 import io.horizen.proposition.Proposition;
+import io.horizen.sc2sc.CrossChainMessage;
+import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.box.Box;
@@ -12,26 +13,24 @@ import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
-import scala.collection.JavaConverters;
-import io.horizen.sc2sc.CrossChainMessage;
-import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.validation.crosschain.CrossChainValidator;
+import scala.collection.JavaConverters;
 
 import java.util.Arrays;
 
 public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
-    private final SidechainSettings sidechainSettings;
+    //private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
     private final NetworkParams networkParams;
 
     public CrossChainRedeemMessageValidator(
-            SidechainSettings sidechainSettings,
+            //SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
             Sc2scCircuit sc2scCircuit,
             NetworkParams networkParams
     ) {
-        this.sidechainSettings = sidechainSettings;
+        //this.sidechainSettings = sidechainSettings;
         this.scStateStorage = scStateStorage;
         this.sc2scCircuit = sc2scCircuit;
         this.networkParams = networkParams;
@@ -65,7 +64,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     private void validateCorrectSidechain(CrossChainMessage msg) {
         byte[] receivingSidechain = msg.getReceiverSidechain();
         String receivingSidechainAsString = BytesUtils.toHexString(receivingSidechain);
-        String sidechainId = sidechainSettings.genesisData().scId();
+        String sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(networkParams.sidechainId()));
 
         if (!receivingSidechainAsString.equals(sidechainId)) {
             throw new IllegalArgumentException(
@@ -84,11 +83,11 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
 
     private void verifyCommitmentTreeRootAndNextCommitmentTreeRoot(byte[] scCommitmentTreeRoot, byte[] nextScCommitmentTreeRoot) {
         if (!scStateStorage.doesScTxCommitmentTreeRootExist(scCommitmentTreeRoot)) {
-            throw new IllegalArgumentException(String.format("Sidechain commitment tree root `%s` does not exist", Arrays.toString(scCommitmentTreeRoot)));
+            throw new IllegalArgumentException(String.format("Sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(scCommitmentTreeRoot)));
         }
 
         if (!scStateStorage.doesScTxCommitmentTreeRootExist(nextScCommitmentTreeRoot)) {
-            throw new IllegalArgumentException(String.format("Next sidechain commitment tree root `%s` does not exist", Arrays.toString(nextScCommitmentTreeRoot)));
+            throw new IllegalArgumentException(String.format("Next sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(nextScCommitmentTreeRoot)));
         }
     }
 

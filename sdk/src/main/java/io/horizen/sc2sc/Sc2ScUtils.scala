@@ -1,18 +1,15 @@
 package io.horizen.sc2sc
 
-import com.google.common.primitives.Bytes
-import com.horizen.commitmenttreenative.{CommitmentTree, ScCommitmentCertPath}
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.commitmenttreenative.ScCommitmentCertPath
 import com.horizen.merkletreenative.MerklePath
 import io.horizen.AbstractState
-import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 
-import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
@@ -39,7 +36,7 @@ trait Sc2ScUtils[
       sc2scCircuitFunctions.initMerkleTree()
     ) { tree => {
       sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, crossChainMessages.asJava)
-      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree);
+      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
       val previousCertificateHash: Option[Array[Byte]] = getTopCertInfoByEpoch(epoch - 1, state, history, calculateMerklePath = false, params) match {
         case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
         case _ => None
@@ -92,7 +89,7 @@ trait Sc2ScUtils[
               ScCommitmentCertPath.deserialize(topCertInfos.merklePath),
               ScCommitmentCertPath.deserialize(nextTopCertInfos.merklePath),
               messageMerklePath,
-              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("You need to set a proving key file path to generate a redeem message"))
+              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("Sc2Sc proving key path must be specified"))
             )
 
             //build and return final message
@@ -139,11 +136,14 @@ trait Sc2ScUtils[
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
       Using.resource(
-        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      ) {
-        pathCert =>
+        CommonCircuit.createWithdrawalCertificate(topCert, networkParams.sidechainCreationVersion)
+      ) { withdrawalCertificate =>
+        Using.resource(
+          commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()
+        ) { pathCert =>
           pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
           pathCert.serialize()
+        }
       }
     }
   }

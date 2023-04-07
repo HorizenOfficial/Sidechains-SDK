@@ -1,15 +1,15 @@
 package io.horizen.certificatesubmitter.dataproof
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
-import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.cryptolibprovider.{CryptoLibProvider, CustomFieldsReservedPositions}
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.Sc2ScDataForCertificate
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.box.WithdrawalRequestBox
 
+import java.util
 import scala.collection.JavaConverters._
 
 case class CertificateDataWithKeyRotation(override val referencedEpochNumber: Int,
@@ -27,9 +27,24 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   extends CertificateData(referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, sc2ScDataForCertificate, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
-    //TODO: use sc2ScDataForCertificate to add custom fields for sc2sc
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getSchnorrKeysHash(schnorrKeysSignatures)
-    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getCertificateCustomFields(keysRootHash).asScala
+    val orderedCustomFields = prepareCustomFields(keysRootHash)
+    val customFields = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getCertificateCustomFields(orderedCustomFields).asScala
+    customFields
+  }
+
+  private def prepareCustomFields(keyRootHash: Array[Byte]): util.List[Array[Byte]] = {
+    val orderedCustomFields = new util.ArrayList[Array[Byte]]()
+    orderedCustomFields.add(keyRootHash)
+
+    sc2ScDataForCertificate.foreach(sc2scData => {
+      orderedCustomFields.add(sc2scData.messagesTreeRoot)
+
+      sc2scData.previousTopQualityCertificateHash.foreach {
+        cert => orderedCustomFields.add(cert)
+      }
+    })
+    orderedCustomFields
   }
 
   override def toString: String = {
