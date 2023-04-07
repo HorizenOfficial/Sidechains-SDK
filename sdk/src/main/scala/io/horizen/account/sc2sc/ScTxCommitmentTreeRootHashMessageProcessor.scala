@@ -33,7 +33,7 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
     !view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash)).sameElements(NULL_HEX_STRING_32)
 
   private[sc2sc] def getScTxCommitmentTreeRootHashKey(hash: Array[Byte]): Array[Byte] =
-  calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))
+    calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))
 
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
   Keccak256.hash(keySeed)

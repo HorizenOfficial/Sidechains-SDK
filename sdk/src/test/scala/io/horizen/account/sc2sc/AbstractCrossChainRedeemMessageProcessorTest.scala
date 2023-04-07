@@ -2,8 +2,7 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.fixtures.AccountCrossChainMessageFixture
 import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{contractAddress, nextScCommitmentTreeRoot, receiverSidechain, scCommitmentTreeRoot}
-import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.state.{AccountStateView, BaseAccountStateView, BlockContext, ExecutionFailedException, ExecutionRevertedException, GasPool, Message, MessageProcessorFixture}
+import io.horizen.account.state._
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
@@ -170,8 +169,8 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     // Act & Assert
     try withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     catch {
-      case _: Exception =>
-        fail("Test failed unexpectedly")
+      case e: Exception =>
+        fail(s"Test failed unexpectedly ${e.getMessage}")
     }
   }
 }

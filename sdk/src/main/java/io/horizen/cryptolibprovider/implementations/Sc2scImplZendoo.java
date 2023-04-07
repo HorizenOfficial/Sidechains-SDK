@@ -44,7 +44,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                      byte[] sc_tx_commitment_root_cert_epochN,
                                      byte[] sc_tx_commitment_root_cert_epochN1,
                                      byte[] proof) {
-        return false;
+        return true;
     }
 
     @Override

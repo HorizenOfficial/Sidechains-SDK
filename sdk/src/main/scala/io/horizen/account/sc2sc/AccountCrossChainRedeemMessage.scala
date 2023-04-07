@@ -24,7 +24,8 @@ case class AccountCrossChainRedeemMessage
       new DynamicBytes(certificateDataHash),
       new DynamicBytes(nextCertificateDataHash),
       new DynamicBytes(scCommitmentTreeRoot),
-      new DynamicBytes(nextScCommitmentTreeRoot)
+      new DynamicBytes(nextScCommitmentTreeRoot),
+      new DynamicBytes(proof)
     )
 }
 

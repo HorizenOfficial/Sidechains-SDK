@@ -9,6 +9,8 @@ import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
 
+import java.nio.charset.StandardCharsets
+
 trait CrossChainRedeemMessageProvider {
   def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean
 }
@@ -59,6 +61,9 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   private def validateRedeemMsg(ccRedeemMgs: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Unit = {
     try {
       val accountCcMsg = ccRedeemMgs.accountCrossChainMessage
+      // validate arguments' semantics
+      validateSemantics(accountCcMsg.receiver, accountCcMsg.receiverSidechain, accountCcMsg.sender)
+
       // Validate the receiving sidechain matches with this scId
       validateScId(networkParams.sidechainId, accountCcMsg.receiverSidechain)
 
@@ -75,6 +80,15 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       case exception: IllegalArgumentException =>
         throw new ExecutionRevertedException("Error while validating redeem message", exception)
     }
+  }
+
+  private def validateSemantics(byteArraysToValidate: Array[Byte]*): Unit = {
+    val byteArrayMaxLength = 64
+    byteArraysToValidate.foreach(arrayToValidate => {
+      if (arrayToValidate.isEmpty || arrayToValidate.length > byteArrayMaxLength) {
+        throw new IllegalArgumentException(s"Value ${BytesUtils.toHexString(arrayToValidate)} is semantically wrong")
+      }
+    })
   }
 
   private def validateScId(scId: Array[Byte], receivingScId: Array[Byte]): Unit = {
@@ -125,7 +139,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     Keccak256.hash(keySeed)
 
   private[sc2sc] def getCrossChainMessageFromRedeemKey(hash: Array[Byte]): Array[Byte] =
-    calculateKey(Bytes.concat("crossChainMessageFromRedeem".getBytes, hash))
+    calculateKey(Bytes.concat("crossChainMessageFromRedeem".getBytes(StandardCharsets.UTF_8), hash))
 
   private def setCrossChainMessageHash(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Unit =
     view.updateAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(messageHash.getValue), Array.emptyByteArray)
