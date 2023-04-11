@@ -1,6 +1,7 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -21,10 +22,10 @@ case class AccountCrossChainRedeemMessage
   override def asABIType(): StaticStruct =
     new StaticStruct(
       new DynamicBytes(accountCrossChainMessage.bytes),
-      new DynamicBytes(certificateDataHash),
-      new DynamicBytes(nextCertificateDataHash),
-      new DynamicBytes(scCommitmentTreeRoot),
-      new DynamicBytes(nextScCommitmentTreeRoot),
+      new Bytes32(certificateDataHash),
+      new Bytes32(nextCertificateDataHash),
+      new Bytes32(scCommitmentTreeRoot),
+      new Bytes32(nextScCommitmentTreeRoot),
       new DynamicBytes(proof)
     )
 }

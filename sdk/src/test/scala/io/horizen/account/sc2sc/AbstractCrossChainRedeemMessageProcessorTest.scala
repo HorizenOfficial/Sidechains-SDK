@@ -88,7 +88,7 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     }
 
     // Assert
-    val expectedMsg = s"Sidechain commitment tree root `${BytesUtils.toHexString("scCommitmentTreeRoot".getBytes)}` does not exist"
+    val expectedMsg = s"Sidechain commitment tree root `${BytesUtils.toHexString(scCommitmentTreeRoot)}` does not exist"
     assertEquals(expectedMsg, exception.getCause.getMessage)
   }
 
@@ -114,7 +114,7 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
     }
 
     // Assert
-    val expectedMsg = s"Sidechain next commitment tree root `${BytesUtils.toHexString("nextScCommitmentTreeRoot".getBytes)}` does not exist"
+    val expectedMsg = s"Sidechain next commitment tree root `${BytesUtils.toHexString(nextScCommitmentTreeRoot)}` does not exist"
     assertEquals(expectedMsg, exception.getCause.getMessage)
   }
 
@@ -193,8 +193,8 @@ class CrossChainRedeemMessageProcessorImpl(networkParams: NetworkParams, sc2scCi
       receiver = "0303908acce9dd1078bdf16a87a9d9f8".getBytes,
       payload = "my payload".getBytes,
     )
-    val certificateDataHash = "certificateDataHash".getBytes
-    val nextCertificateDataHash = "nextCertificateDataHash".getBytes
+    val certificateDataHash = BytesUtils.fromHexString("8b4a3cf70f33a2b9692d1bd5c612e2903297b35289e59c9be7afa0984befd230")
+    val nextCertificateDataHash = BytesUtils.fromHexString("1701e3d5c949797c469644a8c7ff495ee28259c5548d7879fcc5518fe1e2163c")
     val scCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.scCommitmentTreeRoot
     val nextScCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.nextScCommitmentTreeRoot
     val proof = "proof".getBytes
@@ -230,7 +230,7 @@ object CrossChainRedeemMessageProcessorImpl extends CrossChainMessageProcessorCo
   val contractAddress: Address = new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
   val contractCode: Array[Byte] = Keccak256.hash("CrossChainRedeemMessageProcessorImplCode")
 
-  val receiverSidechain: Array[Byte] = "receiverSidechain".getBytes
-  val scCommitmentTreeRoot: Array[Byte] = "scCommitmentTreeRoot".getBytes
-  val nextScCommitmentTreeRoot: Array[Byte] = "nextScCommitmentTreeRoot".getBytes
+  val receiverSidechain: Array[Byte] = BytesUtils.fromHexString("237a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb6")
+  val scCommitmentTreeRoot: Array[Byte] = BytesUtils.fromHexString("05a1b84478667437c79b4dcd8948c8fd6ff624b7af22f92897dce10ccfb2147d")
+  val nextScCommitmentTreeRoot: Array[Byte] = BytesUtils.fromHexString("3ebf08d8d1176d945209599be3b61c2e2e96d6e118baf146b77cf53e2f9a39d0")
 }
