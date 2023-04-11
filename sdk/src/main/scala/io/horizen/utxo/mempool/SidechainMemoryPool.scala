@@ -6,8 +6,11 @@ import io.horizen.utxo.transaction.BoxTransaction
 import io.horizen.{MempoolSettings, SidechainTypes}
 import sparkz.core.transaction.MempoolReader
 import sparkz.util.{ModifierId, SparkzLogging}
+
 import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: MempoolSettings)
@@ -172,17 +175,25 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   // TO DO: check usage in Sparkz core
   // Probably, we need to do a Global check inside for both new and existing transactions.
   override def putWithoutCheck(txs: Iterable[SidechainTypes#SCBT]): SidechainMemoryPool = {
+    // TODO Transaction with less fee rate should be removed.
+    val txToRemove = ListBuffer[SidechainTypes#SCBT]()
     for (t <- txs.tails) {
       if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
-        return this
+        txToRemove += t.head
     }
 
-    for (t <- txs) {
+    var compatibleTxs = txs.filter(t => !txToRemove.contains(t))
+
+    txToRemove.clear()
+
+    for (t <- compatibleTxs) {
       if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava))
-        return this
+        txToRemove += t
     }
 
-    for (t <- txs) {
+    compatibleTxs = compatibleTxs.filter(t => !txToRemove.contains(t))
+
+    for (t <- compatibleTxs) {
       val entry = SidechainMemoryPoolEntry(t)
       if (entry.feeRate.getFeeRate() >= minFeeRate) {
         addWithSizeCheck(entry)
