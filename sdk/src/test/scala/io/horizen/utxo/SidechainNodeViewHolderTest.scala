@@ -648,6 +648,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     val secondLowestFeeTx = getRegularRandomTransaction(20, 580)
     val compatibleTransactin = getCompatibleTransaction(30, 580)
     val incompatibleTransactin = getIncompatibleTransaction(30, 580)
+    val incompatibleTransactin2 = getIncompatibleTransaction(30, 580)
     val highFeeTransaction = getRegularRandomTransaction(40, 580)
     list += lowestFeeTx
     list += secondLowestFeeTx
@@ -680,6 +681,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.validate(ArgumentMatchers.any[SidechainTypes#SCBT])).thenReturn(Try{})
 
     // Test blocks
+    // Try to add andremove transaction from mempool
     val removedBlock1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(commontransaction))
     val appliedBlock1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(commontransaction))
     val appliedBlock2 = generateNextSidechainBlock(appliedBlock1, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
@@ -689,6 +691,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     assertEquals("Common transaction must not be present ", false, nodeViewHolder.mempool.getTransactionById(commontransaction.id()).isPresent)
     assertEquals("Lowest fee transaction must be present ", true, nodeViewHolder.mempool.getTransactionById(lowestFeeTx.id()).isPresent)
 
+    // Try to add incompatible transaction
     val removedBlock2 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(incompatibleTransactin))
     val appliedBlock3 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
 
@@ -698,7 +701,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     assertEquals("IncompatibleTransactin transaction must not be present ", false, nodeViewHolder.mempool.getTransactionById(incompatibleTransactin.id()).isPresent)
     assertEquals("Lowest fee transaction must be present ", true, nodeViewHolder.mempool.getTransactionById(lowestFeeTx.id()).isPresent)
 
-    val removedBlock3 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(highFeeTransaction))
+    // Try to replace transaction with lowest fee
+    val removedBlock3 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, sidechainTransactions = Seq(highFeeTransaction, incompatibleTransactin, incompatibleTransactin2))
     val appliedBlock4 = generateNextSidechainBlock(appliedBlock1, sidechainTransactionsCompanion, params, sidechainTransactions = Seq())
 
     nodeViewHolder.mempool.maxPoolSizeBytes = totalTxSize
