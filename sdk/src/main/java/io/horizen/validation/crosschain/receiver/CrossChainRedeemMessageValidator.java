@@ -2,9 +2,10 @@ package io.horizen.validation.crosschain.receiver;
 
 import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.params.NetworkParams;
 import io.horizen.proposition.Proposition;
+import io.horizen.sc2sc.CrossChainMessage;
+import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.box.Box;
@@ -12,10 +13,8 @@ import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
-import scala.collection.JavaConverters;
-import io.horizen.sc2sc.CrossChainMessage;
-import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.validation.crosschain.CrossChainValidator;
+import scala.collection.JavaConverters;
 
 import java.util.Arrays;
 

@@ -135,7 +135,6 @@ class AccountStateMetadataStorageViewTest
 
     assertEquals("Wrong receipts in view after commit", receipt1.blockNumber, storageView.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
     assertEquals("Wrong receipts in storage after commit", receipt1.blockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
-
   }
 
   @Test
@@ -187,5 +186,4 @@ class AccountStateMetadataStorageViewTest
     Random.nextBytes(value)
     value
   }
-
 }

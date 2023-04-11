@@ -147,7 +147,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       }
   }
 
-    private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+  private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
         WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
@@ -427,6 +427,9 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
     calculateKey(Bytes.concat("receipt".getBytes(StandardCharsets.UTF_8), txHash))
   }
+
+  private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot: Array[Byte]) =
+    calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeRoot))
 
   private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 
