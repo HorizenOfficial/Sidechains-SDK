@@ -36,5 +36,5 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
     calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))
 
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
-  Keccak256.hash(keySeed)
+    Keccak256.hash(keySeed)
 }
