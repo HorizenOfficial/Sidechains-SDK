@@ -228,21 +228,27 @@ abstract class AbstractSidechainNodeViewHolder[
 
   override protected def updateMemPool(blocksRemoved: Seq[PMOD], blocksApplied: Seq[PMOD], memPool: MP, state: MS): MP = {
     val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
-
     val appliedTxs = blocksApplied.flatMap(extractTransactions)
 
     val txToMempool = rolledBackTxs.filter(tx =>
-      !appliedTxs.exists(t => t.id == tx.id))
-
-    val filteredMempool = memPool.filter(tx => !appliedTxs.exists(t => t.id == tx.id))
-
-    filteredMempool.putWithoutCheck(txToMempool).filter(tx =>
-      {
+      !appliedTxs.exists(t => t.id == tx.id) && {
         state match {
           case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
           case _ => true
         }
-      })
+      }
+    )
+
+    val filteredMempool = memPool.filter(tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    )
+
+    filteredMempool.putWithoutCheck(txToMempool)
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
