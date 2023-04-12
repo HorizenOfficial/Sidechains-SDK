@@ -27,7 +27,7 @@ case class WebSocketClientSettings(
 case class WebSocketServerSettings(
     wsServer: Boolean = false,
     wsServerPort: Int = 8025,
-    wsServerAllowedOrigins: Seq[String] = Seq("127.0.0.1")
+    wsServerAllowedOrigins: Seq[String] = Seq()
 )
 
 case class GenesisDataSettings(

@@ -5,7 +5,7 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import io.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.{SidechainSettings, SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
@@ -81,7 +81,15 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     mockedSyncStatusActorRef = mockedDummyActorRef,
   ).rpcProcessor
 
-  private var server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035, Seq("127.0.0.1"))
+  private val mockedWebsocketServerSettings = WebSocketServerSettings(
+    wsServer = true, wsServerPort = 9035, wsServerAllowedOrigins = Seq()
+  )
+
+  private val mockedWebsocketServerSettingsWithExternalOrigin = WebSocketServerSettings(
+    wsServer = true, wsServerPort = 9035, wsServerAllowedOrigins = Seq("185.123.0.12")
+  )
+
+  private var server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, mockedWebsocketServerSettings)
 
   @After
   def after(): Unit = {
@@ -108,15 +116,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
   @Test
   def allowedOriginsTest(): Unit = {
-    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035, Seq("127.0.0.2"))
+    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, mockedWebsocketServerSettingsWithExternalOrigin)
 
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
     val countDownController: CountDownLatchController = new CountDownLatchController(1)
     val endpoint = new WsEndpoint(countDownController)
-    assertThrows[DeploymentException](client.connectToServer(endpoint, cec, new URI("ws://localhost:9035/")))
+    val session: Session = startSession(client, cec, endpoint)
+    val clientId1 = 1
+    sendWebsocketRequest(Option.apply(clientId1), Option.apply(SUBSCRIBE_REQUEST), Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
+    assertTrue("No event messages received.", countDownController.await(5000))
 
+    session.close()
   }
 
   @Test
