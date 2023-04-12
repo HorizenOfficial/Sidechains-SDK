@@ -123,12 +123,8 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
 
     val countDownController: CountDownLatchController = new CountDownLatchController(1)
     val endpoint = new WsEndpoint(countDownController)
-    val session: Session = startSession(client, cec, endpoint)
-    val clientId1 = 1
-    sendWebsocketRequest(Option.apply(clientId1), Option.apply(SUBSCRIBE_REQUEST), Option.apply(NEW_HEADS_SUBSCRIPTION.method), Option.empty, session)
-    assertTrue("No event messages received.", countDownController.await(5000))
+    assertThrows[DeploymentException](client.connectToServer(endpoint, cec, new URI("ws://localhost:9035/")))
 
-    session.close()
   }
 
   @Test
