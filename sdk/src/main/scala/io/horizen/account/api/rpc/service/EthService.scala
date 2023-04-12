@@ -35,12 +35,14 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import org.bouncycastle.crypto.digests.KeccakDigest
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
+import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
@@ -87,7 +89,7 @@ class EthService(
           case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
-              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.revertReason))
+              new RpcError(RpcCode.ExecutionError.code, reverted.getMessage, Numeric.toHexString(reverted.returnData))
             )
           case err: ExecutionFailedException =>
             throw new RpcException(new RpcError(RpcCode.ExecutionError.code, err.getMessage, null))
@@ -350,7 +352,7 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
+          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }
@@ -378,12 +380,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getBalance(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getBalance(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getBalance(address)
       }
     }
   }
@@ -392,12 +390,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          tagStateView.getNonce(address)
-        }
-      } catch {
-        case _: BlockNotFoundException => BigInteger.ZERO
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        tagStateView.getNonce(address)
       }
     }
   }
@@ -707,7 +701,11 @@ class EthService(
 
   @RpcMethod("eth_sendRawTransaction")
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
-    val tx = EthereumTransactionDecoder.decode(signedTxData)
+    val tx = try {
+      EthereumTransactionDecoder.decode(signedTxData)
+    } catch {
+      case err: RuntimeException => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage))
+    }
     // submit tx to sidechain transaction actor
     val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
     // wait for submit
@@ -721,12 +719,8 @@ class EthService(
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): Array[Byte] = {
     applyOnAccountView { nodeView =>
-      try {
-        getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
-          Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
-        }
-      } catch {
-        case _: BlockNotFoundException => null
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
     }
   }
@@ -1035,4 +1029,10 @@ class EthService(
       }
     }
   }
+
+  @RpcMethod("web3_sha3")
+  def getSHA3(data: Array[Byte]): Hash = {
+      new Hash(Keccak256.hash(data))
+  }
+
 }

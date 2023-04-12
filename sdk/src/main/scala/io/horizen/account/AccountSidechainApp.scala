@@ -6,6 +6,8 @@ import com.google.inject.name.Named
 import io.horizen._
 import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.rpc.handler.RpcHandler
+import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import io.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import io.horizen.account.chain.AccountFeePaymentsInfo
@@ -154,9 +156,27 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+
+  //rpcHandler
+  val rpcHandler = new RpcHandler(
+    new EthService(
+      nodeViewHolderRef,
+      networkControllerRef,
+      settings.restApi.timeout,
+      params,
+      sidechainSettings.ethService,
+      sidechainSettings.sparkzSettings.network.maxIncomingConnections,
+      RpcUtils.getClientVersion,
+      sidechainTransactionActorRef,
+      syncStatusActorRef,
+      sidechainTransactionsCompanion
+    )
+  )
+  //Initialize RpcProcessor object with the rpcHandler
+  val rpcProcessor = RpcProcessor(rpcHandler)
   
   if(sidechainSettings.websocketServer.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer.wsServerPort)
   }
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
@@ -168,7 +188,7 @@ class AccountSidechainApp @Inject()
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, networkControllerRef, sidechainSettings, params, sidechainTransactionActorRef, syncStatusActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala, sidechainTransactionsCompanion)
+    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
   )
 
   val nodeViewProvider: NodeViewProvider[

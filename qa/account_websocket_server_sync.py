@@ -42,7 +42,7 @@ websocket_server_port = 8027
 class SCWsAccountServerSyncTest(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_port=[None, websocket_server_port])
+        super().__init__(withdrawalEpochLength=20, number_of_sidechain_nodes=2, websocket_server_ports=[None, websocket_server_port])
 
     def checkSyncUpdate(self, wsEvent, startingBlock):
         assert_true(wsEvent["syncing"])

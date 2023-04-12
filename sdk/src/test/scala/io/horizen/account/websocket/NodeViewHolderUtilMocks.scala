@@ -21,8 +21,10 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.block.Block
+import sparkz.util.ModifierId
 
 import java.math.BigInteger
+import java.util
 import java.util.Optional
 
 class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with AccountBlockFixture with EthereumTransactionFixture{
@@ -108,6 +110,9 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
     val history: AccountHistory = mock[AccountHistory]
 
     Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ => Optional.of(0))
+    Mockito.when(history.getCurrentHeight).thenAnswer(_ => 100)
+    Mockito.when(history.blockIdByHeight(ArgumentMatchers.any[Int])).thenAnswer(_ => Option.apply(genesisBlock.id))
+    Mockito.when(history.getStorageBlockById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => Option.apply(genesisBlock))
     history
   }
 
@@ -132,6 +137,8 @@ class NodeViewHolderUtilMocks extends MockitoSugar with CompanionsFixture with A
   def getNodeMemoryPoolMock: AccountMemoryPool = {
     val memoryPool: AccountMemoryPool = mock[AccountMemoryPool]
 
+    Mockito.when(memoryPool.getExecutableTransactions).thenAnswer(_ => new util.Vector[ModifierId]())
+    Mockito.when(memoryPool.getNonExecutableTransactions).thenAnswer(_ => new util.Vector[ModifierId]())
     memoryPool
   }
 
