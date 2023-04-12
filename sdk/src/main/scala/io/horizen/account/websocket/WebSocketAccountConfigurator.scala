@@ -11,7 +11,8 @@ class WebSocketAccountConfigurator() extends ServerEndpointConfig.Configurator w
 
   override def modifyHandshake(config: ServerEndpointConfig, request: HandshakeRequest, response: HandshakeResponse): Unit = {
     val remoteAddress = InetAddress.getByName(request.asInstanceOf[RequestContext].getRemoteAddr)
-    if (!remoteAddress.isAnyLocalAddress && !remoteAddress.isLoopbackAddress && !remoteAddress.isSiteLocalAddress && !WebSocketAccountConfigurator.allowedIPs.contains(remoteAddress.getHostAddress))
+    if ((WebSocketAccountConfigurator.allowedIPs.isEmpty && !remoteAddress.isAnyLocalAddress && !remoteAddress.isLoopbackAddress && !remoteAddress.isSiteLocalAddress) ||
+      (WebSocketAccountConfigurator.allowedIPs.nonEmpty && !WebSocketAccountConfigurator.allowedIPs.contains(remoteAddress.getHostAddress)))
       throw new SecurityException(s"IP ${remoteAddress} is not allowed to connect to the WebSocket")
   }
 
