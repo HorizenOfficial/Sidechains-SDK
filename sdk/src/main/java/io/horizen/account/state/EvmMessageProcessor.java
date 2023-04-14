@@ -46,6 +46,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         // setup callback for the evm to access the block hash provider
         try (var blockHashGetter = new BlockHashGetter(blockContext.blockHashProvider)) {
             context.blockHashCallback = blockHashGetter;
+            context.tracer = blockContext.getTracer();
 
             // execute EVM
             var result = Evm.Apply(
@@ -57,8 +58,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point
                 gas.getGas(),
                 msg.getGasPrice(),
-                context,
-                blockContext.getTraceOptions()
+                context
             );
             blockContext.setEvmResult(result);
             // consume gas the EVM has used:

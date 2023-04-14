@@ -1,10 +1,10 @@
 package io.horizen.account.state;
 
 import io.horizen.account.block.AccountBlockHeader;
-import io.horizen.evm.results.EvmResult;
-import io.horizen.evm.TraceOptions;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
+import io.horizen.evm.Tracer;
+import io.horizen.evm.results.EvmResult;
 
 import java.math.BigInteger;
 
@@ -19,7 +19,7 @@ public class BlockContext {
     public final long chainID;
     public final HistoryBlockHashProvider blockHashProvider;
     public final Hash random;
-    private TraceOptions traceOptions;
+    private Tracer tracer;
 
     private EvmResult evmResult;
 
@@ -67,16 +67,16 @@ public class BlockContext {
         this.random = new Hash(blockHeader.vrfOutput().bytes());
     }
 
-    public TraceOptions getTraceOptions() {
-        return this.traceOptions;
+    public Tracer getTracer() {
+        return this.tracer;
     }
 
-    public void enableTracer(TraceOptions options) {
-        this.traceOptions = options == null ? new TraceOptions() : options;
+    public void setTracer(Tracer tracer) {
+        this.tracer = tracer;
     }
 
-    public void disableTracer() {
-        this.traceOptions = null;
+    public void removeTracer() {
+        this.tracer = null;
     }
 
     public EvmResult getEvmResult() {
