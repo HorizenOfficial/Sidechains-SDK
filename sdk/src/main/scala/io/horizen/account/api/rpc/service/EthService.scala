@@ -35,12 +35,14 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import org.bouncycastle.crypto.digests.KeccakDigest
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
+import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
@@ -1027,4 +1029,10 @@ class EthService(
       }
     }
   }
+
+  @RpcMethod("web3_sha3")
+  def getSHA3(data: Array[Byte]): Hash = {
+      new Hash(Keccak256.hash(data))
+  }
+
 }

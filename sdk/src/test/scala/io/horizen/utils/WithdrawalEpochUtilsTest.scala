@@ -1,16 +1,13 @@
 package io.horizen.utils
 
-import java.time.Instant
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
-import io.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, VrfGenerator}
+import io.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture}
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.utxo.block.SidechainBlock
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.util.bytesToId
 
 
 class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with CompanionsFixture {
@@ -20,139 +17,97 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
   val withdrawalEpochLength: Int = 100
 
   @Test
-  def getWithdrawalEpochInfo(): Unit = {
+  def testGetWithdrawalEpochInfo(): Unit = {
     Mockito.when(params.withdrawalEpochLength).thenReturn(withdrawalEpochLength)
 
-    // Test 1: block with no MainchainBlockReferenceData
-    val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
-    var block: SidechainBlock = SidechainBlock.create(
-      bytesToId(new Array[Byte](32)),
-      SidechainBlock.BLOCK_VERSION,
-      Instant.now.getEpochSecond - 10000,
-      Seq(), // no MainchainBlockReferenceData
-      Seq(),
-      Seq(),
-      Seq(),
-      forgerMeta1.blockSignSecret,
-      forgerMeta1.forgingStakeInfo,
-      VrfGenerator.generateProof(456L),
-      MerkleTreeFixture.generateRandomMerklePath(456L),
-      new Array[Byte](32),
-      sidechainTransactionsCompanion
-    ).get
-
+    // Test 1: no MainchainBlockReferenceData
     assertEquals("Epoch info expected to be the same as previous.",
       WithdrawalEpochInfo(1, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(0, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 0),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(0, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
 
 
-    // Test 2: block with 1 MainchainBlockReferenceData
-    val (forgerBox2, forgerMeta2) = ForgerBoxFixture.generateForgerBox(322)
-
-    block = SidechainBlock.create(
-      bytesToId(new Array[Byte](32)),
-      SidechainBlock.BLOCK_VERSION,
-      Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference().data),
-      Seq(),
-      Seq(),
-      Seq(),
-      forgerMeta2.blockSignSecret,
-      forgerMeta2.forgingStakeInfo,
-      VrfGenerator.generateProof(456L),
-      MerkleTreeFixture.generateRandomMerklePath(456L),
-      new Array[Byte](32),
-      sidechainTransactionsCompanion
-    ).get
-
+    // Test 2: 1 MainchainBlockReferenceData
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, 2),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(1, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, withdrawalEpochLength),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(1, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(1, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
 
 
-    // Test 3: block with 2 MainchainBlockReferenceData
-    val (forgerBox3, forgerMeta3) = ForgerBoxFixture.generateForgerBox(332)
-
-    block = SidechainBlock.create(
-      bytesToId(new Array[Byte](32)),
-      SidechainBlock.BLOCK_VERSION,
-      Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference().data, generateMainchainBlockReference().data),
-      Seq(),
-      Seq(),
-      Seq(),
-      forgerMeta3.blockSignSecret,
-      forgerMeta3.forgingStakeInfo,
-      VrfGenerator.generateProof(456L),
-      MerkleTreeFixture.generateRandomMerklePath(456L),
-      new Array[Byte](32),
-      sidechainTransactionsCompanion
-    ).get
-
+    // Test 3: 2 MainchainBlockReferenceData
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, 3),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(2, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
       WithdrawalEpochInfo(1, withdrawalEpochLength),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 2), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(2, WithdrawalEpochInfo(1, withdrawalEpochLength - 2), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(2, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
     )
 
 
-    // Test 4: block with no MainchainBlockReferenceData, but with 1 MainchainHeader
-    val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(328)
-    block = SidechainBlock.create(
-      bytesToId(new Array[Byte](32)),
-      SidechainBlock.BLOCK_VERSION,
-      Instant.now.getEpochSecond - 10000,
-      Seq(), // no MainchainBlockReferenceData
-      Seq(),
-      Seq(generateMainchainBlockReference().header), // MainchainHeader has no impact on WithdrawalEpochInfo
-      Seq(),
-      forgerMeta4.blockSignSecret,
-      forgerMeta4.forgingStakeInfo,
-      VrfGenerator.generateProof(456L),
-      MerkleTreeFixture.generateRandomMerklePath(456L),
-      new Array[Byte](32),
-      sidechainTransactionsCompanion
-    ).get
-
+    // Test 4: no MainchainBlockReferenceData
     assertEquals("Epoch info expected to be the same as previous.",
       WithdrawalEpochInfo(1, 1),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, 1), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(0, WithdrawalEpochInfo(1, 1), params)
     )
 
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 0),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block.mainchainBlockReferencesData.size, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(0, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
+    )
+
+    // Test 5: block with maximum number of MainchainBlockReferenceData
+    assertEquals("Epoch info expected to be the same as previous.",
+      WithdrawalEpochInfo(3, withdrawalEpochLength),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(withdrawalEpochLength, WithdrawalEpochInfo(2, withdrawalEpochLength), params)
+    )
+
+    // Test 6: block with maximum number of MainchainBlockReferenceData starting at index 3
+    assertEquals("Epoch info expected to be the same as previous.",
+      WithdrawalEpochInfo(3, 3),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(withdrawalEpochLength, WithdrawalEpochInfo(2, 3), params)
+    )
+
+    // Test 7: block with maximum number of MainchainBlockReferenceData starting at index 3
+    assertEquals("Epoch info expected to be the same as previous.",
+      WithdrawalEpochInfo(3, 3),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(withdrawalEpochLength, WithdrawalEpochInfo(2, 3), params)
+    )
+
+    // Test 8: block with an invalid number MainchainBlockReferenceData, greater than epoch length
+    assertThrows[IllegalArgumentException](
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(withdrawalEpochLength + 1, WithdrawalEpochInfo(2, 0), params)
+    )
+
+    // Test 9: block with an invalid number MainchainBlockReferenceData, negative
+    assertThrows[IllegalArgumentException](
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(- 1, WithdrawalEpochInfo(2, 0), params)
     )
   }
 
   @Test
-  def hasReachedCertificateSubmissionWindowEnd(): Unit = {
+  def testHasReachedCertificateSubmissionWindowEnd(): Unit = {
     val withdrawalEpochLength: Int = 200
     val submissionWindowLength: Int = 40
     val params: NetworkParams = MainNetParams(withdrawalEpochLength = withdrawalEpochLength)
