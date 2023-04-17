@@ -327,12 +327,16 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def sendRpcResponse(rpcResponse: Object, session: Session): Unit = {
-    session.getAsyncRemote.sendObject(rpcResponse, new SendHandler {
-      override def onResult(sendResult: SendResult): Unit = {
-        if (!sendResult.isOK) {
-          log.debug("Websocket send message failed. "+session.getId)
+    try {
+      session.getAsyncRemote.sendObject(rpcResponse, new SendHandler {
+        override def onResult(sendResult: SendResult): Unit = {
+          if (!sendResult.isOK) {
+            log.debug("Websocket send message failed. "+session.getId)
+          }
         }
-      }
-    })
+      })
+    } catch {
+      case _: Throwable => log.debug("Websocket send message error. "+session.getId)
+    }
   }
 }
