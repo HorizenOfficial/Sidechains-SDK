@@ -6,7 +6,7 @@ package io.horizen.account.state;
 // by a specific instance of MessageProcessor.
 // The specific instance of MessageProcessor is selected by looping on a list (initialized
 // at genesis state creation) and executing the method 'canProcess'.
-// Currently there are 3 main MessageProcessor types:
+// Currently, there are 3 main MessageProcessor types:
 //  - Eoa2Eoa: handling regular coin transfers between EOA accounts
 //  - Evm: handling transactions requiring EVM invocations (such as smart contract deployment/invocation/...)
 //  - NativeSmartContract: Handling SC custom logic not requiring EVM invocations (Forger Stake handling, Withdrawal request ...)
@@ -16,8 +16,8 @@ public interface MessageProcessor {
     // Common pattern: declare a new native smart contract account in the View
     void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
 
-    // Checks if the processor is applicable to the Message
-    boolean canProcess(Message msg, BaseAccountStateView view);
+    // Checks if the processor can execute the given Invocation
+    boolean canProcess(Invocation invocation, BaseAccountStateView view);
 
     /**
      * Apply message to the given view. Possible results:
@@ -27,15 +27,14 @@ public interface MessageProcessor {
      *     <li>message invalid and must not exist in a block: throw any other Exception</li>
      * </ul>
      *
-     * @param msg message to apply to the state
-     * @param view state view
-     * @param gas available gas for the execution
-     * @param blockContext contextual information accessible during execution
+     * @param invocation invocation to execute
+     * @param view       state view
+     * @param context    contextual information accessible during execution
      * @return return data on successful execution
      * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
-     * @throws ExecutionFailedException revert-and-consume-all-gas, also mark the message as "failed"
-     * @throws RuntimeException any other exceptions are consideres as "invalid message"
+     * @throws ExecutionFailedException   revert-and-consume-all-gas, also mark the message as "failed"
+     * @throws RuntimeException           any other exceptions are consideres as "invalid message"
      */
-    byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
-            throws ExecutionFailedException;
+    byte[] process(Invocation invocation, BaseAccountStateView view, ExecutionContext context)
+        throws ExecutionFailedException;
 }

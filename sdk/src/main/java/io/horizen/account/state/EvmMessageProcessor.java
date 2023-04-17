@@ -23,48 +23,47 @@ public class EvmMessageProcessor implements MessageProcessor {
      * </ol>
      */
     @Override
-    public boolean canProcess(Message msg, BaseAccountStateView view) {
-        var to = msg.getTo();
+    public boolean canProcess(Invocation invocation, BaseAccountStateView view) {
+        var to = invocation.callee();
         // contract deployment to a new account
         if (to.isEmpty()) return true;
         return view.isSmartContractAccount(to.get());
     }
 
     @Override
-    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
+    public byte[] process(Invocation invocation, BaseAccountStateView view, ExecutionContext context)
         throws ExecutionFailedException {
         // prepare context
-        var context = new EvmContext();
-        context.chainID = BigInteger.valueOf(blockContext.chainID);
-        context.coinbase = blockContext.forgerAddress;
-        context.gasLimit = blockContext.blockGasLimit;
-        context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
-        context.time = BigInteger.valueOf(blockContext.timestamp);
-        context.baseFee = blockContext.baseFee;
-        context.random = blockContext.random;
+        var block = context.blockContext();
+        var evmContext = new EvmContext();
+        evmContext.chainID = BigInteger.valueOf(block.chainID);
+        evmContext.coinbase = block.forgerAddress;
+        evmContext.gasLimit = block.blockGasLimit;
+        evmContext.blockNumber = BigInteger.valueOf(block.blockNumber);
+        evmContext.time = BigInteger.valueOf(block.timestamp);
+        evmContext.baseFee = block.baseFee;
+        evmContext.random = block.random;
 
         // setup callback for the evm to access the block hash provider
-        try (var blockHashGetter = new BlockHashGetter(blockContext.blockHashProvider)) {
-            context.blockHashCallback = blockHashGetter;
-            context.tracer = blockContext.getTracer();
+        try (var blockHashGetter = new BlockHashGetter(block.blockHashProvider)) {
+            evmContext.blockHashCallback = blockHashGetter;
+            evmContext.tracer = block.getTracer();
 
             // execute EVM
             var result = Evm.Apply(
                 view.getStateDbHandle(),
-                msg.getFrom(),
-                msg.getTo().orElse(null),
-                msg.getValue(),
-                msg.getData(),
-                // use gas from the pool not the message, because intrinsic gas was already spent at this point
-                gas.getGas(),
-                msg.getGasPrice(),
-                context
+                invocation.caller(),
+                invocation.callee().getOrElse(() -> null),
+                invocation.value(),
+                invocation.input(),
+                invocation.gas().getGas(),
+                context.msg().getGasPrice(),
+                evmContext
             );
-            blockContext.setEvmResult(result);
             // consume gas the EVM has used:
-            // the EVM will never consume more gas than is available, hence this should never throw
-            // and ExecutionFailedException is thrown if the EVM reported "out of gas"
-            gas.subGas(result.usedGas);
+            // the EVM will never consume more gas than is available, hence consuming used gas here should never throw,
+            // instead the EVM will report an "out of gas" error which we throw as an ExecutionFailedException
+            invocation.gas().subGas(result.usedGas);
             if (result.reverted) throw new ExecutionRevertedException(result.returnData);
             if (!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
             return result.returnData;

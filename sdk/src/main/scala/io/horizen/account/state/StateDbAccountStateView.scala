@@ -160,7 +160,7 @@ class StateDbAccountStateView(
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext, msg).transition()
   }
 
   /**

@@ -4,7 +4,6 @@ import io.horizen.account.block.AccountBlockHeader;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 import io.horizen.evm.Tracer;
-import io.horizen.evm.results.EvmResult;
 
 import java.math.BigInteger;
 
@@ -20,8 +19,6 @@ public class BlockContext {
     public final HistoryBlockHashProvider blockHashProvider;
     public final Hash random;
     private Tracer tracer;
-
-    private EvmResult evmResult;
 
     public BlockContext(
         Address forgerAddress,
@@ -77,13 +74,5 @@ public class BlockContext {
 
     public void removeTracer() {
         this.tracer = null;
-    }
-
-    public EvmResult getEvmResult() {
-        return evmResult;
-    }
-
-    public void setEvmResult(EvmResult evmResult) {
-        this.evmResult = evmResult;
     }
 }

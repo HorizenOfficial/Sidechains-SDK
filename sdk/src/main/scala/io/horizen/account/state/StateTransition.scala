@@ -4,13 +4,18 @@ import io.horizen.account.utils.BigIntegerUtil
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 class StateTransition(
     view: StateDbAccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
-    blockContext: BlockContext
-) extends SparkzLogging {
+    val blockContext: BlockContext,
+    val msg: Message,
+) extends SparkzLogging with ExecutionContext {
+
+  // depth of the current call stack
+  private var callDepth: Int = 0
 
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
@@ -23,63 +28,40 @@ class StateTransition(
    */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def transition(msg: Message): Array[Byte] = {
+  def transition(): Array[Byte] = {
     // do preliminary checks
     preCheck(msg)
     // save the remaining block gas before any changes
     val initialBlockGas = blockGasPool.getGas
     // create a snapshot before any changes are made
-    val initialRevision = view.snapshot
+    val rollback = view.snapshot
+    var skipRefund = false
+    // allocate gas for processing this message
+    val gasPool = buyGas(msg)
     try {
-      // allocate gas for processing this message
-      val gasPool = buyGas(msg)
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
       // reset and prepare account access list
       view.setupAccessList(msg)
-      // find and execute the first matching processor
-      messageProcessors.find(_.canProcess(msg, view)) match {
-        case None =>
-          log.error(s"No message processor found for executing message $msg")
-          throw new IllegalArgumentException("Unable to process message.")
-        case Some(processor) =>
-          // increase the nonce by 1
-          view.increaseNonce(msg.getFrom)
-          // create a snapshot before any changes are made by the processor
-          val revisionProcessor = view.snapshot
-          var skipRefund = false
-          try {
-            processor.process(msg, view, gasPool, blockContext)
-          } catch {
-            // if the processor throws ExecutionRevertedException we revert changes
-            case err: ExecutionRevertedException =>
-              view.revertToSnapshot(revisionProcessor)
-              throw err
-            // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
-            case err: ExecutionFailedException =>
-              view.revertToSnapshot(revisionProcessor)
-              gasPool.subGas(gasPool.getGas)
-              throw err
-            case err : Throwable =>
-              // do not process refunds in this case, all changes will be reverted
-              skipRefund = true
-              throw err
-          } finally {
-            if (!skipRefund) refundGas(msg, gasPool)
-          }
-      }
+      // increase the nonce by 1
+      view.increaseNonce(msg.getFrom)
+      execute(Invocation(msg.getFrom, msg.getTo.asScala, msg.getValue, msg.getData, gasPool, readOnly = false))
     } catch {
       // execution failed was already handled
       case err: ExecutionFailedException => throw err
       // any other exception will bubble up and invalidate the block
       case err: Throwable =>
+        // do not process refunds in this case, all changes will be reverted
+        skipRefund = true
         // revert all changes, even buying gas and increasing the nonce
-        view.revertToSnapshot(initialRevision)
+        view.revertToSnapshot(rollback)
         // revert any changes to the block gas pool
         blockGasPool.addGas(initialBlockGas.subtract(blockGasPool.getGas))
         throw err
+    } finally {
+      if (!skipRefund) refundGas(msg, gasPool)
     }
   }
 
@@ -145,5 +127,39 @@ class StateTransition(
     view.addBalance(msg.getFrom, remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
+  }
+
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
+  def execute(invocation: Invocation): Array[Byte] = {
+    // limit call depth to 1024
+    if (callDepth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
+    callDepth += 1;
+    try {
+      // find and execute the first matching processor
+      messageProcessors.find(_.canProcess(invocation, view)) match {
+        case None =>
+          log.error(s"No message processor found for invocation: $invocation")
+          throw new IllegalArgumentException("Unable to execute invocation.")
+        case Some(processor) =>
+          // create a snapshot before any changes are made by the processor
+          val revert = view.snapshot
+          try {
+            processor.process(invocation, view, this)
+          } catch {
+            // if the processor throws ExecutionRevertedException we revert changes
+            case err: ExecutionRevertedException =>
+              view.revertToSnapshot(revert)
+              throw err
+            // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
+            case err: ExecutionFailedException =>
+              view.revertToSnapshot(revert)
+              invocation.gas.subGas(invocation.gas.getGas)
+              throw err
+          }
+      }
+    } finally {
+      callDepth -= 1;
+    }
   }
 }
