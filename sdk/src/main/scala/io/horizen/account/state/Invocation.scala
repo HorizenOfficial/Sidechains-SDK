@@ -3,6 +3,7 @@ package io.horizen.account.state
 import io.horizen.evm.Address
 
 import java.math.BigInteger
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 case class Invocation(
     caller: Address,
@@ -12,6 +13,11 @@ case class Invocation(
     gas: GasPool,
     readOnly: Boolean,
 )
+
+object Invocation {
+  def fromMessage(msg: Message, gasPool: GasPool): Invocation =
+    Invocation(msg.getFrom, msg.getTo.asScala, msg.getValue, msg.getData, gasPool, readOnly = false)
+}
 
 //case class Invocation(callee: Address, input: Array[Byte], gas: GasPool)
 //case class Call() extends Invocation()

@@ -4,7 +4,6 @@ import io.horizen.account.utils.BigIntegerUtil
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 class StateTransition(
     view: StateDbAccountStateView,
@@ -47,7 +46,7 @@ class StateTransition(
       view.setupAccessList(msg)
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
-      execute(Invocation(msg.getFrom, msg.getTo.asScala, msg.getValue, msg.getData, gasPool, readOnly = false))
+      execute(Invocation.fromMessage(msg, gasPool))
     } catch {
       // execution failed was already handled
       case err: ExecutionFailedException => throw err

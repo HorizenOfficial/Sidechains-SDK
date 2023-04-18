@@ -18,13 +18,14 @@ import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.math.BigInteger
+import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
 
-  private[horizen] def addScCreationForgerStake(view: BaseAccountStateView, owner: Address, value: BigInteger, data: Array[Byte]): Array[Byte]
+  private[horizen] def addScCreationForgerStake(view: BaseAccountStateView, owner: Address, value: BigInteger, data: AddNewStakeCmdInput): Array[Byte]
 
   private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
 
@@ -120,17 +121,34 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
-
-  override def addScCreationForgerStake(view: BaseAccountStateView, owner: Address, value: BigInteger, data: Array[Byte]): Array[Byte] = {
-    doAddNewStakeCmd(Invocation(owner, Some(contractAddress), value, data, null, readOnly = false), view, isGenesisScCreation = true)
+  override def addScCreationForgerStake(
+      view: BaseAccountStateView,
+      owner: Address,
+      value: BigInteger,
+      data: AddNewStakeCmdInput
+  ): Array[Byte] = {
+    val msg = new Message(
+      owner,
+      Optional.of(contractAddress),
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      value,
+      // a negative nonce value will rule out collision with real transactions
+      BigInteger.ZERO.negate(),
+      Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), data.encode()),
+      false
+    )
+    doAddNewStakeCmd(Invocation.fromMessage(msg, null), view, msg, isGenesisScCreation = true)
   }
 
-  def doAddNewStakeCmd(invocation: Invocation, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): Array[Byte] = {
+  def doAddNewStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isGenesisScCreation: Boolean = false): Array[Byte] = {
 
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-//    if (msg.getNonce == null) {
-//      throw new ExecutionRevertedException("Call must include a nonce")
-//    }
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
 
     val stakedAmount = invocation.value
 
@@ -362,7 +380,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val gasView = view.getGasTrackedView(invocation.gas)
     getFunctionSignature(invocation.input) match {
       case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView)
-      case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView)
+      case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg)
       case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
