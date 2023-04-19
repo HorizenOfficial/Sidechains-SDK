@@ -1,15 +1,19 @@
 package io.horizen.account.state;
 
-import io.horizen.evm.BlockHashCallback;
-import io.horizen.evm.Evm;
-import io.horizen.evm.EvmContext;
-import io.horizen.evm.Hash;
+import io.horizen.account.utils.WellKnownAddresses;
+import io.horizen.evm.*;
 import io.horizen.utils.BytesUtils;
+import scala.Option;
 import scala.compat.java8.OptionConverters;
 
 import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
+    private static final Address[] nativeContractAddresses = new Address[] {
+        WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS(),
+        WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS(),
+    };
+
     @Override
     public void init(BaseAccountStateView view) {
         // nothing to do here
@@ -45,8 +49,13 @@ public class EvmMessageProcessor implements MessageProcessor {
         evmContext.random = block.random;
 
         // setup callback for the evm to access the block hash provider
-        try (var blockHashGetter = new BlockHashGetter(block.blockHashProvider)) {
+        try (
+            var blockHashGetter = new BlockHashGetter(block.blockHashProvider);
+            var nativeContractProxy = new NativeContractProxy(context)
+        ) {
             evmContext.blockHashCallback = blockHashGetter;
+            evmContext.externalContracts = nativeContractAddresses;
+            evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer();
 
             // execute EVM
@@ -83,6 +92,37 @@ public class EvmMessageProcessor implements MessageProcessor {
                 .toJava(provider.blockIdByHeight(blockNumber.intValueExact()))
                 .map(hex -> new Hash(BytesUtils.fromHexString(hex)))
                 .orElse(Hash.ZERO);
+        }
+    }
+
+    private static class NativeContractProxy extends InvocationCallback {
+        private final ExecutionContext context;
+
+        public NativeContractProxy(ExecutionContext context) {
+            this.context = context;
+        }
+
+        @Override
+        protected InvocationResult execute(io.horizen.evm.Invocation invocation) {
+            var gasPool = new GasPool(invocation.gas);
+            try {
+                var returnData = context.execute(
+                    Invocation.apply(
+                        invocation.caller,
+                        Option.apply(invocation.callee),
+                        invocation.value,
+                        invocation.input,
+                        gasPool,
+                        invocation.readOnly
+                    )
+                );
+                return new InvocationResult(returnData, gasPool.getGas(), "");
+            } catch (ExecutionRevertedException e) {
+                // forward the revert reason if any
+                return new InvocationResult(e.revertReason, gasPool.getGas(), e.getMessage());
+            } catch (Exception e) {
+                return new InvocationResult(new byte[0], gasPool.getGas(), e.getMessage());
+            }
         }
     }
 }
