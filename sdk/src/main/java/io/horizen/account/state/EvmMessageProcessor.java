@@ -65,14 +65,14 @@ public class EvmMessageProcessor implements MessageProcessor {
                 invocation.callee().getOrElse(() -> null),
                 invocation.value(),
                 invocation.input(),
-                invocation.gas().getGas(),
+                invocation.gasPool().getGas(),
                 context.msg().getGasPrice(),
                 evmContext
             );
             // consume gas the EVM has used:
             // the EVM will never consume more gas than is available, hence consuming used gas here should never throw,
             // instead the EVM will report an "out of gas" error which we throw as an ExecutionFailedException
-            invocation.gas().subGas(result.usedGas);
+            invocation.gasPool().subGas(result.usedGas);
             if (result.reverted) throw new ExecutionRevertedException(result.returnData);
             if (!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
             return result.returnData;
@@ -119,7 +119,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 return new InvocationResult(returnData, gasPool.getGas(), "");
             } catch (ExecutionRevertedException e) {
                 // forward the revert reason if any
-                return new InvocationResult(e.revertReason, gasPool.getGas(), e.getMessage());
+                return new InvocationResult(e.returnData, gasPool.getGas(), e.getMessage());
             } catch (Exception e) {
                 return new InvocationResult(new byte[0], gasPool.getGas(), e.getMessage());
             }

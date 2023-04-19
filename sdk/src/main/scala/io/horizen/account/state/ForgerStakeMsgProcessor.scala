@@ -377,7 +377,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(invocation.gas)
+    val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
       case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView)
       case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg)

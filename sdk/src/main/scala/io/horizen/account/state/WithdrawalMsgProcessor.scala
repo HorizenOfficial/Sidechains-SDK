@@ -36,7 +36,7 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
 
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(invocation.gas)
+    val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
       case GetListOfWithdrawalReqsCmdSig =>
         execGetListOfWithdrawalReqRecords(invocation, gasView)

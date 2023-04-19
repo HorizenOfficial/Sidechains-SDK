@@ -153,7 +153,7 @@ class StateTransition(
             // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
             case err: ExecutionFailedException =>
               view.revertToSnapshot(revert)
-              invocation.gas.subGas(invocation.gas.getGas)
+              invocation.gasPool.subGas(invocation.gasPool.getGas)
               throw err
           }
       }

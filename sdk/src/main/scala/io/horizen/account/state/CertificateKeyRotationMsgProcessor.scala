@@ -38,7 +38,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(invocation.gas)
+    val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
       case SubmitKeyRotationReqCmdSig =>
         execSubmitKeyRotation(invocation, gasView, context.blockContext.withdrawalEpochNumber)

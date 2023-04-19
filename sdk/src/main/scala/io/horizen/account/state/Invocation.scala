@@ -10,11 +10,12 @@ case class Invocation(
     callee: Option[Address],
     value: BigInteger,
     input: Array[Byte],
-    gas: GasPool,
+    gasPool: GasPool,
     readOnly: Boolean,
 )
 
 object Invocation {
+
   /**
    * Create top level invocation from a message.
    */
