@@ -15,8 +15,24 @@ case class Invocation(
 )
 
 object Invocation {
+  /**
+   * Create top level invocation from a message.
+   */
   def fromMessage(msg: Message, gasPool: GasPool): Invocation =
     Invocation(msg.getFrom, msg.getTo.asScala, msg.getValue, msg.getData, gasPool, readOnly = false)
+
+  /**
+   * Create top level invocation from a message, without any gas. Mostly useful for tests.
+   */
+  def fromMessage(msg: Message): Invocation =
+    Invocation(
+      msg.getFrom,
+      msg.getTo.asScala,
+      msg.getValue,
+      msg.getData,
+      new GasPool(BigInteger.ZERO),
+      readOnly = false
+    )
 }
 
 //case class Invocation(callee: Address, input: Array[Byte], gas: GasPool)

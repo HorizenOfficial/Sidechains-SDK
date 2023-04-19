@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
-import io.horizen.fixtures.SecretFixture
 import io.horizen.evm.Address
+import io.horizen.fixtures.SecretFixture
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -41,14 +41,16 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      EoaMessageProcessor.canProcess(msg, mockStateView))
+      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView)
+    )
 
     // Test 2: send to EOA account, tx with no-empty "data"
     val data = new Array[Byte](1000)
     val msgWithData = getMessage(address, value, data)
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      EoaMessageProcessor.canProcess(msgWithData, mockStateView))
+      TestContext.canProcess(EoaMessageProcessor, msgWithData, mockStateView)
+    )
 
     // Test 3: Failure: send to smart contract account
     Mockito.reset(mockStateView)
@@ -60,21 +62,24 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(msg, mockStateView))
+      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView)
+    )
 
     // Test 4: Failure: to is null
     Mockito.reset(mockStateView)
     val contractDeclarationMessage = getMessage(null, value, data)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
+      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage, mockStateView)
+    )
 
     // Test 4: Failure: data is empty array
     Mockito.reset(mockStateView)
     val contractDeclarationMessage2 = getMessage(null, value, Array.emptyByteArray)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(contractDeclarationMessage2, mockStateView))
+      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage2, mockStateView)
+    )
   }
 
   @Test
@@ -105,13 +110,17 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     Mockito
       .when(mockStateView.subBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenThrow(new ExecutionFailedException("something went error"))
-    assertThrows[ExecutionFailedException](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
+    assertThrows[ExecutionFailedException](
+      withGas(TestContext.process(EoaMessageProcessor, msg, mockStateView, defaultBlockContext, _))
+    )
 
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
     Mockito
       .when(mockStateView.addBalance(ArgumentMatchers.any[Address], ArgumentMatchers.any[BigInteger]))
       .thenThrow(new ExecutionFailedException("something went error"))
-    assertThrows[ExecutionFailedException](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
+    assertThrows[ExecutionFailedException](
+      withGas(TestContext.process(EoaMessageProcessor, msg, mockStateView, defaultBlockContext, _))
+    )
   }
 }

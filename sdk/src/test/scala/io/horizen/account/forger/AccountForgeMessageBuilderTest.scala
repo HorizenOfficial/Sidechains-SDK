@@ -1,6 +1,5 @@
 package io.horizen.account.forger
 
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.block.AccountBlockHeader
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory
@@ -16,16 +15,17 @@ import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncod
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
-import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.horizen.state.BaseStateReader
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
-import io.horizen.evm.{Address, Hash}
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
@@ -390,7 +390,7 @@ class AccountForgeMessageBuilderTest
     Mockito
       .when(
         mockMsgProcessor.canProcess(
-          ArgumentMatchers.any[Message],
+          ArgumentMatchers.any[Invocation],
           ArgumentMatchers.any[BaseAccountStateView]
         )
       )
@@ -398,10 +398,9 @@ class AccountForgeMessageBuilderTest
     Mockito
       .when(
         mockMsgProcessor.process(
-          ArgumentMatchers.any[Message],
+          ArgumentMatchers.any[Invocation],
           ArgumentMatchers.any[BaseAccountStateView],
-          ArgumentMatchers.any[GasPool],
-          ArgumentMatchers.any[BlockContext]
+          ArgumentMatchers.any[ExecutionContext]
         )
       )
       .thenThrow(new RuntimeException("kaputt"))

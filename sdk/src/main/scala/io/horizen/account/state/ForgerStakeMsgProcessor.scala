@@ -140,7 +140,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), data.encode()),
       false
     )
-    doAddNewStakeCmd(Invocation.fromMessage(msg, null), view, msg, isGenesisScCreation = true)
+    doAddNewStakeCmd(Invocation.fromMessage(msg), view, msg, isGenesisScCreation = true)
   }
 
   def doAddNewStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isGenesisScCreation: Boolean = false): Array[Byte] = {

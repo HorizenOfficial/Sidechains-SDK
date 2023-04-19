@@ -168,17 +168,13 @@ class CertificateKeyRotationMsgProcessorTest
       }
     }
 
-    withGas {
-      certificateKeyRotationMsgProcessor.process(
-        getMessage(
-          to = contractAddress,
-          data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
-          nonce = randomNonce
-        ), view, _, blockContext
-      )
-    }
+    val msg = getMessage(
+      to = contractAddress,
+      data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
+      nonce = randomNonce
+    )
+    withGas(TestContext.process(certificateKeyRotationMsgProcessor, msg, view, blockContext, _))
   }
-
 
   private def processBadKeyRotationMessage(newKey: SchnorrSecret, keyRotationProof: KeyRotationProof, view: AccountStateView, epoch: Int = 0,
                                            spuriousBytes: Option[Array[Byte]], badBytes: Option[Array[Byte]], errMsg : String) = {
@@ -193,7 +189,6 @@ class CertificateKeyRotationMsgProcessorTest
     //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
     assertEquals("Wrong MethodId for SubmitKeyRotationReqCmdSig", "288d61cc", CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig)
   }
-
 
   @Test
   def testProcessShortOpCode(): Unit = {
