@@ -1,15 +1,13 @@
 import json
 import logging
-from typing import Tuple, Any
-from eth_abi import encode_abi, decode_abi
-from eth_utils import to_checksum_address
-
-from SidechainTestFramework.account.ac_smart_contract_compile import prepare_resources, get_cwd
 import os
-from dataclasses import dataclass
-
+from SidechainTestFramework.account.ac_smart_contract_compile import prepare_resources, get_cwd
 from SidechainTestFramework.account.ac_utils import CallMethod, format_eoa, format_evm, ensure_nonce, ensure_chain_id
 from SidechainTestFramework.account.mk_contract_address import mk_contract_address
+from dataclasses import dataclass
+from eth_abi import encode_abi, decode_abi
+from eth_utils import to_checksum_address
+from typing import Tuple, Any
 
 
 class EvmExecutionError(RuntimeError):
@@ -128,7 +126,7 @@ class SmartContract:
         raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
-                    gasLimit: int = None, gasPrice: int = None, value: int = 0, tag: str = 'latest'):
+                    gasLimit: int = None, gasPrice: int = None, value: int = 0, tag: str = 'latest', eip1898: bool = False, isBlockHash: bool = False):
         """Calls a function in read-only mode and returns the data if applicable
 
                Parameters:
@@ -142,10 +140,27 @@ class SmartContract:
                    gasPrice: The gasPrice to use
                    value: The value to use
                    tag: The block tag to use when calling rpc methods
+                   eip1898: Boolean use to manage EIP-1898 request object
+                   isBlockHash: If eip1898 and this field are true the tag is the block hash, the block number will be retrieved via rpc (for nonce calculation)
 
                Returns:
                    A tuple with the included decoded data if applicable, None else
        """
+
+        # EIP-1898 input managed
+        rpc_tag = {}
+        if eip1898 and isBlockHash:
+            rpc_tag = {
+                "blockHash": tag
+            }
+            tag = node.rpc_eth_getBlockByHash(tag, False)['result']['number']
+        elif eip1898:
+            rpc_tag = {
+                "blockNumber": tag
+            }
+        else:
+            rpc_tag = tag
+
         request = {
             "from": format_evm(fromAddress),
             "to": format_evm(toAddress),
@@ -157,7 +172,8 @@ class SmartContract:
             request["gas"] = gasLimit
         if gasPrice is not None:
             request["gasPrice"] = gasPrice
-        response = node.rpc_eth_call(request, tag)
+
+        response = node.rpc_eth_call(request, rpc_tag)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(format_eoa(response['result'])))
