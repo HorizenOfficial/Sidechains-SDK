@@ -3,11 +3,9 @@ import logging
 import os
 import random
 import subprocess
-from enum import Enum
-
-from eth_utils import to_checksum_address
-
 from SidechainTestFramework.scutil import assert_equal, generate_next_block
+from enum import Enum
+from eth_utils import to_checksum_address
 
 cwd = None
 nodeModulesInstalled = False
@@ -202,10 +200,10 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = CallM
 
 
 def contract_function_static_call(node, smart_contract_type, smart_contract_address, from_address, method, *args,
-                                  tag='latest'):
+                                  tag = 'latest', eip1898 = False, isBlockHash = False):
     logging.info("Calling {}: using static call function".format(method))
     res = smart_contract_type.static_call(node, method, *args, fromAddress=from_address,
-                                          toAddress=smart_contract_address, tag=tag)
+                                          toAddress=smart_contract_address, tag=tag, eip1898=eip1898, isBlockHash=isBlockHash)
     return res
 
 
