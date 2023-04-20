@@ -79,7 +79,7 @@ The following command-line options can be used in addition:
 - `--testlogfilelevel=<log level>`: log level for test logging on log file. Valid values are: fatal, error, warn, info, debug, notset
 - `--testlogconsolelevel=<log level>`: log level for test logging on console. Valid values are: fatal, error, warn, info, debug, notset
 
-Additional options can be found in sc_test_framework.py file.
+Additional options can be found in sc_test_framework.py or multi_sc_test_framework.py files.
 
 
 **Template configuration files**
@@ -132,3 +132,10 @@ If you use console, run with parameters, for example:
 The processes launched with the debug agent are shown under _**Java**_
 9. Select the local process containing "node" and select the node with proper number
 10. Wait a little, execution should stop on breakpoint in Java/Scala code
+
+**Multi Sidechains Tests**
+For implementing a test that needs more than one sidechain, MultiSidechainTestFramework class can be used.
+By default, this class creates and starts 2 sidechains, one utxo and one EVM, but it can be customized.
+It supports the same command-line options defined for single sidechain tests, with the difference that sidechain node 
+specific options must specify the sidechain the node belongs to.
+See the comments in multi_sc_test_framework.py file for additional information.

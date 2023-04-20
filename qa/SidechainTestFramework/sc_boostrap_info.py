@@ -64,7 +64,7 @@ class SCCreationInfo(object):
 
         if sc_creation_version != SC_CREATION_VERSION_2 and is_non_ceasing:
             raise RuntimeError('Cannot initialize non-ceasing sidechain with version different '
-                               'from ' + SC_CREATION_VERSION_2 + '. Found ' + sc_creation_version)
+                               'from ' + str(SC_CREATION_VERSION_2) + '. Found ' + str(sc_creation_version))
         self.circuit_type = circuit_type
 
 
