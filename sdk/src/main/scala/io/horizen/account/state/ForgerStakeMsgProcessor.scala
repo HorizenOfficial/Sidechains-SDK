@@ -136,7 +136,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       BigInteger.ZERO,
       value,
       // a negative nonce value will rule out collision with real transactions
-      BigInteger.ZERO.negate(),
+      BigInteger.ONE.negate(),
       Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), data.encode()),
       false
     )
