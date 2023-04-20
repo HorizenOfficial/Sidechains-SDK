@@ -22,7 +22,7 @@ import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfer
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.{BigIntegerUInt256, _}
+import io.horizen.account.utils._
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
@@ -35,7 +35,6 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import org.bouncycastle.crypto.digests.KeccakDigest
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -47,6 +46,7 @@ import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
@@ -220,7 +220,14 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
-  def call(params: TransactionArgs, tag: String): Array[Byte] = applyOnAccountView(doCall(_, params, tag))
+  def call(params: TransactionArgs, input: Object): Array[Byte] = {
+    applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
+      doCall(nodeView, params, tag)
+    }
+  }
+
+
 
   @RpcMethod("eth_sendTransaction")
   def sendTransaction(params: TransactionArgs): Hash = {
@@ -378,18 +385,64 @@ class EthService(
 
   @RpcMethod("eth_getBalance")
   @RpcOptionalParameters(1)
-  def getBalance(address: Address, tag: String): BigInteger = {
+  def getBalance(address: Address, input: Object): BigInteger = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         tagStateView.getBalance(address)
       }
     }
   }
 
+  // Retrieve block tag from an EIP-1898 rpc input
+  // if the input is a string-string map extract the tag from block number or block hash
+  // if the input is a string it return its value
+  // for the other inputs an exception is thrown
+  private def getBlockTagByEip1898Input(nodeView: NV, input: Object): String = {
+    var tag: String = ""
+    val blockNumberMapKey = "blockNumber"; val blockHashMapKey = "blockHash"
+
+    // string-string map case
+    if (input.isInstanceOf[Map[String, String]]) {
+      val inputMap = input.asInstanceOf[Map[String, String]]
+      // if both keys are present an rpc-exception is thrown
+      if (inputMap.contains(blockNumberMapKey) && inputMap.contains(blockHashMapKey)) {
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both block number and block hash can't be passed as input parameter"))
+      }
+      // block number case
+      else if (inputMap.contains(blockNumberMapKey)) {
+        tag = inputMap.get(blockNumberMapKey).get
+      }
+      // block hash case
+      else if (inputMap.contains(blockHashMapKey)) {
+        // if the block hash is not null retrieve its tag, otherwise return null
+        if (inputMap.get(blockHashMapKey).get!=null)
+          tag = getBlockTagById(nodeView, inputMap.get(blockHashMapKey).get.substring(2))
+        else tag = null
+      }
+      else return null // return null tag in all the other cases related to a map input
+    }
+
+    // legacy string input
+    else if (input.isInstanceOf[String]) {
+      tag = input.asInstanceOf[String]
+    } else if(input==null) {
+      tag = null
+    }
+
+    // throw an invalid params exception in all the other cases
+    else {
+      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "input parameters format is not correct"))
+    }
+    tag
+  }
+
+
   @RpcMethod("eth_getTransactionCount")
   @RpcOptionalParameters(1)
-  def getTransactionCount(address: Address, tag: String): BigInteger = {
+  def getTransactionCount(address: Address, input: Object): BigInteger = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         tagStateView.getNonce(address)
       }
@@ -487,6 +540,15 @@ class EthService(
       case height => ModifierId(nodeView.history.blockIdByHeight(height).getOrElse(throw BlockNotFoundException()))
     }
     blockId
+  }
+
+  private def getBlockTagById(nodeView: NV, id: String): String = {
+    val blockNumberOptional = nodeView.history.getBlockHeightById(id)
+    if(blockNumberOptional.isEmpty)
+      throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash"))
+    val blockNumber = blockNumberOptional.get()
+    val blockTag = "0x" + blockNumber.longValue().toHexString
+    blockTag
   }
 
   private def getBlockIdByHash(tag: String): Option[ModifierId] = {
@@ -717,8 +779,9 @@ class EthService(
 
   @RpcMethod("eth_getCode")
   @RpcOptionalParameters(1)
-  def getCode(address: Address, tag: String): Array[Byte] = {
+  def getCode(address: Address, input: Object): Array[Byte] = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
@@ -906,9 +969,10 @@ class EthService(
 
   @RpcMethod("eth_getStorageAt")
   @RpcOptionalParameters(1)
-  def getStorageAt(address: Address, key: BigInteger, tag: String): Hash = {
+  def getStorageAt(address: Address, key: BigInteger, input: Object): Hash = {
     val storageKey = BigIntegerUtil.toUint256Bytes(key)
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new Hash(stateView.getAccountStorage(address, storageKey))
       }
@@ -917,10 +981,11 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[BigInteger], tag: String): ProofAccountResult = {
+  def getProof(address: Address, keys: Array[BigInteger], input: Object): ProofAccountResult = {
     val storageKeys = keys.map(BigIntegerUtil.toUint256Bytes)
     applyOnAccountView { nodeView =>
       try {
+        val tag = getBlockTagByEip1898Input(nodeView, input)
         getStateViewAtTag(nodeView, tag) { (stateView, _) =>
           stateView.getProof(address, storageKeys)
         }

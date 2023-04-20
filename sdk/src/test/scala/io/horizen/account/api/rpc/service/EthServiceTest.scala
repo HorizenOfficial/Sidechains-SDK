@@ -907,15 +907,48 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     // tag: empty string is not valid
     ("0x1234567890123456789012345678901234567890", ""),
     // tag: block with number 0x1337 does not exist
-    ("0x1234567891011121314151617181920212223242", "0x1337")
+    ("0x1234567891011121314151617181920212223242", "0x1337"),
+    // EIP-1898 input object - tag: block with number 0x1337 does not exist
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x1337")),
+    // EIP-1898 input object - tag: empty string is not valid
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "")),
+    // EIP-1898 input object - tag: block with hash 0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253 does not exist
+    ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+    // EIP-1898 input object both blockNumber and blockHash can't be passed as input parameter
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null, "blockHash" -> null)),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "", "blockHash" -> "")),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x1", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"))
+  )
+
+  private val invalidCasesAddressAndTagEIP1898 = Table(
+    ("Address", "Tag"),
+    // EIP-1898 input object - tag: block with number 0x1337 does not exist
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x1337")),
+    // EIP-1898 input object - tag: empty string is not valid
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "")),
+    // EIP-1898 input object - tag: block with hash 0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253 does not exist
+    ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+    // EIP-1898 input object both blockNumber and blockHash can't be passed as input parameter
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null, "blockHash" -> null)),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "", "blockHash" -> "")),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x1", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x1", "blockHash" -> "")),
+    ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"))
   )
 
   @Test
   def eth_getBalance(): Unit = {
     val validCases = Table(
       ("Address", "tag", "Expected output"),
+      ("0x1234567891011121314151617181920212223242", "0x2", "\"0x7b\""),
       ("0x1234567891011121314151617181920212223242", "latest", "\"0x7b\""),
-      ("0x1234567891011121314151617181920212223241", "latest", "\"0x16345785d89ffff\"")
+      ("0x1234567891011121314151617181920212223242", null, "\"0x7b\""),
+      ("0x1234567891011121314151617181920212223241", "latest", "\"0x16345785d89ffff\""),
+      // EIP-1898 cases
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2"), "\"0x7b\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null), "\"0x7b\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), "\"0x7b\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> null), "\"0x7b\"")
     )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
@@ -924,17 +957,26 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
-        rpc("eth_getBalance", address, tag)
-      }
-    }
+        rpc("eth_getBalance", address, tag)}}
+
+    forAll(invalidCasesAddressAndTagEIP1898) { (address, tag) =>
+      assertThrows[RpcException] {
+        rpc("eth_getBalance", address, tag)}}
   }
 
   @Test
   def eth_getCode(): Unit = {
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
+      ("0x1234567891011121314151617181920212223242", "0x2", "\"0x1234\""),
       ("0x1234567891011121314151617181920212223242", "latest", "\"0x1234\""),
-      ("0x1234567890123456789012345678901234567890", "latest", "\"0x\"")
+      ("0x1234567891011121314151617181920212223242", null, "\"0x1234\""),
+      ("0x1234567890123456789012345678901234567890", "latest", "\"0x\""),
+      // EIP-1898 cases
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2"), "\"0x1234\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null), "\"0x1234\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), "\"0x1234\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> null), "\"0x1234\""),
     )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
@@ -943,17 +985,27 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
-        rpc("eth_getCode", address, tag)
-      }
-    }
+        rpc("eth_getCode", address, tag)}}
+
+    forAll(invalidCasesAddressAndTagEIP1898) { (address, tag) =>
+      assertThrows[RpcException] {
+        rpc("eth_getCode", address, tag)}}
   }
 
   @Test
   def eth_getTransactionCount(): Unit = {
+
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
+      ("0x1234567891011121314151617181920212223242", "0x2", "\"0x1\""),
       ("0x1234567891011121314151617181920212223242", "latest", "\"0x1\""),
-      ("0x1234567890123456789012345678901234567890", "latest", "\"0x0\"")
+      ("0x1234567891011121314151617181920212223242", null, "\"0x1\""),
+      ("0x1234567890123456789012345678901234567890", "0x2", "\"0x0\""),
+      // EIP-1898 cases
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2"), "\"0x1\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null), "\"0x1\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), "\"0x1\""),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> null), "\"0x1\"")
     )
 
     forAll(validCases) { (address, tag, expectedOutput) =>
@@ -962,38 +1014,53 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
     forAll(invalidCasesAddressAndTag) { (address, tag) =>
       assertThrows[RpcException] {
-        rpc("eth_getTransactionCount", address, tag)
-      }
-    }
+        rpc("eth_getTransactionCount", address, tag)}}
+
+    forAll(invalidCasesAddressAndTagEIP1898) { (address, tag) =>
+      assertThrows[RpcException] {
+        rpc("eth_getTransactionCount", address, tag)}}
   }
 
   @Test
   def eth_getStorageAt(): Unit = {
+
+    val expectedOutputAddr1 = "\"0x1511111111111111111111111111111111111111111111111111111111111111\""
+    val expectedOutputAddr2 = "\"0x1411111111111111111111111111111111111111111111111111111111111111\""
     val validCases = Table(
       ("Address", "Key", "Tag", "Expected output"),
-      (
-        "0x1234567891011121314151617181920212223242",
-        "0x0",
-        "latest",
-        "\"0x1511111111111111111111111111111111111111111111111111111111111111\""
-      ),
-      (
-        "0x1234567890123456789012345678901234567890",
-        "0x0",
-        "latest",
-        "\"0x1411111111111111111111111111111111111111111111111111111111111111\""
-      )
-    )
-
-    val invalidCases = Table(
-      ("Address", "Key", "Tag"),
-      ("0x12", "0x12", "latest"),
-      ("0x1234567890123456789012345678901234567890", "0x12", "")
+      ("0x1234567891011121314151617181920212223242", "0x0", "0x2", expectedOutputAddr1),
+      ("0x1234567891011121314151617181920212223242", "0x0", "latest", expectedOutputAddr1),
+      ("0x1234567891011121314151617181920212223242", "0x0", null, expectedOutputAddr1),
+      ("0x1234567890123456789012345678901234567890", "0x0", "latest", expectedOutputAddr2),
+      // EIP-1898 cases
+      ("0x1234567891011121314151617181920212223242", "0x0", Map("blockNumber" -> "0x2"), expectedOutputAddr1),
+      ("0x1234567891011121314151617181920212223242", "0x0", Map("blockNumber" -> null), expectedOutputAddr1),
+      ("0x1234567891011121314151617181920212223242", "0x0", Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), expectedOutputAddr1),
+      ("0x1234567891011121314151617181920212223242", "0x0", Map("blockHash" -> null), expectedOutputAddr1)
     )
 
     forAll(validCases) { (address, key, tag, expectedOutput) =>
       assertJsonEquals(expectedOutput, rpc("eth_getStorageAt", address, key, tag))
     }
+
+    val invalidCases = Table(
+      ("Address", "Key", "Tag"),
+      ("0x12", "0x12", "latest"),
+      ("0x1234567890123456789012345678901234567890", "0x12", ""),
+      // EIP-1898 invalid cases
+      // block with number 0x1337 does not exist
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "0x1337")),
+      // empty string is not valid
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "")),
+      // block with hash 0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253 does not exist
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockHash" -> "0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      // both blockNumber and blockHash can't be passed as input parameter
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> null, "blockHash" -> null)),
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "", "blockHash" -> "")),
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "0x2", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "0x2", "blockHash" -> "")),
+      ("0x1234567890123456789012345678901234567890", "0x12", Map("blockNumber" -> "", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"))
+    )
 
     forAll(invalidCases) { (address, key, tag) =>
       assertThrows[RpcException] {
@@ -1004,33 +1071,44 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_getProof(): Unit = {
+
     def proofMockData(address: String) =
       s"""{"address":"$address","accountProof":["123"],"balance":"0x7b","codeHash":null,"nonce":"0x1","storageHash":null,"storageProof":[]}"""
     val validCases = Table(
       ("Address", "Tag", "Expected output"),
-      (
-        "0x1234567891011121314151617181920212223242",
-        "latest",
-        proofMockData("0x1234567891011121314151617181920212223242"),
-      ),
-      (
-        "0x1234567890123456789012345678901234567890",
-        "latest",
-        proofMockData("0x1234567890123456789012345678901234567890"),
-      )
+      ("0x1234567891011121314151617181920212223242", "0x2", proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567891011121314151617181920212223242", "latest", proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567891011121314151617181920212223242", null, proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567890123456789012345678901234567890", "latest", proofMockData("0x1234567890123456789012345678901234567890")),
+      // EIP-1898 cases
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2"), proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null), proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), proofMockData("0x1234567891011121314151617181920212223242")),
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> null), proofMockData("0x1234567891011121314151617181920212223242"))
     )
+
+    forAll(validCases) { (address, tag, expectedOutput) =>
+      assertJsonEquals(expectedOutput, rpc("eth_getProof", address, Array("0x1", "0x2"), tag))
+    }
 
     val invalidCases = Table(
       ("Address", "Tag"),
       // invalid address
       ("0x12", "latest"),
       // invalid tag parameter: empty string is not allowed
-      ("0x1234567890123456789012345678901234567890", "")
+      ("0x1234567891011121314151617181920212223242", ""),
+      // EIP-1898 invalid cases
+      // empty string is not valid
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "")),
+      // block with hash 0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253 does not exist
+      ("0x1234567891011121314151617181920212223242", Map("blockHash" -> "0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      // both blockNumber and blockHash can't be passed as input parameter
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> null, "blockHash" -> null)),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "", "blockHash" -> "")),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "0x2", "blockHash" -> "")),
+      ("0x1234567891011121314151617181920212223242", Map("blockNumber" -> "", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"))
     )
-
-    forAll(validCases) { (address, tag, expectedOutput) =>
-      assertJsonEquals(expectedOutput, rpc("eth_getProof", address, Array("0x1", "0x2"), tag))
-    }
 
     forAll(invalidCases) { (address, tag) =>
       assertThrows[RpcException] {
@@ -1158,59 +1236,77 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Test
   def eth_call(): Unit = {
-    val validCases = Table(
-      ("Transaction args", "Expected output"),
-      (
-        Map(
-          "from" -> senderWithSecret,
-          "to" -> "0x0000000000000000000022222222222222222222",
-          "value" -> "0xE8D4A51000",
-          "data" -> "0x",
-          "gasPrice" -> "0x4B9ACA00",
-          "nonce" -> "0x1",
-        ),
-        "\"0x\""
-      ),
-      (
-        Map(
-          "from" -> senderWithSecret,
-          "to" -> "0x0000000000000000000011111111111111111111",
-          "value" -> "0xE8D4A51000",
-          "data" -> "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
-          "gasPrice" -> "0x4B9ACA00",
-          "nonce" -> "0x1",
-        ),
-        "\"0x\""
+
+    val transactionArgsMap1 = Map(
+        "from" -> senderWithSecret,
+        "to" -> "0x0000000000000000000022222222222222222222",
+        "value" -> "0xE8D4A51000",
+        "data" -> "0x",
+        "gasPrice" -> "0x4B9ACA00",
+        "nonce" -> "0x1",
       )
+    val transactionArgsMap2 = Map(
+        "from" -> senderWithSecret,
+        "to" -> "0x0000000000000000000011111111111111111111",
+        "value" -> "0xE8D4A51000",
+        "data" -> "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+        "gasPrice" -> "0x4B9ACA00",
+        "nonce" -> "0x1",
+      )
+
+    val validCases = Table(
+      ("Transaction args", "tag", "Expected output"),
+      (transactionArgsMap1, "0x2", "\"0x\""),
+      (transactionArgsMap1, "latest", "\"0x\""),
+      (transactionArgsMap1, null, "\"0x\""),
+      (transactionArgsMap2, "latest", "\"0x\""),
+      // EIP-1898 cases
+      (transactionArgsMap1, Map("blockNumber" -> "0x2"), "\"0x\""),
+      (transactionArgsMap1, Map("blockNumber" -> null), "\"0x\""),
+      (transactionArgsMap1, Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"), "\"0x\""),
+      (transactionArgsMap1, Map("blockHash" -> null), "\"0x\"")
     )
 
-    forAll(validCases) { (transactionArgs, expectedOutput) =>
-      assertJsonEquals(expectedOutput, rpc("eth_call", transactionArgs))
+    forAll(validCases) { (transactionArgs, tag, expectedOutput) =>
+      assertJsonEquals(expectedOutput, rpc("eth_call", transactionArgs, tag))
     }
 
     val invalidCases = Table(
-      "Transaction args",
-      Map(
+      ("Transaction args", "tag"),
+      (Map(
         "from" -> senderWithSecret,
         "to" -> "0x0000000000000000000022222222222222222222",
         "value" -> "0x999999999900000000000000000",
         "data" -> "0x5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
         "gasPrice" -> "0x4B9ACA00",
         "nonce" -> "0x1",
-      ),
-      Map(
+      ), "0x2"),
+      (Map(
         "from" -> senderWithSecret,
         "to" -> "0x0000000000000000000022222222222222222222",
         "value" -> "0x0",
         "data" -> "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
         "gasPrice" -> "0x4B9ACA00",
         "nonce" -> "0x1",
-      )
+      ), "0x2"),
+      // EIP-1898 invalid cases
+      // block with number 0x1337 does not exist
+      (transactionArgsMap1, Map("blockNumber" -> "0x1337")),
+      // empty string is not valid
+      (transactionArgsMap1, Map("blockNumber" -> "")),
+      // block with hash 0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253 does not exist
+      (transactionArgsMap1, Map("blockHash" -> "0xxxx1db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      // both blockNumber and blockHash can't be passed as input parameter
+      (transactionArgsMap1, Map("blockNumber" -> null, "blockHash" -> null)),
+      (transactionArgsMap1, Map("blockNumber" -> "", "blockHash" -> "")),
+      (transactionArgsMap1, Map("blockNumber" -> "0x1", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      (transactionArgsMap1, Map("blockNumber" -> "0x1", "blockHash" -> "")),
+      (transactionArgsMap1, Map("blockNumber" -> "", "blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253"))
     )
 
-    forAll(invalidCases) { transactionArgs =>
+    forAll(invalidCases) { (transactionArgs, tag) =>
       assertThrows[RpcException] {
-        rpc("eth_call", transactionArgs)
+        rpc("eth_call", transactionArgs, tag)
       }
     }
   }

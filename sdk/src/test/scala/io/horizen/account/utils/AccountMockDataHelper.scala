@@ -31,8 +31,8 @@ import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
 import io.horizen.utxo.box.Box
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
+import org.mockito.ArgumentMatchers.{any, anyString}
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
@@ -275,8 +275,9 @@ case class AccountMockDataHelper(genesis: Boolean)
       Mockito.when(history.getStorageBlockById(parentId)).thenReturn(Some(parentBlock.get))
       Mockito.when(history.blockInfoById(any())).thenReturn(blockInfo)
     }
-
     Mockito.when(history.getBlockHeightById(any())).thenReturn(Optional.of[Integer](1))
+    Mockito.when(history.getBlockHeightById(ArgumentMatchers.isNull[String])).thenReturn(Optional.empty[Integer]())
+    Mockito.when(history.getBlockHeightById(ArgumentMatchers.matches("^xxx"))).thenReturn(Optional.empty[Integer]())
     history
   }
 
