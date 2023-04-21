@@ -118,7 +118,6 @@ class SCEvmEIP1898(AccountChainSetup):
         assert_response(sc_node.rpc_eth_getStorageAt(self.evm_address, eip1898_invalidInput_blockNumber), expect_error=True)
         assert_response(sc_node.rpc_eth_getStorageAt(self.evm_address, eip1898_invalidInput_blockHash), expect_error=True)
         assert_response(sc_node.rpc_eth_getStorageAt(self.evm_address, eip1898_invalidInput_bothFields), expect_error=True)
-        print(storage)
 
         # eth_getTransactionCount
         check_nonce = int(sc_node.rpc_eth_getTransactionCount(self.evm_address)['result'], 16)
@@ -157,7 +156,6 @@ class SCEvmEIP1898(AccountChainSetup):
         assert_equal(check_proof, proof)
         proof = sc_node.rpc_eth_getProof(smart_contract_address, [storage], eip1898_blockHash)['result']
         assert_equal(check_proof, proof)
-        print(sc_node.rpc_eth_getProof(self.evm_address, [storage], eip1898_invalidInput_blockHash))
         assert_response(sc_node.rpc_eth_getProof(self.evm_address, [storage], eip1898_invalidInput_blockHash), expect_error=True)
         assert_response(sc_node.rpc_eth_getProof(self.evm_address, [storage], eip1898_invalidInput_bothFields), expect_error=True)
 
