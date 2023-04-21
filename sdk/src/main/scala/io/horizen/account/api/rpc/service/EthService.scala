@@ -398,43 +398,27 @@ class EthService(
   // if the input is a string-string map extract the tag from block number or block hash
   // if the input is a string it return its value
   // for the other inputs an exception is thrown
-  private def getBlockTagByEip1898Input(nodeView: NV, input: Object): String = {
-    var tag: String = ""
-    val blockNumberMapKey = "blockNumber"; val blockHashMapKey = "blockHash"
+  private def getBlockTagByEip1898Input(nodeView: NV, input: Object): String = input match {
 
     // string-string map case
-    if (input.isInstanceOf[Map[String, String]]) {
-      val inputMap = input.asInstanceOf[Map[String, String]]
-      // if both keys are present an rpc-exception is thrown
-      if (inputMap.contains(blockNumberMapKey) && inputMap.contains(blockHashMapKey)) {
+    case inputMap: Map[String, String] =>
+      if (inputMap.contains("blockNumber") && inputMap.contains("blockHash")) {
         throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both block number and block hash can't be passed as input parameter"))
       }
-      // block number case
-      else if (inputMap.contains(blockNumberMapKey)) {
-        tag = inputMap.get(blockNumberMapKey).get
+      else if (inputMap.contains("blockNumber")) {
+        inputMap("blockNumber")
       }
-      // block hash case
-      else if (inputMap.contains(blockHashMapKey)) {
-        // if the block hash is not null retrieve its tag, otherwise return null
-        if (inputMap.get(blockHashMapKey).get!=null)
-          tag = getBlockTagById(nodeView, inputMap.get(blockHashMapKey).get.substring(2))
-        else tag = null
+      else if (inputMap.contains("blockHash")) {
+        Option(inputMap("blockHash")).filter(_ != null).map(_.substring(2)).map(getBlockTagById(nodeView, _)).orNull
       }
-      else return null // return null tag in all the other cases related to a map input
-    }
+      else null
 
     // legacy string input
-    else if (input.isInstanceOf[String]) {
-      tag = input.asInstanceOf[String]
-    } else if(input==null) {
-      tag = null
-    }
+    case inputString: String => inputString
+    case null => null
 
     // throw an invalid params exception in all the other cases
-    else {
-      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "input parameters format is not correct"))
-    }
-    tag
+    case _ => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "input parameters format is not correct"))
   }
 
 
