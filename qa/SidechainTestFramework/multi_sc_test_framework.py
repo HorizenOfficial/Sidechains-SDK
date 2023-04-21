@@ -21,9 +21,9 @@ from test_framework.util import check_json_precision, initialize_chain_clean, st
      wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test, connect_nodes_bi, sync_blocks,\
     sync_mempools
 
-from qa.SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration, DEFAULT_MAX_NONCE_GAP, \
+from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration, DEFAULT_MAX_NONCE_GAP, \
     DEFAULT_MAX_ACCOUNT_SLOTS, DEFAULT_MAX_MEMPOOL_SLOTS, DEFAULT_MAX_NONEXEC_POOL_SLOTS, DEFAULT_TX_LIFETIME
-from qa.SidechainTestFramework.scutil import connect_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
+from SidechainTestFramework.scutil import connect_sc_nodes, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND
 
 '''
 This class implements a base framework for tests needing more than one sidechain.
