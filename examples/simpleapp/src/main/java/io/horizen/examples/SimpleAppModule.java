@@ -10,7 +10,7 @@ import com.google.inject.name.Names;
 import io.horizen.utxo.SidechainAppModule;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
-import io.horizen.api.http.ApplicationApiGroup;
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.Secret;
@@ -73,7 +73,7 @@ public class SimpleAppModule extends SidechainAppModule
         int consensusSecondsInSlot = 120;
 
         // Here I can add my custom rest api and/or override existing one
-        List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
+        List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"
@@ -141,7 +141,7 @@ public class SimpleAppModule extends SidechainAppModule
                 .annotatedWith(Names.named("BackupStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(backupStore));
 
-        bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
+        bind(new TypeLiteral<List<SidechainApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
                 .toInstance(customApiGroups);
 

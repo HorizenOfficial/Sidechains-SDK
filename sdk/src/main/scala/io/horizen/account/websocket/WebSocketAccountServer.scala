@@ -1,8 +1,9 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import io.horizen.SidechainTypes
+import io.horizen.{SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
+import io.horizen.account.api.rpc.service.RpcProcessor
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.network.SyncStatus
@@ -12,10 +13,11 @@ import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
-class WebSocketAccountServer(wsPort: Int)
+class WebSocketAccountServer(wsServerSettings: WebSocketServerSettings)
   extends Actor
   with SparkzLogging {
-  val websocket = new WebSocketAccountServerImpl(wsPort, classOf[WebSocketAccountServerEndpoint]);
+  WebSocketAccountConfigurator.apply(wsServerSettings.wsServerAllowedOrigins)
+  val websocket = new WebSocketAccountServerImpl(wsServerSettings.wsServerPort, classOf[WebSocketAccountServerEndpoint]);
 
   try {
     websocket.start()
@@ -76,18 +78,20 @@ class WebSocketAccountServer(wsPort: Int)
 object WebSocketAccountServerRef {
 
   var sidechainNodeViewHolderRef: ActorRef = null
+  var rpcProcessor: RpcProcessor = null
 
-  def props(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def props(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsServerSettings: WebSocketServerSettings)
            (implicit ec: ExecutionContext): Props = {
     this.sidechainNodeViewHolderRef = sidechainNodeViewHolderRef
-    Props(new WebSocketAccountServer(wsPort))
+    this.rpcProcessor = rpcProcessor
+    Props(new WebSocketAccountServer(wsServerSettings))
   }
 
-  def apply(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def apply(sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsServerSettings: WebSocketServerSettings)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, wsPort))
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsServerSettings))
 
-  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+  def apply(name: String, sidechainNodeViewHolderRef: ActorRef, rpcProcessor: RpcProcessor, wsServerSettings: WebSocketServerSettings)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, wsPort), name)
+    system.actorOf(props(sidechainNodeViewHolderRef, rpcProcessor, wsServerSettings), name)
 }

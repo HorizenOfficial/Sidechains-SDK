@@ -15,6 +15,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion}
 
@@ -112,7 +113,7 @@ abstract class AbstractSidechainNodeViewHolder[
       A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l)
         }
         catch {
@@ -124,14 +125,14 @@ abstract class AbstractSidechainNodeViewHolder[
 
 
 
-  protected def getNodeView(): NV
+  protected def getNodeView: NV
 
   protected def applyFunctionOnNodeView[A]: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[NV,
       A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l)
         }
         catch {
@@ -148,7 +149,7 @@ abstract class AbstractSidechainNodeViewHolder[
       T, A]@unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
-          val l: NV = getNodeView()
+          val l: NV = getNodeView
           sender() ! f(l, functionParams)
         }
         catch {
@@ -225,6 +226,30 @@ abstract class AbstractSidechainNodeViewHolder[
       applyLocallyGeneratedTransactions(newTxs.txs)
   }
 
+  override protected def updateMemPool(blocksRemoved: Seq[PMOD], blocksApplied: Seq[PMOD], memPool: MP, state: MS): MP = {
+    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+    val appliedTxs = blocksApplied.flatMap(extractTransactions)
+
+    val txToMempool = rolledBackTxs.filter(tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    )
+
+    val filteredMempool = memPool.filter(tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    )
+
+    filteredMempool.putWithoutCheck(txToMempool)
+  }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.

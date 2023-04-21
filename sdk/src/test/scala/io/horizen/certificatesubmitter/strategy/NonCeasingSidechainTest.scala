@@ -8,6 +8,7 @@ import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
 import io.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolder, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
 import io.horizen.params.MainNetParams
+import io.horizen.proposition.SchnorrProposition
 import io.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
@@ -71,17 +72,18 @@ class NonCeasingSidechainTest extends JUnitSuite
 
     val schnorrSecret1 = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
     val schnorrSecret2 = SchnorrKeyGenerator.getInstance().generateSecret("seed2".getBytes(StandardCharsets.UTF_8))
+    val signersPublicKeys: Seq[SchnorrProposition] = Seq(schnorrSecret1.publicImage(), schnorrSecret2.publicImage())
 
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
     knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))
 
-    val signaturesStatusSuccess = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    val signaturesStatusSuccess = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
 
     assertTrue("Quality check must be successful.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusSuccess))
 
     knownSigs.clear()
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
-    val signaturesStatusFail = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs)
+    val signaturesStatusFail = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusFail))
   }
 

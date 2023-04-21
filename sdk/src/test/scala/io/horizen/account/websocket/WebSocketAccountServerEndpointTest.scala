@@ -1,15 +1,16 @@
 package io.horizen.account.websocket
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import io.horizen.SidechainTypes
+import io.horizen.{SidechainSettings, SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
-import io.horizen.account.serialization.EthJsonMapper
+import io.horizen.account.fixtures.MockedRpcProcessor
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.api.http.SidechainApiMockConfiguration
@@ -17,17 +18,20 @@ import io.horizen.evm.Hash
 import io.horizen.json.SerializationUtil
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
+import io.horizen.params.MainNetParams
 import io.horizen.utils.{BytesUtils, CountDownLatchController}
 import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
+import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallySuccessfulModifier, SuccessfulTransaction}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
+import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 
 import java.math.BigInteger
 import java.net.URI
@@ -55,7 +59,37 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     TestActor.KeepRunning
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
-  private val server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, 9035)
+
+  val mockedDummyActor = TestProbe()
+  mockedDummyActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      TestActor.KeepRunning
+    }
+  })
+  val mockedDummyActorRef: ActorRef = mockedDummyActor.ref
+  val mockedSidechainSettings = mock[SidechainSettings]
+  Mockito.when(mockedSidechainSettings.sparkzSettings).thenReturn(mock[SparkzSettings])
+  Mockito.when(mockedSidechainSettings.sparkzSettings.network).thenReturn(mock[NetworkSettings])
+  Mockito.when(mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections).thenReturn(10)
+
+
+  private val rpcProcessor = MockedRpcProcessor(
+    mockedSidechainNodeViewHolderRef = mockedSidechainNodeViewHolderRef,
+    mockedNetworkControllerRef = mockedDummyActorRef,
+    mockedSidechainSettings = mockedSidechainSettings,
+    mockedSidechainTransactionActorRef = mockedDummyActorRef,
+    mockedSyncStatusActorRef = mockedDummyActorRef,
+  ).rpcProcessor
+
+  private val mockedWebsocketServerSettings = WebSocketServerSettings(
+    wsServer = true, wsServerPort = 9035, wsServerAllowedOrigins = Seq()
+  )
+
+  private val mockedWebsocketServerSettingsWithExternalOrigin = WebSocketServerSettings(
+    wsServer = true, wsServerPort = 9035, wsServerAllowedOrigins = Seq("185.123.0.12")
+  )
+
+  private var server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, mockedWebsocketServerSettings)
 
   @After
   def after(): Unit = {
@@ -78,6 +112,19 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     }
     Assert.fail("Not able to connect to server")
     null
+  }
+
+  @Test
+  def allowedOriginsTest(): Unit = {
+    server = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, mockedWebsocketServerSettingsWithExternalOrigin)
+
+    val cec = ClientEndpointConfig.Builder.create.build
+    val client = ClientManager.createClient
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    assertThrows[DeploymentException](client.connectToServer(endpoint, cec, new URI("ws://localhost:9035/")))
+
   }
 
   @Test
@@ -253,7 +300,7 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     //Verify that we send back an error
     assertEquals(1, endpoint.receivedMessage.size())
     var response = mapper.readTree(endpoint.receivedMessage.get(0))
-    checkErrorResponse(response, Option.apply(clientId1), RpcCode.MethodNotFound.code, s"Method ${INVALID_REQUEST.request} not supported.")
+    checkErrorResponse(response, Option.apply(clientId1), RpcCode.MethodNotFound.code, s"Method not found")
     endpoint.receivedMessage.remove(0)
 
     //Client 1 try to subscribe to an invalid websocket method
@@ -944,6 +991,59 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     session.close()
   }
 
+  @Test
+  def testRpcCommand(): Unit = {
+    // Test the handle of common rpc commands
+
+    // Add client 1
+    val cec = ClientEndpointConfig.Builder.create.build
+    val client = ClientManager.createClient
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
+
+    //Client 1 calls eth_chainId
+    val clientId1 = 1
+    sendRpcRequest(clientId1, "eth_chainId", Array(), session)
+    assertTrue("No event messages received.", countDownController.await(5000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    var response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    assertEquals("Wrong chain id", Numeric.toHexStringWithPrefix(new BigInteger(String.valueOf(MainNetParams().chainId))), response.get("result").asText())
+    endpoint.receivedMessage.remove(0)
+
+
+    //Client 1 calls eth_blockNumber
+    countDownController.reset(1)
+    sendRpcRequest(clientId1, "eth_blockNumber", Array(), session)
+    assertTrue("No event messages received.", countDownController.await(5000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    assertEquals("Wrong block number", Numeric.toHexStringWithPrefix(new BigInteger("100")), response.get("result").asText())
+    endpoint.receivedMessage.remove(0)
+
+    //Client 1 calls eth_getBlockTransactionCountByNumber
+    countDownController.reset(1)
+    sendRpcRequest(clientId1, "eth_getBlockTransactionCountByNumber", Array("latest"), session)
+    assertTrue("No event messages received.", countDownController.await(5000))
+
+    //Verify that we receive a positive response
+    assertEquals(1, endpoint.receivedMessage.size())
+    response = mapper.readTree(endpoint.receivedMessage.get(0))
+    checkResponseMessage(response, clientId1)
+    assertEquals("Wrong transaction number", Numeric.toHexStringWithPrefix(BigInteger.ZERO), response.get("result").asText())
+    endpoint.receivedMessage.remove(0)
+
+    // Disconnect client 1
+    session.close()
+  }
+
 
   private def sendWebsocketRequest(id: Option[Int], request: Option[WebSocketAccountRequest], method: Option[String], additional_arguments: Option[JsonNode] = Option.empty, session: Session): Unit = {
     val rpcRequest = mapper.createObjectNode()
@@ -962,6 +1062,15 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     }
     session.getBasicRemote.sendObject(rpcRequest)
 
+  }
+
+  private def sendRpcRequest(id: Int, method: String, params: Array[String], session: Session) = {
+    val rpcRequest = mapper.createObjectNode()
+    rpcRequest.put("jsonrpc", "2.0")
+    rpcRequest.put("id", id)
+    rpcRequest.put("method", method)
+    rpcRequest.set("params", mapper.readTree(SerializationUtil.serialize(params)))
+    session.getBasicRemote.sendObject(rpcRequest)
   }
 
   private def checkResponseMessage(wsResponse: JsonNode, expectedId: Int): Unit = {

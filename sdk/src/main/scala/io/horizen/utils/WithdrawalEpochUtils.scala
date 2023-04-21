@@ -13,7 +13,11 @@ object WithdrawalEpochUtils {
       parentEpochInfo: WithdrawalEpochInfo,
       params: NetworkParams
   ): WithdrawalEpochInfo = {
-    val withdrawalEpoch: Int =
+
+    require(mainchainBlockReferenceSize >= 0, s"Negative number of MC ref : $mainchainBlockReferenceSize < 0")
+    require(mainchainBlockReferenceSize <= params.withdrawalEpochLength, s"Number of MC ref greater than withdrawalEpoch length: $mainchainBlockReferenceSize > ${params.withdrawalEpochLength}")
+
+    val withdrawalEpoch: Int = {
       if (parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength)
         // Parent block is the last SC Block of withdrawal epoch.
         parentEpochInfo.epoch + 1
@@ -23,16 +27,26 @@ object WithdrawalEpochUtils {
       else
         // Continue current withdrawal epoch
         parentEpochInfo.epoch
+    }
 
-    val withdrawalEpochIndex: Int =
-      if (withdrawalEpoch > parentEpochInfo.epoch)
+    val withdrawalEpochIndex: Int = {
+      if (withdrawalEpoch > parentEpochInfo.epoch) {
         // New withdrawal epoch started
         // Note: in case of empty MC Block ref list index should be 0.
-        (parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize) % params.withdrawalEpochLength
-      else
+        if (mainchainBlockReferenceSize == params.withdrawalEpochLength && parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength) {
+          // this is the case when we start from end of epoch and jump directly to the next end of epoch with the maximum
+          // number of MC ref blocks
+          mainchainBlockReferenceSize
+        } else {
+          (parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize) % params.withdrawalEpochLength
+        }
+      }
+      else {
         // Continue current withdrawal epoch
         // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
         parentEpochInfo.lastEpochIndex + mainchainBlockReferenceSize
+      }
+    }
 
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }

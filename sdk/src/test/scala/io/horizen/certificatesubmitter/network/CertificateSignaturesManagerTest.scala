@@ -123,7 +123,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val referencedEpoch: Int = 10
     val messageToSign: Array[Byte]= FieldElementFixture.generateFieldElement()
     val noKnownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer()
-    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, noKnownSigs))
+    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, noKnownSigs, params.signersPublicKeys))
 
     certificateSignaturesManagerRef ! roundTrip(Message(getCertificateSignaturesSpec, Right(invData), Some(peer)))
     // Expect no answer to be send back to the peer
@@ -135,7 +135,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val secret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
 
     val knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(invData.indexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
-    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
+    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs, params.signersPublicKeys))
 
     certificateSignaturesManagerRef ! roundTrip(Message(getCertificateSignaturesSpec, Right(invData), Some(peer)))
     // Expect an answer to be send back to the peer
@@ -382,7 +382,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     var knownIndexes = Seq(0, 2, 4)
     var knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
 
-    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
+    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs, params.signersPublicKeys))
 
     certificateSignaturesManagerRef ! TryToSendGetCertificateSignatures
 
@@ -411,7 +411,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     knownIndexes = 0 until pubKeysNumber
     knownSigs = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
 
-    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
+    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs, params.signersPublicKeys))
 
     certificateSignaturesManagerRef ! TryToSendGetCertificateSignatures
     networkController.expectNoMessage(timeout.duration)

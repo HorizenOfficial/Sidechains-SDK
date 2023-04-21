@@ -16,6 +16,8 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen.utxo.api.http
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
@@ -31,7 +33,7 @@ import io.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProv
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
-import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes}
+import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -40,6 +42,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.jdk.CollectionConverters.asScalaBufferConverter
 import scala.io.{Codec, Source}
 
 class SidechainApp @Inject()
@@ -60,7 +63,7 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
    @Named("ConsensusStorage") consensusStorage: Storage,
    @Named("BackupStorage") backUpStorage: Storage,
-   @Named("CustomApiGroups") override val customApiGroups: JList[ApplicationApiGroup],
+   @Named("CustomApiGroups") val customApiGroups: JList[SidechainApplicationApiGroup],
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
@@ -69,7 +72,6 @@ class SidechainApp @Inject()
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
-    customApiGroups,
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
@@ -209,11 +211,16 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if(sidechainSettings.websocketServer.wsServer) {
+  val websocketServerSettings: WebSocketServerSettings = sidechainSettings.websocketServer
+  if(websocketServerSettings.wsServer) {
+    if (websocketServerSettings.wsServerAllowedOrigins.nonEmpty)
+      throw new IllegalArgumentException("wsServerAllowedOrigins property is not supported in the UTXO model websocket!")
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
+
+  override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,

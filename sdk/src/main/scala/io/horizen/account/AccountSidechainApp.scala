@@ -4,8 +4,10 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen._
-import io.horizen.account.api.http.route
-import io.horizen.account.api.http.route.{AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
+import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.rpc.handler.RpcHandler
+import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import io.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import io.horizen.account.chain.AccountFeePaymentsInfo
@@ -36,7 +38,6 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -48,7 +49,7 @@ class AccountSidechainApp @Inject()
   (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
    @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomAccountTransactionSerializers") customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
-   @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
+   @Named("CustomApiGroups") customApiGroups: JList[AccountApplicationApiGroup],
    @Named("RejectedApiPaths") rejectedApiPaths: JList[Pair[String, String]],
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
@@ -59,7 +60,6 @@ class AccountSidechainApp @Inject()
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
-    customApiGroups,
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
@@ -151,10 +151,30 @@ class AccountSidechainApp @Inject()
 
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+
+  //rpcHandler
+  val rpcHandler = new RpcHandler(
+    new EthService(
+      nodeViewHolderRef,
+      networkControllerRef,
+      settings.restApi.timeout,
+      params,
+      sidechainSettings.ethService,
+      sidechainSettings.sparkzSettings.network.maxIncomingConnections,
+      RpcUtils.getClientVersion,
+      sidechainTransactionActorRef,
+      syncStatusActorRef,
+      sidechainTransactionsCompanion
+    )
+  )
+  //Initialize RpcProcessor object with the rpcHandler
+  val rpcProcessor = RpcProcessor(rpcHandler)
   
   if(sidechainSettings.websocketServer.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }
+
+  override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
@@ -163,7 +183,7 @@ class AccountSidechainApp @Inject()
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, networkControllerRef, sidechainSettings, params, sidechainTransactionActorRef, syncStatusActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala, sidechainTransactionsCompanion)
+    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
   )
 
   val nodeViewProvider: NodeViewProvider[

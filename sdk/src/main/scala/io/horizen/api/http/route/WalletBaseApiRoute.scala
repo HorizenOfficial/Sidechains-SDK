@@ -145,7 +145,7 @@ abstract class WalletBaseApiRoute[
               }
 
             case Failure(e) =>
-              log.error(s"Import Wallet: Failed to parse secret: ${body.privKey}", e)
+              log.error(s"Import Wallet: Failed to parse secret", e)
               ApiResponseUtil.toResponse(ErrorFailedToParseSecret("ErrorFailedToParseSecret", JOptional.of(e)))
 
           }
@@ -224,7 +224,7 @@ abstract class WalletBaseApiRoute[
                     secrets.add((value, lineNumber))
                   }
                 case Failure(e) =>
-                  log.error(s"Import Wallet: Failed to parse the secret: ${keyPair(0)}", e)
+                  log.error(s"Import Wallet: Failed to parse the secret at line $lineNumber", e)
                   error = JOptional.of(ErrorFailedToParseSecret(s"Failed to parse the secret at line $lineNumber", JOptional.of(e)))
               }
             }

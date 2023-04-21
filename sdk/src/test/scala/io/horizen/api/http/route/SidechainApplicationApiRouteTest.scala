@@ -8,7 +8,7 @@ import org.junit.Assert.{assertEquals, assertTrue}
 
 import scala.collection.JavaConverters._
 
-class ApplicationApiRouteTest extends SidechainApiRouteTest {
+class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/customSecret/"
 

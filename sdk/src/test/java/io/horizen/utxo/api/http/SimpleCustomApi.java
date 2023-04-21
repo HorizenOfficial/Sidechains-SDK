@@ -3,7 +3,6 @@ package io.horizen.utxo.api.http;
 import akka.http.javadsl.server.Route;
 import com.fasterxml.jackson.annotation.JsonView;
 import io.horizen.api.http.ApiResponse;
-import io.horizen.api.http.ApplicationApiGroup;
 import io.horizen.api.http.ErrorResponse;
 import io.horizen.api.http.SuccessResponse;
 import io.horizen.utxo.node.SidechainNodeView;
@@ -14,8 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class SimpleCustomApi extends ApplicationApiGroup
+public class SimpleCustomApi extends SidechainApplicationApiGroup
 {
+
     @Override
     public String basePath() {
         return "customSecret";
@@ -34,7 +34,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
     private ApiResponse getNSecretsFunction(GetSecretRequest ent) {
         try {
             RespAllSecret resp = new RespAllSecret();
-            List<Secret> res = new ArrayList<>(getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> v.getNodeWallet().allSecrets()));
+            List<Secret> res = new ArrayList<>(getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(v -> (v).getNodeWallet().allSecrets()));
             resp.setSecrets(res.subList(0, ent.getSecretCount()));
             return resp;
         } catch (Exception e) {
@@ -86,7 +86,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
     }
 
     @JsonView(Views.Default.class)
-    class RespAllSecret implements SuccessResponse
+    public static class RespAllSecret implements SuccessResponse
     {
 
         private List<Secret> secrets;
@@ -101,10 +101,10 @@ public class SimpleCustomApi extends ApplicationApiGroup
     }
 
     @JsonView(Views.Default.class)
-    public class ErrorAllSecrets implements ErrorResponse
+    public static class ErrorAllSecrets implements ErrorResponse
     {
-        private String description;
-        private Optional<Throwable> exception;
+        private final String description;
+        private final Optional<Throwable> exception;
 
         public ErrorAllSecrets(String description, Optional<Throwable> exception) {
             this.description = description;
