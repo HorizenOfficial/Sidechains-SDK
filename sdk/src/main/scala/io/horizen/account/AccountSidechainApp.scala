@@ -171,7 +171,7 @@ class AccountSidechainApp @Inject()
   val rpcProcessor = RpcProcessor(rpcHandler)
   
   if(sidechainSettings.websocketServer.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer.wsServerPort)
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
