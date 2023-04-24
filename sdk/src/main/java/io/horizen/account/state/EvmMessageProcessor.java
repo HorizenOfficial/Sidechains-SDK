@@ -43,6 +43,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         evmContext.chainID = BigInteger.valueOf(block.chainID);
         evmContext.coinbase = block.forgerAddress;
         evmContext.gasLimit = block.blockGasLimit;
+        evmContext.gasPrice = context.msg().getGasPrice();
         evmContext.blockNumber = BigInteger.valueOf(block.blockNumber);
         evmContext.time = BigInteger.valueOf(block.timestamp);
         evmContext.baseFee = block.baseFee;
@@ -58,23 +59,26 @@ public class EvmMessageProcessor implements MessageProcessor {
             evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer();
 
-            // execute EVM
-            var result = Evm.Apply(
-                view.getStateDbHandle(),
+            // transform to libevm Invocation type
+            var evmInvocation = new io.horizen.evm.Invocation(
                 invocation.caller(),
                 invocation.callee().getOrElse(() -> null),
                 invocation.value(),
                 invocation.input(),
                 invocation.gasPool().getGas(),
-                context.msg().getGasPrice(),
-                evmContext
+                invocation.readOnly()
             );
+
+            // execute EVM
+            var result = Evm.Apply(view.getStateDbHandle(), evmInvocation, evmContext);
+
             // consume gas the EVM has used:
             // the EVM will never consume more gas than is available, hence consuming used gas here should never throw,
             // instead the EVM will report an "out of gas" error which we throw as an ExecutionFailedException
-            invocation.gasPool().subGas(result.usedGas);
+            var usedGas = invocation.gasPool().getGas().subtract(result.leftOverGas);
+            invocation.gasPool().subGas(usedGas);
             if (result.reverted) throw new ExecutionRevertedException(result.returnData);
-            if (!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
+            if (!result.executionError.isEmpty()) throw new ExecutionFailedException(result.executionError);
             return result.returnData;
         }
     }
@@ -107,6 +111,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             var gasPool = new GasPool(invocation.gas);
             try {
                 var returnData = context.execute(
+                    // transform to SDK Invocation type
                     Invocation.apply(
                         invocation.caller,
                         Option.apply(invocation.callee),
@@ -116,12 +121,12 @@ public class EvmMessageProcessor implements MessageProcessor {
                         invocation.readOnly
                     )
                 );
-                return new InvocationResult(returnData, gasPool.getGas(), "");
+                return new InvocationResult(returnData, gasPool.getGas(), "", false, null);
             } catch (ExecutionRevertedException e) {
                 // forward the revert reason if any
-                return new InvocationResult(e.returnData, gasPool.getGas(), e.getMessage());
+                return new InvocationResult(e.returnData, gasPool.getGas(), e.getMessage(), true, null);
             } catch (Exception e) {
-                return new InvocationResult(new byte[0], gasPool.getGas(), e.getMessage());
+                return new InvocationResult(new byte[0], gasPool.getGas(), e.getMessage(), false, null);
             }
         }
     }
