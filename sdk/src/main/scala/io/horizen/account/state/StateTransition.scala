@@ -134,6 +134,14 @@ class StateTransition(
     // limit call depth to 1024
     if (callDepth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
     callDepth += 1;
+    // verify that there is not value transfer during a read-only invocation
+    if (invocation.readOnly && invocation.value.signum() != 0) {
+      throw new WriteProtectionException("invalid value transfer during read-only invocation");
+    }
+    // enable write protection if it is not already on
+    // every nested invocation after a read-only invocation must remain read-only
+    val firstReadOnlyInvocation = invocation.readOnly && !view.readOnly
+    if (firstReadOnlyInvocation) view.enableWriteProtection()
     try {
       // find and execute the first matching processor
       messageProcessors.find(_.canProcess(invocation, view)) match {
@@ -158,6 +166,8 @@ class StateTransition(
           }
       }
     } finally {
+      // disable write protection only if it was disabled before this invocation
+      if (firstReadOnlyInvocation) view.disableWriteProtection()
       callDepth -= 1;
     }
   }

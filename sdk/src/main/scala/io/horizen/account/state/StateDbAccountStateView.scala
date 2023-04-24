@@ -6,7 +6,11 @@ import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStat
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import io.horizen.block.{
+  MainchainBlockReferenceData,
+  MainchainTxForwardTransferCrosschainOutput,
+  MainchainTxSidechainCreationCrosschainOutput
+}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.evm.results.{EvmLog, ProofAccountResult}
@@ -23,11 +27,11 @@ import scala.util.Try
 
 class StateDbAccountStateView(
     stateDb: StateDB,
-    messageProcessors: Seq[MessageProcessor]
+    messageProcessors: Seq[MessageProcessor],
+    var readOnly: Boolean = false
 ) extends BaseAccountStateView
       with AutoCloseable
       with SparkzLogging {
-
   lazy val withdrawalReqProvider: WithdrawalRequestProvider =
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider =
@@ -213,11 +217,15 @@ class StateDbAccountStateView(
     !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Address, code: Array[Byte]): Unit =
+  override def addAccount(address: Address, code: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid account code change")
     stateDb.setCode(address, code)
+  }
 
-  override def increaseNonce(address: Address): Unit =
+  override def increaseNonce(address: Address): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid nonce change")
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
+  }
 
   @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Address, amount: BigInteger): Unit = {
@@ -226,6 +234,7 @@ class StateDbAccountStateView(
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
       case _ =>
+        if (readOnly) throw new WriteProtectionException("invalid balance change")
         stateDb.addBalance(address, amount)
     }
   }
@@ -238,6 +247,7 @@ class StateDbAccountStateView(
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
       case _ =>
+        if (readOnly) throw new WriteProtectionException("invalid balance change")
         // The check on the address balance to be sufficient to pay the amount at this point has already been
         // done by the state while validating the origin tx
         stateDb.subBalance(address, amount)
@@ -247,8 +257,10 @@ class StateDbAccountStateView(
   override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, new Hash(key)).toBytes
 
-  override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit =
+  override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid write access to storage")
     stateDb.setStorage(address, new Hash(key), new Hash(value))
+  }
 
   final override def removeAccountStorage(address: Address, key: Array[Byte]): Unit =
     updateAccountStorage(address, key, Hash.ZERO.toBytes)
@@ -273,6 +285,7 @@ class StateDbAccountStateView(
   }
 
   final override def updateAccountStorageBytes(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid write access to storage")
     // get previous length of value stored, if any
     val oldLength = new BigInteger(1, getAccountStorage(address, key)).intValueExact()
     // values are split up into 32-bytes chunks:
@@ -336,5 +349,16 @@ class StateDbAccountStateView(
   def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
 
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
-    new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
+    new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, readOnly, gas)
+
+  /**
+   * Prevent write access to account storage, balance, nonce and code. While write protection is enabled invalid access
+   * will throw a WriteProtectionException.
+   */
+  def enableWriteProtection(): Unit = readOnly = true
+
+  /**
+   * Disable write protection.
+   */
+  def disableWriteProtection(): Unit = readOnly = false
 }
