@@ -338,7 +338,7 @@ abstract class AbstractSidechainApp
 
     val bindAddress = settings.restApi.bindAddress
     Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).connectionSource().to(Sink.foreach { connection =>
-      log.info("New RPC connection from address :: %s".format(connection.remoteAddress.toString))
+      log.info("New REST api connection from address :: %s".format(connection.remoteAddress.toString))
       connection.handleWithAsyncHandler(combinedRoute)
     }).run()
 
