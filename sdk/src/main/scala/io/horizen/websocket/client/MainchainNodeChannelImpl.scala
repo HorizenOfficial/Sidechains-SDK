@@ -9,6 +9,7 @@ import io.horizen.websocket.client.MainchainNodeChannelImpl.MAX_SIDECHAINS_REQUE
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
+class CertificateAlreadyPresentException() extends Exception()
 
 case class GetBlockByHeightRequestPayload(height: Int) extends RequestPayload
 case class GetBlockByHashRequestPayload(hash: String) extends RequestPayload
@@ -155,6 +156,13 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
         fee,
         certificateRequest.fieldElementCertificateFields.map(BytesUtils.toHexString),
         certificateRequest.bitVectorCertificateFields.map(BytesUtils.toHexString))
+
+    // check if there are already certificates present in mempool for current or higher epoch
+    getTopQualityCertificates(BytesUtils.toHexString(certificateRequest.sidechainId)) match {
+      case Success(mcRefTry) =>
+        if ((mcRefTry.mempoolCertInfo.get.epoch >= certificateRequest.epochNumber && mcRefTry.mempoolCertInfo.get.certHash != null) || (mcRefTry.chainCertInfo.get.epoch >= certificateRequest.epochNumber  && mcRefTry.chainCertInfo.get.certHash != null))
+          throw new CertificateAlreadyPresentException()
+    }
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 

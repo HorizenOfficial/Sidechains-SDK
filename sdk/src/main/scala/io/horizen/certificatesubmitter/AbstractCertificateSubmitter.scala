@@ -26,6 +26,7 @@ import io.horizen.transaction.Transaction
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.BytesUtils
 import io.horizen.wallet.Wallet
+import io.horizen.websocket.client.CertificateAlreadyPresentException
 import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -413,7 +414,10 @@ abstract class AbstractCertificateSubmitter[
                     log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
                   case Failure(ex) =>
-                    log.error("Creation of backward transfer certificate had been failed.", ex)
+                    if (ex.isInstanceOf[CertificateAlreadyPresentException])
+                      log.info(s"Submission failed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
+                    else
+                      log.error("Creation of backward transfer certificate had been failed.", ex)
                 }
                 context.system.eventStream.publish(CertificateSubmissionStopped)
               }
