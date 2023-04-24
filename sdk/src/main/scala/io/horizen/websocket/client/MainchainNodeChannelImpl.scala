@@ -162,6 +162,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
       case Success(mcRefTry) =>
         if ((mcRefTry.mempoolCertInfo.get.epoch >= certificateRequest.epochNumber && mcRefTry.mempoolCertInfo.get.certHash != null) || (mcRefTry.chainCertInfo.get.epoch >= certificateRequest.epochNumber  && mcRefTry.chainCertInfo.get.certHash != null))
           throw new CertificateAlreadyPresentException()
+      case Failure(_) =>
     }
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
