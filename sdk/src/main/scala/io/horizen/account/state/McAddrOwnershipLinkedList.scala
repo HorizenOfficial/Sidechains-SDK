@@ -8,7 +8,7 @@ import sparkz.crypto.hash.Blake2b256
 
 import scala.util.{Failure, Success}
 
-object ForgerStakeLinkedList {
+object McAddrOwnershipLinkedList {
 
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
@@ -29,10 +29,10 @@ object ForgerStakeLinkedList {
     }
   }
 
-  def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
+  def addNewNodeToList(view: BaseAccountStateView, ownershipId: Array[Byte]): Unit = {
     val oldTip = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
 
-    val newTip = Blake2b256.hash(stakeId)
+    val newTip = Blake2b256.hash(ownershipId)
 
     // modify previous node (if any) to point at this one
     modifyNode(view, oldTip) { previousNode =>
@@ -45,7 +45,7 @@ object ForgerStakeLinkedList {
     // store the new node
     view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, newTip,
       LinkedListNodeSerializer.toBytes(
-        LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
+        LinkedListNode(ownershipId, oldTip, LinkedListNullValue)))
   }
 
   def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte])(
@@ -64,15 +64,15 @@ object ForgerStakeLinkedList {
       .map(view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, nodeId, _))
   }
 
-  def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
+  def findMcAddrOwnershipsData(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[McAddrOwnershipData] = {
+    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, ownershipId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
       // gives an empty array instead
       None
     } else {
-      ForgerStakeDataSerializer.parseBytesTry(data) match {
+      McAddrOwnershipDataSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
           throw new ExecutionRevertedException("Error while parsing forger data.", exception)
@@ -81,12 +81,12 @@ object ForgerStakeLinkedList {
   }
 
   def getListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
-    if (!linkedListNodeRefIsNull(tip)) {
+    /*if (!linkedListNodeRefIsNull(tip)) {
       val node = findLinkedListNode(view, tip).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
         node.dataKey,
-        ForgerStakeData(
+        McAddrOwnershipData(
           ForgerPublicKeys(
             stakeData.forgerPublicKeys.blockSignPublicKey, stakeData.forgerPublicKeys.vrfPublicKey),
           stakeData.ownerPublicKey, stakeData.stakedAmount)
@@ -96,6 +96,9 @@ object ForgerStakeLinkedList {
     } else {
       throw new ExecutionRevertedException("Tip has the null value, no list here")
     }
+
+     */
+    ???
   }
 
   def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =

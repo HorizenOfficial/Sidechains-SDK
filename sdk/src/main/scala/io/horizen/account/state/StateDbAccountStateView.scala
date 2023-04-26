@@ -43,6 +43,8 @@ class StateDbAccountStateView(
   // certificateKeysProvider is present only for NaiveThresholdSignatureCircuitWithKeyRotation
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
+  lazy val mcAddrOwnershipProvider: McAddrOwnershipsProvider =
+    messageProcessors.find(_.isInstanceOf[McAddrOwnershipsProvider]).get.asInstanceOf[McAddrOwnershipsProvider]
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)

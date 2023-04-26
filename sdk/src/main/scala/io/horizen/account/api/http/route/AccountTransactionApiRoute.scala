@@ -17,6 +17,8 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.account.utils.Secp256k1.SIGNATURE_RS_SIZE
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
@@ -35,10 +37,13 @@ import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
+import io.horizen.utils.BytesUtils.padWithZeroBytes
 import sparkz.core.settings.RESTApiSettings
+import sparkz.util.encode.Base64
 
 import java.math.BigInteger
-import java.util.{Optional => JOptional}
+import java.util
+import java.util.{Arrays, Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -68,7 +73,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
+      sendKeysOwnership
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -717,6 +723,57 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def sendKeysOwnership: Route = (post & path("sendKeysOwnership")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateMcAddrOwnership]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
+
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
+
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+            // TODO should use the secret that corresponds to body.ownershipInfo.scAddress
+            val secret = getFittingSecret(sidechainNodeView, None, txCost)
+
+            secret match {
+              case Some(secret) =>
+
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                val dataBytes = encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
+                val tmpTx: EthereumTransaction = new EthereumTransaction(
+                  params.chainId,
+                  JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
+                  nonce,
+                  gasLimit,
+                  maxPriorityFeePerGas,
+                  maxFeePerGas,
+                  valueInWei,
+                  dataBytes,
+                  null
+                )
+                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
+          }
+        }
+      }
+    }
+  }
+
 
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
@@ -743,6 +800,37 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(withdrawal.mainchainAddress, params))
     val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
+  }
+
+
+  def getMcSignature(mcSignatureString: String): SignatureSecp256k1 = {
+
+    val decodedMcSignature: Array[Byte] = Base64.decode(mcSignatureString).get
+
+    // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating a compressed
+    // format of the pub key. We are not using this info
+    val v: BigInteger = BigInteger.valueOf(decodedMcSignature(0) - 0x4)
+    val r: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 1, 33))
+    val s: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 33, 65))
+
+    new SignatureSecp256k1(v, r, s)
+  }
+
+  def encodeAddNewOwnershipCmdRequest(ownershipInfo: TransactionMcAddrOwnershipInfo): Array[Byte] = {
+    // this can throw is not a valid address
+    val scAddress = new AddressProposition(BytesUtils.fromHexString(ownershipInfo.scAddressString))
+
+
+    val mcPubKeyBytes = BytesUtils.fromHexString(ownershipInfo.mcPubKeyString)
+    // require 33 bytes. In MC we have a 33 bytes compressed representation, where the first byte is a tag indicating
+    // the parity value of the compressed format    require(mcPubKeyBytes.length == 33, "Not a correct mc pub key compressed format")
+
+    // this can throw if not correctly base58 encoded
+    val mcSignature: SignatureSecp256k1 = getMcSignature(ownershipInfo.mcSignatureString)
+
+    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, mcPubKeyBytes, mcSignature)
+
+    Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
   }
 
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction, epoch: Int): Option[ErrorResponse] = {
@@ -790,7 +878,10 @@ object AccountTransactionRestScheme {
    private[horizen] case class TransactionWithdrawalRequest(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
+  private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class TransactionMcAddrOwnershipInfo(scAddressString: String, mcPubKeyString: String, mcSignatureString: String)
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
@@ -832,12 +923,21 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqCreateForgerStake(
-                                                nonce: Option[BigInteger],
-                                                forgerStakeInfo: TransactionForgerOutput,
-                                                gasInfo: Option[EIP1559GasInfo]
-                                              ) {
+  private[horizen] case class ReqCreateForgerStake(
+                                                    nonce: Option[BigInteger],
+                                                    forgerStakeInfo: TransactionForgerOutput,
+                                                    gasInfo: Option[EIP1559GasInfo]
+                                                  ) {
     require(forgerStakeInfo != null, "Forger stake info must be provided")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqCreateMcAddrOwnership(
+                                                        nonce: Option[BigInteger],
+                                                        ownershipInfo: TransactionMcAddrOwnershipInfo,
+                                                        gasInfo: Option[EIP1559GasInfo]
+                                                  ) {
+    require(ownershipInfo != null, "MC address ownership info must be provided")
   }
 
   @JsonView(Array(classOf[Views.Default]))
