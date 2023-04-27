@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 case class TestContext(msg: Message, blockContext: BlockContext) extends ExecutionContext {
-  override def execute(invocation: Invocation): Array[Byte] = Array.emptyByteArray
+  override def execute(invocation: Invocation): Array[Byte] = ???
 }
 
 object TestContext {
