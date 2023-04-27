@@ -4,7 +4,7 @@ import logging
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract
-from qa.SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from test_framework.util import assert_equal
 
 """

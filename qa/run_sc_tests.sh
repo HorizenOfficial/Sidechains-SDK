@@ -87,6 +87,7 @@ testScriptsEvm=(
     'sc_evm_mempool.py'
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_orphan_txs.py'
+    'sc_evm_native_interop.py'
     'sc_evm_rpc_invalid_blocks.py'
     'sc_evm_rpc_invalid_txs.py'
     'sc_evm_rpc_net_methods.py'
