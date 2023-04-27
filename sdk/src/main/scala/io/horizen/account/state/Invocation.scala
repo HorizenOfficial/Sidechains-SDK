@@ -12,7 +12,43 @@ case class Invocation(
     input: Array[Byte],
     gasPool: GasPool,
     readOnly: Boolean,
-)
+) {
+
+  /**
+   * Create nested invocation, similar to an EVM "CALL".
+   *
+   * @param addr
+   *   address to call
+   * @param value
+   *   amount of funds to transfer
+   * @param input
+   *   calldata arguments
+   * @param gas
+   *   amount of gas to allocate to the nested call, should not be greater than remaining gas in the parent invocation
+   *   (will be validated in StateTransition.execute)
+   * @return
+   *   new invocation object
+   */
+  def call(addr: Address, value: BigInteger, input: Array[Byte], gas: BigInteger): Invocation = {
+    Invocation(callee.get, Some(addr), value, input, new GasPool(gas), readOnly = false)
+  }
+
+  /**
+   * Create nested read-only invocation, similar to an EVM "STATICCALL".
+   *
+   * @param addr
+   *   address to call
+   * @param input
+   *   calldata arguments
+   * @param gas
+   *   amount of gas to allocate to the nested call, should not be greater than remaining gas in the parent invocation
+   *   (will be validated in StateTransition.execute)
+   * @return
+   */
+  def staticCall(addr: Address, input: Array[Byte], gas: BigInteger): Invocation = {
+    Invocation(callee.get, Some(addr), BigInteger.ZERO, input, new GasPool(gas), readOnly = true)
+  }
+}
 
 object Invocation {
 
@@ -35,25 +71,3 @@ object Invocation {
       readOnly = false
     )
 }
-
-//case class Invocation(callee: Address, input: Array[Byte], gas: GasPool)
-//case class Call() extends Invocation()
-//case class StaticCall() extends Invocation()
-//case class CallCode() extends Invocation()
-//case class DelegateCall() extends Invocation()
-
-//object Invocation {
-//  def call(caller: Address, callee: Address, value: BigInteger, input: Array[Byte], gas: GasPool): Invocation =
-//    Invocation(caller, Some(callee), value, input, gas, readOnly = false)
-//
-//  def staticCall(caller: Address, callee: Address, input: Array[Byte], gas: GasPool): Invocation =
-//    Invocation(caller, Some(callee), BigInteger.ZERO, input, gas, readOnly = true)
-//
-//  def delegateCall(
-//      original: Invocation,
-//      callee: Address,
-//      input: Array[Byte],
-//      gas: GasPool
-//  ): Invocation =
-//    Invocation(original.caller, Some(callee), original.value, input, gas, readOnly = false)
-//}

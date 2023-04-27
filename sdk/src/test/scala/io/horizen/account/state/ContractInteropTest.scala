@@ -22,16 +22,10 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
     ): Array[Byte] = {
       // read target contract address from input
       val evmContractAddress = new Address(invocation.input)
+      // function signature of retrieve()
+      val retrieveSignature = BytesUtils.fromHexString("2e64cec1")
       // execute nested call to EVM contract
-      context.execute(Invocation(
-        invocation.callee.get,
-        Some(evmContractAddress),
-        BigInteger.ZERO,
-        // function signature of retrieve()
-        BytesUtils.fromHexString("2e64cec1"),
-        new GasPool(10000),
-        readOnly = true
-      ))
+      context.execute(invocation.staticCall(evmContractAddress, retrieveSignature, 10000))
     }
   }
 
@@ -51,7 +45,6 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
 
   @Test
   def testProcess(): Unit = {
-
     val initialBalance = new BigInteger("2000000000000")
     val evmMessageProcessor = new EvmMessageProcessor()
     val processors = Seq(NativeTestContract, evmMessageProcessor)
