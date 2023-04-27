@@ -16,7 +16,6 @@ import scala.concurrent.ExecutionContext
 class WebSocketAccountServer(wsServerSettings: WebSocketServerSettings)
   extends Actor
   with SparkzLogging {
-  WebSocketAccountConfigurator.apply(wsServerSettings.wsServerAllowedOrigins)
   val websocket = new WebSocketAccountServerImpl(wsServerSettings.wsServerPort, classOf[WebSocketAccountServerEndpoint]);
 
   try {
