@@ -4,6 +4,7 @@ import io.horizen.account.utils.BigIntegerUtil
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
+import scala.collection.mutable.ListBuffer
 
 class StateTransition(
     view: StateDbAccountStateView,
@@ -13,8 +14,8 @@ class StateTransition(
     val msg: Message,
 ) extends SparkzLogging with ExecutionContext {
 
-  // depth of the current call stack
-  private var callDepth: Int = 0
+  // the current stack of invocations
+  private val invocationStack = new ListBuffer[Invocation]
 
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
@@ -132,17 +133,21 @@ class StateTransition(
   @throws(classOf[ExecutionFailedException])
   def execute(invocation: Invocation): Array[Byte] = {
     // limit call depth to 1024
-    if (callDepth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
-    callDepth += 1;
-    // verify that there is not value transfer during a read-only invocation
-    if (invocation.readOnly && invocation.value.signum() != 0) {
-      throw new WriteProtectionException("invalid value transfer during read-only invocation");
-    }
+    if (invocationStack.length >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
+    // allocate gas from caller to the nested invocation, this can throw if the caller does not have enough gas
+    invocationStack.headOption.foreach(_.gasPool.subGas(invocation.gasPool.getGas))
+    // add new invocation to the stack
+    invocationStack.prepend(invocation)
     // enable write protection if it is not already on
     // every nested invocation after a read-only invocation must remain read-only
     val firstReadOnlyInvocation = invocation.readOnly && !view.readOnly
     if (firstReadOnlyInvocation) view.enableWriteProtection()
     try {
+      // Verify that there is no value transfer during a read-only invocation. This would also throw later because
+      // view.addBalance and view.subBalance would throw, this just makes it fail faster.
+      if (invocation.readOnly && invocation.value.signum() != 0) {
+        throw new WriteProtectionException("invalid value transfer during read-only invocation");
+      }
       // find and execute the first matching processor
       messageProcessors.find(_.canProcess(invocation, view)) match {
         case None =>
@@ -168,7 +173,10 @@ class StateTransition(
     } finally {
       // disable write protection only if it was disabled before this invocation
       if (firstReadOnlyInvocation) view.disableWriteProtection()
-      callDepth -= 1;
+      // remove the current invocation from the stack
+      invocationStack.remove(0)
+      // return remaining gas to the caller
+      invocationStack.headOption.foreach(_.gasPool.addGas(invocation.gasPool.getGas))
     }
   }
 }
