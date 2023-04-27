@@ -48,7 +48,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.app.Version
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.network._
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
@@ -218,6 +218,14 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (sidechainApiMockConfiguration.getShould_peerManager_GetBlacklistedPeers_reply())
             sender ! Seq[InetAddress](inetAddrBlackListed_1.getAddress, inetAddrBlackListed_2.getAddress)
           else new Exception("No black listed peers.")
+        case GetPeer(addr) =>
+          if (sidechainApiMockConfiguration.getShould_peerManager_GetPeer_reply())
+            sender ! peers(addr)
+        case AddToBlacklist(_, _) =>
+
+        case RemoveFromBlacklist(_) =>
+        case RemovePeer(_) =>
+
       }
       TestActor.KeepRunning
     }
@@ -233,6 +241,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
             sender ! connectedPeers
           else sender ! Failure(new Exception("No connected peers."))
         case ConnectTo(_) =>
+        case DisconnectFromAddress(_) =>
       }
       TestActor.KeepRunning
     }
