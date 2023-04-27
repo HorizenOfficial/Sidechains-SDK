@@ -1,6 +1,7 @@
 package io.horizen.api.http.route
 
 import akka.actor.{ActorRef, ActorRefFactory}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.AbstractSidechainApp
@@ -12,11 +13,12 @@ import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, S
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
-import sparkz.core.api.http.ApiRoute
+import sparkz.core.api.http.{ApiError, ApiResponse, ApiRoute}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, RemovePeer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemovePeer, RemoveFromBlacklist}
+import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -35,7 +37,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ peerByAddress ~ addToBlacklist ~ removeFromBlacklist ~ removePeer
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -88,6 +90,29 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def peerByAddress: Route = (path("peer" / Remaining) & post) { addressParam =>
+    try {
+      val maybeAddress = addressAndPortRegexp.findFirstMatchIn(addressParam)
+      maybeAddress match {
+        case None => SidechainApiError(s"address $maybeAddress is not well formatted")
+
+        case Some(addressAndPort) =>
+          val host = InetAddress.getByName(addressAndPort.group(1))
+          val port = addressAndPort.group(2).toInt
+
+          val address = new InetSocketAddress(host, port)
+
+          val result = askActor[PeerInfo](peerManager, GetPeer(address)).map(peerInfo =>
+            SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString)))
+
+          val peerInfo = Await.result(result, settings.timeout)
+          ApiResponseUtil.toResponse(RespGetPeer(peerInfo))
+      }
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
   def connect: Route = (post & path("connect")) {
     withBasicAuth {
       _ => {
@@ -112,6 +137,30 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def removePeer: Route = (path("peer") & delete & withBasicAuth) {
+    _ => {
+      try {
+        entity(as[ReqRemoveFromPeers]) { bodyRequest =>
+          val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
+
+          maybeAddress match {
+            case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
+
+            case Some(addressAndPort) =>
+              val host = InetAddress.getByName(addressAndPort.group(1))
+              val port = addressAndPort.group(2).toInt
+              val peerAddress = new InetSocketAddress(host, port)
+              peerManager ! RemovePeer(peerAddress)
+              networkController ! DisconnectFromAddress(peerAddress)
+              ApiResponse.OK
+          }
+        }
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
+    }
+  }
+
   def blacklistedPeers: Route = (path("blacklistedPeers") & post) {
     try {
       val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
@@ -120,6 +169,57 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       ApiResponseUtil.toResponse(resultList)
     } catch {
       case e: Throwable => SidechainApiError(e)
+    }
+  }
+
+  def addToBlacklist: Route = (post & path("blacklist") & withBasicAuth) {
+    _ => {
+      try {
+        entity(as[RegAddToBlacklist]) { bodyRequest =>
+          val peerAddress = bodyRequest.address
+          val banDuration = bodyRequest.duration
+
+          if (banDuration <= 0) {
+            ApiError(StatusCodes.BadRequest, s"duration must be greater than 0; $banDuration not allowed")
+          } else {
+            addressAndPortRegexp.findFirstMatchIn(peerAddress) match {
+              case None => ApiError(StatusCodes.BadRequest, s"address $peerAddress is not well formatted")
+
+              case Some(addressAndPort) =>
+                val host = InetAddress.getByName(addressAndPort.group(1))
+                val port = addressAndPort.group(2).toInt
+                val peerAddress = new InetSocketAddress(host, port)
+                peerManager ! AddToBlacklist(peerAddress, Some(CustomPenaltyDuration(banDuration)))
+                networkController ! DisconnectFromAddress(peerAddress)
+                ApiResponse.OK
+            }
+          }
+        }
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
+    }
+  }
+
+  def removeFromBlacklist: Route = (path("blacklist") & delete & withBasicAuth) {
+    _ => {
+      try {
+        entity(as[ReqRemoveFromBlacklist]) { bodyRequest =>
+          val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
+
+          maybeAddress match {
+            case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
+
+            case Some(addressAndPort) =>
+              val host = InetAddress.getByName(addressAndPort.group(1))
+              val port = addressAndPort.group(2).toInt
+              peerManager ! RemoveFromBlacklist(new InetSocketAddress(host, port))
+              ApiResponse.OK
+          }
+        }
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
     }
   }
 
@@ -223,7 +323,19 @@ object SidechainNodeRestSchema {
    private[horizen] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespGetPeer(peer: SidechainPeerNode) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class ReqConnect(host: String, port: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RegAddToBlacklist(address: String, duration: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqRemoveFromBlacklist(address: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqRemoveFromPeers(address: String)
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespConnect(connectedTo: String) extends SuccessResponse
