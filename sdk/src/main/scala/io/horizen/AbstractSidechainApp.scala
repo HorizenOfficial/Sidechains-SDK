@@ -48,14 +48,14 @@ import scala.util.{Failure, Success, Try}
 
 
 abstract class AbstractSidechainApp
-(val sidechainSettings: SidechainSettings,
- val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
- val rejectedApiPaths: JList[Pair[String, String]],
- val applicationStopper: SidechainAppStopper,
- val forkConfigurator: ForkConfigurator,
- val sc2scConfigurator: Sc2ScConfigurator,
- val chainInfo: ChainInfo,
- val consensusSecondsInSlot: Int
+  (val sidechainSettings: SidechainSettings,
+   val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   val rejectedApiPaths: JList[Pair[String, String]],
+   val applicationStopper: SidechainAppStopper,
+   val forkConfigurator: ForkConfigurator,
+   val sc2scConfigurator: Sc2ScConfigurator,
+   val chainInfo: ChainInfo,
+   val consensusSecondsInSlot: Int
 )
   extends Application with SparkzLogging {
   override type TX <: Transaction
@@ -323,9 +323,6 @@ abstract class AbstractSidechainApp
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-
-  //  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
-  //  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
   lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))

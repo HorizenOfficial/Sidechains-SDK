@@ -4,7 +4,6 @@ import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.{AccountStateView, ExecutionFailedException, MessageProcessorFixture}
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
-import io.horizen.params.MainNetParams
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertArrayEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
@@ -105,9 +104,9 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
         val wr = AccountCrossChainMessage(
           1,
           Array.fill(20)(Random.nextInt().toByte),
+          Array.fill(32)(Random.nextInt().toByte),
           Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte)
+          Array.fill(4)(Random.nextInt().toByte)
         )
         expectedListOfWR.add(wr)
         val key = proc.getMessageKey(epochNum, index)

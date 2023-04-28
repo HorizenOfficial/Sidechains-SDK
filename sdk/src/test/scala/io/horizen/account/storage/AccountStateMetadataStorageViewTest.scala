@@ -140,7 +140,7 @@ class AccountStateMetadataStorageViewTest
   @Test
   def testDeleteOldData(): Unit = {
     val storageView: AccountStateMetadataStorageView = stateMetadataStorage.getView
-    val maxNumOfCertificateInStorage = 4
+    val maxNumOfCertificateInStorage = 8
 
     val firstEpochToProcess = 100
     val lastEpochToProcess = firstEpochToProcess + maxNumOfCertificateInStorage + 2
@@ -162,7 +162,6 @@ class AccountStateMetadataStorageViewTest
         else
           assertTrue(s"Certificate older than $maxNumOfCertificateInStorage epoch should not still be present - Current epoch: $epochNumber. old epoch: $previousEpoch",
             storageView.getTopQualityCertificate(previousEpoch).isEmpty)
-
       }
       )
     }
