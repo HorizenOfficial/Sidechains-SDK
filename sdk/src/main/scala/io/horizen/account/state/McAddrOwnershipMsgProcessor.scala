@@ -119,7 +119,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
 
-    val hashedMsg = getMcHashedMsg(scAddress.address().toBytes)
+    val hashedMsg = getMcHashedMsg(BytesUtils.toHexString(scAddress.pubKeyBytes()))
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
@@ -137,18 +137,22 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // indicates the format uncompressed
     val mcAddressProposition: AddressProposition = new AddressProposition(Secp256k1.getAddress(util.Arrays.copyOfRange(uncompressed, 1, uncompressed.length)))
 
-    recoveredPubKeyBytes.equals(mcAddressProposition.pubKeyBytes)
+    recoveredPubKeyBytes.sameElements(mcAddressProposition.pubKeyBytes)
 
   }
 
-  private def getMcHashedMsg(messageToSignBytes: Array[Byte]): Array[Byte] = { // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
+  // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
+  private def getMcHashedMsg(messageToSignString: String) = {
     // this is the magic string prepended in zend to the message to be signed*/
     val strMessageMagic = "Zcash Signed Message:\n"
     // compute the message to be signed. Similarly to what MC does, we must prepend the size of the byte buffers
     // we are using
     val messageMagicBytes = strMessageMagic.getBytes(StandardCharsets.UTF_8)
-    val mmb2 = Bytes.concat(Array[Byte](messageMagicBytes.length.toByte), messageMagicBytes)
-    val mts2 = Bytes.concat(Array[Byte](messageToSignBytes.length.toByte), messageToSignBytes)
+    val mmb2 = Bytes.concat(Array[Byte](messageMagicBytes.length.asInstanceOf[Byte]), messageMagicBytes)
+
+    // TODO: currently size < 256 which is ok for a sc address; make it generic with int_to_bytes
+    val messageToSignBytes = messageToSignString.getBytes(StandardCharsets.UTF_8)
+    val mts2 = Bytes.concat(Array[Byte](messageToSignBytes.length.asInstanceOf[Byte]), messageToSignBytes)
     // hash the message as MC does (double sha256)
     doubleSHA256Hash(Bytes.concat(mmb2, mts2))
   }
@@ -160,8 +164,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       throw new ExecutionRevertedException("Call must include a nonce")
     }
 
-    // check that msg.value is greater than zero
-    if (msg.getValue.signum() <= 0) {
+    // check that msg.value is zero
+    if (msg.getValue.signum() != 0) {
       throw new ExecutionRevertedException("Value must not be zero")
     }
 
@@ -174,11 +178,11 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val inputParams = getArgumentsFromData(msg.getData)
 
     val cmdInput = AddNewOwnershipCmdInputDecoder.decode(inputParams)
-    val scAddress = cmdInput.scAddress
+    val scAddress = new AddressProposition(cmdInput.scAddress)
     val mcPubKeyBytes = cmdInput.mcPubKeyBytes
     val mcSignature = cmdInput.mcSignature
 
-    if (!msg.getFrom.equals(cmdInput.scAddress.address())) {
+    if (!msg.getFrom.equals(cmdInput.scAddress)) {
       throw new ExecutionRevertedException(s"sc account is not an EOA")
     }
 
@@ -191,7 +195,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
         s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
     }
 
-    // TODO verify the ownership validating the signature
+    // verify the ownership validating the signature
     if (!isValidOwnershipSignature(scAddress, mcPubKeyBytes, mcSignature)) {
       throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
     }

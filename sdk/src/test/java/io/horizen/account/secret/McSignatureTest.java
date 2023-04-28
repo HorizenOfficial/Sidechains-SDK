@@ -3,8 +3,11 @@ package io.horizen.account.secret;
 import com.google.common.primitives.Bytes;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.utils.Secp256k1;
+import io.horizen.params.RegTestParams;
+import io.horizen.params.TestNetParams;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.math.ec.ECPoint;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
@@ -14,11 +17,14 @@ import sparkz.util.encode.Base58;
 import sparkz.util.encode.Base64;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.security.SignatureException;
 import java.util.Arrays;
 import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static io.horizen.account.utils.Secp256k1.*;
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;
+import static io.horizen.utils.BytesUtils.toHorizenPublicKeyAddress;
+import static io.horizen.utils.Utils.Ripemd160Sha256Hash;
 import static io.horizen.utils.Utils.doubleSHA256Hash;
 import static org.junit.Assert.*;
 
@@ -139,35 +145,41 @@ public class McSignatureTest {
     @Test
     public void testMcSignature() throws SignatureException {
 
+        // for ripemd160 hash
+        Security.addProvider(new BouncyCastleProvider());
+
         /*
           zend rpc command for getting the signature of an input message given a transparent address. The signature will
           be applied using the private key corresponding to the transparent address:
 
-              $ src/zen-cli --regtest signmessage "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G" "abcd"
-              H+aZxHvjYlJCFJI+qkfshOBH3KUxfO8MM6exPIOHSY6uN+Y2tCGUpmXH2biHkt6W7HDwfM+B1qGKhKtDd1Vd8is=
+              $ src/zen-cli -regtest signmessage ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2 00c8f107a09cd4f463afc2f1e6e5bf6022ad4600
+              IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw=
 
 
           zend rpc command for getting info about a transparent address, including its pub key
 
-              $ src/zen-cli --regtest validateaddress "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G"
+              $ src/zen-cli -regtest validateaddress ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2
               {
-                "isvalid": true,
-                "address": "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G",
-                "scriptPubKey": "76a9140885aeef7f6d486b4a80a8b805cb8cfa1cb597b588ac20bb1acf2c1fc1228967a611c7db30632098f0c641855180b5fe23793b72eea50d00b4",
-                "ismine": true,
-                "iswatchonly": false,
-                "isscript": false,
-                "pubkey": "032a5bb6de7d7d39455c2ddce7a6c6e9149e9633985e2d384af0c2900814d8d6a6",
-                "iscompressed": true,
-                "account": ""
+                  "isvalid": true,
+                  "address": "ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2",
+                  "scriptPubKey": "76a914cddf99fb527636c2911235cda4ab07698f659ec688ac20bb1acf2c1fc1228967a611c7db30632098f0c641855180b5fe23793b72eea50d00b4",
+                  "ismine": true,
+                  "iswatchonly": false,
+                  "isscript": false,
+                  "pubkey": "0275e40b8af8b7e8e8d30a821ab659dae06d819d13672826e785953fb037a31d5c",
+                  "pubkeyhash": "c69e658f6907aba4cd351291c2367652fb99dfcd",
+                  "iscompressed": true,
+                  "account": ""
               }
          */
 
 
         // see rpc cmds above. Note:
         // 1. we can not get the pub key from the transparent address because it is hashed before base58 encoding.
-        // 2. here we have 33 bytes. The first byte 0x03 is a tag indicating the parity value of the compressed format
-        String strMcPubKey = "032a5bb6de7d7d39455c2ddce7a6c6e9149e9633985e2d384af0c2900814d8d6a6";
+        //    And we can not get the taddr from the recovered address because it is hashed too (see
+        //    mcAddressProposition below)
+        // 2. here we have 33 bytes. The first byte 0x02/03 is a tag indicating the parity value of the compressed format
+        String strMcPubKey = "0275e40b8af8b7e8e8d30a821ab659dae06d819d13672826e785953fb037a31d5c";
 
         // in order to get an address proposition we must get the uncompressed format of the mc pub key from the
         // compressed one:
@@ -187,11 +199,11 @@ public class McSignatureTest {
 
         System.out.println("mcAddressProposition = " + BytesUtils.toHexString(mcAddressProposition.pubKeyBytes()));
 
-        byte[] hashedMsg = getMcHashedMsg("abcd");
+        byte[] hashedMsg = getMcHashedMsg("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600");
         System.out.println("hashed msg = " + BytesUtils.toHexString(hashedMsg));
 
         // base64 encoded signature as it is returned by rpc cmd above
-        String strMcSignature = "H+aZxHvjYlJCFJI+qkfshOBH3KUxfO8MM6exPIOHSY6uN+Y2tCGUpmXH2biHkt6W7HDwfM+B1qGKhKtDd1Vd8is=";
+        String strMcSignature = "IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw=";
 
         byte[] decodedMcSignature = Base64.decode(strMcSignature).get();
         // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating a compressed
@@ -211,9 +223,31 @@ public class McSignatureTest {
 
         // verify MC message signature
         BigInteger recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData);
+        byte[] recUncompressedPubKeyBytes = Bytes.concat(new byte[]{0x04}, Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE));
+        ECPoint ecpointRec = ecParameters.getCurve().decodePoint(recUncompressedPubKeyBytes);
+        byte[] recCompressedPubKeyBytes = ecpointRec.getEncoded(true);
+
+
         byte[] recoveredPubKeyBytes = getAddress(Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE));
         System.out.println("recAddressProposition = " + BytesUtils.toHexString(recoveredPubKeyBytes));
         assertArrayEquals(recoveredPubKeyBytes, mcAddressProposition.pubKeyBytes());
+
+        // check we have consistent mcpubkey and taddr
+        String taddr ="ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2";
+        byte[] mcPubkeyhash = Ripemd160Sha256Hash(recCompressedPubKeyBytes);
+
+        String computedTaddr = toHorizenPublicKeyAddress(
+                mcPubkeyhash,
+                new RegTestParams(null, null, null,
+                        null, null, 0,
+                        0, 0, 0,
+                        0, null, null, null,
+                        0, null, null,
+                        null, null, null,
+                        null, null, false, null,
+                        null, 0,false, false));
+
+        assertEquals(taddr, computedTaddr);
 
         /*
         The MC signature can be verified also by a solidity smart contract:
