@@ -89,7 +89,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     s"""{
         "baseFeePerGas": "0x342770c0",
         "difficulty": "0x0",
-        "extraData": "0x",
+        "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "gasLimit": "0x1c9c380",
         "gasUsed": "0x3b9aca01",
         "hash": "0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc",
@@ -100,7 +100,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "number": "0x1",
         "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000123",
         "receiptsRoot": "0x1234567891011121314112345678910111213141010203040506070809111444",
-        "sha3Uncles": "0x",
+        "sha3Uncles": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "size": "0x100",
         "stateRoot": "0x1234567891011121314112345678910111213141010203040506070809111333",
         "timestamp": "0x3b9aca00",
