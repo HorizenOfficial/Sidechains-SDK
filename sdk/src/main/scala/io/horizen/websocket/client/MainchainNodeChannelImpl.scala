@@ -157,14 +157,6 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
         certificateRequest.fieldElementCertificateFields.map(BytesUtils.toHexString),
         certificateRequest.bitVectorCertificateFields.map(BytesUtils.toHexString))
 
-    // check if there are already certificates present in mempool for current or higher epoch
-    getTopQualityCertificates(BytesUtils.toHexString(certificateRequest.sidechainId)) match {
-      case Success(mcRefTry) =>
-        if ((mcRefTry.mempoolCertInfo.get.epoch >= certificateRequest.epochNumber && mcRefTry.mempoolCertInfo.get.certHash != null) || (mcRefTry.chainCertInfo.get.epoch >= certificateRequest.epochNumber  && mcRefTry.chainCertInfo.get.certHash != null))
-          throw new CertificateAlreadyPresentException()
-      case Failure(_) =>
-    }
-
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 
     processCertificateResponsePayload(future)

@@ -409,16 +409,30 @@ abstract class AbstractCertificateSubmitter[
                   proofWithQuality.getValue
                 } try to send it to mainchain")
 
-                mainchainChannel.sendCertificate(certificateRequest) match {
-                  case Success(certificate) =>
-                    log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
-
-                  case Failure(ex) =>
-                    if (ex.isInstanceOf[CertificateAlreadyPresentException])
-                      log.info(s"Submission failed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
-                    else
-                      log.error("Creation of backward transfer certificate had been failed.", ex)
+                // check if there are already certificates present in mempool for current or higher epoch
+                var isCertificateAlreadyPresent = false
+                mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(certificateRequest.sidechainId))) match {
+                  case Success(mcRefTry) =>
+                    (mcRefTry.mempoolCertInfo, mcRefTry.chainCertInfo) match {
+                      case (Some(mcInfo), Some(ccInfo)) =>
+                        if ((mcInfo.epoch >= certificateRequest.epochNumber && mcInfo.certHash != null) || (ccInfo.epoch >= certificateRequest.epochNumber && ccInfo.certHash != null)) {
+                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
+                          isCertificateAlreadyPresent = true
+                        }
+                    }
+                  case Failure(_) =>
+                    log.info("Check for top quality certificates before sending it failed. Trying to send certificate anyway.")
                 }
+
+                if (!isCertificateAlreadyPresent)
+                  mainchainChannel.sendCertificate(certificateRequest) match {
+                    case Success(certificate) =>
+                      log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
+
+                    case Failure(ex) =>
+                      log.error("Creation of backward transfer certificate had been failed.", ex)
+                  }
+
                 context.system.eventStream.publish(CertificateSubmissionStopped)
               }
             }).start()
