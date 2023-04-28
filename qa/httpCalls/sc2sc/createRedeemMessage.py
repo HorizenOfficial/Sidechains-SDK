@@ -17,5 +17,4 @@ def createRedeemMessage(sidechainNode, protocolVersion, messageType, senderSidec
     }
     body = json.dumps(j)
     response = sidechainNode.sc2sc_createRedeemMessage(body)
-    print(response)
     return response

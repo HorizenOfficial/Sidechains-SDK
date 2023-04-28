@@ -56,10 +56,6 @@ public class VoteController extends SidechainApplicationApiGroup {
             PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer()
                     .parseBytes(BytesUtils.fromHexString(request.getProposition()));
 
-            System.out.println("In the voting controller with proposition: " + request.getProposition());
-            System.out.println("And the proposition25519: " + proposition.toString());
-            System.out.println("The request: " + request);
-
             ByteBuffer bb = ByteBuffer.allocate(4);
             bb.putInt(request.getVote());
 

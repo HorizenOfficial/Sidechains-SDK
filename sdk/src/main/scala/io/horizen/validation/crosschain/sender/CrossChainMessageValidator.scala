@@ -14,7 +14,6 @@ import io.horizen.{SidechainSettings, SidechainTypes}
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
-                                  //sidechainSettings: SidechainSettings,
                                   sc2ScConfig: Sc2ScConfigurator,
                                   scState: SidechainState,
                                   scStateStorage: SidechainStateStorage,

@@ -19,18 +19,15 @@ import scala.collection.JavaConverters;
 import java.util.Arrays;
 
 public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
-    //private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
     private final NetworkParams networkParams;
 
     public CrossChainRedeemMessageValidator(
-            //SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
             Sc2scCircuit sc2scCircuit,
             NetworkParams networkParams
     ) {
-        //this.sidechainSettings = sidechainSettings;
         this.scStateStorage = scStateStorage;
         this.sc2scCircuit = sc2scCircuit;
         this.networkParams = networkParams;

@@ -46,7 +46,7 @@ class WithKeyRotationCircuitStrategy[
 
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    val result = cryptolibCircuit.createProof(
+    cryptolibCircuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -64,7 +64,6 @@ class WithKeyRotationCircuitStrategy[
       true,
       true
     )
-    result
   }
 
   override def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): CertificateDataWithKeyRotation = {
@@ -140,7 +139,7 @@ class WithKeyRotationCircuitStrategy[
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash, btrFee, ftMinAmount, /*keysRootHash,*/ Seq(keysRootHash, messageTreeRootHash, previousCertificateBytes).asJava)
+        endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(keysRootHash, messageTreeRootHash, previousCertificateBytes).asJava)
 
     message
   }

@@ -324,9 +324,6 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
-  //  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
-  //  val applicationApiRoutes: Seq[ApplicationApiRoute]
-
   // Init API
   lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 

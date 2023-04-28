@@ -77,7 +77,6 @@ class CrossChainToBeRemoved(SidechainTestFramework):
         assert_equal(http_wallet_balance(sc_node), user_balance)
 
         user_address = http_wallet_createPrivateKey25519(sc_node)
-        print(f'the user address {user_address}')
 
         sc_id = self.sc_nodes_bootstrap_info.sidechain_id
         result = sendVoteMessageToSidechain(sc_node, user_address, '8', sc_id, user_address, 100)
@@ -128,7 +127,6 @@ class CrossChainToBeRemoved(SidechainTestFramework):
         self.sc_sync_all()
 
         all_boxes = http_wallet_allBoxes(sc_node)
-        print(f'These are all the boxes: {all_boxes}')
         assert_true(any(box["typeName"] == "CrossChainMessageBox" for box in all_boxes), "Expected a CrossChainMessageBox but none were found")
         assert_true(any(box["typeName"] == "CrossChainRedeemMessageBox" for box in all_boxes), "Expected a CrossChainRedeemMessageBox but none were found")
 

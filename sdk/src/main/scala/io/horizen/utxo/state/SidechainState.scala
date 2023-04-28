@@ -46,7 +46,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                       val params: NetworkParams,
                                       val sc2scConfig: Sc2ScConfigurator,
-                                      //sidechainSettings: SidechainSettings,
                                       override val version: VersionTag,
                                       val applicationState: ApplicationState)
   extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
