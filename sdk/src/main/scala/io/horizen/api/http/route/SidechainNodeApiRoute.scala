@@ -1,7 +1,6 @@
 package io.horizen.api.http.route
 
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.AbstractSidechainApp
@@ -13,7 +12,7 @@ import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, S
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
-import sparkz.core.api.http.{ApiError, ApiResponse, ApiRoute}
+import sparkz.core.api.http.{ApiResponse, ApiRoute}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
@@ -144,7 +143,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
           val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
 
           maybeAddress match {
-            case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
+            case None => SidechainApiError(s"address $maybeAddress is not well formatted")
 
             case Some(addressAndPort) =>
               val host = InetAddress.getByName(addressAndPort.group(1))
@@ -180,10 +179,10 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
           val banDuration = bodyRequest.duration
 
           if (banDuration <= 0) {
-            ApiError(StatusCodes.BadRequest, s"duration must be greater than 0; $banDuration not allowed")
+            SidechainApiError(s"duration must be greater than 0; $banDuration not allowed")
           } else {
             addressAndPortRegexp.findFirstMatchIn(peerAddress) match {
-              case None => ApiError(StatusCodes.BadRequest, s"address $peerAddress is not well formatted")
+              case None => SidechainApiError(s"address $peerAddress is not well formatted")
 
               case Some(addressAndPort) =>
                 val host = InetAddress.getByName(addressAndPort.group(1))
@@ -208,7 +207,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
           val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
 
           maybeAddress match {
-            case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
+            case None => SidechainApiError(s"address $maybeAddress is not well formatted")
 
             case Some(addressAndPort) =>
               val host = InetAddress.getByName(addressAndPort.group(1))
