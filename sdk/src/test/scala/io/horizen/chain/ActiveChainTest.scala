@@ -61,6 +61,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertTrue("Empty ActiveChain expected not to find modifier for inconsistent height", chain.blockInfoByHeight(1).isEmpty)
     assertTrue("Empty ActiveChain expected not to find modifier id for inconsistent height", chain.idByHeight(0).isEmpty)
     assertTrue("Empty ActiveChain expected not to find modifier id for inconsistent height", chain.idByHeight(1).isEmpty)
+    assertTrue("Empty ActiveChain expected to return empty chain from nonexistent modifier", chain.chainSince(getRandomModifier(), None).isEmpty)
     assertTrue("Empty ActiveChain expected to return empty chain from nonexistent modifier", chain.chainAfter(getRandomModifier(), None).isEmpty)
 
     val randomMainchainHash: MainchainHeaderHash = generateMainchainHeaderHash(111L)
@@ -82,7 +83,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
                                     mainchainInitialHeight: Int,
                                     allMainchainReferences: Seq[MainchainHeaderHash] // TODO: in general we need to pass MainchainHeaders and RefData info separately
                                    ): Unit = {
-    assertTrue("Chain from shall not be empty for added element", chain.chainAfter(id, None).nonEmpty)
+    assertTrue("Chain from shall not be empty for added element", chain.chainSince(id, None).nonEmpty)
     assertTrue("Element shall be present in chain", chain.contains(id))
     assertEquals("Data shall be reachable by height", data, chain.blockInfoByHeight(height).get)
     assertEquals("Data shall be reachable by id", data, chain.blockInfoById(id).get)
@@ -297,26 +298,27 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertTrue("ActiveChain expected to find modifier id for height 1", chain.idByHeight(1).isDefined)
     assertTrue("ActiveChain expected to find modifier id for chain current height", chain.idByHeight(chainHeight).isDefined)
 
+    assertTrue("ActiveChain expected to return empty chain from nonexistent modifier", chain.chainSince(getRandomModifier(), None).isEmpty)
     assertTrue("ActiveChain expected to return empty chain from nonexistent modifier", chain.chainAfter(getRandomModifier(), None).isEmpty)
 
-    var chainAfter: Seq[ModifierId] = chain.chainAfter(blockInfoData.head._1, None)
-    assertEquals("ActiveChain chainAfter expected to return chain with different height for first(genesis) modifier",
-      blockInfoData.size, chainAfter.size)
-    for(i <- chainAfter.indices)
-      assertEquals("ActiveChain chainAfter item at index %d is different".format(i), blockInfoData(i)._1, chainAfter(i))
+    var chainSince: Seq[ModifierId] = chain.chainSince(blockInfoData.head._1, None)
+    assertEquals("ActiveChain chainSince expected to return chain with different height for first(genesis) modifier",
+      blockInfoData.size, chainSince.size)
+    for(i <- chainSince.indices)
+      assertEquals("ActiveChain chainAfter item at index %d is different".format(i), blockInfoData(i)._1, chainSince(i))
 
 
     val startingIndex = 3
-    chainAfter = chain.chainAfter(blockInfoData(startingIndex)._1, None)
+    chainSince = chain.chainSince(blockInfoData(startingIndex)._1, None)
     assertEquals("ActiveChain chainAfter expected to return chain with different height for 4th modifier",
-      chainHeight - startingIndex, chainAfter.size)
-    for(i <- chainAfter.indices)
-      assertEquals("ActiveChain chainAfter item at index %d is different".format(i), blockInfoData(i + startingIndex)._1, chainAfter(i))
+      chainHeight - startingIndex, chainSince.size)
+    for(i <- chainSince.indices)
+      assertEquals("ActiveChain chainAfter item at index %d is different".format(i), blockInfoData(i + startingIndex)._1, chainSince(i))
 
 
-    chainAfter = chain.chainAfter(blockInfoData.last._1, None)
-    assertEquals("ActiveChain chainAfter expected to return chain with size 1 for tip modifier", 1, chainAfter.size)
-    assertEquals("ActiveChain chainAfter item at index 0 is different", blockInfoData.last._1, chainAfter.head)
+    chainSince = chain.chainSince(blockInfoData.last._1, None)
+    assertEquals("ActiveChain chainAfter expected to return chain with size 1 for tip modifier", 1, chainSince.size)
+    assertEquals("ActiveChain chainAfter item at index 0 is different", blockInfoData.last._1, chainSince.head)
   }
 
 
@@ -335,12 +337,14 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, firstId, firstData, 1, 0, mainchainDataAfterFirst)
     checkElementIsBest(chain, firstId, firstData, 1)
-    assertEquals("ChainFrom the beginning should contain just a tip", Seq(firstId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain just a tip", Seq(firstId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should be empty", Seq(), chain.chainAfter(firstId, None))
 
     // Try to add the same element second time
     addNewBestBlockShallBeFailed(chain, firstId, firstData, firstMainchainParent)
     checkElementIsBest(chain, firstId, firstData, 1)
-    assertEquals("ChainFrom the beginning should contain just a tip", Seq(firstId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain just a tip", Seq(firstId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should be empty", Seq(), chain.chainAfter(firstId, None))
 
     // Add second element
     val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainHeaderHash]) = getNewDataForParent(firstId)
@@ -349,7 +353,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, secondId, secondData, 2, mainchainDataAfterFirst.size, mainchainDataAfterSecond)
     checkElementIsBest(chain, secondId, secondData, 2)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second id", Seq(secondId), chain.chainAfter(firstId, None))
     checkElementIsNotBest(chain, firstId, firstData, 1)
 
     // Add third element
@@ -359,7 +364,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, thirdId, thirdData, 3, mainchainDataAfterSecond.size, mainchainDataAfterThird)
     checkElementIsBest(chain, thirdId, thirdData, 3)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, thirdId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second and third ids", Seq(secondId, thirdId), chain.chainAfter(firstId, None))
     checkElementIsNotBest(chain, secondId, secondData, 2)
 
     // Add fourth element
@@ -368,7 +374,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     val mainchainDataAfterFourth = mainchainDataAfterThird ++ fourthData.mainchainHeaderHashes
 
     checkElementIsPresent(chain, fourthId, fourthData, 4, mainchainDataAfterThird.size, mainchainDataAfterFourth)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId, fourthId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, thirdId, fourthId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second, third and fourth ids", Seq(secondId, thirdId, fourthId), chain.chainAfter(firstId, None))
 
     //replace last element
     val (otherFourthId: ModifierId, otherFourthData: SidechainBlockInfo, otherFourthMainchainParent: Option[MainchainHeaderHash]) = getNewDataForParent(thirdId)
@@ -377,7 +384,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, otherFourthId, otherFourthData, 4, mainchainDataAfterThird.size, mainchainDataAfterOtherFourth)
     checkElementIsNotPresent(chain, fourthId, fourthData, 4)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId, otherFourthId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, thirdId, otherFourthId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second, third and other fourth ids", Seq(secondId, thirdId, otherFourthId), chain.chainAfter(firstId, None))
 
 
     // do fork on the second element and add element
@@ -388,7 +396,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     checkElementIsPresent(chain, otherThirdId, otherThirdData, 3, mainchainDataAfterSecond.size, mainchainDataAfterOtherThird)
     checkElementIsBest(chain, otherThirdId, otherThirdData, 3)
     checkElementIsNotPresent(chain, otherFourthId, otherFourthData, 4)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, otherThirdId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, otherThirdId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second and other third ids", Seq(secondId, otherThirdId), chain.chainAfter(firstId, None))
 
     val (afterThirdId: ModifierId, afterThirdData: SidechainBlockInfo, afterThirdMainchainParent: Option[MainchainHeaderHash]) = getNewDataForParent(otherThirdId)
     addNewBestBlockIsSuccessful(chain, afterThirdId, afterThirdData, afterThirdMainchainParent)
@@ -396,14 +405,16 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, afterThirdId, afterThirdData, 4, mainchainDataAfterOtherThird.size, mainchainDataAfterAfterThird)
     checkElementIsBest(chain, afterThirdId, afterThirdData, 4)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, otherThirdId, afterThirdId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, otherThirdId, afterThirdId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second, other third and after third ids", Seq(secondId, otherThirdId, afterThirdId), chain.chainAfter(firstId, None))
 
     // try to add unconnected element
     val (unconnectedId: ModifierId, unconnectedData: SidechainBlockInfo, unconnectedMainchainParent: Option[MainchainHeaderHash]) = getNewDataForParent(getRandomModifier())
     addNewBestBlockShallBeFailed(chain, unconnectedId, unconnectedData, unconnectedMainchainParent)
     checkElementIsPresent(chain, afterThirdId, afterThirdData, 4, mainchainDataAfterOtherThird.size, mainchainDataAfterAfterThird)
     checkElementIsBest(chain, afterThirdId, afterThirdData, 4)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, otherThirdId, afterThirdId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, otherThirdId, afterThirdId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain second, other third and after third ids", Seq(secondId, otherThirdId, afterThirdId), chain.chainAfter(firstId, None))
   }
 
   @Test
@@ -443,13 +454,15 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     checkElementIsPresent(chain, firstId, firstData, 1, 0, mainchainDataAfterFirst)
     checkElementIsBest(chain, firstId, firstData, 1)
-    assertEquals("ChainFrom the beginning should contain just a tip", Seq(firstId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain just a tip", Seq(firstId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter should be empty", Seq(), chain.chainAfter(firstId, None))
 
     // Add second element
     val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainHeaderHash]) = getNewDataForParent(firstId, Seq(generateMainchainBlockReference()))
     addNewBestBlockIsSuccessful(chain, secondId, secondData, secondMainchainParent)
     checkElementIsBest(chain, secondId, secondData, 2)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain the second id", Seq(secondId), chain.chainAfter(firstId, None))
     val mainchainDataAfterSecond = mainchainDataAfterFirst ++ secondData.mainchainHeaderHashes
 
     // Add third element
@@ -458,7 +471,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     val mainchainDataAfterThird = mainchainDataAfterSecond ++ thirdData.mainchainHeaderHashes
     checkElementIsPresent(chain, thirdId, thirdData, 3, mainchainDataAfterSecond.size, mainchainDataAfterThird)
     checkElementIsBest(chain, thirdId, thirdData, 3)
-    assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId), chain.chainAfter(firstId, None))
+    assertEquals("ChainSince the beginning should contain all ids", Seq(firstId, secondId, thirdId), chain.chainSince(firstId, None))
+    assertEquals("ChainAfter the beginning should contain the second and thitr ids", Seq(secondId, thirdId), chain.chainAfter(firstId, None))
   }
 
   @Test
