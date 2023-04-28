@@ -24,6 +24,8 @@ final class ActiveChain private(sidechainCache: ElementsChain[ModifierId, Sidech
 
   def contains(id: ModifierId): Boolean = sidechainCache.contains(id)
 
+  def chainSince(id: ModifierId, limit: Option[Int]): Seq[ModifierId] = sidechainCache.chainSince(id, limit)
+
   def chainAfter(id: ModifierId, limit: Option[Int]): Seq[ModifierId] = sidechainCache.chainAfter(id, limit)
 
   def blockInfoById(id: ModifierId): Option[SidechainBlockInfo] = sidechainCache.heightById(id).flatMap(sidechainCache.dataByHeight)
