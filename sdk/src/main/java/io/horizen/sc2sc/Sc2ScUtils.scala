@@ -1,18 +1,15 @@
 package io.horizen.sc2sc
 
-import com.google.common.primitives.Bytes
-import com.horizen.commitmenttreenative.{CommitmentTree, ScCommitmentCertPath}
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.commitmenttreenative.ScCommitmentCertPath
 import com.horizen.merkletreenative.MerklePath
 import io.horizen.AbstractState
-import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 
-import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
@@ -39,7 +36,7 @@ trait Sc2ScUtils[
       sc2scCircuitFunctions.initMerkleTree()
     ) { tree => {
       sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, crossChainMessages.asJava)
-      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree);
+      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
       val previousCertificateHash: Option[Array[Byte]] = getTopCertInfoByEpoch(epoch - 1, state, history, calculateMerklePath = false, params) match {
         case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
         case _ => None
@@ -56,7 +53,6 @@ trait Sc2ScUtils[
     //check the message has been previously posted and we are in the correct epoch
     val currentEpoch = state.getWithdrawalEpochInfo.epoch
     val messageHash = sc2scCircuitFunctions.getCrossChainMessageHash(sourceMessage)
-
     state.getCrossChainMessageHashEpoch(messageHash) match {
       case None => throw new Sc2ScException("Message was not found inside state")
       case Some(messagePostedEpoch) =>
@@ -79,8 +75,8 @@ trait Sc2ScUtils[
             val topCertscCommitmentRoot = topCertInfos.scCommitmentRoot
             val nextCertscCommitmentRoot = nextTopCertInfos.scCommitmentRoot
 
-            val currWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion)
-            val nextWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion)
+            val currWithdrawalCertificate = CommonCircuit.createWithdrawalCertificateBad(topCertInfos.certificate, params.sidechainCreationVersion)
+            val nextWithdrawalCertificate = CommonCircuit.createWithdrawalCertificateBad(nextTopCertInfos.certificate, params.sidechainCreationVersion)
 
             //compute proof
             val proof: Array[Byte] = sc2scCircuitFunctions.createRedeemProof(
@@ -92,7 +88,7 @@ trait Sc2ScUtils[
               ScCommitmentCertPath.deserialize(topCertInfos.merklePath),
               ScCommitmentCertPath.deserialize(nextTopCertInfos.merklePath),
               messageMerklePath,
-              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("You need to set a proving key file path to generate a redeem message"))
+              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("Sc2Sc proving key path must be specified"))
             )
 
             //build and return final message
@@ -135,15 +131,15 @@ trait Sc2ScUtils[
     val existenceProof = mcBlockRef.data.existenceProof.getOrElse(
       throw new IllegalArgumentException(s"There is no existence proof in the MainchainBlockReference $mcBlockRef")
     )
-    Using.resource(
-      mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
-    ) { commTree =>
+    Using.resources(
+      mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree,
+      CommonCircuit.createWithdrawalCertificateBad(topCert, networkParams.sidechainCreationVersion)
+    ) { (commTree, withdrawalCertificate) =>
       Using.resource(
-        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      ) {
-        pathCert =>
-          pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
-          pathCert.serialize()
+        commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()
+      ) { pathCert =>
+        pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
+        pathCert.serialize()
       }
     }
   }

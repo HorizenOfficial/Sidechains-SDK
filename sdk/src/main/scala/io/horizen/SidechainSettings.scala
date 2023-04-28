@@ -127,9 +127,9 @@ case class AccountMempoolSettings(
 }
 
 case class Sc2ScSettings(
-                          sc2ScProvingKeyFilePath: Option[String],
-                          sc2scVerificationKeyFilePath: Option[String]
-                        )
+  sc2ScProvingKeyFilePath: Option[String],
+  sc2ScVerificationKeyFilePath: Option[String]
+)
 
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,

@@ -89,6 +89,7 @@ class AccountForgeMessageBuilderTest
         stateView,
         listOfTxs,
         Seq.empty,
+        Seq.empty,
         blockContext,
         null,
         inputBlockSize
@@ -135,6 +136,7 @@ class AccountForgeMessageBuilderTest
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
+        Seq.empty,
         Seq.empty,
         blockContext,
         null,
@@ -189,6 +191,7 @@ class AccountForgeMessageBuilderTest
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
+        Seq.empty,
         Seq.empty,
         blockContext,
         null,

@@ -460,7 +460,6 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
     if bootstrap_info.genesis_evm_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_evm_account.secret)
 
-
     all_signers_private_keys = bootstrap_info.certificate_proof_info.schnorr_signers_secrets
     signer_private_keys = [all_signers_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
@@ -534,6 +533,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
+        "SC2SC_PROVING_KEY_PATH": sc_node_config.sc2sc_proving_key_file_path if sc_node_config.sc2sc_proving_key_file_path is not None else "",
+        "SC2SC_VERIFICATION_KEY_PATH": sc_node_config.sc2sc_verification_key_file_path if sc_node_config.sc2sc_verification_key_file_path is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
@@ -544,7 +545,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
-        'TX_LIFETIME': sc_node_config.tx_lifetime
+        'TX_LIFETIME': sc_node_config.tx_lifetime,
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -657,8 +658,6 @@ def get_examples_dir():
 
 SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
 EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* io.horizen.examples.EvmApp"
-
-
 
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,

@@ -1,6 +1,5 @@
 package io.horizen.validation.crosschain.sender
 
-import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessageHash, Sc2ScConfigurator}
@@ -10,13 +9,15 @@ import io.horizen.utxo.box.CrossChainMessageBox
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.storage.SidechainStateStorage
 import io.horizen.validation.crosschain.CrossChainValidator
+import io.horizen.{SidechainSettings, SidechainTypes}
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
-                                  scStateStorage: SidechainStateStorage,
+                                  //sidechainSettings: SidechainSettings,
                                   sc2ScConfig: Sc2ScConfigurator,
                                   scState: SidechainState,
+                                  scStateStorage: SidechainStateStorage,
                                   networkParams: NetworkParams
                                 ) extends CrossChainValidator[SidechainBlock] {
   override def validate(scBlock: SidechainBlock): Unit = {

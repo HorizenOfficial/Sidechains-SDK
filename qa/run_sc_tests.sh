@@ -71,6 +71,7 @@ testScriptsEvm=(
     'sc_evm_bwt_corner_cases.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
     'sc_evm_bwt_corner_cases.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
     'sc_evm_cert_key_rotation.py'
+    'sc_evm_cert_key_rotation_multiple_nodes.py'
     'sc_evm_cert_key_rotation.py --nonceasing'
     'sc_evm_cert_key_rotation_across_epoch.py'
     'sc_evm_cert_key_rotation_across_epoch.py --nonceasing'
@@ -113,6 +114,7 @@ testScriptsEvm=(
     'sc_evm_txpool.py'
     'account_websocket_server.py'
     'account_websocket_server_sync.py'
+    'account_websocket_server_rpc.py'
 );
 
 testScriptsUtxo=(

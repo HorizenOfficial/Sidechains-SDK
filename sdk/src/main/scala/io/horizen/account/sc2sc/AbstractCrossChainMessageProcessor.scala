@@ -1,6 +1,7 @@
 package io.horizen.account.sc2sc
 
 import com.google.common.primitives.{Bytes, Ints}
+import io.horizen.SidechainSettings
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData}
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
@@ -11,7 +12,7 @@ import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, CrossChainProtocolVersion}
-import io.horizen.utils.ZenCoinsUtils
+import io.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.{StaticStruct, Type}
 import org.web3j.abi.datatypes.generated.Uint32
@@ -25,7 +26,7 @@ trait CrossChainMessageProvider {
   private[horizen] def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage]
   private[horizen] def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int]
 }
-abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
+abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
 
   val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
@@ -43,7 +44,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
   }
 
   override def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
-    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(msg, networkParams))
+    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(msg, sidechainId))
   }
 
   private[horizen] def getListOfCrossChainMessagesRecords(epochNum: Int, view: BaseAccountStateView): Seq[AccountCrossChainMessage] = {
@@ -58,7 +59,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
 
 
   override private[horizen] def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int] = {
-    val data = view.getAccountStorage(contractAddress, messageHash.bytes)
+    val data = view.getAccountStorage(contractAddress, messageHash.getValue)
     if (data.sameElements(NULL_HEX_STRING_32)) {
       Option.empty
     } else {
@@ -66,42 +67,47 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
     }
   }
 
+  protected def addCrossChainMessage(request: AccountCrossChainMessage,
+                                     view: BaseAccountStateView,
+                                     currentEpochNum: Int): Array[Byte] = {
+    val numOfReqs = getMessageEpochCounter(view, currentEpochNum)
+    if (numOfReqs >= MaxCrosschainMessagesPerEpoch) {
+      throw new ExecutionRevertedException("Reached maximum number of CrosschainMessages per epoch: request is invalid")
+    }
+
+    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, sidechainId))
+    //check for duplicates in this and other message processor, in any epoch
+    if (view.getCrossChainMessageHashEpoch(messageHash).nonEmpty) {
+      throw new ExecutionRevertedException("Duplicate crosschain message")
+    }
+
+    val nextNum: Int = numOfReqs + 1
+    setMessageEpochCounter(view, currentEpochNum, nextNum)
+
+    val requestInBytes = request.bytes
+    val messageKey = getMessageKey(currentEpochNum, nextNum)
+    view.updateAccountStorageBytes(contractAddress, messageKey, requestInBytes)
+    //we store also the mapping [message hash, epochnumber]
+    view.updateAccountStorageBytes(contractAddress, messageHash.getValue, Ints.toByteArray(currentEpochNum))
+
+    val event = AddCrossChainMessage(
+      new Address(request.sender), request.messageType, request.receiverSidechain, request.receiver, request.payload
+    )
+    val evmLog = getEthereumConsensusDataLog(event)
+    view.addLog(evmLog)
+
+    request.encode
+  }
 
   protected def addCrossChahinMessage(messageType: Int,
                                       sender: Address,
                                       receiverSidechain: Array[Byte],
                                       receiver: Array[Byte],
                                       payload: Array[Byte],
-                                      view: AccountStateView,
+                                      view: BaseAccountStateView,
                                       currentEpochNum: Int): Array[Byte] = {
-    val numOfReqs = getMessageEpochCounter(view, currentEpochNum)
-    if (numOfReqs >= MaxCrosschainMessagesPerEpoch) {
-      throw new ExecutionRevertedException("Reached maximum number of CrosschainMessages per epoch: request is invalid")
-    }
-
     val request = AccountCrossChainMessage(messageType, sender.toBytes, receiverSidechain, receiver, payload)
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, networkParams))
-
-    //check for duplicates in this and other message processor, in any epoch
-    if (view.getCrossChainMessageHashEpoch(messageHash).nonEmpty) {
-      throw new ExecutionRevertedException("Dupicate crosschain message")
-    }
-
-    val nextNum: Int = numOfReqs + 1
-    setMessageEpochCounter(view, currentEpochNum, nextNum)
-
-
-    val requestInBytes = request.bytes
-    val messageKey = getMessageKey(currentEpochNum, nextNum)
-    view.updateAccountStorageBytes(contractAddress, messageKey, requestInBytes)
-    //we store also the mapping [message hash, epochnumber]
-    view.updateAccountStorageBytes(contractAddress, messageHash.bytes, Ints.toByteArray(currentEpochNum))
-
-    val event = AddCrossChainMessage(sender, messageType, receiverSidechain, receiver, payload)
-    val evmLog = getEthereumConsensusDataLog(event)
-    view.addLog(evmLog)
-
-    request.encode
+    addCrossChainMessage(request, view, currentEpochNum)
   }
 
   private[horizen] def getMessageEpochCounter(view: BaseAccountStateView, epochNum: Int) = {
@@ -133,11 +139,11 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
 }
 
 object AbstractCrossChainMessageProcessor {
-  private[horizen] def buildCrosschainMessageFromAccount(data: AccountCrossChainMessage, params: NetworkParams): CrossChainMessage = {
+  private[horizen] def buildCrosschainMessageFromAccount(data: AccountCrossChainMessage, sidechainId: Array[Byte]): CrossChainMessage = {
     new CrossChainMessageImpl(
       CrossChainProtocolVersion.VERSION_1,
       data.messageType,
-      params.sidechainId,
+      sidechainId,
       data.sender,
       data.receiverSidechain,
       data.receiver,

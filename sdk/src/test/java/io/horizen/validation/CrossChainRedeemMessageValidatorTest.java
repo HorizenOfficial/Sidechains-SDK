@@ -1,7 +1,5 @@
 package io.horizen.validation;
 
-import io.horizen.GenesisDataSettings;
-import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.params.NetworkParams;
 import io.horizen.proof.Signature25519;
@@ -20,7 +18,6 @@ import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -60,13 +57,11 @@ public class CrossChainRedeemMessageValidatorTest {
         }
     }
 
-    private final SidechainSettings sidechainSettings = mock(SidechainSettings.class);
     private final SidechainStateStorage scStateStorage = mock(SidechainStateStorage.class);
     private final Sc2scCircuit sc2scCircuit = mock(Sc2scCircuit.class);
     private final CrossChainRedeemMessageBoxData redeemMessageBox = mock(CrossChainRedeemMessageBoxData.class);
     private final CrossChainMessage crossChainMessage = mock(CrossChainMessage.class);
-    private final GenesisDataSettings genesisDataSettings = mock(GenesisDataSettings.class);
-    private final String scId = BytesUtils.toHexString("scId".getBytes());
+    private final byte[] scId = BytesUtils.fromHexString("a3adf0b3c8f3c570f058a370f98d14bd");
     private final CrossChainMessageHash crossChainMsgHash = mock(CrossChainMessageHash.class);
     private final byte[] scTxCommitmentTreeHash = "scTxCommitmentTreeHashOf32Chars!".getBytes(StandardCharsets.UTF_8);
     private final byte[] nextScTxCommitmentTreeHash = "nextScTxCommitmentTreeHashOf32Ch".getBytes(StandardCharsets.UTF_8);
@@ -78,9 +73,10 @@ public class CrossChainRedeemMessageValidatorTest {
     @Test
     public void whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException() {
         // Arrange
-        String badScIdHex = BytesUtils.toHexString("badScIdHex".getBytes());
+        byte[] badScIdHex = BytesUtils.fromHexString("0b3c8f3c570f058a37a3adf0f98d14bd");
+        String revBadScId = BytesUtils.toHexString(BytesUtils.reverseBytes(badScIdHex));
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
@@ -89,9 +85,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(badScIdHex);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(badScIdHex);
 
         // Act
         IllegalArgumentException thrown = assertThrows(
@@ -100,7 +95,7 @@ public class CrossChainRedeemMessageValidatorTest {
         );
 
         // Assert
-        String expectedMsg = String.format("Receiver sidechain id `%s` does not match with this sidechain id `%s`", scId, badScIdHex);
+        String expectedMsg = String.format("Receiver sidechain id `%s` does not match with this sidechain id `%s`", BytesUtils.toHexString(scId), revBadScId);
         assertEquals(expectedMsg, thrown.getMessage());
     }
 
@@ -108,7 +103,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenTryToRedeemTheSameMessageTwice_throwsAnIllegalArgumentException() throws Exception {
         // Arrange
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
@@ -117,9 +112,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(scId);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(true);
@@ -142,7 +136,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() throws Exception {
         // Arrange
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         SidechainBlock sidechainBlock = mock(SidechainBlock.class);
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
@@ -151,9 +145,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(scId);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
@@ -168,7 +161,7 @@ public class CrossChainRedeemMessageValidatorTest {
         );
 
         // Assert
-        String expectedMsg = String.format("Sidechain commitment tree root `%s` does not exist", Arrays.toString(scTxCommitmentTreeHash));
+        String expectedMsg = String.format("Sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(scTxCommitmentTreeHash));
         String exceptionMsg = thrown.getMessage();
         assertEquals(expectedMsg, exceptionMsg);
     }
@@ -177,7 +170,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenNextScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException() throws Exception {
         // Arrange
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
@@ -186,9 +179,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(scId);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
@@ -205,7 +197,7 @@ public class CrossChainRedeemMessageValidatorTest {
         );
 
         // Assert
-        String expectedMsg = String.format("Next sidechain commitment tree root `%s` does not exist", Arrays.toString(nextScTxCommitmentTreeHash));
+        String expectedMsg = String.format("Next sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(nextScTxCommitmentTreeHash));
         String exceptionMsg = thrown.getMessage();
         assertEquals(expectedMsg, exceptionMsg);
     }
@@ -214,7 +206,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenProofIsNotValid_throwsAnIllegalArgumentException() throws Exception {
         // Arrange
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
@@ -223,9 +215,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(scId);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
@@ -264,7 +255,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenAllValidationsPass_throwsNoException() throws Exception {
         // Arrange
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
-                sidechainSettings, scStateStorage, sc2scCircuit, networkParams
+                scStateStorage, sc2scCircuit, networkParams
         );
         CrossChainRedeemTransactionMock txToBeValidated = new CrossChainRedeemTransactionMock(
                 List.of(), List.of(), List.of(), 1, redeemMessageBox
@@ -273,9 +264,8 @@ public class CrossChainRedeemMessageValidatorTest {
 
         when(sidechainBlock.transactions()).thenReturn(scala.jdk.CollectionConverters.asScalaBuffer(List.of(txToBeValidated)));
         when(redeemMessageBox.getMessage()).thenReturn(crossChainMessage);
-        when(crossChainMessage.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString(scId));
-        when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
-        when(genesisDataSettings.scId()).thenReturn(scId);
+        when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
+        when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
         when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);

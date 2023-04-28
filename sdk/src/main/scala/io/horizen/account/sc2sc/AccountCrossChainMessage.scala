@@ -1,7 +1,7 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import org.web3j.abi.datatypes.generated.Uint32
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes20, Bytes32, Bytes4, Uint32}
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -22,10 +22,10 @@ case class AccountCrossChainMessage
   private[horizen] def asABIType(): StaticStruct = {
     new StaticStruct(
       new Uint32(messageType),
-      new DynamicBytes(sender),
-      new DynamicBytes(receiverSidechain),
-      new DynamicBytes(receiver),
-      new DynamicBytes(payload)
+      new Bytes20(sender),
+      new Bytes32(receiverSidechain),
+      new Bytes20(receiver),
+      new Bytes4(payload)
     )
   }
 }

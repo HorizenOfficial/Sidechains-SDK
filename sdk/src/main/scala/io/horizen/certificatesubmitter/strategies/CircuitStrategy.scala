@@ -10,6 +10,7 @@ import io.horizen.fork.ForkManager
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScUtils}
+import io.horizen.proposition.SchnorrProposition
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
@@ -31,7 +32,7 @@ abstract class CircuitStrategy[
 
   def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T
 
-  def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
+  def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])]
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
   def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0

@@ -20,6 +20,7 @@ import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainMessageImpl;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 import org.junit.Rule;
 import org.junit.Test;
@@ -132,7 +133,7 @@ public class Sc2scImplZendooTest {
         Sc2scImplZendoo circuit = new Sc2scImplZendoo();
 
         try (
-                InMemoryAppendOnlyMerkleTree tree = circuit.initMerkleTree();//InMemoryAppendOnlyMerkleTree.init(Constants.MSG_MT_HEIGHT(), 1L << Constants.MSG_MT_HEIGHT());
+                InMemoryAppendOnlyMerkleTree tree = circuit.initMerkleTree();
                 FieldElementsContainer feContainer = FieldElementUtils.deserializeMany(msg3.bytes());
                 FieldElement msg3Fe = HashUtils.fieldElementListHash(feContainer.getFieldElementCollection());
         ) {
@@ -202,7 +203,7 @@ public class Sc2scImplZendooTest {
 
         byte[] scId = generateFieldRandomBytes(r);
         int msgTreeIndex = circuit.insertMessagesInMerkleTreeWithIndex(msgTree, List.of(msg1), msg1);
-        CrossChainMessageHash msgHash = circuit.getCrossChainMessageHash(msg1); // appendMsgHash(msg1, msgTree); // appendRandomMsgHash(r, msgTree);
+        CrossChainMessageHash msgHash = circuit.getCrossChainMessageHash(msg1);
         byte[] msgRoot = circuit.getCrossChainMessageTreeRoot(msgTree);
 
         WithdrawalCertificate currWithdrawalCertificate = WithdrawalCertificate.getRandom(
@@ -237,8 +238,8 @@ public class Sc2scImplZendooTest {
         ) {
             byte[] proof = circuit.createRedeemProof(
                     msgHash,
-                    currentScTxCommitmentsRoot,
-                    nextScTxCommitmentsRoot,
+                    BytesUtils.reverseBytes(currentScTxCommitmentsRoot),
+                    BytesUtils.reverseBytes(nextScTxCommitmentsRoot),
                     currWithdrawalCertificate,
                     nextWithdrawalCertificate,
                     currentPath,

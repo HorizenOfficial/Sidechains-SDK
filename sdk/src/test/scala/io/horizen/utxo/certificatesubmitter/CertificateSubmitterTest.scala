@@ -371,7 +371,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seeeeed".getBytes(StandardCharsets.UTF_8))
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret.sign(messageToSign)))
 
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, params.signersPublicKeys))
 
     statusOpt = Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]]
     assertTrue("Status expected to be defined", statusOpt.isDefined)
@@ -380,6 +380,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertEquals("Referenced epoch number is different.", referencedEpochNumber, status.referencedEpoch)
     assertArrayEquals("Message to sign is different.", messageToSign, status.messageToSign)
     assertEquals("Known sigs array is different.", knownSigs, status.knownSigs)
+    assertEquals("Public keys are different.", params.signersPublicKeys, status.signersPublicKeys)
   }
   @Test
   def newBlockArrived(): Unit = {
@@ -834,7 +835,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Test 2: Retrieve signature from remote with different message to sign when inside the Submission Window
     // Emulate in window status
     val referencedEpochNumber = 10
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer(), params.signersPublicKeys))
 
     val anotherMessageToSign = FieldElementFixture.generateFieldElement()
     val anotherSignature = schnorrSecrets.head.sign(anotherMessageToSign)
@@ -900,6 +901,31 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     } catch {
       case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
     }
+
+
+    // Test 7: Key rotation keys: retrieve valid signature from remote,
+    // when public key in the Status is different to the genesis one (from params).
+    val newSecret: SchnorrSecret = keyGenerator.generateSecret("rotated_key_seed".getBytes(StandardCharsets.UTF_8))
+    val updatedSignerKeys = newSecret.publicImage() +: params.signersPublicKeys.tail
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer(), updatedSignerKeys))
+
+    val updatedKeySignature = newSecret.sign(messageToSign)
+    val remoteUpdatedKeySignInfo = CertificateSignatureFromRemoteInfo(0, messageToSign, updatedKeySignature)
+
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteUpdatedKeySignInfo), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", ValidSignature, res)
+
+      assertEquals("Different signatures number expected.", 1, submitter.signaturesStatus.get.knownSigs.size)
+      assertEquals("Inconsistent remote signature info stored data: pubKeyIndex.",
+        remoteUpdatedKeySignInfo.pubKeyIndex, submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex)
+      assertEquals("Inconsistent remote signature info stored data: signature.",
+        remoteUpdatedKeySignInfo.signature, submitter.signaturesStatus.get.knownSigs.head.signature)
+      assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    } catch {
+      case _: TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
   }
 
   @Test
@@ -961,7 +987,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Test 2: Try to generate Certificate when there is not enough known sigs (< threshold) - should skip
     val referencedEpochNumber = 100
     val messageToSign = FieldElementFixture.generateFieldElement()
-    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer(), params.signersPublicKeys))
 
     certificateSubmitterRef ! TryToGenerateCertificate
     certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }

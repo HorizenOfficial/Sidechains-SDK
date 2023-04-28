@@ -67,6 +67,9 @@ case class AccountMockDataHelper(genesis: Boolean)
     val nonExecutableTxsIdList: Iterable[ModifierId] = List(bytesToId(new Array[Byte](32)))
     Mockito.when(memoryPool.getNonExecutableTransactions).thenReturn(nonExecutableTxsIdList.toList.asJava)
 
+    // latest nonce of account
+    Mockito.when(memoryPool.getPoolNonce(any[SidechainTypes#SCP])).thenReturn(BigInteger.ZERO)
+
     // default signature for all txs
     val defaultSignature = new SignatureSecp256k1(
       new BigInteger("1c", 16),

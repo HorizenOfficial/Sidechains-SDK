@@ -9,7 +9,7 @@ import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, CustomFieldsReservedPositions}
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.util.ModifierId
 import sparkz.core.transaction.state.MinimalState
 
@@ -63,7 +63,7 @@ abstract class AbstractState[
       throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION} custom fields when sidechain2sidechain messaging is enabled.")
     }
     val messageTreeRoot = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_message_tree_root.position()).rawData
-    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_previus_certificate_hash.position()).rawData
+    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_previous_certificate_hash.position()).rawData
 
     val expectedPreviousCertificateHash: Array[Byte] = certificate(topQualityCertificate.epochNumber - 1) match {
       case None => FieldElement.createFromLong(0).serializeFieldElement()

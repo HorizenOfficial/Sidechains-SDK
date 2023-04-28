@@ -1,14 +1,18 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import org.web3j.abi.datatypes.generated.Bytes32
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
 case class AccountCrossChainRedeemMessage
 (
-  accountCrossChainMessage: AccountCrossChainMessage,
+  messageType: Int,
+  sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
+  receiverSidechain: Array[Byte],
+  receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
+  payload: Array[Byte],
   certificateDataHash: Array[Byte],
   nextCertificateDataHash: Array[Byte],
   scCommitmentTreeRoot: Array[Byte],
@@ -21,7 +25,11 @@ case class AccountCrossChainRedeemMessage
 
   override def asABIType(): StaticStruct =
     new StaticStruct(
-      new DynamicBytes(accountCrossChainMessage.bytes),
+      new Uint32(messageType),
+      new Bytes20(sender),
+      new Bytes32(receiverSidechain),
+      new Bytes20(receiver),
+      new Bytes4(payload),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
@@ -32,7 +40,11 @@ case class AccountCrossChainRedeemMessage
 
 object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[AccountCrossChainRedeemMessage] {
   override def serialize(redeemMsg: AccountCrossChainRedeemMessage, w: Writer): Unit = {
-    writeBytes(w, redeemMsg.accountCrossChainMessage.bytes)
+    w.putUInt(redeemMsg.messageType)
+    writeBytes(w, redeemMsg.sender)
+    writeBytes(w, redeemMsg.receiverSidechain)
+    writeBytes(w, redeemMsg.receiver)
+    writeBytes(w, redeemMsg.payload)
     writeBytes(w, redeemMsg.certificateDataHash)
     writeBytes(w, redeemMsg.nextCertificateDataHash)
     writeBytes(w, redeemMsg.scCommitmentTreeRoot)
@@ -41,7 +53,12 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
   }
 
   override def parse(r: Reader): AccountCrossChainRedeemMessage = {
-    val crossChainMessage = AccountCrossChainMessageSerializer.parse(r)
+    val messageType = r.getUInt().toInt
+    val sender = parseNextBytes(r)
+    val receiverSidechain = parseNextBytes(r)
+    val receiver = parseNextBytes(r)
+    val payload = parseNextBytes(r)
+    AccountCrossChainMessage(messageType, sender, receiverSidechain, receiver, payload)
     val certificateDataHash = parseNextBytes(r)
     val nextCertificateDataHash = parseNextBytes(r)
     val scCommitmentTreeRoot = parseNextBytes(r)
@@ -49,7 +66,7 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
     val proof = parseNextBytes(r)
 
     AccountCrossChainRedeemMessage(
-      crossChainMessage,
+      messageType, sender, receiverSidechain, receiver, payload,
       certificateDataHash,
       nextCertificateDataHash,
       scCommitmentTreeRoot,

@@ -7,7 +7,7 @@ import io.horizen.account.utils._
 import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.state.StateView
-import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import io.horizen.evm.StateDB
 import sparkz.core.VersionTag
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -75,8 +75,14 @@ class AccountStateView(
     metadataStorageView.commit(version)
   }
 
-  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
-    metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
+  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    val res = metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
+    res match {
+      case Some(value) => println(s"The result is ${BytesUtils.toHexString(value.hash)}")
+      case _ => println(s"NOTHING FOUND FOR EPOCH $referencedWithdrawalEpoch")
+    }
+    res
+  }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
 

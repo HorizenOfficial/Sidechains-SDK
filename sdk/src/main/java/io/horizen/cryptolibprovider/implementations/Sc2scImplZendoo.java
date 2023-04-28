@@ -6,8 +6,10 @@ import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.InMemoryAppendOnlyMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
+import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
+import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
@@ -15,15 +17,18 @@ import io.horizen.cryptolibprovider.utils.HashUtils;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainMessageHashImpl;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 public class Sc2scImplZendoo implements Sc2scCircuit {
 
     private static final int SEGMENT_SIZE = 1 << 15;
-    public static final int CUSTOM_FIELDS_NUM = 5;
+    private static final int DLOG_KEYS_SIZE = 1 << 18;
+    public static final int CUSTOM_FIELDS_NUM = 32;
 
     @Override
     public InMemoryAppendOnlyMerkleTree initMerkleTree() {
@@ -112,9 +117,10 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                     MerklePath messageMerklePath,
                                     String provingKeyPath
     ) {
+
         return Sc2Sc.createProof(
-                nextScTxCommitmentRoot,
-                scTxCommitmentRoot,
+                BytesUtils.reverseBytes(nextScTxCommitmentRoot),
+                BytesUtils.reverseBytes(scTxCommitmentRoot),
                 messageHash.getValue(),
                 nextWithdrawalCertificate,
                 currWithdrawalCertificate,
@@ -134,8 +140,8 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                      byte[] proof,
                                      String verifyKeyPath) {
         return Sc2Sc.verifyProof(
-                nextScTxCommitmentRootCertEpoch,
-                scTxCommitmentRootCertEpoch,
+                BytesUtils.reverseBytes(nextScTxCommitmentRootCertEpoch),
+                BytesUtils.reverseBytes(scTxCommitmentRootCertEpoch),
                 messageHash.getValue(),
                 proof,
                 verifyKeyPath

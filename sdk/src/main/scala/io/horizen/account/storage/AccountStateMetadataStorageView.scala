@@ -2,7 +2,7 @@ package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
-import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import io.horizen.account.storage.AccountStateMetadataStorageView.{DEFAULT_ACCOUNT_STATE_ROOT}
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
 import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
@@ -12,6 +12,7 @@ import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochI
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
+
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
@@ -151,12 +152,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
         WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-          case Success(certificate) => Option(certificate)
+          case Success(certificate) =>
+            Option(certificate)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate information parsing.", exception)
             Option.empty
         }
-      case _ => Option.empty
+      case _ =>
+        Option.empty
     }
   }
 
@@ -366,7 +369,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           case _ => false
         }
         if (isWithdrawalEpochSwitched) {
-          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+          val certEpochNumberToRemove: Int = epochInfo.epoch - 8
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1

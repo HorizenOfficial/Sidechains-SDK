@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.state.events.AddCrossChainRedeemMessage
 import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
 import io.horizen.cryptolibprovider.{CryptoLibProvider, Sc2scCircuit}
+import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.utils.BytesUtils
@@ -21,6 +22,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
                                                          scTxMsgProc: ScTxCommitmentTreeRootHashMessageProvider
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
   protected def processRedeemMessage(msg: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Array[Byte] = {
+    // todo: refactor the creation of ccMsg
     validateRedeemMsg(msg, view)
 
     addCrossChainMessageToView(view, msg)
@@ -32,7 +34,11 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def addCrossChainRedeemMessageLogEvent(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
     val event = AddCrossChainRedeemMessage(
-      accCcRedeemMessage.accountCrossChainMessage,
+      new Address(accCcRedeemMessage.sender),
+      accCcRedeemMessage.messageType,
+      accCcRedeemMessage.receiverSidechain,
+      accCcRedeemMessage.receiver,
+      accCcRedeemMessage.payload,
       accCcRedeemMessage.certificateDataHash,
       accCcRedeemMessage.nextCertificateDataHash,
       accCcRedeemMessage.scCommitmentTreeRoot,
@@ -44,8 +50,14 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   }
 
   private def addCrossChainMessageToView(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
+    val accountCrossChainMessage = AccountCrossChainMessage(
+      accCcRedeemMessage.messageType, accCcRedeemMessage.sender, accCcRedeemMessage.receiverSidechain, accCcRedeemMessage.receiver, accCcRedeemMessage.payload
+    )
     val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(
-      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcRedeemMessage.accountCrossChainMessage, networkParams)
+      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(
+        accountCrossChainMessage,
+        BytesUtils.reverseBytes(networkParams.sidechainId)
+      )
     )
     setCrossChainMessageHash(messageHash, view)
   }
@@ -60,7 +72,10 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateRedeemMsg(ccRedeemMgs: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Unit = {
     try {
-      val accountCcMsg = ccRedeemMgs.accountCrossChainMessage
+      val accountCcMsg = AccountCrossChainMessage(
+        ccRedeemMgs.messageType, ccRedeemMgs.sender, ccRedeemMgs.receiverSidechain, ccRedeemMgs.receiver, ccRedeemMgs.payload
+      )
+
       // validate arguments' semantics
       validateSemantics(accountCcMsg.receiver, accountCcMsg.receiverSidechain, accountCcMsg.sender)
 
@@ -68,7 +83,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       validateScId(networkParams.sidechainId, accountCcMsg.receiverSidechain)
 
       // Validate message has not been redeemed yet
-      val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accountCcMsg, networkParams)
+      val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accountCcMsg, BytesUtils.reverseBytes(networkParams.sidechainId))
       validateDoubleMessageRedeem(ccMsg, view)
 
       // Validate scCommitmentTreeRoot and nextScCommitmentTreeRoot exists
@@ -119,9 +134,11 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   }
 
   private def validateProof(ccRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
-    val accCcMsg = ccRedeemMessage.accountCrossChainMessage
+    val accountCcMsg = AccountCrossChainMessage(
+      ccRedeemMessage.messageType, ccRedeemMessage.sender, ccRedeemMessage.receiverSidechain, ccRedeemMessage.receiver, ccRedeemMessage.payload
+    )
     val ccMsgHash = sc2scCircuit.getCrossChainMessageHash(
-      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcMsg, networkParams)
+      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accountCcMsg, BytesUtils.reverseBytes(networkParams.sidechainId))
     )
     val isProofValid = sc2scCircuit.verifyRedeemProof(
       ccMsgHash,
@@ -132,7 +149,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     )
 
     if (!isProofValid) {
-      throw new IllegalArgumentException(s"Cannot verify this cross-chain message $accCcMsg")
+      throw new IllegalArgumentException(s"Cannot verify this cross-chain message $accountCcMsg")
     }
   }
 

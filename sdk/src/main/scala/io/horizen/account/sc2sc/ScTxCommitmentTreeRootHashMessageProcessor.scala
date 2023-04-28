@@ -26,11 +26,12 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] =
     throw new ExecutionRevertedException("Cannot call ScTxCommitmentTreeRootHashMessageProcessor directly")
 
+  // TODO: replace again with emptyByteArray
   override def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit =
-    view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), Array.emptyByteArray)
+    view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), hash)
 
   override def doesScTxCommitmentTreeRootHashExist(hash: Array[Byte], view: BaseAccountStateView): Boolean =
-    !view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash)).sameElements(NULL_HEX_STRING_32)
+    view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash)).nonEmpty
 
   private[sc2sc] def getScTxCommitmentTreeRootHashKey(hash: Array[Byte]): Array[Byte] =
     calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))
