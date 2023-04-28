@@ -9,22 +9,20 @@ import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
-import io.horizen.account.utils.Secp256k1
-import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE, getAddress}
+import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE}
 import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
-import io.horizen.utils.BytesUtils.padWithZeroBytes
-import io.horizen.utils.Utils.doubleSHA256Hash
+import io.horizen.utils.BytesUtils.{padWithZeroBytes, toHorizenPublicKeyAddress}
+import io.horizen.utils.Utils.{Ripemd160Sha256Hash, doubleSHA256Hash}
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.asn1.x9.X9ECParameters
-import org.bouncycastle.math.ec.ECPoint
 import org.web3j.crypto.Sign
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
+
 import java.nio.charset.StandardCharsets
-import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait McAddrOwnershipsProvider {
@@ -71,12 +69,12 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     !data.sameElements(NULL_HEX_STRING_32)
   }
 
-  def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcPubKeyBytes: Array[Byte]): Unit = {
+  def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcTransparentAddress: String): Unit = {
 
     // add a new node to the linked list pointing to this forger stake data
     addNewNodeToList(view, ownershipId)
 
-    val mcAddrOwnershipData = McAddrOwnershipData(scAddress, mcPubKeyBytes)
+    val mcAddrOwnershipData = McAddrOwnershipData(scAddress, mcTransparentAddress)
 
     // store the forger stake data
     view.updateAccountStorageBytes(contractAddress, ownershipId,
@@ -111,7 +109,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
-  def isValidOwnershipSignature(scAddress: AddressProposition, mcPubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
+  def isValidOwnershipSignature(scAddress: AddressProposition, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
     val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
@@ -123,21 +121,13 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
-    val recoveredPubKeyBytes = getAddress(Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
+    val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
+    val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
+    val recCompressedPubKeyBytes = ecpointRec.getEncoded(true)
+    val mcPubkeyhash = Ripemd160Sha256Hash(recCompressedPubKeyBytes)
+    val computedTaddr = toHorizenPublicKeyAddress(mcPubkeyhash, params)
 
-    // in order to get an address proposition we must get the uncompressed format of the mc pub key from the
-    // compressed one:
-
-    // get the point on the curve corresponding to mc pub key
-    val ecpoint: ECPoint = ecParameters.getCurve.decodePoint(mcPubKey)
-    // get the uncompressed format from the point
-    val uncompressed: Array[Byte] = ecpoint.getEncoded(false)
-
-    // address proposition is the keccak hash of the uncompressed pub key. We must remove the first byte 0x04 which
-    // indicates the format uncompressed
-    val mcAddressProposition: AddressProposition = new AddressProposition(Secp256k1.getAddress(util.Arrays.copyOfRange(uncompressed, 1, uncompressed.length)))
-
-    recoveredPubKeyBytes.sameElements(mcAddressProposition.pubKeyBytes)
+    computedTaddr.equals(mcTransparentAddress)
 
   }
 
@@ -179,7 +169,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val cmdInput = AddNewOwnershipCmdInputDecoder.decode(inputParams)
     val scAddress = new AddressProposition(cmdInput.scAddress)
-    val mcPubKeyBytes = cmdInput.mcPubKeyBytes
+    val mcTransparentAddress = cmdInput.mcTransparentAddress
     val mcSignature = cmdInput.mcSignature
 
     if (!msg.getFrom.equals(cmdInput.scAddress)) {
@@ -196,14 +186,14 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // verify the ownership validating the signature
-    if (!isValidOwnershipSignature(scAddress, mcPubKeyBytes, mcSignature)) {
+    if (!isValidOwnershipSignature(scAddress, mcTransparentAddress, mcSignature)) {
       throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
     }
 
     // add the obj to stateDb
-    addMcAddrOwnership(view, newOwnershipId, scAddress, mcPubKeyBytes)
+    addMcAddrOwnership(view, newOwnershipId, scAddress, mcTransparentAddress)
     log.debug(s"Added ownership to stateDb: newOwnershipId=${BytesUtils.toHexString(newOwnershipId)}," +
-      s" scAddress=$scAddress, mcPubKeyBytes=${BytesUtils.toHexString(mcPubKeyBytes)}, mcSignature=$mcSignature")
+      s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
 
     /* TODO add event
     val addNewStakeEvt = DelegateMcAddrOwnership(msg.getFrom, ownerAddress, newownershipId, stakedAmount)

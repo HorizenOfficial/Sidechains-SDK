@@ -4,7 +4,6 @@ import com.google.common.primitives.Bytes;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.utils.Secp256k1;
 import io.horizen.params.RegTestParams;
-import io.horizen.params.TestNetParams;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -318,4 +317,13 @@ public class McSignatureTest {
         assertArrayEquals(getUnsignedByteArray(s), signatureData.getS());
     }
 
+    @Test
+    public void whenStringConstructorWithNamedCharset_thenOK() {
+        String inputString = "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G";
+        byte[] inputBytes = inputString.getBytes(StandardCharsets.UTF_8);
+
+        String outPutString = new String(inputBytes, StandardCharsets.UTF_8);
+
+        assertEquals(inputString, outPutString);
+    }
 }

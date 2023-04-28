@@ -816,15 +816,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     // this can throw is not a valid address
     val scAddress = new Address("0x"+ownershipInfo.scAddress)
 
-
-    val mcPubKeyBytes = BytesUtils.fromHexString(ownershipInfo.mcPubKey)
-    // require 33 bytes. In MC we have a 33 bytes compressed representation, where the first byte is a tag indicating
-    // the parity value of the compressed format    require(mcPubKeyBytes.length == 33, "Not a correct mc pub key compressed format")
+    // TODO check encoding is valid base58 address
 
     // this can throw if not correctly base58 encoded
     val mcSignature: SignatureSecp256k1 = getMcSignature(ownershipInfo.mcSignature)
 
-    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, mcPubKeyBytes, mcSignature)
+    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, ownershipInfo.mcTransparentAddress, mcSignature)
 
     Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
   }
@@ -877,7 +874,7 @@ object AccountTransactionRestScheme {
   private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class TransactionMcAddrOwnershipInfo(scAddress: String, mcPubKey: String, mcSignature: String)
+  private[horizen] case class TransactionMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: String, mcSignature: String)
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {

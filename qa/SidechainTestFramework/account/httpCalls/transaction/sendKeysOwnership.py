@@ -1,14 +1,14 @@
 import json
 
 
-def sendKeysOwnership(sidechainNode, *, fromAddress, mc_pub_key, mc_signature,
+def sendKeysOwnership(sidechainNode, *, sc_address, mc_addr, mc_signature,
                       nonce=None, gas_limit=230000, max_priority_fee_per_gas=900000000,
                       max_fee_per_gas=900000000, api_key=None):
     j = {
         "ownershipInfo": {
-            "scAddress" : fromAddress,
-             "mcPubKey": mc_pub_key,
-             "mcSignature": mc_signature
+            "scAddress" : sc_address,
+            "mcTransparentAddress": mc_addr,
+            "mcSignature": mc_signature
         },
         "nonce": nonce,
         "gasInfo": {

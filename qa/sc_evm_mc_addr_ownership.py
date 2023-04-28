@@ -64,26 +64,20 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
 
         lag_list = mc_node.listaddressgroupings()
-        addr, val = get_address_with_balance(lag_list)
+        taddr, val = get_address_with_balance(lag_list)
 
-        assert_true(addr is not None)
+        assert_true(taddr is not None)
 
-        ret1 = mc_node.validateaddress(addr)
-        pub_key = ret1['pubkey']
-
-        mc_signature = mc_node.signmessage(addr, sc_address)
-        pprint.pprint(sc_address)
-        pprint.pprint(pub_key)
-        pprint.pprint(mc_signature)
+        mc_signature = mc_node.signmessage(taddr, sc_address)
+        print("scAddr: " + sc_address)
+        print("mcAddr: " + taddr)
+        print("mcSignature: " + mc_signature)
         # TODO
         # negative case
-        # pub_key = "0275e40b8af8b7e8e8d30a821ab659dae06d819d13672826e785953fb037a31d5c"
-        '''sc_address = "00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"
-        mc_signature = "IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw="
-        '''
+
         ret3 = sendKeysOwnership(sc_node,
-                                 fromAddress=sc_address,
-                                 mc_pub_key=pub_key,
+                                 sc_address=sc_address,
+                                 mc_addr=taddr,
                                  mc_signature=mc_signature)
         pprint.pprint(ret3)
 
