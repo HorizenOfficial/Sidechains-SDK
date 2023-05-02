@@ -89,23 +89,25 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def peerByAddress: Route = (path("peer" / Remaining) & post) { addressParam =>
+  def peerByAddress: Route = (path("peer") & post) {
     try {
-      val maybeAddress = addressAndPortRegexp.findFirstMatchIn(addressParam)
-      maybeAddress match {
-        case None => SidechainApiError(s"address $maybeAddress is not well formatted")
+      entity(as[ReqWithAddress]) { bodyRequest =>
+        val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
+        maybeAddress match {
+          case None => SidechainApiError(s"address $maybeAddress is not well formatted")
 
-        case Some(addressAndPort) =>
-          val host = InetAddress.getByName(addressAndPort.group(1))
-          val port = addressAndPort.group(2).toInt
+          case Some(addressAndPort) =>
+            val host = InetAddress.getByName(addressAndPort.group(1))
+            val port = addressAndPort.group(2).toInt
 
-          val address = new InetSocketAddress(host, port)
+            val address = new InetSocketAddress(host, port)
 
-          val result = askActor[PeerInfo](peerManager, GetPeer(address)).map(peerInfo =>
-            SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString)))
+            val result = askActor[PeerInfo](peerManager, GetPeer(address)).map(peerInfo =>
+              SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString)))
 
-          val peerInfo = Await.result(result, settings.timeout)
-          ApiResponseUtil.toResponse(RespGetPeer(peerInfo))
+            val peerInfo = Await.result(result, settings.timeout)
+            ApiResponseUtil.toResponse(RespGetPeer(peerInfo))
+        }
       }
     } catch {
       case e: Throwable => SidechainApiError(e)
@@ -136,10 +138,10 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def removePeer: Route = (path("peer") & delete & withBasicAuth) {
+  def removePeer: Route = (path("removePeer") & post & withBasicAuth) {
     _ => {
       try {
-        entity(as[ReqRemoveFromPeers]) { bodyRequest =>
+        entity(as[ReqWithAddress]) { bodyRequest =>
           val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
 
           maybeAddress match {
@@ -171,12 +173,12 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def addToBlacklist: Route = (post & path("blacklist") & withBasicAuth) {
+  def addToBlacklist: Route = (post & path("addToBlacklist") & withBasicAuth) {
     _ => {
       try {
-        entity(as[RegAddToBlacklist]) { bodyRequest =>
+        entity(as[ReqAddToBlacklist]) { bodyRequest =>
           val peerAddress = bodyRequest.address
-          val banDuration = bodyRequest.duration
+          val banDuration = bodyRequest.durationInMinutes
 
           if (banDuration <= 0) {
             SidechainApiError(s"duration must be greater than 0; $banDuration not allowed")
@@ -200,10 +202,10 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def removeFromBlacklist: Route = (path("blacklist") & delete & withBasicAuth) {
+  def removeFromBlacklist: Route = (path("removeFromBlacklist") & post & withBasicAuth) {
     _ => {
       try {
-        entity(as[ReqRemoveFromBlacklist]) { bodyRequest =>
+        entity(as[ReqWithAddress]) { bodyRequest =>
           val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
 
           maybeAddress match {
@@ -328,13 +330,10 @@ object SidechainNodeRestSchema {
    private[horizen] case class ReqConnect(host: String, port: Int)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class RegAddToBlacklist(address: String, duration: Int)
+  private[horizen] case class ReqAddToBlacklist(address: String, durationInMinutes: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class ReqRemoveFromBlacklist(address: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class ReqRemoveFromPeers(address: String)
+  private[horizen] case class ReqWithAddress(address: String)
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespConnect(connectedTo: String) extends SuccessResponse

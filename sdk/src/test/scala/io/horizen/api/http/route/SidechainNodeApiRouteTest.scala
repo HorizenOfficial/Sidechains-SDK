@@ -172,7 +172,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
     "reply at /peer" in {
       // 2 peers
       peers.foreach(pair => {
-        Post(basePath + "peer" + pair._1).addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
+        Post(basePath + "peer").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress(pair._1.toString))) ~> sidechainNodeApiRoute ~> check {
           status.intValue() shouldBe StatusCodes.OK.intValue
           responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
           val result = mapper.readTree(entityAs[String]).get("result")
@@ -191,17 +191,11 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
           assertEquals(pair._2.connectionType.get.toString, result.get("peer").get("connectionType").textValue())
         }
       })
-
-      // api error
-      Post(basePath + "peer" + "/23.34.12.34:23443").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
     }
 
-    "reply at /blacklist" in {
+    "reply at /addToBlacklist" in {
       // 2 peers
-      Post(basePath + "blacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(RegAddToBlacklist("92.92.92.92:27017", 40))) ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "addToBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqAddToBlacklist("92.92.92.92:27017", 40))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -209,9 +203,9 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "delete at /blacklist" in {
+    "reply at /removeFromBlacklist" in {
       // 2 peers
-      Delete(basePath + "blacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqRemoveFromBlacklist("92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "removeFromBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("/92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -219,9 +213,9 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "delete at /peer" in {
+    "reply at /removePeer" in {
       // 2 peers
-      Delete(basePath + "peer").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqRemoveFromPeers("92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "removePeer").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("/92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
