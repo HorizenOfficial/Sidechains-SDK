@@ -411,7 +411,7 @@ abstract class AbstractCertificateSubmitter[
 
                 // check if there are already certificates present in mempool for current or higher epoch
                 var isCertificateAlreadyPresent = false
-                mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(certificateRequest.sidechainId))) match {
+                mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
                   case Success(mcRefTry) =>
                     (mcRefTry.mempoolCertInfo, mcRefTry.chainCertInfo) match {
                       case (Some(mcInfo), Some(ccInfo)) =>
