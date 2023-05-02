@@ -27,6 +27,8 @@ trait AccountStateReader {
   def isForgingOpen: Boolean
   def getAllowedForgerList: Seq[Int]
 
+  def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData]
+
   def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog]
   def getIntermediateRoot: Array[Byte]
 

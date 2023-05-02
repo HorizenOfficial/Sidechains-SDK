@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.McAddrOwnershipLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
+import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
@@ -23,11 +23,10 @@ import org.web3j.utils.Numeric
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 
 import java.nio.charset.StandardCharsets
-import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait McAddrOwnershipsProvider {
-  private[horizen] def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
-  private[horizen] def findMcAddrOwnershipsData(view: BaseAccountStateView, scAddress: Array[Byte]): Option[McAddrOwnershipData]
+  private[horizen] def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[McAddrOwnershipData]
+  //private[horizen] def getMcAddrOwnershipsData(view: BaseAccountStateView, scAddress: Array[Byte]): Seq[McAddrOwnershipData]
 }
 
 case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with McAddrOwnershipsProvider {
@@ -214,21 +213,22 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
   }
 
-  override def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    var stakeList = Seq[AccountForgingStakeInfo]()
+  override def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[McAddrOwnershipData] = {
+    var ownershipsList = Seq[McAddrOwnershipData]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
-      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
-      stakeList = item +: stakeList
+      val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
+      ownershipsList = item +: ownershipsList
       nodeReference = prevNodeReference
     }
-    stakeList
+    ownershipsList
   }
 
+  /*
   def doUncheckedgetListOfMcAddrOwnershipsCmd(view: BaseAccountStateView): Array[Byte] = {
-    val stakeList = getListOfMcAddrOwnerships(view)
-    AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
+    val ownershipsList = getListOfMcAddrOwnerships(view)
+    McAddrOwnershipInfoListEncoder.encode(ownershipsList.asJava)
   }
 
   def doGetListOfOwnershipsCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
@@ -239,20 +239,23 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     checkGetListOfOwnershipsCmd(msg)
     doUncheckedgetListOfMcAddrOwnershipsCmd(view)
   }
-  
+
+   */
+
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
-      case GetListOfOwnershipsCmd => doGetListOfOwnershipsCmd(msg, gasView)
+      //case GetListOfOwnershipsCmd => doGetListOfOwnershipsCmd(msg, gasView)
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
 
-  override private[horizen] def findMcAddrOwnershipsData(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[McAddrOwnershipData] =
-    McAddrOwnershipLinkedList.findMcAddrOwnershipsData(view, ownershipId)
-
+  /*
+  override def getMcAddrOwnershipsData(view: BaseAccountStateView, scAddress: Array[Byte]): Seq[McAddrOwnershipData] =
+    McAddrOwnershipLinkedList.getMcAddrOwnershipsData(view, scAddress)
+   */
 
 }
 
@@ -260,7 +263,6 @@ object McAddrOwnershipMsgProcessor {
 
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
-
 
   val GetListOfOwnershipsCmd: String = getABIMethodId("getVerifiedMcAddresses(address)")
   val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(address,bytes32,bytes1,bytes1,bytes32,bytes32)")

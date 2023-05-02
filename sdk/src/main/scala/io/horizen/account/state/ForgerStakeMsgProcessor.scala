@@ -4,7 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.ForgerStakeLinkedList.{LinkedListNullValue, LinkedListTipKey, _}
+import io.horizen.account.state.ForgerStakeLinkedList._
 import io.horizen.account.state.ForgerStakeMsgProcessor._
 import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32

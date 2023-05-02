@@ -1,5 +1,6 @@
 package io.horizen.account.state
 
+import io.horizen.account.state.ForgerStakeMsgProcessor.{LinkedListNullValue, LinkedListTipKey}
 import io.horizen.account.state.MessageProcessorUtil.{LinkedListNode, LinkedListNodeSerializer}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.utils.BytesUtils
@@ -9,9 +10,6 @@ import sparkz.crypto.hash.Blake2b256
 import scala.util.{Failure, Success}
 
 object ForgerStakeLinkedList {
-
-  val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
-  val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
   def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
     val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, nodeId)

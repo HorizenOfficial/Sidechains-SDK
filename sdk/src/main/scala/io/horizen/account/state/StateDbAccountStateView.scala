@@ -69,6 +69,11 @@ class StateDbAccountStateView(
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)
 
+
+  override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] =
+    mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this)
+
+
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {

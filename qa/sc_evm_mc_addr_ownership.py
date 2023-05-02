@@ -12,6 +12,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createRawLegacyEIP155T
     createRawLegacyEIP155Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createRawLegacyTransaction import createRawLegacyTransaction
 from SidechainTestFramework.account.httpCalls.transaction.decodeTransaction import decodeTransaction
+from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
@@ -64,33 +65,57 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
 
         lag_list = mc_node.listaddressgroupings()
-        taddr, val = get_address_with_balance(lag_list)
+        taddr1, val = get_address_with_balance(lag_list)
 
-        assert_true(taddr is not None)
+        assert_true(taddr1 is not None)
 
-        mc_signature = mc_node.signmessage(taddr, sc_address)
+        mc_signature1 = mc_node.signmessage(taddr1, sc_address)
         print("scAddr: " + sc_address)
-        print("mcAddr: " + taddr)
-        print("mcSignature: " + mc_signature)
+        print("mcAddr: " + taddr1)
+        print("mcSignature: " + mc_signature1)
         # TODO
         # negative case
 
-        ret3 = sendKeysOwnership(sc_node,
+        ret1 = sendKeysOwnership(sc_node,
                                  sc_address=sc_address,
-                                 mc_addr=taddr,
-                                 mc_signature=mc_signature)
-        pprint.pprint(ret3)
+                                 mc_addr=taddr1,
+                                 mc_signature=mc_signature1)
+        pprint.pprint(ret1)
 
-        tx_hash = ret3['transactionId']
+        tx_hash1 = ret1['transactionId']
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
 
         # check receipt, meanwhile do some check on amounts
-        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
-        status = int(receipt['result']['status'], 16)
+        receipt1 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash1))
+        status = int(receipt1['result']['status'], 16)
         assert_true(status == 1)
 
+        taddr2 = mc_node.getnewaddress()
+        mc_signature2 = mc_node.signmessage(taddr2, sc_address)
+        print("mcAddr: " + taddr2)
+        print("mcSignature: " + mc_signature2)
 
+        ret2 = sendKeysOwnership(sc_node,
+                                 sc_address=sc_address,
+                                 mc_addr=taddr2,
+                                 mc_signature=mc_signature2)
+        pprint.pprint(ret2)
+
+        tx_hash2 = ret2['transactionId']
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # check receipt, meanwhile do some check on amounts
+        receipt2 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash2))
+        status = int(receipt2['result']['status'], 16)
+        assert_true(status == 1)
+
+        ret3 = getKeysOwnership(sc_node, sc_address=sc_address)
+        pprint.pprint(ret3)
+
+        assert_true(taddr1 in ret3['mcAddresses'])
+        assert_true(taddr2 in ret3['mcAddresses'])
 
 
 

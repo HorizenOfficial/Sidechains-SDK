@@ -424,6 +424,8 @@ class AccountState(
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
+  override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships)
+
   override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] = using(getView)(_.getLogs(txHash))
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
@@ -510,6 +512,7 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
 }
 
 object AccountState extends SparkzLogging {
