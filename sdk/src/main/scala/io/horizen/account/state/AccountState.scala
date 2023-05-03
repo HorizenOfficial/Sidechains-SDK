@@ -426,6 +426,8 @@ class AccountState(
 
   override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships)
 
+  override def ownershipDataExist(ownershipId: Array[Byte]): Boolean = using(getView)(_.ownershipDataExist(ownershipId))
+
   override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] = using(getView)(_.getLogs(txHash))
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)

@@ -73,6 +73,9 @@ class StateDbAccountStateView(
   override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] =
     mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this)
 
+  override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
+    mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
+
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {

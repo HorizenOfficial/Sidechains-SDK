@@ -48,10 +48,21 @@ def get_address_with_balance(input_list):
                 return (addr, val)
     return (None, 0)
 
+
+
+
 class SCEvmMcAddressOwnership(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1)
 
+    def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1):
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # check receipt
+        receipt1 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+        status = int(receipt1['result']['status'], 16)
+        assert_true(status == expected_receipt_status)
 
     def run_test(self):
         ft_amount_in_zen = Decimal('500.0')
@@ -63,7 +74,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         sc_address = remove_0x_prefix(self.evm_address)
 
-
         lag_list = mc_node.listaddressgroupings()
         taddr1, val = get_address_with_balance(lag_list)
 
@@ -73,8 +83,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("scAddr: " + sc_address)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature1)
-        # TODO
-        # negative case
+
 
         ret1 = sendKeysOwnership(sc_node,
                                  sc_address=sc_address,
@@ -83,14 +92,10 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         pprint.pprint(ret1)
 
         tx_hash1 = ret1['transactionId']
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
+        self.forge_and_check_receipt(sc_node, tx_hash1)
 
-        # check receipt, meanwhile do some check on amounts
-        receipt1 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash1))
-        status = int(receipt1['result']['status'], 16)
-        assert_true(status == 1)
 
+        mc_node.getnewaddress()
         taddr2 = mc_node.getnewaddress()
         mc_signature2 = mc_node.signmessage(taddr2, sc_address)
         print("mcAddr: " + taddr2)
@@ -103,13 +108,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         pprint.pprint(ret2)
 
         tx_hash2 = ret2['transactionId']
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
-
-        # check receipt, meanwhile do some check on amounts
-        receipt2 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash2))
-        status = int(receipt2['result']['status'], 16)
-        assert_true(status == 1)
+        self.forge_and_check_receipt(sc_node, tx_hash2)
 
         ret3 = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret3)
@@ -118,10 +117,31 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(taddr2 in ret3['mcAddresses'])
 
 
+        # negative cases
+        # 1. try to add the same ownership
+        try:
+            sendKeysOwnership(sc_node,
+                                     sc_address=sc_address,
+                                     mc_addr=taddr2,
+                                     mc_signature=mc_signature2)
+            fail("duplicate association should not work")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            assert_true("already linked" in str(err) )
 
 
 
+        # 2. try to add a not owned ownership. The failure is detected
+        taddr3 = mc_node.getnewaddress()
 
+        ret4 = sendKeysOwnership(sc_node,
+                                 sc_address=sc_address,
+                                 mc_addr=taddr3,
+                                 mc_signature=mc_signature1)
+        tx_hash4 = ret4['transactionId']
+        pprint.pprint(ret4)
+
+        self.forge_and_check_receipt(sc_node, tx_hash4, 0)
 
 if __name__ == "__main__":
     SCEvmMcAddressOwnership().main()

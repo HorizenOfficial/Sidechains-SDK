@@ -82,8 +82,7 @@ object McAddrOwnershipLinkedList {
     if (!linkedListNodeRefIsNull(tip)) {
       val node = findLinkedListNode(view, tip).get
       val ownershipData = findOwnershipData(view, node.dataKey).get
-      val listItem = McAddrOwnershipData(
-            ownershipData.scAddress, ownershipData.mcTransparentAddress)
+      val listItem = McAddrOwnershipData(ownershipData.scAddress, ownershipData.mcTransparentAddress)
       val prevNodeKey = node.previousNodeKey
       (listItem, prevNodeKey)
     } else {

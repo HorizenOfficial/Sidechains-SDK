@@ -28,6 +28,8 @@ trait AccountStateReader {
   def getAllowedForgerList: Seq[Int]
 
   def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData]
+  def ownershipDataExist(ownershipId: Array[Byte]): Boolean
+
 
   def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog]
   def getIntermediateRoot: Array[Byte]

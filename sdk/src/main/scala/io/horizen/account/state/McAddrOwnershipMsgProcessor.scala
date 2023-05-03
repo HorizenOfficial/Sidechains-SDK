@@ -6,7 +6,6 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE}
@@ -26,7 +25,7 @@ import java.nio.charset.StandardCharsets
 
 trait McAddrOwnershipsProvider {
   private[horizen] def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[McAddrOwnershipData]
-  //private[horizen] def getMcAddrOwnershipsData(view: BaseAccountStateView, scAddress: Array[Byte]): Seq[McAddrOwnershipData]
+  private[horizen] def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean
 }
 
 case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with McAddrOwnershipsProvider {
@@ -34,15 +33,10 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   override val contractAddress: Address = MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("McAddrOwnershipSmartContractCode")
 
-  // get ecdsa curve y^2 mod p = (x^3 + 7) mod p
+  // ecdsa curve y^2 mod p = (x^3 + 7) mod p
   val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
 
   val networkParams: NetworkParams = params
-
-  def getOwnershipId(msg: Message): Array[Byte] = {
-    Keccak256.hash(Bytes.concat(
-      msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
-  }
 
   override def init(view: BaseAccountStateView): Unit = {
     super.init(view)
@@ -70,42 +64,14 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
   def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcTransparentAddress: String): Unit = {
 
-    // add a new node to the linked list pointing to this forger stake data
+    // add a new node to the linked list pointing to this obj data
     addNewNodeToList(view, ownershipId)
 
-    val mcAddrOwnershipData = McAddrOwnershipData(scAddress, mcTransparentAddress)
+    val mcAddrOwnershipData = McAddrOwnershipData(scAddress.address().toStringNoPrefix, mcTransparentAddress)
 
-    // store the forger stake data
+    // store the ownership data
     view.updateAccountStorageBytes(contractAddress, ownershipId,
       McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
-
-  }
-
-  def removeMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]): Unit = {
-    val nodeToRemoveId = Blake2b256.hash(ownershipId)
-
-    // we assume that the caller have checked that the forger stake really exists in the stateDb.
-    // in this case we must necessarily have a linked list node
-    val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
-
-    // modify previous node if any
-    modifyNode(view, nodeToRemove.previousNodeKey) { previousNode =>
-      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
-    }
-
-    // modify next node if any
-    modifyNode(view, nodeToRemove.nextNodeKey) { nextNode =>
-      LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
-    } getOrElse {
-      // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
-      view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
-    }
-
-    // remove the stake
-    view.removeAccountStorageBytes(contractAddress, ownershipId)
-
-    // remove the node from the linked list
-    view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
   def isValidOwnershipSignature(scAddress: AddressProposition, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
@@ -163,7 +129,6 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom}")
     }
 
-
     val inputParams = getArgumentsFromData(msg.getData)
 
     val cmdInput = AddNewOwnershipCmdInputDecoder.decode(inputParams)
@@ -176,9 +141,9 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // compute ownershipId
-    val newOwnershipId = getOwnershipId(msg)
+    val newOwnershipId = getOwnershipId(scAddress.address(), mcTransparentAddress)
 
-    // check we do not already have this stake obj in the db
+    // check we do not already have this obj in the db
     if (existsOwnershipData(view, newOwnershipId)) {
       throw new ExecutionRevertedException(
         s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
@@ -195,22 +160,13 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
 
     /* TODO add event
-    val addNewStakeEvt = DelegateMcAddrOwnership(msg.getFrom, ownerAddress, newownershipId, stakedAmount)
-    val evmLog = getEthereumConsensusDataLog(addNewStakeEvt)
+    val addNewMcAddrOwnershipEvt = DelegateMcAddrOwnership(msg.getFrom, ownerAddress, newownershipId, ownership)
+    val evmLog = getEthereumConsensusDataLog(addNewMcAddrOwnershipEvt)
     view.addLog(evmLog)
      */
 
     // result in case of success execution might be useful for RPC commands
     newOwnershipId
-  }
-
-  private def checkGetListOfOwnershipsCmd(msg: Message): Unit = {
-    // check we have no other bytes after the op code in the msg data
-    if (getArgumentsFromData(msg.getData).length > 0) {
-      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_ID_LENGTH"
-      log.debug(msgStr)
-      throw new ExecutionRevertedException(msgStr)
-    }
   }
 
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[McAddrOwnershipData] = {
@@ -225,37 +181,18 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     ownershipsList
   }
 
-  /*
-  def doUncheckedgetListOfMcAddrOwnershipsCmd(view: BaseAccountStateView): Array[Byte] = {
-    val ownershipsList = getListOfMcAddrOwnerships(view)
-    McAddrOwnershipInfoListEncoder.encode(ownershipsList.asJava)
+   override def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean = {
+    existsOwnershipData(view, ownershipId)
   }
-
-  def doGetListOfOwnershipsCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    if (msg.getValue.signum() != 0) {
-      throw new ExecutionRevertedException("Call value must be zero")
-    }
-
-    checkGetListOfOwnershipsCmd(msg)
-    doUncheckedgetListOfMcAddrOwnershipsCmd(view)
-  }
-
-   */
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
-      //case GetListOfOwnershipsCmd => doGetListOfOwnershipsCmd(msg, gasView)
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
-
-  /*
-  override def getMcAddrOwnershipsData(view: BaseAccountStateView, scAddress: Array[Byte]): Seq[McAddrOwnershipData] =
-    McAddrOwnershipLinkedList.getMcAddrOwnershipsData(view, scAddress)
-   */
 
 }
 
@@ -264,14 +201,16 @@ object McAddrOwnershipMsgProcessor {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
 
-  val GetListOfOwnershipsCmd: String = getABIMethodId("getVerifiedMcAddresses(address)")
   val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(address,bytes32,bytes1,bytes1,bytes32,bytes32)")
 
   // ensure we have strings consistent with size of opcode
   require(
-    GetListOfOwnershipsCmd.length == 2 * METHOD_ID_LENGTH &&
       AddNewOwnershipCmd.length == 2 * METHOD_ID_LENGTH
   )
 
+
+  def getOwnershipId(scAddress: Address, mcAddress: String): Array[Byte] = {
+    Keccak256.hash(Bytes.concat(scAddress.toBytes, mcAddress.getBytes(StandardCharsets.UTF_8)))
+  }
 }
 

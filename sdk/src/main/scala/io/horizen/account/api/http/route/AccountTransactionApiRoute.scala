@@ -15,6 +15,7 @@ import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccount
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.getOwnershipId
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS}
@@ -742,27 +743,35 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
             val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-            val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
+            if (!sidechainNodeView.getNodeState.ownershipDataExist(getOwnershipId(
+              new Address("0x"+body.ownershipInfo.scAddress), body.ownershipInfo.mcTransparentAddress
+            ))) {
 
-            secret match {
-              case Some(secret) =>
 
-                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                val dataBytes = encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
-                val tmpTx: EthereumTransaction = new EthereumTransaction(
-                  params.chainId,
-                  JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
-                  nonce,
-                  gasLimit,
-                  maxPriorityFeePerGas,
-                  maxFeePerGas,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} has insufficient balance", JOptional.empty()))
+              val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
+
+              secret match {
+                case Some(secret) =>
+
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val dataBytes = encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    dataBytes,
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} has insufficient balance", JOptional.empty()))
+              }
+            } else {
+              ApiResponseUtil.toResponse(GenericTransactionError(s"Account ${body.ownershipInfo.scAddress} already linked to mc address: ${body.ownershipInfo.mcTransparentAddress}", JOptional.empty()))
             }
           }
         }
@@ -782,7 +791,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
             if (listOfMcAddrOwnerships.nonEmpty) {
               val ownedMcAddrs = listOfMcAddrOwnerships.view.filter(item => {
-                item.scAddress.address().toStringNoPrefix.equals(body.scAddress)
+                item.scAddress.equals(body.scAddress)
               })
               ApiResponseUtil.toResponse(RespMcAddresses(ownedMcAddrs.map(_.mcTransparentAddress).toList))
             } else {

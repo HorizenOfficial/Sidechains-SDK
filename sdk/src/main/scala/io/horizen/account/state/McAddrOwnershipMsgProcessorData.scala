@@ -3,7 +3,6 @@ package io.horizen.account.state
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
 import BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.json.Views
@@ -35,15 +34,18 @@ case class McAddrOwnershipInfo(
     .format(this.getClass.toString, BytesUtils.toHexString(ownershipId), mcAddrOwnershipData)
 
   private[horizen] def asABIType(): StaticStruct = {
-    val mcAddrBytes = mcAddrOwnershipData.mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
+    val scAddrBytes = mcAddrOwnershipData.scAddress.getBytes(StandardCharsets.UTF_8)
+    require(scAddrBytes.length == 20, "Sc address array should have length 20")
 
+    val mcAddrBytes = mcAddrOwnershipData.mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
     require(mcAddrBytes.length == 35, "Mc address array should have length 35")
+
     val listOfParams = new util.ArrayList[Type[_]]()
 
     listOfParams.add(new Bytes32(ownershipId))
     listOfParams.add(new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)))
     listOfParams.add(new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, 35)))
-    listOfParams.add(new AbiAddress(mcAddrOwnershipData.scAddress.address().toString))
+    listOfParams.add(new AbiAddress(mcAddrOwnershipData.scAddress))
 
     new StaticStruct(listOfParams)
   }
@@ -146,7 +148,7 @@ object AddNewOwnershipCmdInputDecoder
 
 
 @JsonView(Array(classOf[Views.Default]))
-case class McAddrOwnershipData(scAddress: AddressProposition, mcTransparentAddress: String)
+case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
   extends BytesSerializable {
 
   override type M = McAddrOwnershipData
@@ -154,23 +156,28 @@ case class McAddrOwnershipData(scAddress: AddressProposition, mcTransparentAddre
   override def serializer: SparkzSerializer[McAddrOwnershipData] = McAddrOwnershipDataSerializer
 
   override def toString: String = "%s(scAddress: %s, mcAddress: %s)"
-    .format(this.getClass.toString, scAddress.toString, mcTransparentAddress)
+    .format(this.getClass.toString, scAddress, mcTransparentAddress)
 }
 
 object McAddrOwnershipDataSerializer extends SparkzSerializer[McAddrOwnershipData] {
   override def serialize(s: McAddrOwnershipData, w: Writer): Unit = {
+    val scAddressBytes = s.scAddress.getBytes(StandardCharsets.UTF_8)
     val mcAddressBytes = s.mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
-    AddressPropositionSerializer.getSerializer.serialize(s.scAddress, w)
+    w.putInt(scAddressBytes.length)
+    w.putBytes(scAddressBytes)
     w.putInt(mcAddressBytes.length)
     w.putBytes(mcAddressBytes)
   }
 
   override def parse(r: Reader): McAddrOwnershipData = {
-    val scAddress = AddressPropositionSerializer.getSerializer.parse(r)
-
+    val scAddressBytesLength = r.getInt()
+    val scAddressBytes = r.getBytes(scAddressBytesLength)
     val mcAddressBytesLength = r.getInt()
     val mcAddressBytes = r.getBytes(mcAddressBytesLength)
 
-    McAddrOwnershipData(scAddress, new String(mcAddressBytes, StandardCharsets.UTF_8))
+    McAddrOwnershipData(
+      new String(scAddressBytes, StandardCharsets.UTF_8),
+      new String(mcAddressBytes, StandardCharsets.UTF_8)
+    )
   }
 }
