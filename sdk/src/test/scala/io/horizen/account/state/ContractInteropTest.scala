@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.account.utils.{FeeUtils, Secp256k1}
-import io.horizen.evm.{Address, Hash}
+import io.horizen.evm.{Address, Hash, TraceOptions, Tracer}
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
@@ -69,6 +69,43 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
       )
       // verify that the NativeTestContract was able to call the retrieve() function on the EVM based contract
       assertArrayEquals("unexpected result", initialValue, returnData)
+
+      // put a tracer into the context
+      val tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+      blockContext.setTracer(tracer)
+
+      // repeat the last call again
+      val returnDataTraced = transition(
+        stateView,
+        processors,
+        getMessage(NativeTestContract.contractAddress, data = contractAddress.toBytes)
+      )
+      // verify that the result is still correct
+      assertArrayEquals("unexpected result", initialValue, returnDataTraced)
+
+      val traceResult = tracer.getResult.result
+//      println("traceResult" + traceResult.toPrettyString)
+
+      // TODO: native contracts don't trigger the tracer yet, some information is therefore expected to be missing here
+      assertJsonEquals(
+        s"""{
+          "type": "",
+          "from": "",
+          "gas": "",
+          "gasUsed": "",
+          "input": "",
+          "calls": [{
+            "type": "STATICCALL",
+            "from": "${NativeTestContract.contractAddress}",
+            "to": "$contractAddress",
+            "gas": "0x2710",
+            "gasUsed": "0xf6",
+            "input": "0x2e64cec1",
+            "output": "0x400000000000000000000000000000000000000000000000000000000000002a"
+          }]
+        }""",
+        traceResult
+      )
     }
   }
 }
