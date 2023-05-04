@@ -40,7 +40,7 @@ Test:
 """
 
 
-class SCEvmBackwardTransfer(AccountChainSetup):
+class SCEvmMultipleCertSubmittersTest(AccountChainSetup):
 
     def __init__(self):
         super().__init__(withdrawalEpochLength=10, number_of_sidechain_nodes=2,
@@ -138,4 +138,4 @@ class SCEvmBackwardTransfer(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    SCEvmBackwardTransfer().main()
+    SCEvmMultipleCertSubmittersTest().main()
