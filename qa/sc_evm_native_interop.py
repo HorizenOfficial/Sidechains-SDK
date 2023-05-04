@@ -5,7 +5,7 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract
 from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS
-from test_framework.util import assert_equal, assert_true, assert_false
+from test_framework.util import assert_equal, assert_false, assert_true
 
 """
 Check an EVM Contract calling a native contract.
@@ -107,6 +107,32 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_true(int(native_call["gasUsed"], 16) > 0)
         assert_equal("0xf6ad3c23", native_call["input"])
         assert_true(len(native_call["output"]) > 512)
+
+        # Get gas estimations
+        estimation_interop = node.rpc_eth_estimateGas(
+            {
+                "to": contract_address,
+                "input": "0xd9908c86"
+            }
+        )
+        estimation_native = node.rpc_eth_estimateGas(
+            {
+                "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                "input": "0xf6ad3c23"
+            }
+        )
+        logging.info("estimated gas interop: {}".format(estimation_interop))
+        logging.info("estimated gas native: {}".format(estimation_native))
+
+        # Gas usage given in a trace does not include intrinsic gas, we need to add it to compare with gas estimation
+        # 21k + (number of non-zero bytes in the input) * 16 + (number of zero bytes) * 4
+        intrinsic_gas = 21000 + 4 * 16
+
+        # Verify gas usage reported by the trace matches with the estimated gas for a call to the EVM contract
+        assert_equal(int(trace_result["gasUsed"], 16) + intrinsic_gas, int(estimation_interop["result"], 16))
+
+        # Verify gas usage of the nested call to the native contract reported by the trace matches with the estimation
+        assert_equal(int(native_call["gasUsed"], 16) + intrinsic_gas, int(estimation_native["result"], 16))
 
 
 if __name__ == "__main__":
