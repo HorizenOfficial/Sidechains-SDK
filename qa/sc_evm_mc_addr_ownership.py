@@ -1,26 +1,14 @@
 #!/usr/bin/env python3
-import logging
 import pprint
-from binascii import a2b_hex, b2a_hex
 from decimal import Decimal
-
-import rlp
-from eth_utils import add_0x_prefix, remove_0x_prefix
+from eth_abi import decode
+from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_topic, encode_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.httpCalls.transaction.createRawEIP1559Transaction import createRawEIP1559Transaction
-from SidechainTestFramework.account.httpCalls.transaction.createRawLegacyEIP155Transaction import \
-    createRawLegacyEIP155Transaction
-from SidechainTestFramework.account.httpCalls.transaction.createRawLegacyTransaction import createRawLegacyTransaction
-from SidechainTestFramework.account.httpCalls.transaction.decodeTransaction import decodeTransaction
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
-from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
-from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
 from SidechainTestFramework.scutil import generate_next_block
-from httpCalls.block.best import http_block_best
-from httpCalls.transaction.allTransactions import allTransactions
-from SidechainTestFramework.account.utils import convertZenToWei
-from test_framework.util import (assert_equal, assert_true, fail)
+from SidechainTestFramework.sidechainauthproxy import SCAPIException
+from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes)
 
 """
 Configuration: 
@@ -31,10 +19,6 @@ Test:
     xxx
      
 """
-
-
-def b2x(b):
-    return b2a_hex(b).decode('ascii')
 
 def get_address_with_balance(input_list):
     '''
@@ -49,20 +33,44 @@ def get_address_with_balance(input_list):
     return (None, 0)
 
 
+def check_add_ownership_event(event, sc_addr, mc_addr):
+    assert_equal(2, len(event['topics']), "Wrong number of topics in event")
+    event_id = remove_0x_prefix(event['topics'][0])
+    event_signature = remove_0x_prefix(
+        encode_hex(event_signature_to_log_topic('AddMcAddrOwnership(address,bytes3,bytes32)')))
+    assert_equal(event_signature, event_id, "Wrong event signature in topics")
+
+    evt_sc_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]
+    assert_equal(sc_addr, evt_sc_addr, "Wrong sc_addr address in topics")
+
+    (mca3, mca32) = decode(['bytes3', 'bytes32'], hex_str_to_bytes(event['data'][2:]))
+    evt_mc_addr = (mca3 + mca32).decode('utf-8')
+    assert_equal(mc_addr, evt_mc_addr, "Wrong mc_addr string in topics")
+
+
+def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None):
+    generate_next_block(sc_node, "first node")
+    self.sc_sync_all()
+
+    # check receipt
+    receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+    status = int(receipt['result']['status'], 16)
+    assert_true(status == expected_receipt_status)
+
+    # if we have a succesful receipt and valid func parameters, check the event
+    if (expected_receipt_status == 1):
+        if (sc_addr is not None) and (mc_addr is not None) :
+            assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+            event = receipt['result']['logs'][0]
+            check_add_ownership_event(event, sc_addr, mc_addr)
+    else:
+        assert_equal(0, len(receipt['result']['logs']), "No events should be in receipt")
+
 
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1)
-
-    def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1):
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
-
-        # check receipt
-        receipt1 = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
-        status = int(receipt1['result']['status'], 16)
-        assert_true(status == expected_receipt_status)
 
     def run_test(self):
         ft_amount_in_zen = Decimal('500.0')
@@ -92,11 +100,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         pprint.pprint(ret1)
 
         tx_hash1 = ret1['transactionId']
-        self.forge_and_check_receipt(sc_node, tx_hash1)
+        forge_and_check_receipt(self, sc_node, tx_hash1, sc_addr=sc_address, mc_addr=taddr1)
 
 
-        mc_node.getnewaddress()
-        taddr2 = mc_node.getnewaddress()
+        # mc recycles addresses
+        while True:
+            taddr2 = mc_node.getnewaddress()
+            if taddr2 != taddr1:
+                break
+            else:
+                print(taddr2, "...", taddr1)
+
         mc_signature2 = mc_node.signmessage(taddr2, sc_address)
         print("mcAddr: " + taddr2)
         print("mcSignature: " + mc_signature2)
@@ -108,7 +122,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         pprint.pprint(ret2)
 
         tx_hash2 = ret2['transactionId']
-        self.forge_and_check_receipt(sc_node, tx_hash2)
+        forge_and_check_receipt(self, sc_node, tx_hash2, sc_addr=sc_address, mc_addr=taddr2)
 
         ret3 = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret3)
@@ -124,14 +138,14 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
                                      sc_address=sc_address,
                                      mc_addr=taddr2,
                                      mc_signature=mc_signature2)
-            fail("duplicate association should not work")
         except RuntimeError as err:
             print("Expected exception thrown: {}".format(err))
             assert_true("already linked" in str(err) )
+        else:
+            fail("duplicate association should not work")
 
 
-
-        # 2. try to add a not owned ownership. The failure is detected
+        # 2. try to add a not owned ownership. The tx is executed but the receipt has a failed status
         taddr3 = mc_node.getnewaddress()
 
         ret4 = sendKeysOwnership(sc_node,
@@ -141,7 +155,47 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         tx_hash4 = ret4['transactionId']
         pprint.pprint(ret4)
 
-        self.forge_and_check_receipt(sc_node, tx_hash4, 0)
+        forge_and_check_receipt(self, sc_node, tx_hash4, expected_receipt_status=0)
+
+        # 3. try to use invalid parameters
+        # 3.1 illegal sc address
+        try:
+            sendKeysOwnership(sc_node,
+                              sc_address="1234",
+                              mc_addr=taddr2,
+                              mc_signature=mc_signature2)
+        except SCAPIException as err:
+            print("Expected exception thrown: {}".format(str(err.error)))
+            assert_true("Invalid SC address" in str(err.error))
+        else:
+            fail("invalid sc address should not work")
+
+
+        # 3.2 illegal mc address
+        try:
+            sendKeysOwnership(sc_node,
+                              sc_address=sc_address,
+                              mc_addr="1LMcKyPmwebfygoeZP8E9jAMS2BcgH3Yip",
+                              mc_signature=mc_signature2)
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(str(err)))
+            assert_true("Invalid input parameters" in str(err))
+        else:
+            fail("invalid mc address should not work")
+
+
+        # 3.3 illegal mc signature
+        try:
+            sendKeysOwnership(sc_node,
+                              sc_address=sc_address,
+                              mc_addr=taddr3,
+                              mc_signature="xyz")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(str(err)))
+            assert_true("Invalid input parameters" in str(err))
+        else:
+            fail("invalid mc signature should not work")
+
 
 if __name__ == "__main__":
     SCEvmMcAddressOwnership().main()

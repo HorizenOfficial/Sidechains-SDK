@@ -743,35 +743,46 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
             val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-            if (!sidechainNodeView.getNodeState.ownershipDataExist(getOwnershipId(
-              new Address("0x"+body.ownershipInfo.scAddress), body.ownershipInfo.mcTransparentAddress
-            ))) {
+            val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
 
+            secret match {
+              case Some(secret) =>
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                Try {
+                  // it throws if the parameters are invalid
+                  encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
+                } match {
 
-              val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
+                  case Success(dataBytes) =>
 
-              secret match {
-                case Some(secret) =>
+                    val ownershipId = getOwnershipId(
+                      new Address("0x"+body.ownershipInfo.scAddress),
+                      body.ownershipInfo.mcTransparentAddress
+                    )
 
-                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                  val dataBytes = encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
-                  val tmpTx: EthereumTransaction = new EthereumTransaction(
-                    params.chainId,
-                    JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
-                    nonce,
-                    gasLimit,
-                    maxPriorityFeePerGas,
-                    maxFeePerGas,
-                    valueInWei,
-                    dataBytes,
-                    null
-                  )
-                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} has insufficient balance", JOptional.empty()))
-              }
-            } else {
-              ApiResponseUtil.toResponse(GenericTransactionError(s"Account ${body.ownershipInfo.scAddress} already linked to mc address: ${body.ownershipInfo.mcTransparentAddress}", JOptional.empty()))
+                    if (sidechainNodeView.getNodeState.ownershipDataExist(ownershipId)) {
+                      ApiResponseUtil.toResponse(GenericTransactionError(s"Account ${body.ownershipInfo.scAddress} already linked to mc address: ${body.ownershipInfo.mcTransparentAddress}", JOptional.empty()))
+                    } else {
+                      val tmpTx: EthereumTransaction = new EthereumTransaction(
+                        params.chainId,
+                        JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
+                        nonce,
+                        gasLimit,
+                        maxPriorityFeePerGas,
+                        maxFeePerGas,
+                        valueInWei,
+                        dataBytes,
+                        null
+                      )
+                      validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                    }
+
+                  case Failure(exception) =>
+                    ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
+                }
+
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} has insufficient balance", JOptional.empty()))
             }
           }
         }
@@ -825,7 +836,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Array[Byte] = {
     // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
     // different to `getnewaddress "" true` hash that is in BE endianness.
-    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(withdrawal.mainchainAddress, params))
+    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(withdrawal.mainchainAddress, params))
     val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
   }
@@ -848,9 +859,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     // this can throw is not a valid address
     val scAddress = new Address("0x"+ownershipInfo.scAddress)
 
-    // TODO check encoding is valid base58 address
+    // this throws if the address is not base 58 decoded
+    val decodedMcPubKeyHash: Array[Byte] = BytesUtils.fromHorizenMcTransparentAddress(ownershipInfo.mcTransparentAddress, params)
 
-    // this can throw if not correctly base58 encoded
+    // check decoded length
+    require(decodedMcPubKeyHash.length == BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH, s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be 35, found ${decodedMcPubKeyHash.length}")
+
+    // this throws if the signature is not correctly base64 encoded
     val mcSignature: SignatureSecp256k1 = getMcSignature(ownershipInfo.mcSignature)
 
     val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, ownershipInfo.mcTransparentAddress, mcSignature)
@@ -966,6 +981,7 @@ object AccountTransactionRestScheme {
                                                         gasInfo: Option[EIP1559GasInfo]
                                                       ) {
     require(ownershipInfo != null, "MC address ownership info must be provided")
+    require(ownershipInfo.scAddress.length == 40, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
   }
 
   @JsonView(Array(classOf[Views.Default]))

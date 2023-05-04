@@ -7,6 +7,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import io.horizen.account.state.events.AddMcAddrOwnership
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE}
 import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
@@ -159,11 +160,9 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     log.debug(s"Added ownership to stateDb: newOwnershipId=${BytesUtils.toHexString(newOwnershipId)}," +
       s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
 
-    /* TODO add event
-    val addNewMcAddrOwnershipEvt = DelegateMcAddrOwnership(msg.getFrom, ownerAddress, newownershipId, ownership)
+    val addNewMcAddrOwnershipEvt = AddMcAddrOwnership(scAddress.address(), mcTransparentAddress)
     val evmLog = getEthereumConsensusDataLog(addNewMcAddrOwnershipEvt)
     view.addLog(evmLog)
-     */
 
     // result in case of success execution might be useful for RPC commands
     newOwnershipId
