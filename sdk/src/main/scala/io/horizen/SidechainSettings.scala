@@ -75,6 +75,7 @@ case class WalletSettings(
     seed: String,
     @(SensitiveString @field) genesisSecrets: Seq[String],
     maxTxFee: Long = 10000000,
+    minAPIThroughput: Int = 10,
 ) extends SensitiveStringer
 
 case class CeasedSidechainWithdrawalSettings(
