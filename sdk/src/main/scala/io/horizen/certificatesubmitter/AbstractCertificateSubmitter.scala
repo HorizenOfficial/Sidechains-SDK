@@ -419,6 +419,16 @@ abstract class AbstractCertificateSubmitter[
                           log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
                           isCertificateAlreadyPresent = true
                         }
+                      case (Some(mcInfo), _) =>
+                        if (mcInfo.epoch >= certificateRequest.epochNumber && mcInfo.certHash != null) {
+                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
+                          isCertificateAlreadyPresent = true
+                        }
+                      case (_, Some(ccInfo)) =>
+                        if (ccInfo.epoch >= certificateRequest.epochNumber && ccInfo.certHash != null) {
+                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
+                          isCertificateAlreadyPresent = true
+                        }
                     }
                   case Failure(_) =>
                     log.info("Check for top quality certificates before sending it failed. Trying to send certificate anyway.")
