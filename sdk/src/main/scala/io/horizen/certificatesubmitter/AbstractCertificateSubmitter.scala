@@ -429,9 +429,11 @@ abstract class AbstractCertificateSubmitter[
                           log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
                           isCertificateAlreadyPresent = true
                         }
+                      case _ =>
+                        log.info("Top quality certificate is empty. Trying to send the new certificate anyway.")
                     }
                   case Failure(_) =>
-                    log.info("Check for top quality certificates before sending it failed. Trying to send certificate anyway.")
+                    log.info("Check for top quality certificates before sending it failed. Trying to send the new certificate anyway.")
                 }
 
                 if (!isCertificateAlreadyPresent)
