@@ -4,7 +4,8 @@ import logging
 import pprint
 import time
 from decimal import Decimal
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, disconnect_sc_nodes_bi
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, disconnect_sc_nodes_bi, \
+    AccountModel
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, event_signature_to_log_topic, to_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -60,9 +61,8 @@ class SCEvmClosedForgerList(AccountChainSetup):
     # the genesis keys are added to the list of allowed forgers, therefore we have a total of 3 allowed forgers
     number_of_allowed_forgers = 2
 
-    allowed_forger_propositions = generate_secrets("seed_2", number_of_allowed_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed_2", number_of_allowed_forgers)
-
+    allowed_forger_propositions = generate_secrets("seed_2", number_of_allowed_forgers, AccountModel)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed_2", number_of_allowed_forgers, AccountModel)
 
     def __init__(self):
         allowedForgers = []

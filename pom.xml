@@ -15,8 +15,10 @@
 
 	<modules>
 		<module>sdk</module>
-		<module>examples/simpleapp</module>
-		<module>examples/evmapp</module>
+		<module>examples/utxo/simpleapp</module>
+		<module>examples/account/evmapp</module>
+		<module>examples/utxo/utxoapp_sctool</module>
+		<module>examples/account/evmapp_sctool</module>
 		<module>tools/sctool</module>
 		<module>tools/dbtool</module>
 		<module>tools/signingtool</module>
