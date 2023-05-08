@@ -173,11 +173,10 @@ def sync_sc_mempools(api_connections, wait_for=25, mempool_cardinality_only=Fals
 sidechainclient_processes = {}
 
 
-def launch_bootstrap_tool(command_name, json_parameters):
+def launch_bootstrap_tool(command_name, json_parameters, model):
+    bootstrapping_tool_path = EVM_BOOTSTRAPPING_TOOL if model == 'account' else UTXO_BOOTSTRAPPING_TOOL
     json_param = json.dumps(json_parameters)
-    java_ps = subprocess.Popen(["java", "-jar",
-                                os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.7.0-SNAPSHOT.jar",
+    java_ps = subprocess.Popen(["java", "-jar", bootstrapping_tool_path,
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -238,7 +237,7 @@ def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timest
     jsonParameters = {"model": model,
                       "secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
                       "regtestBlockTimestampRewind": block_timestamp_rewind, "virtualWithdrawalEpochLength": virtual_withdrawal_epoch_length}
-    jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
+    jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters, model)
     return jsonNode
 
 
@@ -252,12 +251,12 @@ Output: an array of instances of Account (see sc_bootstrap_info.py).
 """
 
 
-def generate_secrets(seed, number_of_accounts):
+def generate_secrets(seed, number_of_accounts, model):
     accounts = []
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        secrets.append(launch_bootstrap_tool("generatekey", jsonParameters))
+        secrets.append(launch_bootstrap_tool("generatekey", jsonParameters, model))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -275,12 +274,12 @@ Output: an array of instances of VrfKey (see sc_bootstrap_info.py).
 """
 
 
-def generate_vrf_secrets(seed, number_of_vrf_keys):
+def generate_vrf_secrets(seed, number_of_vrf_keys, model):
     vrf_keys = []
     secrets = []
     for i in range(number_of_vrf_keys):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        secrets.append(launch_bootstrap_tool("generateVrfKey", jsonParameters))
+        secrets.append(launch_bootstrap_tool("generateVrfKey", jsonParameters, model))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -288,12 +287,12 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
     return vrf_keys
 
 
-def generate_account_proposition(seed, number_of_acc_props):
+def generate_account_proposition(seed, number_of_acc_props, model):
     acc_props = []
     secrets = []
     for i in range(number_of_acc_props):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        secrets.append(launch_bootstrap_tool("generateAccountKey", jsonParameters))
+        secrets.append(launch_bootstrap_tool("generateAccountKey", jsonParameters, model))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -308,12 +307,12 @@ Parameters:
 
 Output: an array of instances of SchnorrKey (see sc_bootstrap_info.py).
 """
-def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
+def generate_cert_signer_secrets(seed, number_of_schnorr_keys, model):
     schnorr_keys = []
     secrets = []
     for i in range(number_of_schnorr_keys):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        secrets.append(launch_bootstrap_tool("generateCertificateSignerKey", jsonParameters))
+        secrets.append(launch_bootstrap_tool("generateCertificateSignerKey", jsonParameters, model))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -337,8 +336,8 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 
 
 def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths,
-                                    is_csw_enabled, circuit_type):
-    signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
+                                    is_csw_enabled, circuit_type, model):
+    signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys, model)
 
     signer_secrets = []
     public_signing_keys = []
@@ -358,7 +357,7 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
     }
 
     if circuit_type == KEY_ROTATION_CIRCUIT:
-        master_keys = generate_cert_signer_secrets("master" + seed, number_of_signer_keys)
+        master_keys = generate_cert_signer_secrets("master" + seed, number_of_signer_keys, model)
         for i in range((len(master_keys))):
             master_key = master_keys[i]
             master_secrets.append(master_key.secret)
@@ -367,8 +366,8 @@ def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys
         json_parameters["mastersPublicKeys"] = public_master_keys
 
     output = launch_bootstrap_tool("generateCertProofInfo",
-                                   json_parameters) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
-        launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters)
+                                   json_parameters, model) if circuit_type == NO_KEY_ROTATION_CIRCUIT else \
+        launch_bootstrap_tool("generateCertWithKeyRotationProofInfo", json_parameters, model)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
@@ -406,13 +405,13 @@ Output: Verification key
 """
 
 
-def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
+def generate_csw_proof_info(withdrawal_epoch_len, keys_paths, model):
     json_parameters = {
         "withdrawalEpochLen": withdrawal_epoch_len,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path
     }
-    output = launch_bootstrap_tool("generateCswProofInfo", json_parameters)
+    output = launch_bootstrap_tool("generateCswProofInfo", json_parameters, model)
 
     verification_key = output["verificationKey"]
     return verification_key
@@ -464,7 +463,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
     signer_private_keys = [all_signers_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
     if sc_node_config.api_key != "":
-        api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
+        api_key_hash = calculateApiKeyHash(sc_node_config.api_key, model)
 
     if bootstrap_info.genesis_account is not None:
         # we choose to tell the secrtes only to bootstrapped node 0
@@ -654,11 +653,10 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* io.horizen.examples.EvmApp"
-
-
-
+SIMPLE_APP_BINARY = get_examples_dir() + "/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/utxo/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/account/evmapp/target/lib/* io.horizen.examples.EvmApp"
+UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/utxoapp_sctool-0.7.0-SNAPSHOT.jar"
+EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/evmapp_sctool-0.7.0-SNAPSHOT.jar"
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
@@ -1085,8 +1083,8 @@ Parameters:
 
 def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths,
                      model=DefaultModel):
-    accounts = generate_secrets("seed", 1)
-    vrf_keys = generate_vrf_secrets("seed", 1)
+    accounts = generate_secrets("seed", 1, model)
+    vrf_keys = generate_vrf_secrets("seed", 1, model)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
     withdrawal_epoch_length = 0 if sc_creation_info.non_ceasing else sc_creation_info.withdrawal_epoch_length
@@ -1094,16 +1092,16 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys,
                                                              sc_creation_info.cert_sig_threshold, cert_keys_paths,
                                                              sc_creation_info.csw_enabled,
-                                                             sc_creation_info.circuit_type)
+                                                             sc_creation_info.circuit_type, model)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:
-        csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
+        csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths, model)
 
     genesis_evm_account = None
     evm_account_public_key = None
     if (model == AccountModel):
-        evm_accounts = generate_account_proposition("seed", 1)
+        evm_accounts = generate_account_proposition("seed", 1, model)
         genesis_evm_account = evm_accounts[0]
         evm_account_public_key = genesis_evm_account.proposition
 
@@ -1134,11 +1132,11 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
                            genesis_evm_account, sc_creation_info.circuit_type)
 
 
-def calculateApiKeyHash(auth_api_key):
+def calculateApiKeyHash(auth_api_key, model):
     json_parameters = {
         "string": auth_api_key
     }
-    return launch_bootstrap_tool("encodeString", json_parameters)["encodedString"]
+    return launch_bootstrap_tool("encodeString", json_parameters, model)["encodedString"]
 
 
 """
