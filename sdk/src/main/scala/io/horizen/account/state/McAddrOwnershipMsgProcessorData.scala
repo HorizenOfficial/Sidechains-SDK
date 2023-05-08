@@ -1,12 +1,12 @@
 package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
 import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.account.state.McAddrOwnershipData.decodeMcAddress
 import io.horizen.json.Views
-import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import org.web3j.abi.TypeReference
@@ -19,77 +19,9 @@ import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util
 
-@JsonView(Array(classOf[Views.Default]))
-// used as element of the list to return when getting all forger stakes via msg processor
-case class McAddrOwnershipInfo(
-                                ownershipId: Array[Byte],
-                                mcAddrOwnershipData: McAddrOwnershipData)
-  extends BytesSerializable with ABIEncodable[StaticStruct] {
 
-  override type M = McAddrOwnershipInfo
-
-  override def serializer: SparkzSerializer[McAddrOwnershipInfo] = McAddrOwnershipInfoSerializer
-
-  override def toString: String = "%s(ownershipId: %s, McAddrOwnershipData: %s)"
-    .format(this.getClass.toString, BytesUtils.toHexString(ownershipId), mcAddrOwnershipData)
-
-  private[horizen] def asABIType(): StaticStruct = {
-    val scAddrBytes = mcAddrOwnershipData.scAddress.getBytes(StandardCharsets.UTF_8)
-    require(scAddrBytes.length == 20, "Sc address array should have length 20")
-
-    val mcAddrBytes = mcAddrOwnershipData.mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
-    require(mcAddrBytes.length == 35, "Mc address array should have length 35")
-
-    val listOfParams = new util.ArrayList[Type[_]]()
-
-    listOfParams.add(new Bytes32(ownershipId))
-    listOfParams.add(new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)))
-    listOfParams.add(new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, 35)))
-    listOfParams.add(new AbiAddress(mcAddrOwnershipData.scAddress))
-
-    new StaticStruct(listOfParams)
-  }
-
-  override def equals(that: Any): Boolean =
-    that match {
-      case that: McAddrOwnershipInfo =>
-        that.canEqual(this) &&
-          this.mcAddrOwnershipData == that.mcAddrOwnershipData &&
-          util.Arrays.equals(this.ownershipId, that.ownershipId)
-      case _ => false
-    }
-
-
-  override def hashCode: Int = {
-    val prime = 31
-    var result = 1
-    result = prime * result + (if (ownershipId == null) 0 else util.Arrays.hashCode(ownershipId))
-    result = prime * result + (if (mcAddrOwnershipData == null) 0 else mcAddrOwnershipData.hashCode)
-    result
-  }
-
-}
-
-object McAddrOwnershipInfoListEncoder extends ABIListEncoder[McAddrOwnershipInfo, StaticStruct]{
-  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
-}
-
-object McAddrOwnershipInfoSerializer extends SparkzSerializer[McAddrOwnershipInfo] {
-
-  override def serialize(s: McAddrOwnershipInfo, w: Writer): Unit = {
-    w.putBytes(s.ownershipId)
-    McAddrOwnershipDataSerializer.serialize(s.mcAddrOwnershipData, w)
-  }
-
-  override def parse(r: Reader): McAddrOwnershipInfo = {
-    val ownershipId = r.getBytes(32)
-    val McAddrOwnershipData = McAddrOwnershipDataSerializer.parse(r)
-
-    McAddrOwnershipInfo(ownershipId, McAddrOwnershipData)
-  }
-}
-
-case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1) extends ABIEncodable[StaticStruct] {
+case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1)
+  extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
     val t_v = getUnsignedByteArray(mcSignature.getV)
@@ -117,7 +49,7 @@ object AddNewOwnershipCmdInputDecoder
   extends ABIDecoder[AddNewOwnershipCmdInput]
     with MsgProcessorInputDecoder[AddNewOwnershipCmdInput] {
 
-  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
       // sc address
       new TypeReference[AbiAddress]() {},
@@ -128,8 +60,9 @@ object AddNewOwnershipCmdInputDecoder
       new TypeReference[Bytes1]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {}))
+  }
 
-   override def createType(listOfParams: util.List[Type[_]]): AddNewOwnershipCmdInput = {
+  override def createType(listOfParams: util.List[Type[_]]): AddNewOwnershipCmdInput = {
     val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
     val mcTransparentAddrress = decodeMcAddress(listOfParams.get(1).asInstanceOf[Bytes3], listOfParams.get(2).asInstanceOf[Bytes32])
     val mcSignature = new SignatureSecp256k1(
@@ -140,11 +73,56 @@ object AddNewOwnershipCmdInputDecoder
 
     AddNewOwnershipCmdInput(scAddress, mcTransparentAddrress, mcSignature)
   }
+}
 
-  private[horizen] def decodeMcAddress(first3Bytes: Bytes3, last32Bytes: Bytes32): String = {
-    new String(first3Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
+case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: Option[String])
+  extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+    val mcAddrBytes = mcTransparentAddressOpt match {
+      case Some(mcTransparentAddress) =>
+        mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
+      case None =>
+        new Array[Byte](35)
+    }
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(scAddress.toString),
+      new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
+      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, 35))
+    )
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(scAddress: %s, mcAddress: %s)"
+    .format(
+      this.getClass.toString,
+      scAddress.toString, mcTransparentAddressOpt.getOrElse("undef"))
+}
+
+object RemoveOwnershipCmdInputDecoder
+  extends ABIDecoder[RemoveOwnershipCmdInput]
+    with MsgProcessorInputDecoder[RemoveOwnershipCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      // sc address
+      new TypeReference[AbiAddress]() {},
+      // mc transparent address
+      new TypeReference[Bytes3]() {},
+      new TypeReference[Bytes32]() {},
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): RemoveOwnershipCmdInput = {
+    val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    val mcTransparentAddress =
+      decodeMcAddress(listOfParams.get(1).asInstanceOf[Bytes3], listOfParams.get(2).asInstanceOf[Bytes32])
+
+    RemoveOwnershipCmdInput(scAddress, Some(mcTransparentAddress))
   }
 }
+
 
 
 @JsonView(Array(classOf[Views.Default]))
@@ -157,6 +135,14 @@ case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
 
   override def toString: String = "%s(scAddress: %s, mcAddress: %s)"
     .format(this.getClass.toString, scAddress, mcTransparentAddress)
+
+
+}
+
+object McAddrOwnershipData {
+  def decodeMcAddress(first3Bytes: Bytes3, last32Bytes: Bytes32): String = {
+    new String(first3Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
+  }
 }
 
 object McAddrOwnershipDataSerializer extends SparkzSerializer[McAddrOwnershipData] {

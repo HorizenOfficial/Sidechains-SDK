@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
+import json
 import pprint
 from decimal import Decimal
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_topic, encode_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
+from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.scutil import generate_next_block
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
-from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes)
+from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false)
 
 """
 Configuration: 
@@ -33,11 +35,18 @@ def get_address_with_balance(input_list):
     return (None, 0)
 
 
-def check_add_ownership_event(event, sc_addr, mc_addr):
+def check_add_ownership_event(event, sc_addr, mc_addr, op="add"):
+    if op == "add":
+        sig = 'AddMcAddrOwnership(address,bytes3,bytes32)'
+    elif op == "remove":
+        sig = 'RemoveMcAddrOwnership(address,bytes3,bytes32)'
+    else:
+        assert_false("Invalid op = " + op)
+
     assert_equal(2, len(event['topics']), "Wrong number of topics in event")
     event_id = remove_0x_prefix(event['topics'][0])
     event_signature = remove_0x_prefix(
-        encode_hex(event_signature_to_log_topic('AddMcAddrOwnership(address,bytes3,bytes32)')))
+        encode_hex(event_signature_to_log_topic(sig)))
     assert_equal(event_signature, event_id, "Wrong event signature in topics")
 
     evt_sc_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]
@@ -48,12 +57,15 @@ def check_add_ownership_event(event, sc_addr, mc_addr):
     assert_equal(mc_addr, evt_mc_addr, "Wrong mc_addr string in topics")
 
 
-def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None):
+def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None, evt_op="add"):
     generate_next_block(sc_node, "first node")
     self.sc_sync_all()
 
     # check receipt
     receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+    if not 'result' in receipt or receipt['result'] == None:
+        raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(receipt, indent=2)))
+
     status = int(receipt['result']['status'], 16)
     assert_true(status == expected_receipt_status)
 
@@ -62,7 +74,7 @@ def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, s
         if (sc_addr is not None) and (mc_addr is not None) :
             assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
             event = receipt['result']['logs'][0]
-            check_add_ownership_event(event, sc_addr, mc_addr)
+            check_add_ownership_event(event, sc_addr, mc_addr, evt_op)
     else:
         assert_equal(0, len(receipt['result']['logs']), "No events should be in receipt")
 
@@ -196,6 +208,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         else:
             fail("invalid mc signature should not work")
 
+
+        ret2 = removeKeysOwnership(sc_node,
+                                 sc_address=sc_address,
+                                 mc_addr=taddr2)
+        pprint.pprint(ret2)
+
+        tx_hash2 = ret2['transactionId']
+        forge_and_check_receipt(self, sc_node, tx_hash2, sc_addr=sc_address, mc_addr=taddr2, evt_op="remove")
+
+        ret3 = getKeysOwnership(sc_node, sc_address=sc_address)
+        pprint.pprint(ret3)
 
 if __name__ == "__main__":
     SCEvmMcAddressOwnership().main()

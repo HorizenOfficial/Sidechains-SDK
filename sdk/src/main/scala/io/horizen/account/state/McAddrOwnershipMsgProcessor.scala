@@ -6,8 +6,9 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
+import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.state.events.AddMcAddrOwnership
+import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE}
 import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
@@ -63,7 +64,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     !data.sameElements(NULL_HEX_STRING_32)
   }
 
-  def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcTransparentAddress: String): Unit = {
+  private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcTransparentAddress: String): Unit = {
 
     // add a new node to the linked list pointing to this obj data
     addNewNodeToList(view, ownershipId)
@@ -73,6 +74,34 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // store the ownership data
     view.updateAccountStorageBytes(contractAddress, ownershipId,
       McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
+  }
+
+  private def removeMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]) : Unit =
+  {
+    val nodeToRemoveId = Blake2b256.hash(ownershipId)
+
+    // we assume that the caller have checked that the data really exists in the stateDb.
+    // in this case we must necessarily have a linked list node
+    val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
+
+    // modify previous node if any
+    modifyNode(view, nodeToRemove.previousNodeKey) { previousNode =>
+      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
+    }
+
+    // modify next node if any
+    modifyNode(view, nodeToRemove.nextNodeKey) { nextNode =>
+      LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
+    } getOrElse {
+      // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
+      view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
+    }
+
+    // remove the stake
+    view.removeAccountStorageBytes(contractAddress, ownershipId)
+
+    // remove the node from the linked list
+    view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
   def isValidOwnershipSignature(scAddress: AddressProposition, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
@@ -138,7 +167,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val mcSignature = cmdInput.mcSignature
 
     if (!msg.getFrom.equals(cmdInput.scAddress)) {
-      throw new ExecutionRevertedException(s"sc account is not an EOA")
+      throw new ExecutionRevertedException(
+        s"sc account ${msg.getFrom.toStringNoPrefix} is not the one specified in input ${cmdInput.scAddress.toStringNoPrefix}")
     }
 
     // compute ownershipId
@@ -168,6 +198,63 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     newOwnershipId
   }
 
+  def doRemoveOwnershipCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
+    // check that msg.value is zero
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Value must not be zero")
+    }
+
+    // check that sender account exists
+    if (!view.accountExists(msg.getFrom) ) {
+      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom}")
+    }
+
+    val inputParams = getArgumentsFromData(msg.getData)
+
+    val cmdInput = RemoveOwnershipCmdInputDecoder.decode(inputParams)
+    val scAddress = new AddressProposition(cmdInput.scAddress)
+
+    if (!msg.getFrom.equals(cmdInput.scAddress)) {
+      throw new ExecutionRevertedException(
+        s"sc account ${msg.getFrom.toStringNoPrefix} is not the one specified in input ${cmdInput.scAddress.toStringNoPrefix}")
+    }
+
+    cmdInput.mcTransparentAddressOpt match {
+      case Some(mcTransparentAddress) =>
+        // compute ownershipId
+        val ownershipId = getOwnershipId(scAddress.address(), mcTransparentAddress)
+
+        // check we do not already have this obj in the db
+        if (!existsOwnershipData(view, ownershipId)) {
+          throw new ExecutionRevertedException(
+            s"Ownership ${BytesUtils.toHexString(ownershipId)} does not exists")
+        }
+
+        // remove the obj from stateDb
+        removeMcAddrOwnership(view, ownershipId)
+        log.debug(s"Removed ownership from stateDb: newOwnershipId=${BytesUtils.toHexString(ownershipId)}," +
+          s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress")
+
+        // TODO handle correct event
+        val removeMcAddrOwnershipEvt = RemoveMcAddrOwnership(scAddress.address(), mcTransparentAddress)
+        val evmLog = getEthereumConsensusDataLog(removeMcAddrOwnershipEvt)
+        view.addLog(evmLog)
+
+        // result in case of success execution might be useful for RPC commands
+        ownershipId
+
+      case None =>
+        // TODO handle none case, we should remove all sc address association
+      throw new ExecutionRevertedException(
+          s"Invalid null mc address")
+    }
+ }
+
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView): Seq[McAddrOwnershipData] = {
     var ownershipsList = Seq[McAddrOwnershipData]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
@@ -189,6 +276,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(msg, gasView)
+      case RemoveOwnershipCmd => doRemoveOwnershipCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
@@ -200,11 +288,13 @@ object McAddrOwnershipMsgProcessor {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
 
-  val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(address,bytes32,bytes1,bytes1,bytes32,bytes32)")
+  val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(address,bytes3,bytes32,bytes1,bytes32,bytes32)")
+  val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(address,bytes3,bytes32)")
 
   // ensure we have strings consistent with size of opcode
   require(
-      AddNewOwnershipCmd.length == 2 * METHOD_ID_LENGTH
+    AddNewOwnershipCmd.length == 2 * METHOD_ID_LENGTH,
+    RemoveOwnershipCmd.length == 2 * METHOD_ID_LENGTH
   )
 
 

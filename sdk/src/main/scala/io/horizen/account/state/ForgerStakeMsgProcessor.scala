@@ -94,7 +94,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
-  def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
+  private def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
     // we assume that the caller have checked that the forger stake really exists in the stateDb.

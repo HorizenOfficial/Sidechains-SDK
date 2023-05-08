@@ -72,7 +72,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
-      sendKeysOwnership ~ getKeysOwnership
+      sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -791,6 +791,67 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 
+  def removeKeysOwnership: Route = (post & path("removeKeysOwnership")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqRemoveMcAddrOwnership]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
+
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
+
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+            val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
+
+            secret match {
+              case Some(secret) =>
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                Try {
+                  // it throws if the parameters are invalid
+                  encodeRemoveOwnershipCmdRequest(body.ownershipInfo)
+                } match {
+
+                  case Success(dataBytes) =>
+
+                    val tmpTx: EthereumTransaction = new EthereumTransaction(
+                      params.chainId,
+                      JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
+                      nonce,
+                      gasLimit,
+                      maxPriorityFeePerGas,
+                      maxFeePerGas,
+                      valueInWei,
+                      dataBytes,
+                      null
+                    )
+                    validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+
+                  case Failure(exception) =>
+                    ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
+                }
+
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} has insufficient balance", JOptional.empty()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+
   def getKeysOwnership: Route = (post & path("getKeysOwnership")) {
     withBasicAuth {
       _ => {
@@ -855,15 +916,30 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     new SignatureSecp256k1(v, r, s)
   }
 
-  def encodeAddNewOwnershipCmdRequest(ownershipInfo: TransactionMcAddrOwnershipInfo): Array[Byte] = {
+  private def checkScMcAddresses(scAddress: String, mcTransparentAddressOpt: Option[String]) : (Address, Array[Byte]) = {
     // this can throw is not a valid address
-    val scAddress = new Address("0x"+ownershipInfo.scAddress)
+    val scAddressObj = new Address("0x"+scAddress)
 
-    // this throws if the address is not base 58 decoded
-    val decodedMcPubKeyHash: Array[Byte] = BytesUtils.fromHorizenMcTransparentAddress(ownershipInfo.mcTransparentAddress, params)
+    mcTransparentAddressOpt match {
+      case Some(mcTransparentAddress) =>
+        // this throws if the address is not base 58 decoded
+        val decodedMcPubKeyHash: Array[Byte] = BytesUtils.fromHorizenMcTransparentAddress(mcTransparentAddress, params)
 
-    // check decoded length
-    require(decodedMcPubKeyHash.length == BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH, s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be 35, found ${decodedMcPubKeyHash.length}")
+        // check decoded length
+        require(decodedMcPubKeyHash.length == BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH,
+          s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be 35, found ${decodedMcPubKeyHash.length}")
+
+        (scAddressObj, decodedMcPubKeyHash)
+
+      case None =>
+        (scAddressObj, new Array[Byte](0))
+    }
+
+  }
+
+  def encodeAddNewOwnershipCmdRequest(ownershipInfo: TransactionCreateMcAddrOwnershipInfo): Array[Byte] = {
+    // this throws if any of sc and mc addresses is not valid
+    val (scAddress, _) = checkScMcAddresses(ownershipInfo.scAddress, Some(ownershipInfo.mcTransparentAddress))
 
     // this throws if the signature is not correctly base64 encoded
     val mcSignature: SignatureSecp256k1 = getMcSignature(ownershipInfo.mcSignature)
@@ -871,6 +947,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, ownershipInfo.mcTransparentAddress, mcSignature)
 
     Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
+  }
+
+  def encodeRemoveOwnershipCmdRequest(ownershipInfo: TransactionRemoveMcAddrOwnershipInfo): Array[Byte] = {
+    // this throws if any of sc and mc addresses is not valid
+    val (scAddress, _) = checkScMcAddresses(ownershipInfo.scAddress, ownershipInfo.mcTransparentAddress)
+    val removeMcAddrOwnershipInput = RemoveOwnershipCmdInput(scAddress, ownershipInfo.mcTransparentAddress)
+
+    Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.RemoveOwnershipCmd), removeMcAddrOwnershipInput.encode())
+
   }
 
   private def checkKeyRotationProofValidity(body: ReqCreateKeyRotationTransaction, epoch: Int): Option[ErrorResponse] = {
@@ -924,7 +1009,10 @@ object AccountTransactionRestScheme {
   private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class TransactionMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: String, mcSignature: String)
+  private[horizen] case class TransactionCreateMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: String, mcSignature: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class TransactionRemoveMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: Option[String])
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
@@ -977,11 +1065,23 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class ReqCreateMcAddrOwnership(
                                                         nonce: Option[BigInteger],
-                                                        ownershipInfo: TransactionMcAddrOwnershipInfo,
+                                                        ownershipInfo: TransactionCreateMcAddrOwnershipInfo,
                                                         gasInfo: Option[EIP1559GasInfo]
                                                       ) {
     require(ownershipInfo != null, "MC address ownership info must be provided")
     require(ownershipInfo.scAddress.length == 40, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqRemoveMcAddrOwnership(
+                                                        nonce: Option[BigInteger],
+                                                        ownershipInfo: TransactionRemoveMcAddrOwnershipInfo,
+                                                        gasInfo: Option[EIP1559GasInfo]
+                                                      ) {
+    require(ownershipInfo != null, "MC address ownership info must be provided")
+    require(ownershipInfo.scAddress.length == 40, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
+    // for the time being do not allow null mc address. In future we can use a null value for removing all sc address ownerships
+    require(ownershipInfo.mcTransparentAddress.isDefined, "MC address must be specified")
   }
 
   @JsonView(Array(classOf[Views.Default]))
