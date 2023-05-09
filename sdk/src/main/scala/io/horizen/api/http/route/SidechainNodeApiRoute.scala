@@ -3,21 +3,24 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.AbstractSidechainApp
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import io.horizen.api.http.route.SidechainNodeRestSchema._
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, SuccessResponse}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.json.Views
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import io.horizen.params.NetworkParams
+import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
-import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import sparkz.core.api.http.{ApiResponse, ApiRoute}
+import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
+import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemoveFromBlacklist, RemovePeer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -26,13 +29,23 @@ import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-case class SidechainNodeApiRoute(peerManager: ActorRef,
+case class SidechainNodeApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams)
-                                (implicit val context: ActorRefFactory, val ec: ExecutionContext) extends ApiRoute {
+                                (implicit val context: ActorRefFactory, val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
 
   override val route: Route = pathPrefix("node") {
@@ -173,23 +186,22 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
 
       var blacklistedNum = -1
-      askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+      val resultBlacklisted = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
         .map(blacklistedPeers => {
           blacklistedNum = blacklistedPeers.length
           println(s"There are $blacklistedNum blacklisted peers.")
         })
 
+
       var connectedToNum = -1
-      askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
+      val resultConnected = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
         .map(connectedPeers => {
           connectedToNum = connectedPeers.length
           println(s"There are $connectedToNum connected peers.")
         })
 
-      sidechainNodeViewHolderRef
-      // todo skontaj kako da iskoristis ovaj holderRef da dobijes podatke od MC, mempoola i te stvari
-
-//      (sidechainNodeViewHolderRef ? GetDataFromCurrentView(f)).mapTo[View]
+      Await.result(resultBlacklisted, settings.timeout)
+      Await.result(resultConnected, settings.timeout)
 
 
 
