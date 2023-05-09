@@ -40,7 +40,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>io.horizen.EVMSimpleAppBootstrappingTool</mainClass>
+                            <mainClass>io.horizen.AccountSimpleAppBootstrappingTool</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

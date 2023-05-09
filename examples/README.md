@@ -29,8 +29,8 @@ pip3 install -r requirements.txt
 **Execution**
 
 You can run an Example App inside an IDE by:
-* Executing the SimpleApp class in the examples/simpleapp module.
-* Executing the EvmApp class in the examples/evmapp module.
+* Executing the SimpleApp class in the examples/utxo/simpleapp module.
+* Executing the EvmApp class in the examples/account/evmapp module.
 
 Otherwise, to run an Example App outside the IDE:
 1. Build and package the project
@@ -48,7 +48,7 @@ Otherwise, to run an Example App outside the IDE:
     ```
 * (Linux)
     ```
-    cd ./Sidechains-SDK/examples/simpleapp
+    cd ./Sidechains-SDK/examples/utxo/simpleapp
     java -cp ./target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./target/lib/\* io.horizen.examples.SimpleApp <path_to_config_file>
     ```
 **Model: Account**
@@ -60,7 +60,7 @@ Otherwise, to run an Example App outside the IDE:
     ```
 * (Linux)
     ```
-    cd ./Sidechains-SDK/examples/evmapp
+    cd ./Sidechains-SDK/examples/account/evmapp
     java -cp ./target/sidechains-evmapp-0.7.0-SNAPSHOT.jar:./target/lib/\* io.horizen.examples.EvmApp <path_to_config_file>
     ```
 
