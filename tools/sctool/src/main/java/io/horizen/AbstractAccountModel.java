@@ -42,7 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-abstract public class AbstractEVMModel implements SidechainModel<AccountBlock> {
+abstract public class AbstractAccountModel implements SidechainModel<AccountBlock> {
     private static final String model = "account";
 
     @Override
