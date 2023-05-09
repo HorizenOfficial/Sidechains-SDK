@@ -8,7 +8,7 @@ prod_release="false"
 mapfile -t prod_release_br_list < <(echo "${PROD_RELEASE_BRANCHES}" | tr " " "\n")
 
 pom_version="$(xpath -q -e '/project/version/text()' ./pom.xml)"
-simpleapp_version="$(xpath -q -e '/project/version/text()' ./examples/simpleapp/pom.xml)"
+simpleapp_version="$(xpath -q -e '/project/version/text()' ./examples/utxo/simpleapp/pom.xml)"
 sdk_version="$(xpath -q -e '/project/version/text()' ./sdk/pom.xml)"
 sctool_version="$(xpath -q -e '/project/version/text()' ./tools/sctool/pom.xml)"
 
@@ -25,7 +25,7 @@ echo "./tools/sctool/pom.xml version:       $sctool_version"
 
 if [ -d "${TRAVIS_BUILD_DIR}/libevm" ]; then
   lib_evm_version="$(xpath -q -e '/project/version/text()' ./libevm/pom.xml)"
-  evmapp_version="$(xpath -q -e '/project/version/text()' ./examples/evmapp/pom.xml)"
+  evmapp_version="$(xpath -q -e '/project/version/text()' ./examples/account/evmapp/pom.xml)"
 
   echo "./libevm/pom.xml version:             ${lib_evm_version}"
   echo "./examples/evmapp/pom.xml version:    ${evmapp_version}"
