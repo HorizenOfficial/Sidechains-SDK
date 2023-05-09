@@ -12,11 +12,12 @@ import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, S
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.api.http.{ApiResponse, ApiRoute}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemovePeer, RemoveFromBlacklist}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -36,7 +37,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ peerByAddress ~ addToBlacklist ~ removeFromBlacklist ~ removePeer
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ peerByAddress ~ addToBlacklist ~ removeFromBlacklist ~ removePeer ~ nodeInfo
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -109,6 +110,90 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             ApiResponseUtil.toResponse(RespGetPeer(peerInfo))
         }
       }
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
+  //todo david
+
+  /*
+  [X] Node name
+  [ ] Node types - forger, submitter, signer, simple node
+  [ ] Sdk version
+  [X] Sc ID
+  [X] Sc type - ceasable/non-ceasable
+  [ ] Sc model - UTXO/Account
+  [ ] Sc block height
+  [ ] Sc consensus epoch
+  [ ] Sc withdrawal epoch
+  [ ] Sc environment
+  [ ] Sc node version
+  [X] Number of connected peers
+  [X] Number of peers
+  [X] Number of blacklisted peers
+  [ ] Tx mempool - executable & non executable
+  [X] maxMemPoolSlots - if it’s configurable
+  [ ] Last baseFeePerGas - for account model only
+  [ ] Forward transfer min fee
+  [ ] Quality of last certificate
+  [ ] Backward transfer fee
+  [ ] Last MC reference hash
+  * */
+  def nodeInfo: Route = (path("info") & post) {
+    try {
+      val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
+      val isNonCeasing = params.isNonCeasing
+      val withdrawalEpochLength = params.withdrawalEpochLength
+
+      val a = app.settings.network.nodeName
+      val a1 = app.settings.network.agentName
+      val a2 = app.settings.network.appVersion
+      val a3 = app.settings.network.knownPeers
+      val a4 = app.settings.network.declaredAddress
+      val a5 = app.settings.ntp.server
+      val a6 = app.settings.restApi.bindAddress
+
+      val a7 = app.sidechainSettings.accountMempool.maxMemPoolSlots
+      val a8 = app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
+      val a32 = app.sidechainSettings.forger.automaticForging
+      val a9 = app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled
+      val a10 = app.sidechainSettings.ethService.globalRpcGasCap
+      val a11 = app.sidechainSettings.mempool.maxSize
+      val a12 = app.sidechainSettings.websocketClient.enabled
+
+      val a13 = app.chainInfo.mainnetId
+      val a14 = app.chainInfo.testnetId
+      val a15 = app.chainInfo.regtestId
+
+      val a17 = app.params.chainId
+      val a18 = app.nodeViewSynchronizer
+      val a19 = app.nodeViewHolderRef
+      val a19asd = app.mainchainNodeChannel.getTopQualityCertificates(sidechainId) //java.lang.IllegalStateException: The web socket channel must be not null.
+
+
+      var blacklistedNum = -1
+      askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+        .map(blacklistedPeers => {
+          blacklistedNum = blacklistedPeers.length
+          println(s"There are $blacklistedNum blacklisted peers.")
+        })
+
+      var connectedToNum = -1
+      askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
+        .map(connectedPeers => {
+          connectedToNum = connectedPeers.length
+          println(s"There are $connectedToNum connected peers.")
+        })
+
+      sidechainNodeViewHolderRef
+      // todo skontaj kako da iskoristis ovaj holderRef da dobijes podatke od MC, mempoola i te stvari
+
+//      (sidechainNodeViewHolderRef ? GetDataFromCurrentView(f)).mapTo[View]
+
+
+
+      ApiResponse.OK
     } catch {
       case e: Throwable => SidechainApiError(e)
     }
