@@ -4,6 +4,9 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.node.AccountNodeView
+import io.horizen.account.state.AccountState
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import io.horizen.api.http.route.SidechainNodeRestSchema._
@@ -15,6 +18,7 @@ import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, Node
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
+import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
 import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
@@ -25,12 +29,15 @@ import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
+import java.io.File
 import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
+import scala.sys.process._
 import scala.util.{Failure, Success, Try}
+import scala.xml.XML
 
 case class SidechainNodeApiRoute[
   TX <: Transaction,
@@ -133,79 +140,153 @@ case class SidechainNodeApiRoute[
   /*
   [X] Node name
   [ ] Node types - forger, submitter, signer, simple node
-  [ ] Sdk version
+  [X] Sdk version
   [X] Sc ID
   [X] Sc type - ceasable/non-ceasable
-  [ ] Sc model - UTXO/Account
-  [ ] Sc block height
-  [ ] Sc consensus epoch
-  [ ] Sc withdrawal epoch
-  [ ] Sc environment
+  [X] Sc model - UTXO/Account
+  [X] Sc block height
+  [X] Sc consensus epoch
+  [X] Sc withdrawal epoch
+  [X] Sc environment - on which network is node currently - mainnet/testnet/regtest
   [ ] Sc node version
   [X] Number of connected peers
   [X] Number of peers
   [X] Number of blacklisted peers
-  [ ] Tx mempool - executable & non executable
+  [X] Tx mempool - executable & non executable - only for account model, UTXO has unified
   [X] maxMemPoolSlots - if it’s configurable
   [ ] Last baseFeePerGas - for account model only
   [ ] Forward transfer min fee
-  [ ] Quality of last certificate
+  [ ] Quality of last certificate - account only?
   [ ] Backward transfer fee
   [ ] Last MC reference hash
   * */
   def nodeInfo: Route = (path("info") & post) {
     try {
-      val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
-      val isNonCeasing = params.isNonCeasing
-      val withdrawalEpochLength = params.withdrawalEpochLength
-
-      val a = app.settings.network.nodeName
-      val a1 = app.settings.network.agentName
-      val a2 = app.settings.network.appVersion
-      val a3 = app.settings.network.knownPeers
-      val a4 = app.settings.network.declaredAddress
-      val a5 = app.settings.ntp.server
-      val a6 = app.settings.restApi.bindAddress
-
-      val a7 = app.sidechainSettings.accountMempool.maxMemPoolSlots
-      val a8 = app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
-      val a32 = app.sidechainSettings.forger.automaticForging
-      val a9 = app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled
-      val a10 = app.sidechainSettings.ethService.globalRpcGasCap
-      val a11 = app.sidechainSettings.mempool.maxSize
-      val a12 = app.sidechainSettings.websocketClient.enabled
-
-      val a13 = app.chainInfo.mainnetId
-      val a14 = app.chainInfo.testnetId
-      val a15 = app.chainInfo.regtestId
-
-      val a17 = app.params.chainId
-      val a18 = app.nodeViewSynchronizer
-      val a19 = app.nodeViewHolderRef
-      val a19asd = app.mainchainNodeChannel.getTopQualityCertificates(sidechainId) //java.lang.IllegalStateException: The web socket channel must be not null.
-
-
-      var blacklistedNum = -1
-      val resultBlacklisted = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
-        .map(blacklistedPeers => {
-          blacklistedNum = blacklistedPeers.length
-          println(s"There are $blacklistedNum blacklisted peers.")
-        })
-
-
-      var connectedToNum = -1
-      val resultConnected = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
-        .map(connectedPeers => {
-          connectedToNum = connectedPeers.length
-          println(s"There are $connectedToNum connected peers.")
-        })
-
-      Await.result(resultBlacklisted, settings.timeout)
-      Await.result(resultConnected, settings.timeout)
+      applyOnNodeView { nodeView =>
+        var allTransactionSize = 0
+        var nonExecTransactionSize = 0
+        var execTransactionSize = 0
+        var scModel = ""
 
 
 
-      ApiResponse.OK
+        allTransactionSize = nodeView.getNodeMemoryPool.getTransactions.size()
+
+
+        val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
+        val isNonCeasing = params.isNonCeasing
+        val withdrawalEpochLength = params.withdrawalEpochLength
+
+        val nodeName = app.settings.network.nodeName
+        val a1 = app.settings.network.agentName
+        val a2 = app.settings.network.appVersion // what is app version? sc node version or sdk version?
+        val a3 = app.settings.network.knownPeers
+        val a4 = app.settings.network.declaredAddress
+        val a5 = app.settings.ntp.server
+        val a6 = app.settings.restApi.bindAddress
+
+        val a7 = app.sidechainSettings.accountMempool.maxMemPoolSlots
+        val a8 = app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
+        val a32 = app.sidechainSettings.forger.automaticForging
+        val a9 = app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled
+        val a10 = app.sidechainSettings.ethService.globalRpcGasCap
+        val a11 = app.sidechainSettings.mempool.maxSize
+        val a12 = app.sidechainSettings.websocketClient.enabled
+
+        val a13 = app.chainInfo.mainnetId
+        val a14 = app.chainInfo.testnetId
+        val a15 = app.chainInfo.regtestId
+        val scEnv = app.sidechainSettings.genesisData.mcNetwork  //on which network is the node currently (regtest in our case)
+
+        val chainId = app.params.chainId
+        val scId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
+        val a18 = app.nodeViewSynchronizer
+        val a19 = app.nodeViewHolderRef
+        val a19asd = app.mainchainNodeChannel.getTopQualityCertificates(sidechainId) //java.lang.IllegalStateException: The web socket channel must be not null.
+
+        var blacklistedNum = -1
+        val resultBlacklisted = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+          .map(blacklistedPeers => {
+            blacklistedNum = blacklistedPeers.length
+            println(s"There are $blacklistedNum blacklisted peers.")
+          })
+
+
+        var connectedToNum = -1
+        val resultConnected = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
+          .map(connectedPeers => {
+            connectedToNum = connectedPeers.length
+            println(s"There are $connectedToNum connected peers.")
+          })
+
+        Await.result(resultBlacklisted, settings.timeout)
+        Await.result(resultConnected, settings.timeout)
+
+
+
+        //sdk version
+        val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
+        val pomFile = new File(sdkPath)
+        val pomXml = XML.loadFile(pomFile)
+        val versionTag = (pomXml \ "version").head
+        val sdkVersion = versionTag.text
+        println(sdkVersion)
+
+        //node version
+        val nodeVersion = "node --version".!!.trim
+        println(nodeVersion)
+
+        val scBlockHeight =nodeView.getNodeHistory.getCurrentHeight
+
+        val mempoolSize = nodeView.getNodeMemoryPool.getTransactions.size()
+        if (nodeView.isInstanceOf[AccountNodeView]) {
+          val e = nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
+          val e1 =execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
+
+          val e3 =nodeView.getNodeState.asInstanceOf[AccountState].getConsensusEpochNumber
+          val e4 =nodeView.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch
+  //          val e5 =nodeView.getNodeState.asInstanceOf[AccountState].getTopQualityCertificate(nodeView.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch).get.quality
+          scModel = "Account"
+        }
+        else {
+            nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].size
+            execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes
+            execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage
+            scModel = "UTXO"
+        }
+
+
+        val acc = app.sidechainSettings.forger.allowedForgersList
+        app.sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
+
+
+  //        case class ForgerKeysData(
+  //                                   blockSignProposition: String,
+  //                                   vrfPublicKey: String,
+  //                                 ) extends SensitiveStringer
+
+        ApiResponseUtil.toResponse(RespNodeInfo(
+          nodeName = nodeName,
+          nodeType = Option.empty,
+          sdkVersion = Option(sdkVersion),
+          scId = Option(scId),
+          scType = Option(if (isNonCeasing) "non ceasing" else "ceasing"),
+          scModel = Option(scModel),
+          scBlockHeight = Option(scBlockHeight),
+          scConcensusEpoch = Option.empty,
+          scWithdrawalEpochLength = Option.empty,
+          scEnv = Option(scEnv),
+          scNodeVersion = Option.empty,
+          numberOfPeers = Option.empty,
+          numberOfConnectedPeers = Option(connectedToNum),
+          numberOfBlacklistedPeers = Option(blacklistedNum),
+          mempoolSize = Option(mempoolSize),
+          executableTxSize = Option(execTransactionSize),
+          nonExecutableTxSize = Option(nonExecTransactionSize),
+        ))
+
+
+      }
     } catch {
       case e: Throwable => SidechainApiError(e)
     }
@@ -416,6 +497,27 @@ object SidechainNodeRestSchema {
                                              protocolVersion: String,
                                              connectionType: Option[String]
                                            )
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespNodeInfo(
+                                         nodeName: String,
+                                         nodeType: Option[String],
+                                         sdkVersion: Option[String],
+                                         scId: Option[String],
+                                         scType: Option[String],
+                                         scModel: Option[String],
+                                         scBlockHeight: Option[Int],
+                                         scConcensusEpoch: Option[String],
+                                         scWithdrawalEpochLength: Option[String],
+                                         scEnv: Option[String],
+                                         scNodeVersion: Option[String],
+                                         numberOfPeers: Option[Int],
+                                         numberOfConnectedPeers: Option[Int],
+                                         numberOfBlacklistedPeers: Option[Int],
+                                         mempoolSize: Option[Int],
+                                         executableTxSize: Option[Int],
+                                         nonExecutableTxSize: Option[Int],
+                                     )  extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
