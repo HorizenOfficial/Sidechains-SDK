@@ -367,7 +367,7 @@ class SidechainInfo(object):
         self.sc_nodes = self.sc_setup_nodes()
         if self.connect_nodes:
             for n in range(self.number_of_sidechain_nodes - 1):
-                connect_sc_nodes(self.sc_nodes[n], n + 1)
+                connect_sc_nodes(self.sc_nodes[n], n + 1, sc_num=self.sc_num)
             self.sc_sync_all()
 
     def sc_setup_nodes(self):
