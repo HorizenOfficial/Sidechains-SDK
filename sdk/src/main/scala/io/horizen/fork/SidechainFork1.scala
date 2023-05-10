@@ -36,7 +36,7 @@ import io.horizen.utils.ZenCoinsUtils
  *     missing for all CoinBoxes. After the fork is applied, all CoinBoxes value will be checked against the dust
  *     threshold limit - 54 satoshis ATM.
  */
-class SidechainFork1(epochNumber: ForkConsensusEpochNumber) extends BaseConsensusEpochFork(epochNumber) {
+class SidechainFork1(epochNumber: SidechainForkConsensusEpoch) extends SidechainFork(epochNumber) {
   override val backwardTransferLimitEnabled: Boolean = true
   override val openStakeTransactionEnabled: Boolean = true
   override val nonceLength: Int = Constants.FIELD_ELEMENT_LENGTH()

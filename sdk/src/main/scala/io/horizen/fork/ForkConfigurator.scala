@@ -7,18 +7,18 @@ abstract class ForkConfigurator {
   /**
    * The default values are always active since genesis.
    */
-  private val getBaseSidechainConsensusEpochNumbers = ForkConsensusEpochNumber(0, 0, 0)
+  private val getBaseSidechainConsensusEpochNumbers = SidechainForkConsensusEpoch(0, 0, 0)
 
   /**
    * Mandatory for every sidechain to provide an epoch number here.
    */
-  val getSidechainFork1: ForkConsensusEpochNumber
+  val getSidechainFork1: SidechainForkConsensusEpoch
 
   /**
    * List of sidechain consensus epoch forks
    */
   private lazy val forks = Seq(
-    new BaseConsensusEpochFork(getBaseSidechainConsensusEpochNumbers),
+    new SidechainFork(getBaseSidechainConsensusEpochNumbers),
     new SidechainFork1(getSidechainFork1),
   )
 
@@ -37,20 +37,20 @@ abstract class ForkConfigurator {
   }
 
   /**
-   * Validate monotonic epoch numbers for the sequence of forks for all networks (configuration sanity check)
+   * Validate the order of epoch numbers for the sequence of forks for all networks (configuration sanity check)
    * @return
    *   sequence of forks
    */
-  final def check(): Try[Seq[BaseConsensusEpochFork]] = {
-    findBadFork(forks)(_.epochNumber.mainnetEpochNumber).map {
+  final def check(): Try[Seq[SidechainFork]] = {
+    findBadFork(forks)(_.epochNumber.mainnet).map {
       badFork => return Failure(new RuntimeException(s"invalid activation height on mainnet for fork: $badFork"))
     }
 
-    findBadFork(forks)(_.epochNumber.testnetEpochNumber).map {
+    findBadFork(forks)(_.epochNumber.testnet).map {
       badFork => return Failure(new RuntimeException(s"invalid activation height on testnet for fork: $badFork"))
     }
 
-    findBadFork(forks)(_.epochNumber.regtestEpochNumber).map {
+    findBadFork(forks)(_.epochNumber.regtest).map {
       badFork => return Failure(new RuntimeException(s"invalid activation height on regtest for fork: $badFork"))
     }
 

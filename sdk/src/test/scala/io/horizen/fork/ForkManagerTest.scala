@@ -35,18 +35,18 @@ class ForkManagerTest extends JUnitSuite {
     val mainchainFork2 = ForkManager.getMainchainFork(420)
     assertNotEquals("Expected to get mainchain fork", null, mainchainFork2)
 
-    val sidechainConsensusFork1 = ForkManager.getSidechainConsensusEpochFork(-5)
+    val sidechainConsensusFork1 = ForkManager.getSidechainFork(-5)
     assertEquals("Expected not to get sidechain fork", null, sidechainConsensusFork1)
 
-    val sidechainConsensusFork2 = ForkManager.getSidechainConsensusEpochFork(9)
+    val sidechainConsensusFork2 = ForkManager.getSidechainFork(9)
     assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork2)
-    assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork2.isInstanceOf[BaseConsensusEpochFork])
+    assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork2.isInstanceOf[SidechainFork])
 
-    val sidechainConsensusFork3 = ForkManager.getSidechainConsensusEpochFork(10)
+    val sidechainConsensusFork3 = ForkManager.getSidechainFork(10)
     assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork3)
     assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork3.isInstanceOf[SidechainFork1])
 
-    val sidechainConsensusFork4 = ForkManager.getSidechainConsensusEpochFork(11)
+    val sidechainConsensusFork4 = ForkManager.getSidechainFork(11)
     assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork4)
     assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork4.isInstanceOf[SidechainFork1])
   }

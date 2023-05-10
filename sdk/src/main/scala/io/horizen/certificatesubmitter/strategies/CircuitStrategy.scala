@@ -13,8 +13,6 @@ import io.horizen.proposition.SchnorrProposition
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
-import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.transaction.MemoryPool
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.Try
@@ -38,7 +36,7 @@ abstract class CircuitStrategy[
 
   // Every positive value FT is allowed.
   protected [certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
-    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+    ForkManager.getSidechainFork(consensusEpochNumber).ftMinAmount
   }
 
   protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: HIS, state: MS, withdrawalEpochNumber: Int): Array[Byte] = {

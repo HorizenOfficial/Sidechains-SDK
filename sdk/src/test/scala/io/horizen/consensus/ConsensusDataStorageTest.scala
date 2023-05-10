@@ -26,7 +26,7 @@ class ConsensusDataStorageTest {
 
   @Test
   def simpleTestAfterFork(): Unit = {
-    simpleTest(new SimpleForkConfigurator().getSidechainFork1.regtestEpochNumber + 1)
+    simpleTest(new SimpleForkConfigurator().getSidechainFork1.regtest + 1)
   }
 
   def simpleTest(epochNumber: Int): Unit = {
@@ -51,7 +51,7 @@ class ConsensusDataStorageTest {
 
     val nonceData: Map[ConsensusEpochId, NonceConsensusEpochInfo] = (1 to 100).map{ _ =>
       val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))))
-      val nonceBytes:Array[Byte] = new Array[Byte](ForkManager.getSidechainConsensusEpochFork(epochNumber).nonceLength)
+      val nonceBytes:Array[Byte] = new Array[Byte](ForkManager.getSidechainFork(epochNumber).nonceLength)
       rnd.nextBytes(nonceBytes)
       val nonceInfo =
         NonceConsensusEpochInfo(byteArrayToConsensusNonce(nonceBytes))
