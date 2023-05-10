@@ -1,83 +1,68 @@
 package io.horizen.fork
 
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
-
-class ForkManager {}
-
 object ForkManager {
-    var networkName: String = null
+  private var networkName: String = _
 
-    var mainchainForks: ListBuffer[BaseMainchainHeightFork] = ListBuffer[BaseMainchainHeightFork]()
-    var consensusEpochForks: ListBuffer[BaseConsensusEpochFork] = ListBuffer[BaseConsensusEpochFork]()
+  /**
+   * List of mandatory mainchain forks, hardcoded.
+   */
+  private val mainchainForks: Seq[BaseMainchainHeightFork] = Seq(
+    new BaseMainchainHeightFork(BaseMainchainHeightFork.DEFAULT_MAINCHAIN_FORK_HEIGHTS)
+  )
 
-    def getMainchainFork(mainchainHeight:Int):BaseMainchainHeightFork = {
-        if (networkName == null) {
-            throw new RuntimeException("Forkmanager hasn't been initialized.")
-        }
+  /**
+   * List of mandatory sidechain forks, the activation points have to be configured by the sidechain.
+   */
+  private var consensusEpochForks: Seq[BaseConsensusEpochFork] = Seq()
 
-        if (mainchainForks.isEmpty)
-            throw new RuntimeException("MainchainForks list is empty")
+  /**
+   * Finds the latest fork in the given sequence of forks with an activation height less or equal than the given height.
+   */
+  private def findActiveFork[T](forks: Seq[T], height: Int)(fun: T => Int): Option[T] = {
+    forks.foldLeft(Option.empty[T]) { (active, fork) =>
+      if (fun(fork) <= height) Some(fork)
+      else return active
+    }
+  }
 
-        val mcForksIter = mainchainForks.iterator
-        var mcFork: BaseMainchainHeightFork = null
+  def getMainchainFork(mainchainHeight: Int): BaseMainchainHeightFork = {
+    if (networkName == null) throw new RuntimeException("Forkmanager hasn't been initialized.")
+    if (mainchainForks.isEmpty) throw new RuntimeException("MainchainForks list is empty")
+    findActiveFork(mainchainForks, mainchainHeight) { fork =>
+      networkName match {
+        case "regtest" => fork.heights.regtestHeight
+        case "testnet" => fork.heights.testnetHeight
+        case "mainnet" => fork.heights.mainnetHeight
+      }
+    }.orNull
+  }
 
-        networkName match {
-            case "regtest" => mcForksIter.takeWhile(fork => fork.heights.regtestHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-            case "testnet" => mcForksIter.takeWhile(fork => fork.heights.testnetHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-            case "mainnet" => mcForksIter.takeWhile(fork => fork.heights.mainnetHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-        }
+  def getSidechainConsensusEpochFork(consensusEpoch: Int): BaseConsensusEpochFork = {
+    if (networkName == null) throw new RuntimeException("Forkmanager hasn't been initialized.")
+    if (consensusEpochForks.isEmpty) throw new RuntimeException("ConsensusEpochForks list is empty")
+    findActiveFork(consensusEpochForks, consensusEpoch) { fork =>
+      networkName match {
+        case "regtest" => fork.epochNumber.regtestEpochNumber
+        case "testnet" => fork.epochNumber.testnetEpochNumber
+        case "mainnet" => fork.epochNumber.mainnetEpochNumber
+      }
+    }.orNull
+  }
 
-        mcFork
+  def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
+    if (this.networkName != null) throw new IllegalStateException("ForkManager is already initialized.")
+
+    val saneNetworkName = networkName match {
+      case "regtest" | "testnet" | "mainnet" => networkName
+      case _ => throw new IllegalArgumentException("Unknown network type.")
     }
 
-    def getSidechainConsensusEpochFork(consensusEpoch:Int):BaseConsensusEpochFork = {
-        if (networkName == null) {
-            throw new RuntimeException("Forkmanager hasn't been initialized.")
-        }
+    this.consensusEpochForks = forkConfigurator.check().get
+    this.networkName = saneNetworkName
+  }
 
-        if (consensusEpochForks.isEmpty)
-            throw new RuntimeException("ConsensusEpochForks list is empty")
-
-        val consensusForksIter = consensusEpochForks.iterator
-        var consensusFork: BaseConsensusEpochFork = null
-
-        networkName match {
-            case "regtest" => consensusForksIter.takeWhile(fork => fork.epochNumber.regtestEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-            case "testnet" => consensusForksIter.takeWhile(fork => fork.epochNumber.testnetEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-            case "mainnet" => consensusForksIter.takeWhile(fork => fork.epochNumber.mainnetEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-        }
-
-        consensusFork
-    }
-
-    def init(forkConfigurator:ForkConfigurator, networkName:String): Try[Unit] = Try {
-        if (this.networkName != null) {
-            throw new IllegalStateException("ForkManager is already initialized.")
-        }
-
-        networkName match {
-            case "regtest" | "testnet" | "mainnet" => this.networkName = networkName
-            case _ => throw new IllegalArgumentException("Unknown network type.")
-        }
-
-        mainchainForks += new BaseMainchainHeightFork(BaseMainchainHeightFork.DEFAULT_MAINCHAIN_FORK_HEIGHTS)
-
-        forkConfigurator.check() match {
-            case Success(_) => {
-                consensusEpochForks += new BaseConsensusEpochFork(forkConfigurator.getBaseSidechainConsensusEpochNumbers())
-                consensusEpochForks += new SidechainFork1(forkConfigurator.getSidechainFork1())
-            }
-            case Failure(exception) => {
-                this.networkName = null
-                throw exception
-            }
-        }
-    }
-
-    private[horizen] def reset(): Unit = {
-        this.networkName = null
-        this.mainchainForks = ListBuffer[BaseMainchainHeightFork]()
-        this.consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()
-    }
+  private[horizen] def reset(): Unit = {
+    this.networkName = null
+    this.consensusEpochForks = Seq()
+  }
 }

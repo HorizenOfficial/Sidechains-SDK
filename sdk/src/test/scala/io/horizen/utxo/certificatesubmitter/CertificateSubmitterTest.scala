@@ -63,7 +63,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   @Before
   def init(): Unit = {
     val forkConfigurator = new SimpleForkConfigurator()
-    consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1().regtestEpochNumber
+    consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1.regtestEpochNumber
     val forkManagerUtil = new ForkManagerUtil()
     forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }

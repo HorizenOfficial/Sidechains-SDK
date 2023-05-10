@@ -4,6 +4,8 @@ import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
+import scala.util.Try
+
 class ForkManagerTest extends JUnitSuite {
 
   @Before
@@ -14,18 +16,17 @@ class ForkManagerTest extends JUnitSuite {
   @Test
   def ForkManagerTest(): Unit = {
     val simpleForkConfigurator = new SimpleForkConfigurator
-    ForkManager.networkName = null
 
-    var res = ForkManager.init(simpleForkConfigurator, "wrongname")
+    var res = Try.apply(ForkManager.init(simpleForkConfigurator, "wrongname"))
     assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
-    res = ForkManager.init(new BadForkConfigurator, "regtest")
+    res = Try.apply(ForkManager.init(new BadForkConfigurator, "regtest"))
     assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
-    res = ForkManager.init(simpleForkConfigurator, "regtest")
+    res = Try.apply(ForkManager.init(simpleForkConfigurator, "regtest"))
     assertEquals("Expected successed ForkManager initialization", true, res.isSuccess)
 
-    res = ForkManager.init(simpleForkConfigurator, "regtest")
+    res = Try.apply(ForkManager.init(simpleForkConfigurator, "regtest"))
     assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
     val mainchainFork1 = ForkManager.getMainchainFork(419)
