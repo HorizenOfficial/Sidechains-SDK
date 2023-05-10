@@ -228,6 +228,9 @@ object SidechainBlockBase {
   }
 
   def getTopQualityCertsWithMainChainHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate,Array[Byte])] = {
-    mainchainBlockReferencesData.filter(_.topQualityCertificate.nonEmpty).map( brefData =>  (brefData.topQualityCertificate.get, brefData.headerHash))
+    mainchainBlockReferencesData.flatMap(data => data.topQualityCertificate match {
+      case Some(cert) => Some(cert, data.headerHash)
+      case None => None
+    })
   }
 }

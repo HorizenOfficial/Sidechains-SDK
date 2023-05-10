@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen.SidechainTypes
 import io.horizen.params.NetworkParams
+import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -26,7 +27,7 @@ class SidechainBackup @Inject()
    @Named("Params") val params : NetworkParams
   ) extends SparkzLogging
   {
-    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers, true)
+    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers, Sc2ScUtils.isActive(params))
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
 
 

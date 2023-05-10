@@ -224,7 +224,7 @@ class SidechainApp @Inject()
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = {
-    var ret = Seq(
+    var routes = Seq(
       MainchainBlockApiRoute[TX,
         SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](settings.restApi, nodeViewHolderRef),
       SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
@@ -237,9 +237,10 @@ class SidechainApp @Inject()
     )
 
     if (sc2scConfigurator.canSendMessages) {
-      ret = ret :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
+      routes = routes :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
     }
-    ret
+
+    routes
   }
 
   val nodeViewProvider: NodeViewProvider[

@@ -48,7 +48,7 @@ class CrossChainMessageValidator(
 
   private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferenceInBlock: Int, boxInThisBlock: Int): Unit = {
     val alreadyMined = scState.getAlreadyMinedCrosschainMessagesInCurrentEpoch
-    val allowed = scState.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate)
+    val allowed = scState.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch)
     val total = alreadyMined + boxInThisBlock
     if (total > allowed) {
       throw new IllegalStateException("Exceeded the maximum number of CrosschainMessages allowed!")

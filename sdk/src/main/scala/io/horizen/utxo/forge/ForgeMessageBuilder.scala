@@ -159,7 +159,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val allowedCrossChainMessageBoxes =
       if (sc2ScConfigurator.canSendMessages) {
-        nodeView.state.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate) - nodeView.state.getAlreadyMinedCrosschainMessagesInCurrentEpoch
+        nodeView.state.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch) - nodeView.state.getAlreadyMinedCrosschainMessagesInCurrentEpoch
       } else 0
 
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)

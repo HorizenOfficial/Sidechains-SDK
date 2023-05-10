@@ -27,7 +27,7 @@ trait CrossChainMessageProvider {
 }
 abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
 
-  val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate
+  val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
   protected def execGetListOfCrosschainMessages(msg: Message, view: BaseAccountStateView): Array[Byte] = {

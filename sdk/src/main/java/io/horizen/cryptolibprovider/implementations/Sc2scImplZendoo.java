@@ -23,7 +23,7 @@ import java.util.Optional;
 public class Sc2scImplZendoo implements Sc2scCircuit {
 
     private static final int SEGMENT_SIZE = 1 << 15;
-    public static final int CUSTOM_FIELDS_NUM = 5;
+    public static final int CUSTOM_FIELDS_NUM = 32;
 
     @Override
     public InMemoryAppendOnlyMerkleTree initMerkleTree() {
@@ -44,7 +44,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     }
 
     @Override
-    public int getMaxMessagesPerCertificate() {
+    public int getMaxCrossChainMessagesPerEpoch() {
         return 1 << Constants.MSG_MT_HEIGHT();
     }
 
@@ -80,7 +80,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     }
 
     @Override
-    public void insertMessagesInMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception {
+    public void appendMessagesToMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception {
         for (CrossChainMessage msg : messages) {
             insertMessageInMerkleTree(msgTree, msg);
         }

@@ -62,8 +62,8 @@ abstract class AbstractState[
     if (certificateCustomFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION) {
       throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION} custom fields when sidechain2sidechain messaging is enabled.")
     }
-    val messageTreeRoot = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_message_tree_root.position()).rawData
-    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_previus_certificate_hash.position()).rawData
+    val messageTreeRoot = certificateCustomFields(CustomFieldsReservedPositions.SC2SC_MESSAGE_TREE_ROOT.position()).rawData
+    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.SC2SC_PREVIOUS_CERTIFICATE_HASH.position()).rawData
 
     val expectedPreviousCertificateHash: Array[Byte] = certificate(topQualityCertificate.epochNumber - 1) match {
       case None => FieldElement.createFromLong(0).serializeFieldElement()
@@ -77,7 +77,7 @@ abstract class AbstractState[
     Using.resource(
       CryptoLibProvider.sc2scCircuitFunctions.initMerkleTree()
     ) { tree => {
-      CryptoLibProvider.sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, expectedCrosschainMessages.asJava)
+      CryptoLibProvider.sc2scCircuitFunctions.appendMessagesToMerkleTree(tree, expectedCrosschainMessages.asJava)
       val expectedMessageTreeRoot = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
 
       if (!util.Arrays.equals(messageTreeRoot, expectedMessageTreeRoot)) {

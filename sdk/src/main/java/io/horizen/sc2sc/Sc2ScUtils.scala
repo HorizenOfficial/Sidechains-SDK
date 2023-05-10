@@ -1,18 +1,14 @@
 package io.horizen.sc2sc
 
-import com.google.common.primitives.Bytes
-import com.horizen.commitmenttreenative.{CommitmentTree, ScCommitmentCertPath}
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.commitmenttreenative.ScCommitmentCertPath
 import com.horizen.merkletreenative.MerklePath
 import io.horizen.AbstractState
-import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 
-import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
@@ -38,7 +34,7 @@ trait Sc2ScUtils[
     Using.resource(
       sc2scCircuitFunctions.initMerkleTree()
     ) { tree => {
-      sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, crossChainMessages.asJava)
+      sc2scCircuitFunctions.appendMessagesToMerkleTree(tree, crossChainMessages.asJava)
       val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree);
       val previousCertificateHash: Option[Array[Byte]] = getTopCertInfoByEpoch(epoch - 1, state, history, calculateMerklePath = false, params) match {
         case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
@@ -76,38 +72,41 @@ trait Sc2ScUtils[
             val nextTopCertInfos = getTopCertInfoByEpoch(messagePostedEpoch + 1, state, history, calculateMerklePath = true, params).getOrElse(
               throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch+1")
             )
-            val topCertscCommitmentRoot = topCertInfos.scCommitmentRoot
-            val nextCertscCommitmentRoot = nextTopCertInfos.scCommitmentRoot
+            val topCertScCommitmentRoot = topCertInfos.scCommitmentRoot
+            val nextCertScCommitmentRoot = nextTopCertInfos.scCommitmentRoot
 
-            val currWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion)
-            val nextWithdrawalCertificate = CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion)
+            Using.resources(
+              CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion),
+              CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion),
+              ScCommitmentCertPath.deserialize(topCertInfos.commitmentCertPath),
+              ScCommitmentCertPath.deserialize(nextTopCertInfos.commitmentCertPath),
+            ) { (currWithdrawalCertificate, nextWithdrawalCertificate, certCommitmentCertPath, nextCertCommitmentCertPath) =>
+              //compute proof
+              val proof: Array[Byte] = sc2scCircuitFunctions.createRedeemProof(
+                messageHash,
+                topCertScCommitmentRoot,
+                nextCertScCommitmentRoot,
+                currWithdrawalCertificate,
+                nextWithdrawalCertificate,
+                certCommitmentCertPath,
+                nextCertCommitmentCertPath,
+                messageMerklePath,
+                params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("You need to set a proving key file path to generate a redeem message"))
+              )
 
-            //compute proof
-            val proof: Array[Byte] = sc2scCircuitFunctions.createRedeemProof(
-              messageHash,
-              topCertscCommitmentRoot,
-              nextCertscCommitmentRoot,
-              currWithdrawalCertificate,
-              nextWithdrawalCertificate,
-              ScCommitmentCertPath.deserialize(topCertInfos.merklePath),
-              ScCommitmentCertPath.deserialize(nextTopCertInfos.merklePath),
-              messageMerklePath,
-              params.sc2ScProvingKeyFilePath.getOrElse(throw new IllegalArgumentException("You need to set a proving key file path to generate a redeem message"))
-            )
+              //build and return final message
+              val retMessage = new CrossChainRedeemMessageImpl(
+                sourceMessage,
+                CryptoLibProvider.commonCircuitFunctions.getCertDataHash(topCertInfos.certificate, params.sidechainCreationVersion),
+                CryptoLibProvider.commonCircuitFunctions.getCertDataHash(nextTopCertInfos.certificate, params.sidechainCreationVersion),
+                topCertInfos.scCommitmentRoot,
+                nextTopCertInfos.scCommitmentRoot,
+                proof
+              )
 
-            //build and return final message
-            val retMessage = new CrossChainRedeemMessageImpl(
-              sourceMessage,
-              CryptoLibProvider.commonCircuitFunctions.getCertDataHash(topCertInfos.certificate, params.sidechainCreationVersion),
-              CryptoLibProvider.commonCircuitFunctions.getCertDataHash(nextTopCertInfos.certificate, params.sidechainCreationVersion),
-              topCertInfos.scCommitmentRoot,
-              nextTopCertInfos.scCommitmentRoot,
-              proof
-            )
-
-            Success(retMessage)
-          }
-          }
+              Success(retMessage)
+            }
+          }}
         }
     }
   }
@@ -148,9 +147,15 @@ trait Sc2ScUtils[
     }
   }
 }
+object Sc2ScUtils {
+  def isActive(networkParams: NetworkParams): Boolean = {
+    networkParams.sc2ScProvingKeyFilePath.nonEmpty || networkParams.sc2ScVerificationKeyFilePath.nonEmpty
+  }
+}
+
 
 case class TopQualityCertificateInfos(
                                        certificate: WithdrawalEpochCertificate,
                                        scCommitmentRoot: Array[Byte],
-                                       merklePath: Array[Byte]
+                                       commitmentCertPath: Array[Byte]
                                      )

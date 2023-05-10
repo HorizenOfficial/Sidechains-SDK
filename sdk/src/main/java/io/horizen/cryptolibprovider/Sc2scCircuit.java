@@ -16,7 +16,7 @@ public interface Sc2scCircuit {
             String verificationKeyPath
     ) throws Exception;
 
-    int getMaxMessagesPerCertificate();
+    int getMaxCrossChainMessagesPerEpoch();
 
     InMemoryAppendOnlyMerkleTree initMerkleTree();
 
@@ -28,7 +28,7 @@ public interface Sc2scCircuit {
 
     int insertMessagesInMerkleTreeWithIndex(InMemoryAppendOnlyMerkleTree tree, List<CrossChainMessage> messages, CrossChainMessage leafMsg) throws Exception;
 
-    void insertMessagesInMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception;
+    void appendMessagesToMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception;
 
     FieldElement getCrossChainMessageTreeRootAsFieldElement(InMemoryAppendOnlyMerkleTree tree);
 

@@ -32,13 +32,12 @@ class Sc2ScProver [
   HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS],
   MS <: AbstractState[TX, H, PM, MS],
   VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL],
-  MP <: MemoryPool[TX, MP],
-  T <: CertificateData](settings: SidechainSettings,
+  MP <: MemoryPool[TX, MP]
+](settings: SidechainSettings,
                         sidechainNodeViewHolderRef: ActorRef,
                         params: NetworkParams,
                         )
                        (implicit ec: ExecutionContext) extends Actor
-  with Timers
   with SparkzLogging
   with Sc2ScUtils[TX, H, PM, MS, HIS]
 {

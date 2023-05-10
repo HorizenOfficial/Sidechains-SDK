@@ -324,7 +324,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
 
   private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferenceInBlock: Int, boxInThisBlock: Int): Unit = {
     val alreadyMined = getAlreadyMinedCrosschainMessagesInCurrentEpoch
-    val allowed = getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate)
+    val allowed = getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch)
     val total = alreadyMined + boxInThisBlock
     if (total > allowed) {
       throw new IllegalStateException(s"Exceeded the maximum number of CrosschainMessages allowed!")
