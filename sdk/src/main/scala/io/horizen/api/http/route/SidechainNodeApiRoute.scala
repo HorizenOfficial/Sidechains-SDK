@@ -17,8 +17,10 @@ import io.horizen.json.Views
 import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.node.SidechainNodeView
+import io.horizen.utxo.state.SidechainState
 import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
 import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
@@ -154,11 +156,13 @@ case class SidechainNodeApiRoute[
   [X] Number of blacklisted peers
   [X] Tx mempool - executable & non executable - only for account model, UTXO has unified
   [X] maxMemPoolSlots - if it’s configurable
-  [ ] Last baseFeePerGas - for account model only
-  [ ] Forward transfer min fee
-  [ ] Quality of last certificate - account only?
-  [ ] Backward transfer fee
+  [X] Last baseFeePerGas - for account model only - changed to next!!
+  [X] Forward transfer min fee
+  [X] Quality of last certificate - account only?
+  [X] Backward transfer fee
   [ ] Last MC reference hash
+
+  - for errors, accessing to log file is necessary but don't know how to get a path of it since it's only in conf file
   * */
   def nodeInfo: Route = (path("info") & post) {
     try {
@@ -166,15 +170,11 @@ case class SidechainNodeApiRoute[
         var allTransactionSize = 0
         var nonExecTransactionSize = 0
         var execTransactionSize = 0
-        var scModel = ""
-
-
 
         allTransactionSize = nodeView.getNodeMemoryPool.getTransactions.size()
 
 
         val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
-        val isNonCeasing = params.isNonCeasing
         val withdrawalEpochLength = params.withdrawalEpochLength
 
         val nodeName = app.settings.network.nodeName
@@ -219,10 +219,19 @@ case class SidechainNodeApiRoute[
             println(s"There are $connectedToNum connected peers.")
           })
 
+        //all peers
+        var allPeersNum = 0;
+        val resultAllPeers = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
+          _.map { case (address, peerInfo) => {
+            allPeersNum += 1
+            println(SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString)))
+            }
+          }
+        }
+
         Await.result(resultBlacklisted, settings.timeout)
         Await.result(resultConnected, settings.timeout)
-
-
+        Await.result(resultAllPeers, settings.timeout)
 
         //sdk version
         val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
@@ -237,27 +246,80 @@ case class SidechainNodeApiRoute[
         println(nodeVersion)
 
         val scBlockHeight =nodeView.getNodeHistory.getCurrentHeight
+        var withdrawalEpochNum = 0
 
-        val mempoolSize = nodeView.getNodeMemoryPool.getTransactions.size()
+        val mempoolUsed = nodeView.getNodeMemoryPool.getTransactions.size()
+        val mempoolSize = nodeView.getNodeMemoryPool.getSize
+        var consensusEpoch = 0
+        var epochForgersStake:Long = 0
+
+        var certQuality:Long = -1
+        var certEpoch:Int = -1
+        var certBtrFee:Long = -1
+        var certFtMinAmount:Long = -1
+        var certHash:String = ""
         if (nodeView.isInstanceOf[AccountNodeView]) {
-          val e = nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
-          val e1 =execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
+          nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
+          execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
 
           val e3 =nodeView.getNodeState.asInstanceOf[AccountState].getConsensusEpochNumber
-          val e4 =nodeView.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch
-  //          val e5 =nodeView.getNodeState.asInstanceOf[AccountState].getTopQualityCertificate(nodeView.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch).get.quality
-          scModel = "Account"
+          withdrawalEpochNum =nodeView.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch //not sure what this is
+
+          consensusEpoch = nodeView.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.epoch
+          epochForgersStake = nodeView.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.forgersStake
+
+          nodeView.getNodeState.asInstanceOf[AccountState].getConsensusEpochNumber
+          nodeView.getNodeState.asInstanceOf[AccountState].getView.getNextBaseFee
+
+          nodeView.getNodeState.asInstanceOf[AccountState].lastCertificateReferencedEpoch match {
+            case Some(referencedEpoch) =>
+              nodeView.asInstanceOf[AccountNodeView].getNodeState.getTopQualityCertificate(referencedEpoch) match {
+                case Some(cert) =>
+                  certEpoch = cert.epochNumber
+                  certQuality = cert.quality
+                  certBtrFee = cert.btrFee
+                  certFtMinAmount = cert.ftMinAmount
+                  certHash = BytesUtils.toHexString(cert.hash)
+                case _ =>
+              }
+            case _ =>
+          }
         }
         else {
-            nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].size
-            execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes
-            execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage
-            scModel = "UTXO"
+          nonExecTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].size
+          execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes
+          execTransactionSize = nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage
+
+          withdrawalEpochNum = nodeView.getNodeState.asInstanceOf[SidechainState].getWithdrawalEpochInfo.epoch
+          println("withdrawalEpochNum")
+          println(withdrawalEpochNum)
+
+          consensusEpoch = nodeView.getNodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo._2.epoch
+          epochForgersStake = nodeView.getNodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo._2.forgersStake
+
+          nodeView.getNodeState.asInstanceOf[SidechainState].lastCertificateReferencedEpoch() match {
+            case Some(referencedEpoch) =>
+              nodeView.getNodeState.asInstanceOf[SidechainState].certificate(referencedEpoch) match {
+                case Some(cert) =>
+                  certEpoch = cert.epochNumber
+                  certQuality = cert.quality
+                  certBtrFee = cert.btrFee
+                  certFtMinAmount = cert.ftMinAmount
+                  certHash = BytesUtils.toHexString(cert.hash)
+                case _ =>
+              }
+            case _ =>
+          }
         }
 
 
         val acc = app.sidechainSettings.forger.allowedForgersList
-        app.sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
+        println("allowedForgersList")
+        println(acc)
+        println("signersPublicKeys")
+        println(app.sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys)
+
+        app.sidechainSettings.logInfo.logFileName
 
 
   //        case class ForgerKeysData(
@@ -265,24 +327,47 @@ case class SidechainNodeApiRoute[
   //                                   vrfPublicKey: String,
   //                                 ) extends SensitiveStringer
 
+
+
+        nodeView.getNodeHistory.getCurrentHeight
+
+
+        //get last SC block and get params from there such as difficulty etc.
+        val lastBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
+        val block = nodeView.getNodeHistory.getBlockById(lastBlockId.get(0))
+
+        //get last MC block reference
+
+
         ApiResponseUtil.toResponse(RespNodeInfo(
           nodeName = nodeName,
           nodeType = Option.empty,
           sdkVersion = Option(sdkVersion),
           scId = Option(scId),
-          scType = Option(if (isNonCeasing) "non ceasing" else "ceasing"),
-          scModel = Option(scModel),
+          scType = Option(if (params.isNonCeasing) "non ceasing" else "ceasing"),
+          scModel = if (nodeView.isInstanceOf[SidechainNodeView]) Option("UTXO") else Option("Account"),
           scBlockHeight = Option(scBlockHeight),
-          scConcensusEpoch = Option.empty,
-          scWithdrawalEpochLength = Option.empty,
+          scConsensusEpoch = Option(consensusEpoch),
+          epochForgersStake = Option(epochForgersStake),
+          nextBaseFee = if (nodeView.isInstanceOf[AccountNodeView]) Option(nodeView.getNodeState.asInstanceOf[AccountState].getView.getNextBaseFee) else Option.empty,
+          scWithdrawalEpochLength = Option(params.withdrawalEpochLength),
           scEnv = Option(scEnv),
           scNodeVersion = Option.empty,
-          numberOfPeers = Option.empty,
+          numberOfPeers = Option(allPeersNum),
           numberOfConnectedPeers = Option(connectedToNum),
           numberOfBlacklistedPeers = Option(blacklistedNum),
+          maxMemPoolSlots = Option(app.sidechainSettings.accountMempool.maxMemPoolSlots),
           mempoolSize = Option(mempoolSize),
-          executableTxSize = Option(execTransactionSize),
-          nonExecutableTxSize = Option(nonExecTransactionSize),
+          mempoolUsed = Option(mempoolUsed),
+          mempoolUsedSizeKBytes = if (nodeView.isInstanceOf[SidechainNodeView]) Option(nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes) else Option.empty,
+          mempoolUsedPercentage = if (nodeView.isInstanceOf[SidechainNodeView]) Option(nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage) else Option.empty,
+          executableTxSize = if (nodeView.isInstanceOf[AccountNodeView]) Option(execTransactionSize) else Option.empty,
+          nonExecutableTxSize = if (nodeView.isInstanceOf[AccountNodeView]) Option(nonExecTransactionSize) else Option.empty,
+          lastCertQuality = if (certQuality != -1) Option(certQuality) else Option.empty,
+          lastCertEpoch = if (certEpoch != -1) Option(certEpoch) else Option.empty,
+          lastCertBtrFree = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
+          lastCertFtMinAmount = if (certFtMinAmount != -1) Option(certFtMinAmount) else Option.empty,
+          lastCertHash = if (certHash != "") Option(certHash) else Option.empty,
         ))
 
 
@@ -507,18 +592,28 @@ object SidechainNodeRestSchema {
                                          scType: Option[String],
                                          scModel: Option[String],
                                          scBlockHeight: Option[Int],
-                                         scConcensusEpoch: Option[String],
-                                         scWithdrawalEpochLength: Option[String],
+                                         scConsensusEpoch: Option[Int],
+                                         epochForgersStake: Option[Long],
+                                         nextBaseFee: Option[BigInt],
+                                         scWithdrawalEpochLength: Option[Int],
                                          scEnv: Option[String],
                                          scNodeVersion: Option[String],
                                          numberOfPeers: Option[Int],
                                          numberOfConnectedPeers: Option[Int],
                                          numberOfBlacklistedPeers: Option[Int],
+                                         maxMemPoolSlots : Option[Int],
                                          mempoolSize: Option[Int],
+                                         mempoolUsed: Option[Int],
+                                         mempoolUsedSizeKBytes: Option[Int],
+                                         mempoolUsedPercentage: Option[Int],
                                          executableTxSize: Option[Int],
                                          nonExecutableTxSize: Option[Int],
+                                         lastCertEpoch : Option[Int],
+                                         lastCertQuality : Option[Long],
+                                         lastCertBtrFree : Option[Long],
+                                         lastCertFtMinAmount : Option[Long],
+                                         lastCertHash : Option[String],
                                      )  extends SuccessResponse
-
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
 
