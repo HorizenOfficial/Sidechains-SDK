@@ -139,29 +139,6 @@ case class SidechainNodeApiRoute[
     }
   }
 
-  /*
-  [X] Node name
-  [X] Node types - forger, submitter, signer, simple node
-  [X] Sdk version
-  [X] Sc ID
-  [X] Sc type - ceasable/non-ceasable
-  [X] Sc model - UTXO/Account
-  [X] Sc block height
-  [X] Sc consensus epoch
-  [X] Sc withdrawal epoch
-  [X] Sc environment - on which network is node currently - mainnet/testnet/regtest
-  [X] Number of connected peers
-  [X] Number of peers
-  [X] Number of blacklisted peers
-  [X] Tx mempool - executable & non executable - only for account model, UTXO has unified
-  [X] maxMemPoolSlots - if it’s configurable
-  [X] Last baseFeePerGas - for account model only - changed to next!!
-  [X] Forward transfer min fee
-  [X] Quality of last certificate - account only?
-  [X] Backward transfer fee
-  [X] Last MC reference hash
-  [X] errors
-  */
   def nodeInfo: Route = (path("info") & post) {
     try {
       applyOnNodeView { nodeView =>
