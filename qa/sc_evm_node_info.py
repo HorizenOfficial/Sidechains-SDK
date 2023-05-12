@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.scutil import connect_sc_nodes
+from SidechainTestFramework.scutil import connect_sc_nodes, assert_equal
 from test_framework.util import assert_true
 
 """
@@ -48,16 +48,16 @@ class ScEvmNodeInfo(AccountChainSetup):
         assert_true(node_info_0['epochForgersStake'], 10000000000)
         assert_true(node_info_0['nextBaseFee'], 875000000)
         assert_true(node_info_0['scWithdrawalEpochLength'], 900)
-        # assert_true(node_info_0['scWithdrawalEpochNum'], 0)
+        assert_equal(node_info_0['scWithdrawalEpochNum'], 0)
         assert_true(node_info_0['scEnv'], 'regtest')
         assert_true(node_info_0['lastMcBlockReferenceHash'])
         assert_true(node_info_0['numberOfConnectedPeers'], 1)
-        # assert_true(node_info_0['numberOfBlacklistedPeers'], 0)
+        assert_equal(node_info_0['numberOfBlacklistedPeers'], 0)
         assert_true(node_info_0['maxMemPoolSlots'], 6144)
-        # assert_true(node_info_0['numOfTxInMempool'], 0)
-        # assert_true(node_info_0['executableTxSize'], 0)
-        # assert_true(node_info_0['nonExecutableTxSize'], 0)
-        # assert_true(node_info_0['errors'], [])
+        assert_equal(node_info_0['numOfTxInMempool'], 0)
+        assert_equal(node_info_0['executableTxSize'], 0)
+        assert_equal(node_info_0['nonExecutableTxSize'], 0)
+        assert_equal(node_info_0['errors'], [])
         assert_true(list(node_info_0.keys()).__len__(), 24)
 
 

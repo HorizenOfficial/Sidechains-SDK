@@ -4,7 +4,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, sc_p2p_port
+    bootstrap_sidechain_nodes, start_sc_nodes, sc_p2p_port, assert_equal
 from test_framework.util import initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_true
 
@@ -98,15 +98,15 @@ class ScNodeInfo(SidechainTestFramework):
         assert_true(node_info_0['scConsensusEpoch'], 1)
         assert_true(node_info_0['epochForgersStake'], 60000000000)
         assert_true(node_info_0['scWithdrawalEpochLength'], 1000)
-        # assert_true(node_info_0['scWithdrawalEpochNum'], 0)
+        assert_equal(node_info_0['scWithdrawalEpochNum'], 0)
         assert_true(node_info_0['scEnv'], 'regtest')
         assert_true(node_info_0['lastMcBlockReferenceHash'])
         assert_true(node_info_0['numberOfConnectedPeers'], 4)
-        # assert_true(node_info_0['numberOfBlacklistedPeers'], 0)
-        # assert_true(node_info_0['numOfTxInMempool'], 0)
-        # assert_true(node_info_0['mempoolUsedSizeKBytes'], 0)
-        # assert_true(node_info_0['mempoolUsedPercentage'], 0)
-        # assert_true(node_info_0['errors'], [])
+        assert_equal(node_info_0['numberOfBlacklistedPeers'], 0)
+        assert_equal(node_info_0['numOfTxInMempool'], 0)
+        assert_equal(node_info_0['mempoolUsedSizeKBytes'], 0)
+        assert_equal(node_info_0['mempoolUsedPercentage'], 0)
+        assert_equal(node_info_0['errors'], [])
         assert_true(list(node_info_0.keys()).__len__(), 22)
 
 
