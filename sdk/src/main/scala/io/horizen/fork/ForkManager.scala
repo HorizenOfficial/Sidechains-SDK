@@ -44,14 +44,7 @@ object ForkManager {
   }
 
   def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
-    if (initialized) {
-      throw new IllegalStateException("ForkManager is already initialized.")
-    }
-
-    networkName match {
-      case "regtest" | "testnet" | "mainnet" =>
-      case _ => throw new IllegalArgumentException("Unknown network type.")
-    }
+    if (initialized) throw new IllegalStateException("ForkManager is already initialized.")
 
     // preselect the network as it cannot change during runtime
     mainchainForks = ForkUtil.selectNetwork(networkName, MainchainFork.forks)

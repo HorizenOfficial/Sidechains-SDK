@@ -9,5 +9,6 @@ trait ForkActivation {
     case "regtest" => regtest
     case "testnet" => testnet
     case "mainnet" => mainnet
+    case _ => throw new IllegalArgumentException(s"Unknown network type: $network")
   }
 }
