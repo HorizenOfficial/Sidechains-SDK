@@ -9,7 +9,7 @@ from test_framework.util import initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_true
 
 """
-Make sure that node info endpoint gives correct data.
+Make sure that node info endpoint gives correct data for UTXO model.
 
 Configuration: start 5 sidechain nodes. All nodes have max outgoing connections set to 0, except the first one.
 
@@ -73,9 +73,40 @@ class ScNodeInfo(SidechainTestFramework):
         connect_sc_nodes(sc_nodes[0], 3)
         connect_sc_nodes(sc_nodes[0], 4)
 
-        node_info = sc_nodes[0].node_info()['result']
+        node_info_0 = sc_nodes[0].node_info()['result']
+        node_info_1 = sc_nodes[1].node_info()['result']
+        node_info_2 = sc_nodes[2].node_info()['result']
+        node_info_3 = sc_nodes[3].node_info()['result']
+        node_info_4 = sc_nodes[4].node_info()['result']
 
-        assert_true(node_info['numberOfPeers'], 4)
+        assert_true(node_info_0['numberOfPeers'], 4)
+        assert_true(node_info_1['numberOfPeers'], 1)
+        assert_true(node_info_2['numberOfPeers'], 1)
+        assert_true(node_info_3['numberOfPeers'], 1)
+        assert_true(node_info_4['numberOfPeers'], 1)
+
+        assert_true(node_info_0['nodeName'], 'node0')
+        assert_true(node_info_0['nodeType'], 'signer,submitter')
+        assert_true(node_info_0['protocolVersion'], '0.0.1')
+        assert_true(node_info_0['agentName'], '2-Hop')
+        assert_true(node_info_0['sdkVersion'])
+        assert_true(node_info_0['scId'])
+        assert_true(node_info_0['scType'], 'ceasing')
+        assert_true(node_info_0['scModel'], 'UTXO')
+        assert_true(node_info_0['scBlockHeight'], 1)
+        assert_true(node_info_0['scConsensusEpoch'], 1)
+        assert_true(node_info_0['epochForgersStake'], 60000000000)
+        assert_true(node_info_0['scWithdrawalEpochLength'], 1000)
+        # assert_true(node_info_0['scWithdrawalEpochNum'], 0)
+        assert_true(node_info_0['scEnv'], 'regtest')
+        assert_true(node_info_0['lastMcBlockReferenceHash'])
+        assert_true(node_info_0['numberOfConnectedPeers'], 4)
+        # assert_true(node_info_0['numberOfBlacklistedPeers'], 0)
+        # assert_true(node_info_0['numOfTxInMempool'], 0)
+        # assert_true(node_info_0['mempoolUsedSizeKBytes'], 0)
+        # assert_true(node_info_0['mempoolUsedPercentage'], 0)
+        # assert_true(node_info_0['errors'], [])
+        assert_true(list(node_info_0.keys()).__len__(), 22)
 
 
 if __name__ == "__main__":

@@ -194,9 +194,8 @@ case class SidechainNodeApiRoute[
         var allPeersNum = 0
         val resultAllPeers = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
           _.map {
-            case (address, peerInfo) =>
+            case (_, _) =>
               allPeersNum += 1
-            case (_,_) =>
           }
         }
 
@@ -204,17 +203,13 @@ case class SidechainNodeApiRoute[
         Await.result(resultConnected, settings.timeout)
         Await.result(resultAllPeers, settings.timeout)
 
-        //sdk version
-        val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
-        val pomFile = new File(sdkPath)
-        val pomXml = XML.loadFile(pomFile)
-        val versionTag = (pomXml \ "version").head
-        val sdkVersion = versionTag.text
+        val scBlockHeight = nodeView.getNodeHistory.getCurrentHeight
 
-        val scBlockHeight =nodeView.getNodeHistory.getCurrentHeight
+        val lastScBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
+        val lastScBlock = nodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
+        val lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
+
         var withdrawalEpochNum = -1
-
-        val numOfTxInMempool = nodeView.getNodeMemoryPool.getSize
         var consensusEpoch = -1
         var epochForgersStake:Long = -1
 
@@ -223,7 +218,6 @@ case class SidechainNodeApiRoute[
         var certBtrFee:Long = -1
         var certFtMinAmount:Long = -1
         var certHash:String = ""
-
         nodeView match {
           case viewAccount: AccountNodeView =>
             nonExecTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
@@ -271,38 +265,11 @@ case class SidechainNodeApiRoute[
               case _ =>
             }
         }
+        val numOfTxInMempool = nodeView.getNodeMemoryPool.getSize
 
-        val logFilePath = app.sidechainSettings.sparkzSettings.logDir + "/" + app.sidechainSettings.logInfo.logFileName
-        var errorLines:Array[String] = null
-        var source: Option[Source] = None
-        var isReadingSuccessful = true
-        try {
-          source = Some(Source.fromFile(logFilePath))
-          errorLines = source.get.getLines().filter(_.contains("[ERROR]")).toArray
-        } catch {
-          case e: Exception =>
-            log.error(e.getMessage)
-            isReadingSuccessful = false
-        } finally {
-          source.foreach(_.close())
-        }
-
-        val lastScBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
-        val lastScBlock = nodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
-        val lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
-
-        //node type
-        var nodeTypes = ""
-        if (app.sidechainSettings.forger.automaticForging)
-          nodeTypes += "forger"
-        if (app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled)
-          nodeTypes += ",signer"
-        if (app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
-          nodeTypes += ",submitter"
-        if (nodeTypes == "")
-          nodeTypes = "simple node"
-        if (nodeTypes.charAt(0) == ',')
-          nodeTypes = nodeTypes.stripPrefix(",")
+        val errorLines:Array[String] = getErrorLogs
+        val sdkVersion = getSDKVersion
+        val nodeTypes = getNodeTypes
 
         ApiResponseUtil.toResponse(RespNodeInfo(
           nodeName = nodeName,
@@ -335,12 +302,53 @@ case class SidechainNodeApiRoute[
           lastCertBtrFree = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
           lastCertFtMinAmount = if (certFtMinAmount != -1) Option(certFtMinAmount) else Option.empty,
           lastCertHash = if (certHash != "") Option(certHash) else Option.empty,
-          errors = if (isReadingSuccessful) Option(errorLines) else Option.empty
+          errors = if (errorLines != null) Option(errorLines) else Option.empty
         ))
       }
     } catch {
       case e: Throwable => SidechainApiError(e)
     }
+  }
+
+  private def getErrorLogs: Array[String] = {
+    val logFilePath = app.sidechainSettings.sparkzSettings.logDir + "/" + app.sidechainSettings.logInfo.logFileName
+    var errorLogs: Array[String] = null
+    var source: Option[Source] = None
+    try {
+      source = Some(Source.fromFile(logFilePath))
+      errorLogs = source.get.getLines().filter(_.contains("[ERROR]")).toArray
+    } catch {
+      case e: Exception =>
+        log.error(e.getMessage)
+    } finally {
+      source.foreach(_.close())
+    }
+    errorLogs
+  }
+
+  private def getSDKVersion: String = {
+    val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
+    val pomFile = new File(sdkPath)
+    val pomXml = XML.loadFile(pomFile)
+    val versionTag = (pomXml \ "version").head
+    val sdkVersion = versionTag.text
+    sdkVersion
+  }
+
+  private def getNodeTypes: String = {
+    var nodeTypes = ""
+    if (app.sidechainSettings.forger.automaticForging)
+      nodeTypes += "forger"
+    if (app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled)
+      nodeTypes += ",signer"
+    if (app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+      nodeTypes += ",submitter"
+    if (nodeTypes == "")
+      nodeTypes = "simple node"
+    if (nodeTypes.charAt(0) == ',')
+      nodeTypes = nodeTypes.stripPrefix(",")
+
+    nodeTypes
   }
 
   def connect: Route = (post & path("connect")) {
