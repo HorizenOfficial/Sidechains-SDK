@@ -26,7 +26,7 @@ class ConsensusDataStorageTest {
 
   @Test
   def simpleTestAfterFork(): Unit = {
-    simpleTest(new SimpleForkConfigurator().getSidechainFork1.regtest + 1)
+    simpleTest(new SimpleForkConfigurator().fork1activation.regtest + 1)
   }
 
   def simpleTest(epochNumber: Int): Unit = {

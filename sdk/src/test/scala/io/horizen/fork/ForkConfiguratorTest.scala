@@ -5,7 +5,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 class BadForkConfigurator extends ForkConfigurator {
-  override val getSidechainFork1: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, -5)
+  override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, -5)
 }
 
 class ForkConfiguratorTest extends JUnitSuite {

@@ -382,7 +382,7 @@ function runTestScript
       testEnd=$(date +%s)
       testRuntime=$((testEnd-testStart))
       updateSuccessCount
-      echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+#      echo "--- Success: ${testName} --- ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     else
       testEnd=$(date +%s)
       testRuntime=$((testEnd-testStart))
@@ -391,7 +391,7 @@ function runTestScript
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
     fi
 
-    echo | tee /dev/fd/3
+#    echo | tee /dev/fd/3
 }
 
 function runTests
@@ -440,7 +440,7 @@ function runParallelTests
     if checkFileExists "$test"; then
           if checkScriptArgsValid "$scriptArg"  \
                                   "$test"; then
-            echo "== Running $testNumber Of $testCount Tests: \"$test\"  == Parallel: $parallelGroup" | tee /dev/fd/3
+#            echo "== Running $testNumber Of $testCount Tests: \"$test\"  == Parallel: $parallelGroup" | tee /dev/fd/3
             testFileWithArgs="${BASH_SOURCE%/*}/$test --parallel=$parallelGroup"
 
             runTestScript \

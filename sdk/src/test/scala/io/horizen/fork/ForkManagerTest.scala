@@ -40,7 +40,7 @@ class ForkManagerTest extends JUnitSuite {
 
     val sidechainConsensusFork2 = ForkManager.getSidechainFork(9)
     assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork2)
-    assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork2.isInstanceOf[SidechainFork])
+    assertEquals("Expected not to get sidechain fork", true, sidechainConsensusFork2.isInstanceOf[MandatorySidechainFork])
 
     val sidechainConsensusFork3 = ForkManager.getSidechainFork(10)
     assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork3)
