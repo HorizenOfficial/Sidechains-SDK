@@ -17,6 +17,7 @@ Test:
     - connect the first node to all the other nodes
     - get the first node info
     - check that number of all peers is 4
+    - check that rest of the parameters from node_info endpoint match the expected
 """
 
 

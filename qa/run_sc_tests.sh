@@ -86,6 +86,7 @@ testScriptsEvm=(
     'sc_evm_gasPrice.py'
     'sc_evm_mempool.py'
     'sc_evm_mempool_invalid_txs.py'
+    'sc_evm_node_info.py'
     'sc_evm_orphan_txs.py'
     'sc_evm_rpc_invalid_blocks.py'
     'sc_evm_rpc_invalid_txs.py'
