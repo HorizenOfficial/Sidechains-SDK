@@ -7,6 +7,7 @@ import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageV
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.AccountState
+import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import io.horizen.api.http.route.SidechainNodeRestSchema._
@@ -21,6 +22,7 @@ import io.horizen.utils.BytesUtils
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.node.SidechainNodeView
 import io.horizen.utxo.state.SidechainState
+import io.horizen.wallet.AbstractWallet
 import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
 import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
@@ -36,6 +38,7 @@ import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
+import scala.io.{BufferedSource, Source}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
@@ -138,7 +141,7 @@ case class SidechainNodeApiRoute[
 
   /*
   [X] Node name
-  [ ] Node types - forger, submitter, signer, simple node
+  [X] Node types - forger, submitter, signer, simple node
   [X] Sdk version
   [X] Sc ID
   [X] Sc type - ceasable/non-ceasable
@@ -147,7 +150,6 @@ case class SidechainNodeApiRoute[
   [X] Sc consensus epoch
   [X] Sc withdrawal epoch
   [X] Sc environment - on which network is node currently - mainnet/testnet/regtest
-  [ ] Sc node version
   [X] Number of connected peers
   [X] Number of peers
   [X] Number of blacklisted peers
@@ -158,9 +160,8 @@ case class SidechainNodeApiRoute[
   [X] Quality of last certificate - account only?
   [X] Backward transfer fee
   [X] Last MC reference hash
-
-  - for errors, accessing to log file is necessary but don't know how to get a path of it since it's only in conf file
-  * */
+  [X] errors
+  */
   def nodeInfo: Route = (path("info") & post) {
     try {
       applyOnNodeView { nodeView =>
@@ -180,7 +181,6 @@ case class SidechainNodeApiRoute[
         val resultBlacklisted = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
           .map(blacklistedPeers => {
             blacklistedNum = blacklistedPeers.length
-            println(s"There are $blacklistedNum blacklisted peers.")
           })
 
         //connected peers
@@ -188,21 +188,14 @@ case class SidechainNodeApiRoute[
         val resultConnected = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
           .map(connectedPeers => {
             connectedToNum = connectedPeers.length
-            println(s"There are $connectedToNum connected peers.")
           })
 
         //all peers
-        var allPeersNum = 0;
+        var allPeersNum = 0
         val resultAllPeers = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
           _.map {
             case (address, peerInfo) =>
               allPeersNum += 1
-              println("SidechainPeerNode")
-              println(SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString)))
-              println("protocol")
-              println(peerInfo.peerSpec.protocolVersion)
-              println("agent name")
-              println(peerInfo.peerSpec.agentName)
             case (_,_) =>
           }
         }
@@ -279,29 +272,41 @@ case class SidechainNodeApiRoute[
             }
         }
 
-        val acc = app.sidechainSettings.forger.allowedForgersList
-        println("allowedForgersList")
-        println(acc)
-        println("signersPublicKeys")
-        println(app.sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys)
+        val logFilePath = app.sidechainSettings.sparkzSettings.logDir + "/" + app.sidechainSettings.logInfo.logFileName
+        var errorLines:Array[String] = null
+        var source: Option[Source] = None
+        var isReadingSuccessful = true
+        try {
+          source = Some(Source.fromFile(logFilePath))
+          errorLines = source.get.getLines().filter(_.contains("[ERROR]")).toArray
+        } catch {
+          case e: Exception =>
+            log.error(e.getMessage)
+            isReadingSuccessful = false
+        } finally {
+          source.foreach(_.close())
+        }
 
-        app.sidechainSettings.logInfo.logFileName
-
-        //get last SC block and get params from there such as difficulty etc.
         val lastScBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
         val lastScBlock = nodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
         val lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
 
-        //todo node type
-        //todo sc node - ask what it is
-        //todo errors - is it possible?
-
-        //val mcBlockHash = BytesUtils.toHexString(nodeView.getNodeHistory.getBestMainchainBlockReferenceInfo.get().getMainchainHeaderHash)
-        //val mcBlock = app.mainchainNodeChannel.getBlockByHash(mcBlockHash)
+        //node type
+        var nodeTypes = ""
+        if (app.sidechainSettings.forger.automaticForging)
+          nodeTypes += "forger"
+        if (app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled)
+          nodeTypes += ",signer"
+        if (app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+          nodeTypes += ",submitter"
+        if (nodeTypes == "")
+          nodeTypes = "simple node"
+        if (nodeTypes.charAt(0) == ',')
+          nodeTypes = nodeTypes.stripPrefix(",")
 
         ApiResponseUtil.toResponse(RespNodeInfo(
           nodeName = nodeName,
-          nodeType = Option.empty, //todo
+          nodeType = Option(nodeTypes),
           protocolVersion = Option(protocolVersion),
           agentName = Option(agentName),
           sdkVersion = Option(sdkVersion),
@@ -315,7 +320,6 @@ case class SidechainNodeApiRoute[
           scWithdrawalEpochLength = Option(params.withdrawalEpochLength),
           scWithdrawalEpochNum = if (withdrawalEpochNum != -1) Option(withdrawalEpochNum) else Option.empty,
           scEnv = Option(scEnv),
-          scNodeVersion = Option.empty, //todo
           lastMcBlockReferenceHash = Option(lastMcBlockReferenceHash),
           numberOfPeers = Option(allPeersNum),
           numberOfConnectedPeers = Option(connectedToNum),
@@ -331,6 +335,7 @@ case class SidechainNodeApiRoute[
           lastCertBtrFree = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
           lastCertFtMinAmount = if (certFtMinAmount != -1) Option(certFtMinAmount) else Option.empty,
           lastCertHash = if (certHash != "") Option(certHash) else Option.empty,
+          errors = if (isReadingSuccessful) Option(errorLines) else Option.empty
         ))
       }
     } catch {
@@ -561,7 +566,6 @@ object SidechainNodeRestSchema {
                                          scWithdrawalEpochLength: Option[Int],
                                          scWithdrawalEpochNum: Option[Int],
                                          scEnv: Option[String],
-                                         scNodeVersion: Option[String],
                                          lastMcBlockReferenceHash: Option[String],
                                          numberOfPeers: Option[Int],
                                          numberOfConnectedPeers: Option[Int],
@@ -577,6 +581,7 @@ object SidechainNodeRestSchema {
                                          lastCertBtrFree : Option[Long],
                                          lastCertFtMinAmount : Option[Long],
                                          lastCertHash : Option[String],
+                                         errors: Option[Array[String]]
                                      )  extends SuccessResponse
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
