@@ -11,7 +11,7 @@ import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircui
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate}
+import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
 
 import java.util.Optional
@@ -28,7 +28,7 @@ class WithKeyRotationCircuitStrategy[
                                       sc2scConfig: Sc2ScConfigurator,
                                       params: NetworkParams,
                                       circuit: ThresholdSignatureCircuitWithKeyRotation)
-  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, sc2scConfig, params) {
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, sc2scConfig, params) with Sc2ScUtils[TX, H, PM, MS, HIS] {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 

@@ -1,6 +1,6 @@
 package io.horizen
 
-import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
@@ -52,7 +52,7 @@ abstract class AbstractState[
   def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int]
 
   //hash of mainchain block that published the top quality cert of this epoch
-  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]];
+  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash]
 
   protected def validateTopQualityCertificateForSc2Sc(topQualityCertificate: WithdrawalEpochCertificate,
                                                       certReferencedEpochNumber: Int,

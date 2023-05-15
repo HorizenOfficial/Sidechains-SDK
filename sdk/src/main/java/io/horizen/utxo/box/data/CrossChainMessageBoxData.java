@@ -12,20 +12,19 @@ import java.util.Objects;
 public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey25519Proposition, CrossChainMessageBox, CrossChainMessageBoxData> {
 
     private CrossChainProtocolVersion protocolVersion;
-    private final Integer messageType;
+    private final int messageType;
     private final byte[]  receiverSidechain;
     private final byte[]  receiverAddress;
     private final byte[]  payload;
 
     public CrossChainMessageBoxData(PublicKey25519Proposition proposition,
                                     CrossChainProtocolVersion protocolVersion,
-                                    Integer messageType,
+                                    int messageType,
                                     byte[] receiverSidechain,
                                     byte[] receiverAddress,
                                     byte[] payload) {
         super(proposition, 0);
         Objects.requireNonNull(protocolVersion, "protocol version must be defined");
-        Objects.requireNonNull(messageType, "messageType must be defined");
         Objects.requireNonNull(receiverSidechain, "receiverSidechain must be defined");
         Objects.requireNonNull(receiverAddress, "receiverAddress must be defined");
         Objects.requireNonNull(payload, "payload must be defined");
@@ -40,7 +39,7 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
         return protocolVersion;
     }
 
-    public Integer getMessageType() {
+    public int getMessageType() {
         return messageType;
     }
 
@@ -69,7 +68,7 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
     @Override
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Bytes.concat(Shorts.toByteArray(protocolVersion.getVal()),
-                new byte[]{messageType.byteValue()}, receiverSidechain, receiverAddress, payload));
+                new byte[]{(byte)messageType}, receiverSidechain, receiverAddress, payload));
     }
 }
 

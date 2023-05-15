@@ -1,4 +1,4 @@
-package io.horizen.validation.crosschain.receiver;
+package io.horizen.utxo.crosschain.receiver;
 
 import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
@@ -13,7 +13,7 @@ import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
-import io.horizen.validation.crosschain.CrossChainValidator;
+import io.horizen.utxo.crosschain.CrossChainValidator;
 import scala.collection.JavaConverters;
 
 import java.util.Arrays;
@@ -40,7 +40,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     public void validate(SidechainBlock objectToValidate) throws Exception {
         for (BoxTransaction<Proposition, Box<Proposition>> tx : JavaConverters.seqAsJavaList(objectToValidate.transactions())) {
             if (tx instanceof AbstractCrossChainRedeemTransaction) {
-                CrossChainRedeemMessageBoxData boxData = ((AbstractCrossChainRedeemTransaction) tx).getRedeemMessageBox();
+                CrossChainRedeemMessageBoxData boxData = ((AbstractCrossChainRedeemTransaction) tx).getRedeemMessageBoxData();
                 CrossChainMessage ccMsg = boxData.getMessage();
 
                 // CrossChainRedeemMsg.message.receivingScId = current sidechain

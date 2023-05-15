@@ -11,27 +11,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 abstract public class AbstractCrossChainRedeemTransaction extends AbstractRegularTransaction {
-    protected final CrossChainRedeemMessageBoxData redeemMessageBox;
+    protected final CrossChainRedeemMessageBoxData redeemMessageBoxData;
 
     public AbstractCrossChainRedeemTransaction(
             List<byte[]> inputZenBoxIds,
             List<Signature25519> inputZenBoxProofs,
             List<ZenBoxData> outputZenBoxesData,
             long fee,
-            CrossChainRedeemMessageBoxData redeemMessageBox
+            CrossChainRedeemMessageBoxData redeemMessageBoxData
     ) {
         super(inputZenBoxIds, inputZenBoxProofs, outputZenBoxesData, fee);
-        this.redeemMessageBox = redeemMessageBox;
+        this.redeemMessageBoxData = redeemMessageBoxData;
     }
 
-    public CrossChainRedeemMessageBoxData getRedeemMessageBox() {
-        return redeemMessageBox;
+    public CrossChainRedeemMessageBoxData getRedeemMessageBoxData() {
+        return redeemMessageBoxData;
     }
 
     @Override
     protected List<BoxData<Proposition, Box<Proposition>>> getCustomOutputData() {
         List<BoxData<Proposition, Box<Proposition>>> result = new ArrayList<>();
-        result.add((BoxData)redeemMessageBox);
+        result.add((BoxData) redeemMessageBoxData);
         return result;
     }
 }

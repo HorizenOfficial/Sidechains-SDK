@@ -1,7 +1,7 @@
 package io.horizen.utxo.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import io.horizen.block.{SidechainBlockBase, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
@@ -19,13 +19,13 @@ import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box._
 import io.horizen.utxo.box.data.ZenBoxData
+import io.horizen.utxo.crosschain.CrossChainValidator
+import io.horizen.utxo.crosschain.receiver.CrossChainRedeemMessageValidator
 import io.horizen.utxo.forge.ForgerList
 import io.horizen.utxo.node.NodeState
 import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import io.horizen.validation.crosschain.CrossChainValidator
-import io.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator
 import io.horizen.validation.crosschain.sender.CrossChainMessageValidator
 import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
 import sparkz.core._
@@ -60,7 +60,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
-    new CrossChainMessageValidator(stateStorage, sc2scConfig, this, params),
+    new CrossChainMessageValidator(sc2scConfig, this, params),
     new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
@@ -115,7 +115,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     if (sc2scConfig.canSendMessages) stateStorage.getCrossChainMessageHashEpoch(messageHash) else None
   }
 
-  override def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]] = {
+  override def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] = {
     stateStorage.getTopQualityCertificateMainchainHeaderHash(withdrawalEpoch)
   }
 
@@ -322,20 +322,11 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
       (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
-  private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferenceInBlock: Int, boxInThisBlock: Int): Unit = {
-    val alreadyMined = getAlreadyMinedCrosschainMessagesInCurrentEpoch
-    val allowed = getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch)
-    val total = alreadyMined + boxInThisBlock
-    if (total > allowed) {
-      throw new IllegalStateException(s"Exceeded the maximum number of CrosschainMessages allowed!")
-    }
-  }
-
-  def getAlreadyMinedCrosschainMessagesInCurrentEpoch: Int = {
+  def getAlreadyMinedCrossChainMessagesInCurrentEpoch: Int = {
     stateStorage.getCrossChainMessagesPerEpoch(getWithdrawalEpochInfo.epoch).size
   }
 
-  def getAllowedCrosschainMessageBoxes(numberOfMainchainBlockReferenceInBlock: Int, maxMessagesPerCertificate: Int): Int = {
+  def getAllowedCrossChainMessageBoxes(numberOfMainchainBlockReferenceInBlock: Int, maxMessagesPerCertificate: Int): Int = {
     Math.min(maxMessagesPerCertificate,
       (maxMessagesPerCertificate * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
@@ -625,7 +616,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                    newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
                    consensusEpoch: ConsensusEpochNumber,
-                   topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
+                   topQualityCerts: Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)],
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
                    keyRotationProofsToAdd: Seq[KeyRotationProof],

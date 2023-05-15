@@ -131,3 +131,5 @@ object MainchainHeaderSerializer extends SparkzSerializer[MainchainHeader] {
     MainchainHeader.create(r.getBytes(length), 0).get
   }
 }
+
+case class MainchainHeaderHash(value: Array[Byte])

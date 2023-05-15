@@ -25,6 +25,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
 import sparkz.util.SparkzLogging
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -418,7 +419,7 @@ class CswManager(settings: SidechainSettings,
     // Note 2: Getting `hashScTxsCommitment` operation is quite expensive due to look up into the storage for the header.
     // Note 3: Mainchain header keep `hashScTxsCommitment` in RPC friendly way - BE form of uint256.
     var scTxsComHashes: Seq[Array[Byte]] = (startBlockHeight + 1 to endBlockHeight).flatMap(height => history.getMainchainHeaderInfoByHeight(height)).map(info => {
-      BytesUtils.reverseBytes(history.getMainchainHeaderByHash(info.hash.data).get.hashScTxsCommitment)
+      BytesUtils.reverseBytes(history.getMainchainHeaderByHash(McHeaderHash(info.hash.data)).get.hashScTxsCommitment)
     })
 
     if(excludeGenesisCommTreeHash) {

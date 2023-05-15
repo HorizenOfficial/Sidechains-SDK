@@ -175,6 +175,8 @@ class AccountSidechainNodeViewHolderEventTest
     val params: NetworkParams = mock[NetworkParams]
     Mockito.when(params.chainId).thenReturn(1997)
     Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
+    Mockito.when(params.sc2ScProvingKeyFilePath).thenReturn(None)
+    Mockito.when(params.sc2ScVerificationKeyFilePath).thenReturn(None)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]

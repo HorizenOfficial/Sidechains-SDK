@@ -121,8 +121,8 @@ class AccountStateMetadataStorageViewTest
       stateMetadataStorage.getAccountStateRoot)
     assertEquals("Certificate is different in view and in storage after a commit", storageView.getTopQualityCertificate(currentEpoch).get.epochNumber,
       stateMetadataStorage.getTopQualityCertificate(currentEpoch).get.epochNumber)
-    assertArrayEquals("Top certificate mainchain hash is different in view and in storage after a commit", storageView.getTopCertificateMainchainHash(currentEpoch).get,
-      stateMetadataStorage.getTopCertificateMainchainHash(currentEpoch).get)
+    assertArrayEquals("Top certificate mainchain hash is different in view and in storage after a commit", storageView.getTopCertificateMainchainHash(currentEpoch).get.value,
+      stateMetadataStorage.getTopCertificateMainchainHash(currentEpoch).get.value)
 
     assertEquals("Height after commit should be 1 in view", 1, storageView.getHeight)
     assertEquals("Height after commit should be 1 in storage", 1, stateMetadataStorage.getHeight)

@@ -7,14 +7,13 @@ import io.horizen.sc2sc.{CrossChainMessageHash, Sc2ScConfigurator}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CrossChainMessageBox
+import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.storage.SidechainStateStorage
-import io.horizen.validation.crosschain.CrossChainValidator
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
-                                  scStateStorage: SidechainStateStorage,
                                   sc2ScConfig: Sc2ScConfigurator,
                                   scState: SidechainState,
                                   networkParams: NetworkParams
@@ -46,10 +45,10 @@ class CrossChainMessageValidator(
     }
   }
 
-  private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferenceInBlock: Int, boxInThisBlock: Int): Unit = {
-    val alreadyMined = scState.getAlreadyMinedCrosschainMessagesInCurrentEpoch
-    val allowed = scState.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch)
-    val total = alreadyMined + boxInThisBlock
+  private def checkCrosschainMessagesBoxesAllowed(mainchainBlockReferencesInBlock: Int, boxesInBlock: Int): Unit = {
+    val alreadyMined = scState.getAlreadyMinedCrossChainMessagesInCurrentEpoch
+    val allowed = scState.getAllowedCrossChainMessageBoxes(mainchainBlockReferencesInBlock, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch)
+    val total = alreadyMined + boxesInBlock
     if (total > allowed) {
       throw new IllegalStateException("Exceeded the maximum number of CrosschainMessages allowed!")
     }
@@ -69,7 +68,7 @@ class CrossChainMessageValidator(
               .sc2scCircuitFunctions
               .getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(cmBox.asInstanceOf[CrossChainMessageBox], networkParams))
 
-          if (scStateStorage.getCrossChainMessageHashEpoch(messageHash).isDefined) {
+          if (scState.getCrossChainMessageHashEpoch(messageHash).isDefined) {
             throw new Exception("CrossChainMessage already found in state")
           }
         })

@@ -69,12 +69,8 @@ class WithoutKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =
-      sc2scConfig.canSendMessages match {
-        case true => Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
-        case false => None
-      }
-
+    // todo: remove this from certificatedataWITHOUTkeyrotation
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = None
 
     val signersPublicKeyWithSignatures = status.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -102,12 +98,6 @@ class WithoutKeyRotationCircuitStrategy[
 
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
-
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  sc2scConfig.canSendMessages match {
-      case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
-      case false => None
-    }
-    //TODO: sc2ScDataForCertificate must be used in below circuits..
 
     val utxoMerkleTreeRoot: Option[Array[Byte]] = {
       Try {

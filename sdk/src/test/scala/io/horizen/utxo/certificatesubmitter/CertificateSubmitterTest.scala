@@ -141,7 +141,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[MainchainHeaderHash]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -182,7 +182,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[MainchainHeaderHash]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -224,7 +224,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[MainchainHeaderHash]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }
@@ -266,7 +266,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       msg match {
         case GetDataFromCurrentView(f) =>
           val history: SidechainHistory = mock[SidechainHistory]
-          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[Array[Byte]]()))
+          when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any[MainchainHeaderHash]()))
             .thenAnswer(_ => Some(mockedMcBlockWithScCreation(expectedSysDataConstantOpt)).asJava)
           sender ! f(CurrentView(history, mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
       }

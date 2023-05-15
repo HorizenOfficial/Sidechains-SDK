@@ -5,13 +5,14 @@ import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSeriali
 import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
 import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
-import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.storage.Storage
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 import sparkz.core.{VersionTag, versionToBytes}
+
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList}
@@ -47,13 +48,13 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
-  private[horizen] var topCertificateMainchainHashes: Map[Int, Array[Byte]] = Map()
+  private[horizen] var topCertificateMainchainHashes: Map[Int, MainchainHeaderHash] = Map()
   //Contains the base fee to be used when forging the next block
   private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
-  def addTopCertificateMainchainHash(hash: Int, mainchainHash: Array[Byte]) = {
+  def addTopCertificateMainchainHash(hash: Int, mainchainHash: MainchainHeaderHash) = {
     topCertificateMainchainHashes = topCertificateMainchainHashes + (hash -> mainchainHash)
   }
 
@@ -110,7 +111,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     lastCertificateReferencedEpochOpt.orElse(lastCertificateReferencedEpochFromStorage)
   }
 
-  override def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]] = {
+  override def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = {
     topCertificateMainchainHashes.get(referencedWithdrawalEpoch).orElse(getTopCertificateMainchainHashesFromStorage(referencedWithdrawalEpoch))
   }
 
@@ -160,9 +161,9 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
   }
 
-  private[horizen] def getTopCertificateMainchainHashesFromStorage(referencedWithdrawalEpoch: Int): Option[Array[Byte]] = {
+  private[horizen] def getTopCertificateMainchainHashesFromStorage(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = {
     storage.get(topCertificateMainchainHasheKey(referencedWithdrawalEpoch)).asScala  match {
-      case Some(baw) => Some(baw.data)
+      case Some(baw) => Some(MainchainHeaderHash(baw.data))
       case _ => Option.empty
     }
   }
@@ -389,7 +390,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     nextBaseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
 
     topCertificateMainchainHashes.foreach(ele =>
-      updateList.add(new JPair(topCertificateMainchainHasheKey(ele._1), ele._2))
+      updateList.add(new JPair(topCertificateMainchainHasheKey(ele._1), ele._2.value))
     )
 
     storage.update(version, updateList, removeList)

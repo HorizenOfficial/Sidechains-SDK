@@ -17,6 +17,7 @@ import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
@@ -465,11 +466,11 @@ abstract class AbstractHistory[
     storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
   }
 
-  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: Array[Byte]): Optional[MainchainBlockReference] = {
+  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: McHeaderHash): Optional[MainchainBlockReference] = {
     storage.getMainchainBlockReferenceByHash(mainchainHeaderHash).asJava
   }
 
-  override def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): Optional[MainchainHeader] = {
+  override def getMainchainHeaderByHash(mainchainHeaderHash: McHeaderHash): Optional[MainchainHeader] = {
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 

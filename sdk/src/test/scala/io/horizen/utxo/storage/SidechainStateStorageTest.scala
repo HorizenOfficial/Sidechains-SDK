@@ -2,7 +2,7 @@ package io.horizen.utxo.storage
 
 import com.google.common.primitives.Ints
 import io.horizen.SidechainTypes
-import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
 import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CryptoLibProvider
@@ -200,7 +200,7 @@ class SidechainStateStorageTest
     // Certificate
     val referenceEpochNumber = 0
     val cert: WithdrawalEpochCertificate = generateWithdrawalEpochCertificate(epochNumber = Some(referenceEpochNumber))
-    val mainChainHash: Array[Byte] =  generateRandomMainchainHash()
+    val mainChainHash: MainchainHeaderHash = generateRandomMainchainHash()
 
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getLastCertificateSidechainBlockIdKey), version))
 
@@ -223,7 +223,7 @@ class SidechainStateStorageTest
       new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
     //mainchain hashes
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getTopQualityCertificateMainchainHeaderKey(referenceEpochNumber)),
-      new ByteArrayWrapper(mainChainHash)))
+      new ByteArrayWrapper(mainChainHash.value)))
 
     // block fee info
     val nextBlockFeeInfoCounter: Int = 0

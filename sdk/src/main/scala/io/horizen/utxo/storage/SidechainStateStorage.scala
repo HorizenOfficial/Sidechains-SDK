@@ -2,7 +2,7 @@ package io.horizen.utxo.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.SidechainTypes
-import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
@@ -275,9 +275,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getTopQualityCertificateMainchainHeaderHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]] = {
+  def getTopQualityCertificateMainchainHeaderHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = {
     storage.get(getTopQualityCertificateMainchainHeaderKey(referencedWithdrawalEpoch)).asScala match {
-      case Some(baw) => Some(baw.data())
+      case Some(baw) => Some(MainchainHeaderHash(baw.data()))
       case _ => Option.empty
     }
   }
@@ -363,7 +363,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              crossChainMessageHashesToAppend: Seq[CrossChainMessageHash],
              hashScTxsCommitment: Seq[Array[Byte]],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
+             topQualityCerts: Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
              scHasCeased: Boolean,
@@ -540,7 +540,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
       topQualityCerts.foreach(ele =>
         updateList.add(new JPair(getTopQualityCertificateMainchainHeaderKey(ele._1.epochNumber),
-          new ByteArrayWrapper(ele._2)))
+          new ByteArrayWrapper(ele._2.value)))
       )
     }
 

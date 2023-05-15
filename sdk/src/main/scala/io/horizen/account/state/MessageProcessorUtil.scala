@@ -11,7 +11,6 @@ object MessageProcessorUtil {
       case NaiveThresholdSignatureCircuit => None
       case NaiveThresholdSignatureCircuitWithKeyRotation => Some(CertificateKeyRotationMsgProcessor(params))
     }
-    // TODO: this condition will be replaced with the sc2sc proving and verification key paths existence that will be introduced with SDK-649
     val sc2ScMsgProcessors = if (Sc2ScUtils.isActive(params)) Seq(ScTxCommitmentTreeRootHashMessageProcessor())
                              else Seq()
     Seq(

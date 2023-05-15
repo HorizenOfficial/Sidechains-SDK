@@ -1,4 +1,4 @@
-package io.horizen.validation.crosschain;
+package io.horizen.utxo.crosschain;
 
 import io.horizen.block.SidechainBlockBase;
 

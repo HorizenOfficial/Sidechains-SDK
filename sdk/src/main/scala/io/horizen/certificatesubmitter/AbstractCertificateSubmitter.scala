@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import io.horizen._
 import io.horizen.api.http.client.SecureEnclaveApiClient
-import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
@@ -181,7 +181,7 @@ abstract class AbstractCertificateSubmitter[
 
   private def getSidechainCreationTransaction(history: HIS): SidechainCreation = {
     val mainchainReference: MainchainBlockReference = history
-      .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
+      .getMainchainBlockReferenceByHash(MainchainHeaderHash(params.genesisMainchainBlockHash)).asScala
       .getOrElse(throw new IllegalStateException("No mainchain creation transaction in history"))
 
     mainchainReference.data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]

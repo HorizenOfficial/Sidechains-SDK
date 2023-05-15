@@ -8,6 +8,7 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import io.horizen.transaction.Transaction
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
@@ -147,29 +148,29 @@ abstract class AbstractHistoryStorage[
 
   def activeChainAfter(blockId: ModifierId, limit: Option[Int]): Seq[ModifierId] = activeChain.chainAfter(blockId, limit)
 
-  def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: Array[Byte]): Option[PM] = {
-    activeChain.idByMcHeader(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)
+  def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: McHeaderHash): Option[PM] = {
+    activeChain.idByMcHeader(byteArrayToMainchainHeaderHash(mainchainHeaderHash.value)).flatMap(blockById)
   }
 
-  def getSidechainBlockContainingMainchainReferenceData(mainchainHeaderHash: Array[Byte]): Option[PM] = {
-    activeChain.idByMcReferenceData(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)
+  def getSidechainBlockContainingMainchainReferenceData(mainchainHeaderHash: McHeaderHash): Option[PM] = {
+    activeChain.idByMcReferenceData(byteArrayToMainchainHeaderHash(mainchainHeaderHash.value)).flatMap(blockById)
   }
 
-  def getMainchainBlockReferenceByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReference] = {
+  def getMainchainBlockReferenceByHash(mainchainHeaderHash: McHeaderHash): Option[MainchainBlockReference] = {
     for {
       header <- getMainchainHeaderByHash(mainchainHeaderHash)
       data <- getMainchainReferenceDataByHash(mainchainHeaderHash)
     } yield MainchainBlockReference(header, data)
   }
 
-  def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeader] = {
+  def getMainchainHeaderByHash(mainchainHeaderHash: McHeaderHash): Option[MainchainHeader] = {
     val block: Option[PM] = getSidechainBlockContainingMainchainHeader(mainchainHeaderHash)
-    block.flatMap(_.mainchainHeaders.find(header => mainchainHeaderHash.sameElements(header.hash)))
+    block.flatMap(_.mainchainHeaders.find(header => mainchainHeaderHash.value.sameElements(header.hash)))
   }
 
-  def getMainchainReferenceDataByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceData] = {
+  def getMainchainReferenceDataByHash(mainchainHeaderHash: McHeaderHash): Option[MainchainBlockReferenceData] = {
     val block: Option[PM] = getSidechainBlockContainingMainchainReferenceData(mainchainHeaderHash)
-    block.flatMap(_.mainchainBlockReferencesData.find(data => mainchainHeaderHash.sameElements(data.headerHash)))
+    block.flatMap(_.mainchainBlockReferencesData.find(data => mainchainHeaderHash.value.sameElements(data.headerHash)))
   }
 
   def getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainHeight: Int): Option[MainchainBlockReferenceInfo] = {

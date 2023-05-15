@@ -11,7 +11,6 @@ case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: 
   override lazy val hash = precalculatedHash
 }
 
-
 trait MainchainHeaderFixture {
 
   def mainchainHeaderToBytes(obj: MainchainHeader): Array[Byte] = {

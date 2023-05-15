@@ -6,7 +6,7 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.google.common.primitives.Longs
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
-import io.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainHeader, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.chain.MainchainHeaderInfo
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
@@ -189,10 +189,10 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
         getRandomBlockId(height), FieldElementUtils.randomFieldElementBytes(height)))
     })
 
-    Mockito.when(history.getMainchainHeaderByHash(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
-      val headerHash: Array[Byte] = args.getArgument(0)
+    Mockito.when(history.getMainchainHeaderByHash(ArgumentMatchers.any[MainchainHeaderHash]())).thenAnswer(args => {
+      val headerHash: MainchainHeaderHash = args.getArgument(0)
       val header = mock[MainchainHeader]
-      Mockito.when(header.hashScTxsCommitment).thenReturn(FieldElementUtils.randomFieldElementBytes(Longs.fromByteArray(headerHash)))
+      Mockito.when(header.hashScTxsCommitment).thenReturn(FieldElementUtils.randomFieldElementBytes(Longs.fromByteArray(headerHash.value)))
       java.util.Optional.of(header)
     })
 

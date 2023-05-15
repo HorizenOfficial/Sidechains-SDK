@@ -9,7 +9,7 @@ import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
-import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
@@ -368,9 +368,8 @@ class AccountState(
   override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] =
     if (sc2scConfig.canSendMessages) using(getView)(_.getCrossChainMessageHashEpoch(messageHash)) else None
 
-  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]] =
+  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] =
     using(getView)(_.getTopCertificateMainchainHash(withdrawalEpoch))
-
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     using(getView)(_.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType))

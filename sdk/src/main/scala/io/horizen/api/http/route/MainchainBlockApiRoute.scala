@@ -16,6 +16,7 @@ import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.{Optional => JOptional}
 import scala.compat.java8.OptionConverters._
@@ -111,7 +112,8 @@ case class MainchainBlockApiRoute[
   def blockReferenceByHash: Route = (post & path("blockReferenceByHash")) {
     entity(as[ReqBlockBy]) { body =>
       withNodeView { sidechainNodeView =>
-        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(BytesUtils.fromHexString(body.hash)).asScala match {
+        val mcHeaderHashValue = BytesUtils.fromHexString(body.hash)
+        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(McHeaderHash(mcHeaderHashValue)).asScala match {
           case Some(mcBlockRef) =>
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))

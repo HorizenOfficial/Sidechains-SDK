@@ -1,7 +1,7 @@
 package io.horizen.utxo.storage
 
 import io.horizen.SidechainTypes
-import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
@@ -19,6 +19,7 @@ import org.scalatestplus.mockito._
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
@@ -65,10 +66,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // Check MainchainHeaders
     blocks(blockIndex).mainchainHeaders.foreach { case mainchainHeader =>
       assertEquals("Storage must return correct sidechain block by mainchain header hash",
-        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainHeader(mainchainHeader.hash).get.id)
+        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainHeader(McHeaderHash(mainchainHeader.hash)).get.id)
 
       assertArrayEquals("Storage must return correct mainchain header by mainchain header hash",
-        mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(mainchainHeader.hash).get.mainchainHeaderBytes)
+        mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(McHeaderHash(mainchainHeader.hash)).get.mainchainHeaderBytes)
 
       val mcHeaderInfoOpt:Option[MainchainHeaderInfo] = historyStorage.getMainchainHeaderInfoByHash(mainchainHeader.hash)
       assertEquals("MainchainHeaderInfo expected to be present", false, mcHeaderInfoOpt.isEmpty)
@@ -81,7 +82,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       historyStorage.getMainchainHeaderInfoByHash(parentHash) match  {
         case Some(parentHeaderInfo) => {
           val parentCumulativeHash = parentHeaderInfo.cumulativeCommTreeHash
-          val mcHeaderOpt = historyStorage.getMainchainHeaderByHash(mainchainHeader.hash)
+          val mcHeaderOpt = historyStorage.getMainchainHeaderByHash(McHeaderHash(mainchainHeader.hash))
           assertArrayEquals("CumulativeHash is differ", CumulativeHashFunctions.computeCumulativeHash(parentCumulativeHash, BytesUtils.reverseBytes(mcHeaderOpt.get.hashScTxsCommitment)), mcHeaderInfoOpt.get.cumulativeCommTreeHash)
         }
         case None =>
@@ -92,10 +93,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // Check MainchainBlockReferenceData
     blocks(blockIndex).mainchainBlockReferencesData.foreach { case mainchainReferenceData =>
       assertEquals("Storage must return correct sidechain block by mainchain reference data header hash",
-        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainReferenceData(mainchainReferenceData.headerHash).get.id)
+        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainReferenceData(McHeaderHash(mainchainReferenceData.headerHash)).get.id)
 
       assertEquals("Storage must return correct mainchain data by mainchain reference data header hash",
-        mainchainReferenceData, historyStorage.getMainchainReferenceDataByHash(mainchainReferenceData.headerHash).get)
+        mainchainReferenceData, historyStorage.getMainchainReferenceDataByHash(McHeaderHash(mainchainReferenceData.headerHash)).get)
     }
 
     val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlockReferencesData.length).sum + params.mainchainCreationBlockHeight

@@ -227,9 +227,9 @@ object SidechainBlockBase {
       Utils.ZEROS_HASH
   }
 
-  def getTopQualityCertsWithMainChainHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate,Array[Byte])] = {
+  def getTopQualityCertsWithMainChainHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)] = {
     mainchainBlockReferencesData.flatMap(data => data.topQualityCertificate match {
-      case Some(cert) => Some(cert, data.headerHash)
+      case Some(cert) => Some(cert, MainchainHeaderHash(data.headerHash))
       case None => None
     })
   }

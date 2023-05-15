@@ -13,7 +13,7 @@ import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
-import io.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator;
+import io.horizen.utxo.crosschain.receiver.CrossChainRedeemMessageValidator;
 import org.junit.Test;
 import scala.Option;
 import sparkz.core.serialization.BytesSerializable;
