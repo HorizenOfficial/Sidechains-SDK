@@ -12,6 +12,7 @@ import com.horizen.merkletreenative.MerklePath;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
+import io.horizen.crosschain.CrossChainMessageMerkleTree;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
@@ -24,6 +25,8 @@ import io.horizen.utils.FieldElementsContainer;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
 
 import java.io.File;
 import java.util.List;
@@ -51,101 +54,6 @@ public class Sc2scImplZendooTest {
 
         // Assert
         assertTrue(keysWereGenerated);
-    }
-
-    @Test
-    public void ifMessageIsNotIncludedInMessagesList_getCrossChainMessageMerklePath_throwsIllegalArgumentException() {
-        // Arrange
-        CrossChainMessage msg1 = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain1".getBytes(),
-                "sender1".getBytes(),
-                "receiverSidechain1".getBytes(),
-                "receiver1".getBytes(),
-                "payload1".getBytes()
-        );
-        CrossChainMessage msg2 = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain2".getBytes(),
-                "sender2".getBytes(),
-                "receiverSidechain2".getBytes(),
-                "receiver2".getBytes(),
-                "payload2".getBytes()
-        );
-        CrossChainMessage notIncludedMsg = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain3".getBytes(),
-                "sender3".getBytes(),
-                "receiverSidechain3".getBytes(),
-                "receiver3".getBytes(),
-                "payload3".getBytes()
-        );
-        List<CrossChainMessage> messages = List.of(msg1, msg2);
-        try (
-                InMemoryAppendOnlyMerkleTree tree = InMemoryAppendOnlyMerkleTree.init(Constants.MSG_MT_HEIGHT(), 1L << Constants.MSG_MT_HEIGHT());
-        ) {
-            Sc2scCircuit circuit = new Sc2scImplZendoo();
-
-            // Act
-            Exception exception = assertThrows(IllegalArgumentException.class, () -> circuit.insertMessagesInMerkleTreeWithIndex(tree, messages, notIncludedMsg));
-
-            // Assert
-            String expectedMessage = "Cannot get merkle path of a message not included in the message list";
-            assertEquals(expectedMessage, exception.getMessage());
-        }
-    }
-
-    @Test
-    public void verifyMessageMerklePathCorrectness() throws Exception {
-        // Arrange
-        CrossChainMessage msg1 = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain1".getBytes(),
-                "sender1".getBytes(),
-                "receiverSidechain1".getBytes(),
-                "receiver1".getBytes(),
-                "payload1".getBytes()
-        );
-        CrossChainMessage msg2 = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain2".getBytes(),
-                "sender2".getBytes(),
-                "receiverSidechain2".getBytes(),
-                "receiver2".getBytes(),
-                "payload2".getBytes()
-        );
-        CrossChainMessage msg3 = new CrossChainMessageImpl(
-                CrossChainProtocolVersion.VERSION_1,
-                1,
-                "senderSidechain3".getBytes(),
-                "sender3".getBytes(),
-                "receiverSidechain3".getBytes(),
-                "receiver3".getBytes(),
-                "payload3".getBytes()
-        );
-        List<CrossChainMessage> messages = List.of(msg1, msg2, msg3);
-        Sc2scImplZendoo circuit = new Sc2scImplZendoo();
-
-        try (
-                InMemoryAppendOnlyMerkleTree tree = circuit.initMerkleTree();//InMemoryAppendOnlyMerkleTree.init(Constants.MSG_MT_HEIGHT(), 1L << Constants.MSG_MT_HEIGHT());
-                FieldElementsContainer feContainer = FieldElementUtils.deserializeMany(msg3.bytes());
-                FieldElement msg3Fe = HashUtils.fieldElementListHash(feContainer.getFieldElementCollection());
-        ) {
-            // Act
-            int leafIndex = circuit.insertMessagesInMerkleTreeWithIndex(tree, messages, msg3);
-
-            try (FieldElement treeRoot = circuit.getCrossChainMessageTreeRootAsFieldElement(tree)) {
-                MerklePath msg3MerklePath = circuit.getCrossChainMessageMerklePath(tree, leafIndex);
-
-                // Assert
-                assertTrue(msg3MerklePath.verify(msg3Fe, treeRoot));
-            }
-        }
     }
 
     @Test
@@ -200,10 +108,13 @@ public class Sc2scImplZendooTest {
                 "payload1".getBytes()
         );
 
+        CrossChainMessageMerkleTree ccMsgMerkleTree = new CrossChainMessageMerkleTree();
+
         byte[] scId = generateFieldRandomBytes(r);
-        int msgTreeIndex = circuit.insertMessagesInMerkleTreeWithIndex(msgTree, List.of(msg1), msg1);
-        CrossChainMessageHash msgHash = circuit.getCrossChainMessageHash(msg1); // appendMsgHash(msg1, msgTree); // appendRandomMsgHash(r, msgTree);
-        byte[] msgRoot = circuit.getCrossChainMessageTreeRoot(msgTree);
+        Seq<CrossChainMessage> messages = JavaConverters.asScalaIteratorConverter(List.of(msg1).iterator()).asScala().toSeq();
+        int msgTreeIndex = ccMsgMerkleTree.insertMessagesInMerkleTreeWithIndex(msgTree, messages, msg1);
+        CrossChainMessageHash msgHash = circuit.getCrossChainMessageHash(msg1);
+        byte[] msgRoot = ccMsgMerkleTree.getCrossChainMessageTreeRoot(msgTree);
 
         WithdrawalCertificate currWithdrawalCertificate = WithdrawalCertificate.getRandom(
                 r, 0, Sc2scImplZendoo.CUSTOM_FIELDS_NUM);
@@ -233,7 +144,7 @@ public class Sc2scImplZendooTest {
         try (
                 ScCommitmentCertPath currentPath = currentCt.getScCommitmentCertPath(scId, currCertHash).get();
                 ScCommitmentCertPath nextPath = nextCt.getScCommitmentCertPath(scId, nextCertHash).get();
-                MerklePath msgPath = circuit.getCrossChainMessageMerklePath(msgTree, msgTreeIndex) //getMsgPath(0, msgTree)
+                MerklePath msgPath = ccMsgMerkleTree.getCrossChainMessageMerklePath(msgTree, msgTreeIndex)
         ) {
             byte[] proof = circuit.createRedeemProof(
                     msgHash,

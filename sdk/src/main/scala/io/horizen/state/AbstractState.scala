@@ -6,6 +6,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.consensus.ConsensusEpochInfo
+import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, CustomFieldsReservedPositions}
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.Transaction
@@ -73,12 +74,13 @@ abstract class AbstractState[
       throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect previousCertificateHash field")
     }
     val expectedCrosschainMessages = getCrossChainMessages(certReferencedEpochNumber)
+    val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
     Using.resource(
-      CryptoLibProvider.sc2scCircuitFunctions.initMerkleTree()
+      ccMsgMerkleTree.initMerkleTree
     ) { tree => {
-      CryptoLibProvider.sc2scCircuitFunctions.appendMessagesToMerkleTree(tree, expectedCrosschainMessages.asJava)
-      val expectedMessageTreeRoot = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
+      ccMsgMerkleTree.appendMessagesToMerkleTree(tree, expectedCrosschainMessages)
+      val expectedMessageTreeRoot = ccMsgMerkleTree.getCrossChainMessageTreeRoot(tree)
 
       if (!util.Arrays.equals(messageTreeRoot, expectedMessageTreeRoot)) {
         throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect crosschain message tree root field")

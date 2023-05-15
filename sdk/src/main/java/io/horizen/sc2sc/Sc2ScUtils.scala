@@ -4,6 +4,7 @@ import com.horizen.commitmenttreenative.ScCommitmentCertPath
 import com.horizen.merkletreenative.MerklePath
 import io.horizen.AbstractState
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -31,11 +32,12 @@ trait Sc2ScUtils[
    */
   def getDataForCertificateCreation(epoch: Int, state: MS, history: HIS, params: NetworkParams): Sc2ScDataForCertificate = {
     val crossChainMessages: Seq[CrossChainMessage] = state.getCrossChainMessages(epoch)
+    val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
     Using.resource(
-      sc2scCircuitFunctions.initMerkleTree()
+      ccMsgMerkleTree.initMerkleTree
     ) { tree => {
-      sc2scCircuitFunctions.appendMessagesToMerkleTree(tree, crossChainMessages.asJava)
-      val messageRootHash: Array[Byte] = sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree);
+      ccMsgMerkleTree.appendMessagesToMerkleTree(tree, crossChainMessages)
+      val messageRootHash: Array[Byte] = ccMsgMerkleTree.getCrossChainMessageTreeRoot(tree)
       val previousCertificateHash: Option[Array[Byte]] = getTopCertInfoByEpoch(epoch - 1, state, history, calculateMerklePath = false, params) match {
         case Some(certInfo) => Some(CryptoLibProvider.commonCircuitFunctions.getCertDataHash(certInfo.certificate, params.sidechainCreationVersion))
         case _ => None
@@ -52,6 +54,7 @@ trait Sc2ScUtils[
     //check the message has been previously posted and we are in the correct epoch
     val currentEpoch = state.getWithdrawalEpochInfo.epoch
     val messageHash = sc2scCircuitFunctions.getCrossChainMessageHash(sourceMessage)
+    val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
     state.getCrossChainMessageHashEpoch(messageHash) match {
       case None => throw new Sc2ScException("Message was not found inside state")
@@ -61,11 +64,11 @@ trait Sc2ScUtils[
         } else {
           //collect all the data needed for proof creation
           Using.resource(
-            sc2scCircuitFunctions.initMerkleTree()
+            ccMsgMerkleTree.initMerkleTree
           ) { tree => {
-            val messages = state.getCrossChainMessages(messagePostedEpoch).asJava
-            val msgLeafIndex = sc2scCircuitFunctions.insertMessagesInMerkleTreeWithIndex(tree, messages, sourceMessage)
-            val messageMerklePath: MerklePath = sc2scCircuitFunctions.getCrossChainMessageMerklePath(tree, msgLeafIndex)
+            val messages = state.getCrossChainMessages(messagePostedEpoch)
+            val msgLeafIndex = ccMsgMerkleTree.insertMessagesInMerkleTreeWithIndex(tree, messages, sourceMessage)
+            val messageMerklePath: MerklePath = ccMsgMerkleTree.getCrossChainMessageMerklePath(tree, msgLeafIndex)
             val topCertInfos = getTopCertInfoByEpoch(messagePostedEpoch, state, history, calculateMerklePath = true, params).getOrElse(
               throw new Sc2ScException("Unable to retrieve certificate associated with this message epoch")
             )

@@ -18,19 +18,7 @@ public interface Sc2scCircuit {
 
     int getMaxCrossChainMessagesPerEpoch();
 
-    InMemoryAppendOnlyMerkleTree initMerkleTree();
-
     CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg) throws Exception;
-
-    byte[] getCrossChainMessageTreeRoot(InMemoryAppendOnlyMerkleTree tree) throws Exception;
-
-    MerklePath getCrossChainMessageMerklePath(InMemoryAppendOnlyMerkleTree tree, int leaf) throws Exception;
-
-    int insertMessagesInMerkleTreeWithIndex(InMemoryAppendOnlyMerkleTree tree, List<CrossChainMessage> messages, CrossChainMessage leafMsg) throws Exception;
-
-    void appendMessagesToMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception;
-
-    FieldElement getCrossChainMessageTreeRootAsFieldElement(InMemoryAppendOnlyMerkleTree tree);
 
     byte[] createRedeemProof(CrossChainMessageHash messageHash,
                              byte[] scTxCommitmentRoot,

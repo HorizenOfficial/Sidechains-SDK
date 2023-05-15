@@ -26,11 +26,6 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     public static final int CUSTOM_FIELDS_NUM = 32;
 
     @Override
-    public InMemoryAppendOnlyMerkleTree initMerkleTree() {
-        return InMemoryAppendOnlyMerkleTree.init(Constants.MSG_MT_HEIGHT(), 1L << Constants.MSG_MT_HEIGHT());
-    }
-
-    @Override
     public boolean generateSc2ScKeys(String provingKeyPath, String verificationKeyPath) throws Exception {
         return Sc2Sc.setup(
                 ProvingSystemType.COBOUNDARY_MARLIN,
@@ -46,59 +41,6 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     @Override
     public int getMaxCrossChainMessagesPerEpoch() {
         return 1 << Constants.MSG_MT_HEIGHT();
-    }
-
-    @Override
-    public byte[] getCrossChainMessageTreeRoot(InMemoryAppendOnlyMerkleTree tree) {
-        try (FieldElement root = getCrossChainMessageTreeRootAsFieldElement(tree)) {
-            return root.serializeFieldElement();
-        }
-    }
-
-    @Override
-    public FieldElement getCrossChainMessageTreeRootAsFieldElement(InMemoryAppendOnlyMerkleTree tree) {
-        tree.finalizeTreeInPlace();
-        return tree.root();
-    }
-
-    @Override
-    public int insertMessagesInMerkleTreeWithIndex(InMemoryAppendOnlyMerkleTree tree, List<CrossChainMessage> messages, CrossChainMessage leafMsg) throws Exception {
-        int msgIndexInsertion = -1;
-        for (int i = 0; i < messages.size(); i++) {
-            CrossChainMessage currMsg = messages.get(i);
-
-            insertMessageInMerkleTree(tree, currMsg);
-
-            if (currMsg.equals(leafMsg)) {
-                msgIndexInsertion = i;
-            }
-        }
-        if (msgIndexInsertion < 0) {
-            throw new IllegalArgumentException("Cannot get merkle path of a message not included in the message list");
-        }
-        return msgIndexInsertion;
-    }
-
-    @Override
-    public void appendMessagesToMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, List<CrossChainMessage> messages) throws Exception {
-        for (CrossChainMessage msg : messages) {
-            insertMessageInMerkleTree(msgTree, msg);
-        }
-    }
-
-    private void insertMessageInMerkleTree(InMemoryAppendOnlyMerkleTree msgTree, CrossChainMessage currMsg) throws Exception {
-        try (
-                FieldElementsContainer fieldElementsContainer = FieldElementUtils.deserializeMany(currMsg.bytes());
-                FieldElement cumulatedFieldElement = HashUtils.fieldElementListHash(fieldElementsContainer.getFieldElementCollection())
-        ) {
-            msgTree.append(cumulatedFieldElement);
-        }
-    }
-
-    @Override
-    public MerklePath getCrossChainMessageMerklePath(InMemoryAppendOnlyMerkleTree tree, int leafIndex) {
-        tree.finalizeTreeInPlace();
-        return tree.getMerklePath(leafIndex);
     }
 
     @Override

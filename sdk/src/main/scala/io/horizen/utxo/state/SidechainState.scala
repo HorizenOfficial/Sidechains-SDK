@@ -21,12 +21,12 @@ import io.horizen.utxo.box._
 import io.horizen.utxo.box.data.ZenBoxData
 import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.crosschain.receiver.CrossChainRedeemMessageValidator
+import io.horizen.utxo.crosschain.validation.sender.CrossChainMessageValidator
 import io.horizen.utxo.forge.ForgerList
 import io.horizen.utxo.node.NodeState
 import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import io.horizen.validation.crosschain.sender.CrossChainMessageValidator
 import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._

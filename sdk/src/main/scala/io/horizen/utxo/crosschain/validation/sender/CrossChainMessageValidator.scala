@@ -1,4 +1,4 @@
-package io.horizen.validation.crosschain.sender
+package io.horizen.utxo.crosschain.validation.sender
 
 import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CryptoLibProvider
@@ -9,7 +9,6 @@ import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CrossChainMessageBox
 import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.state.SidechainState
-import io.horizen.utxo.storage.SidechainStateStorage
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
