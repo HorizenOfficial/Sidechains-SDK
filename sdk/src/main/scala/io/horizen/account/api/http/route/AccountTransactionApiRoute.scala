@@ -15,7 +15,7 @@ import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccount
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.getOwnershipId
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{getMcSignature, getOwnershipId}
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS}
@@ -37,10 +37,7 @@ import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
 import sparkz.core.settings.RESTApiSettings
-import sparkz.util.encode.Base64
-
 import java.math.BigInteger
-import java.util
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.ExecutionContext
@@ -790,7 +787,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-
   def removeKeysOwnership: Route = (post & path("removeKeysOwnership")) {
     withBasicAuth {
       _ => {
@@ -825,18 +821,30 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                   case Success(dataBytes) =>
 
-                    val tmpTx: EthereumTransaction = new EthereumTransaction(
-                      params.chainId,
-                      JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
-                      nonce,
-                      gasLimit,
-                      maxPriorityFeePerGas,
-                      maxFeePerGas,
-                      valueInWei,
-                      dataBytes,
-                      null
-                    )
-                    validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                    val ownershipId = body.ownershipInfo.mcTransparentAddress match {
+                      case Some(mcAddr) => Some(getOwnershipId(
+                        new Address("0x"+body.ownershipInfo.scAddress),
+                        mcAddr
+                      ))
+                      case None => None
+                    }
+
+                    if (ownershipId.isDefined && !sidechainNodeView.getNodeState.ownershipDataExist(ownershipId.get)) {
+                      ApiResponseUtil.toResponse(GenericTransactionError(s"Account ${body.ownershipInfo.scAddress} not linked to mc address: ${body.ownershipInfo.mcTransparentAddress.get}", JOptional.empty()))
+                    } else {
+                      val tmpTx: EthereumTransaction = new EthereumTransaction(
+                        params.chainId,
+                        JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
+                        nonce,
+                        gasLimit,
+                        maxPriorityFeePerGas,
+                        maxFeePerGas,
+                        valueInWei,
+                        dataBytes,
+                        null
+                      )
+                      validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                    }
 
                   case Failure(exception) =>
                     ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
@@ -859,13 +867,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
           withNodeView { sidechainNodeView =>
             val accountState = sidechainNodeView.getNodeState
-            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships
+            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(body.scAddress)
 
             if (listOfMcAddrOwnerships.nonEmpty) {
-              val ownedMcAddrs = listOfMcAddrOwnerships.view.filter(item => {
-                item.scAddress.equals(body.scAddress)
-              })
-              ApiResponseUtil.toResponse(RespMcAddresses(ownedMcAddrs.map(_.mcTransparentAddress).toList))
+              ApiResponseUtil.toResponse(RespMcAddresses(listOfMcAddrOwnerships.map(_.mcTransparentAddress).toList))
             } else {
               ApiResponseUtil.toResponse(RespMcAddresses(Seq().toList))
             }
@@ -900,20 +905,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(withdrawal.mainchainAddress, params))
     val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
     Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
-  }
-
-
-  def getMcSignature(mcSignatureString: String): SignatureSecp256k1 = {
-
-    val decodedMcSignature: Array[Byte] = Base64.decode(mcSignatureString).get
-
-    // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating a compressed
-    // format of the pub key. We are not using this info
-    val v: BigInteger = BigInteger.valueOf(decodedMcSignature(0) - 0x4)
-    val r: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 1, 33))
-    val s: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 33, 65))
-
-    new SignatureSecp256k1(v, r, s)
   }
 
   private def checkScMcAddresses(scAddress: String, mcTransparentAddressOpt: Option[String]) : (Address, Array[Byte]) = {
@@ -1085,7 +1076,7 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class ReqGetMcAddrOwnership(scAddress: String) {
+  private[horizen] case class ReqGetMcAddrOwnership(scAddress: Option[String]) {
     require(scAddress != null, "SC address must be provided")
   }
 

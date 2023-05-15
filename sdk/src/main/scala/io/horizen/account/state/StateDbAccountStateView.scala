@@ -70,8 +70,8 @@ class StateDbAccountStateView(
     forgerStakesProvider.getAllowedForgerListIndexes(this)
 
 
-  override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] =
-    mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this)
+  override def getListOfMcAddrOwnerships(scAddressOpt: Option[String]): Seq[McAddrOwnershipData] =
+    mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this, scAddressOpt)
 
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)

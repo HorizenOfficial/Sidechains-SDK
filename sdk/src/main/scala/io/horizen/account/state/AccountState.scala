@@ -424,7 +424,7 @@ class AccountState(
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
-  override def getListOfMcAddrOwnerships: Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships)
+  override def getListOfMcAddrOwnerships(scAddress: Option[String] = None): Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships(None))
 
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean = using(getView)(_.ownershipDataExist(ownershipId))
 

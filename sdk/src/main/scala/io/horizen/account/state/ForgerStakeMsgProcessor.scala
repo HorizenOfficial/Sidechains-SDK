@@ -6,7 +6,7 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList._
 import io.horizen.account.state.ForgerStakeMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.LinkedListNode
+import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, removeNode}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -84,7 +84,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
                      stakedAmount: BigInteger): Unit = {
 
     // add a new node to the linked list pointing to this forger stake data
-    addNewNodeToList(view, stakeId)
+    addNewNode(view, stakeId, contractAddress, LinkedListTipKey, LinkedListNullValue)
 
     val forgerStakeData = ForgerStakeData(
       ForgerPublicKeys(blockSignProposition, vrfPublicKey), new AddressProposition(ownerPublicKey), stakedAmount)
@@ -97,28 +97,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   private def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
-    // we assume that the caller have checked that the forger stake really exists in the stateDb.
-    // in this case we must necessarily have a linked list node
-    val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
-
-    // modify previous node if any
-    modifyNode(view, nodeToRemove.previousNodeKey) { previousNode =>
-      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
-    }
-
-    // modify next node if any
-    modifyNode(view, nodeToRemove.nextNodeKey) { nextNode =>
-      LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
-    } getOrElse {
-      // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
-      view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
-    }
+    // remove the data from the linked list
+    removeNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
 
     // remove the stake
     view.removeAccountStorageBytes(contractAddress, stakeId)
-
-    // remove the node from the linked list
-    view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
 
@@ -211,8 +194,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
-    while (!linkedListNodeRefIsNull(nodeReference)) {
-      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
+    while (!linkedListNodeRefIsNull(nodeReference, LinkedListNullValue)) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
       stakeList = item +: stakeList
       nodeReference = prevNodeReference
     }

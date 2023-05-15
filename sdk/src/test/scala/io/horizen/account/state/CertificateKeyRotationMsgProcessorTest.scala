@@ -110,17 +110,6 @@ class CertificateKeyRotationMsgProcessorTest
 
   def randomNonce: BigInteger = randomU256
 
-
-  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
-    if (!view.accountExists(origin)) {
-      view.addAccount(origin, randomHash)
-
-      if (amount.signum() == 1) {
-        view.addBalance(origin, amount)
-      }
-    }
-  }
-
   private def buildKeyRotationProof(keyType: KeyRotationProofType, index: Int, epoch: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
     val messageToSign = keyType match {
       case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation

@@ -112,16 +112,6 @@ class ForgerStakeMsgProcessorTest
     returnData
   }
 
-  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
-    if (!view.accountExists(origin)) {
-      view.addAccount(origin, randomHash)
-
-      if (amount.signum() == 1) {
-        view.addBalance(origin, amount)
-      }
-    }
-  }
-
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calculated using this site: https://emn178.github.io/online-tools/keccak_256.html

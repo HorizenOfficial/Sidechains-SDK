@@ -90,4 +90,14 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
 
   def decodeEventTopic[T <: Type[_]](topic: Hash, ref: TypeReference[T]): Type[_] =
     FunctionReturnDecoder.decodeIndexedValue(BytesUtils.toHexString(topic.toBytes), ref)
+
+  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO, inAddress: Address = origin): Unit = {
+    if (!view.accountExists(inAddress)) {
+      view.addAccount(inAddress, randomHash)
+
+      if (amount.signum() == 1) {
+        view.addBalance(inAddress, amount)
+      }
+    }
+  }
 }

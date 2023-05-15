@@ -1,13 +1,14 @@
 package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.account.abi.{ABIDecoder, ABIEncodable, MsgProcessorInputDecoder}
+import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
 import BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.state.McAddrOwnershipData.decodeMcAddress
 import io.horizen.json.Views
 import io.horizen.evm.Address
+import io.horizen.utils.BytesUtils
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes3, Bytes32}
@@ -23,6 +24,9 @@ import java.util
 case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1)
   extends ABIEncodable[StaticStruct] {
 
+  require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
+    s"Invalid mc address length: ${mcTransparentAddress.length}")
+
   override def asABIType(): StaticStruct = {
     val t_v = getUnsignedByteArray(mcSignature.getV)
     val t_r = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), Secp256k1.SIGNATURE_RS_SIZE)
@@ -32,7 +36,7 @@ case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: Str
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new AbiAddress(scAddress.toString),
       new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
-      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, 35)),
+      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)),
       new Bytes1(t_v),
       new Bytes32(t_r),
       new Bytes32(t_s))
@@ -75,12 +79,32 @@ object AddNewOwnershipCmdInputDecoder
   }
 }
 
+case class GetOwnershipsCmdInput(scAddress: Address)
+  extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(scAddress.toString)
+    )
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(scAddress: %s)"
+    .format(
+      this.getClass.toString,
+      scAddress.toString)
+}
+
 case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: Option[String])
   extends ABIEncodable[StaticStruct] {
+
 
   override def asABIType(): StaticStruct = {
     val mcAddrBytes = mcTransparentAddressOpt match {
       case Some(mcTransparentAddress) =>
+        require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
+          s"Invalid mc address length: ${mcTransparentAddress.length}")
         mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
       case None =>
         new Array[Byte](35)
@@ -89,7 +113,7 @@ case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new AbiAddress(scAddress.toString),
       new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
-      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, 35))
+      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH))
     )
     new StaticStruct(listOfParams)
   }
@@ -98,6 +122,22 @@ case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: 
     .format(
       this.getClass.toString,
       scAddress.toString, mcTransparentAddressOpt.getOrElse("undef"))
+}
+
+object GetOwnershipsCmdInputDecoder
+  extends ABIDecoder[GetOwnershipsCmdInput]
+    with MsgProcessorInputDecoder[GetOwnershipsCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[AbiAddress]() {}
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): GetOwnershipsCmdInput = {
+    val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    GetOwnershipsCmdInput(scAddress)
+  }
 }
 
 object RemoveOwnershipCmdInputDecoder
@@ -127,7 +167,10 @@ object RemoveOwnershipCmdInputDecoder
 
 @JsonView(Array(classOf[Views.Default]))
 case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
-  extends BytesSerializable {
+  extends BytesSerializable  with ABIEncodable[StaticStruct] {
+
+  require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
+    s"Invalid mc address length: ${mcTransparentAddress.length}")
 
   override type M = McAddrOwnershipData
 
@@ -136,13 +179,26 @@ case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
   override def toString: String = "%s(scAddress: %s, mcAddress: %s)"
     .format(this.getClass.toString, scAddress, mcTransparentAddress)
 
+  override def asABIType(): StaticStruct = {
+    val mcAddrBytes = mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
 
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(scAddress),
+      new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
+      new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH))
+    )
+    new StaticStruct(listOfParams)
+  }
 }
 
 object McAddrOwnershipData {
   def decodeMcAddress(first3Bytes: Bytes3, last32Bytes: Bytes32): String = {
     new String(first3Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
   }
+}
+
+object McAddrOwnershipDataListEncoder extends ABIListEncoder[McAddrOwnershipData, StaticStruct]{
+  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
 }
 
 object McAddrOwnershipDataSerializer extends SparkzSerializer[McAddrOwnershipData] {
