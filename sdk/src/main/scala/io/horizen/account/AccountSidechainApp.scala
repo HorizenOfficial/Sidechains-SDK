@@ -142,8 +142,11 @@ class AccountSidechainApp @Inject()
      sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
-  val transactionRateLimiterActorRef: ActorRef = SidechainTransactionRateLimiterActorRef(nodeViewHolderRef, sidechainSettings.wallet.minAPIThroughput)
-  val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(transactionRateLimiterActorRef)
+  val sidechainTransactionActorRef: ActorRef = if (sidechainSettings.apiRateLimiter.enabled) {
+    SidechainTransactionRateLimiterActorRef(nodeViewHolderRef, sidechainSettings.apiRateLimiter)
+  } else {
+    SidechainTransactionActorRef(nodeViewHolderRef)
+  }
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter

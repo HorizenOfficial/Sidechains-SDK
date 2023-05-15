@@ -2,18 +2,20 @@ package io.horizen.api.http
 
 import akka.actor._
 import com.google.common.util.concurrent.RateLimiter
+import io.horizen.ApiRateLimiterSettings
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import sparkz.util.SparkzLogging
 
+import java.util.concurrent.TimeUnit
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 
-class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThroughput: Int = 10)(implicit ec: ExecutionContext)
+class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, rateLimiterSettings: ApiRateLimiterSettings)(implicit ec: ExecutionContext)
   extends Actor with SparkzLogging {
 
-  private val transactionMap : TrieMap[String, Long] = TrieMap()
-  private val rateLimiter: RateLimiter = RateLimiter.create(minThroughput)
+  private val transactionMap: TrieMap[String, Long] = TrieMap()
+  private val rateLimiter: RateLimiter = RateLimiter.create(rateLimiterSettings.minThroughput)
   private var averageProcessingTimeMs: Long = 0
 
   override def preStart(): Unit = {
@@ -28,7 +30,7 @@ class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThrou
 
   protected def locallyGeneratedTransaction: Receive = {
     case LocallyGeneratedTransaction(transaction) =>
-      if (averageProcessingTimeMs > 2000 && !rateLimiter.tryAcquire()) {
+      if (averageProcessingTimeMs > rateLimiterSettings.throttlingThresholdMs && !rateLimiter.tryAcquire()) {
         context.system.eventStream.publish(
           FailedTransaction(
             transaction.id,
@@ -37,7 +39,7 @@ class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThrou
           )
         )
       } else {
-        val startTime: Long = System.currentTimeMillis()
+        val startTime: Long = System.nanoTime()
         transactionMap(transaction.id) = startTime
         nodeViewHolderRef ! LocallyGeneratedTransaction(transaction)
       }
@@ -49,7 +51,7 @@ class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThrou
         case Some(startTime) => updateProcessingTime(startTime)
         case None =>
       }
-    case FailedTransaction(transactionId, throwable, _) =>
+    case FailedTransaction(transactionId, _, _) =>
       transactionMap.remove(transactionId) match {
         case Some(startTime) => updateProcessingTime(startTime)
         case None =>
@@ -57,8 +59,8 @@ class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThrou
   }
 
   private def updateProcessingTime(startTime: Long): Unit = {
-    val elapsed: Long = System.currentTimeMillis() - startTime
-    averageProcessingTimeMs = (averageProcessingTimeMs * 0.9).toLong + (elapsed * 0.1).toLong
+    val elapsedMs: Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime)
+    averageProcessingTimeMs = (averageProcessingTimeMs * 0.9).toLong + (elapsedMs * 0.1).toLong
   }
 
   override def receive: Receive = {
@@ -70,12 +72,12 @@ class SidechainTransactionRateLimiterActor(nodeViewHolderRef: ActorRef, minThrou
 }
 
 object SidechainTransactionRateLimiterActorRef {
-  def props(sidechainNodeViewHolderRef: ActorRef, minThroughput: Int)
+  def props(sidechainNodeViewHolderRef: ActorRef, rateLimiterSettings: ApiRateLimiterSettings)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainTransactionRateLimiterActor(sidechainNodeViewHolderRef, minThroughput))
+    Props(new SidechainTransactionRateLimiterActor(sidechainNodeViewHolderRef, rateLimiterSettings))
 
-  def apply(sidechainNodeViewHolderRef: ActorRef, minThroughput: Int)
+  def apply(sidechainNodeViewHolderRef: ActorRef, rateLimiterSettings: ApiRateLimiterSettings)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, minThroughput))
+    system.actorOf(props(sidechainNodeViewHolderRef, rateLimiterSettings))
 }
 
