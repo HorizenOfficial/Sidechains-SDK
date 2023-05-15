@@ -2,7 +2,7 @@ import json
 
 
 def sendKeysOwnership(sidechainNode, *, sc_address, mc_addr, mc_signature,
-                      nonce=None, gas_limit=230000, max_priority_fee_per_gas=900000000,
+                      nonce=None, gas_limit=2300000, max_priority_fee_per_gas=900000000,
                       max_fee_per_gas=900000000, api_key=None):
     j = {
         "ownershipInfo": {
