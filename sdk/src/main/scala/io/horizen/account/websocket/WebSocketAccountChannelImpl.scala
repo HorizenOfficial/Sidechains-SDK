@@ -47,13 +47,13 @@ class WebSocketAccountChannelImpl extends SparkzLogging with ClosableResourceHan
       }
   }
 
-  def getWalletAddresses: Set[Address] = {
+  def getWalletAddresses: Try[Set[Address]] = Try{
     applyOnAccountView { nodeView =>
       nodeView.vault.publicKeys().filter(key => key.isInstanceOf[AddressProposition]).map(addressProposition => addressProposition.asInstanceOf[AddressProposition].address())
     }
   }
 
-  def getEthereumLogsFromBlock(block: AccountBlock, subscriptionWithFilter: SubscriptionWithFilter): Seq[EthereumLogView] = {
+  def getEthereumLogsFromBlock(block: AccountBlock, subscriptionWithFilter: SubscriptionWithFilter): Try[Seq[EthereumLogView]] = Try{
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
         RpcFilter.getBlockLogs(stateView, block, subscriptionWithFilter.filter)
@@ -62,7 +62,7 @@ class WebSocketAccountChannelImpl extends SparkzLogging with ClosableResourceHan
   }
 
 
-  def accountBlockToWebsocketJson(block: AccountBlock): WebSocketEthereumBlockView = {
+  def accountBlockToWebsocketJson(block: AccountBlock): Try[WebSocketEthereumBlockView] = Try{
     applyOnAccountView { nodeView =>
       val blockNumber = nodeView.history.getBlockHeightById(block.id).get().toLong
       val blockHash = new Hash(block.id.toBytes)

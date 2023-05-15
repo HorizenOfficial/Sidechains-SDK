@@ -213,8 +213,6 @@ class SidechainApp @Inject()
   //Websocket server for the Explorer
   val websocketServerSettings: WebSocketServerSettings = sidechainSettings.websocketServer
   if(websocketServerSettings.wsServer) {
-    if (websocketServerSettings.wsServerAllowedOrigins.nonEmpty)
-      throw new IllegalArgumentException("wsServerAllowedOrigins property is not supported in the UTXO model websocket!")
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 

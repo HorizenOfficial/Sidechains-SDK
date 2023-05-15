@@ -71,7 +71,7 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
     lastId = Some(newId)
   }
 
-  def chainAfter(id: ID, limit: Option[Int]): Seq[ID] = {
+  def chainSince(id: ID, limit: Option[Int], getChainAfter: Boolean=false): Seq[ID] = {
     if (contains(id) && height > 0) {
       var res: Seq[ID] = Seq()
       val startHeight = heightById(id).get
@@ -82,6 +82,8 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
         case None =>
           height
       }
+      if(getChainAfter) // if getChainAfter is true skip a position to return the chain after the input id
+        currentHeight += 1
       while (currentHeight < height && res.size < blockLimit) {
         currentHeight += 1
         res = res :+ dataByHeight(currentHeight).get.getParentId
@@ -94,6 +96,10 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
     else {
       Seq()
     }
+  }
+
+  def chainAfter(id: ID, limit: Option[Int]): Seq[ID] = {
+    chainSince(id, limit, true)
   }
 
   def clear(): Unit = {

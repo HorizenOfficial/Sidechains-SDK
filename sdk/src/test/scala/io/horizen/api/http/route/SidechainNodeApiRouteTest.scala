@@ -147,6 +147,82 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
+    "reply at /blacklistedPeers" in {
+      Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("addresses").isArray)
+        val nodes = result.get("addresses").elements().asScala.toArray
+        assertEquals(nodes(0).textValue(), inetAddrBlackListed_1.getAddress.toString)
+        assertEquals(nodes(1).textValue(), inetAddrBlackListed_2.getAddress.toString)
+      }
+      // api error
+      sidechainApiMockConfiguration.setShould_peerManager_GetBlacklistedPeers_reply(false)
+      Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
+    "reply at /peer" in {
+      // 2 peers
+      peers.foreach(pair => {
+        Post(basePath + "peer").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress(pair._1.toString))) ~> sidechainNodeApiRoute ~> check {
+          status.intValue() shouldBe StatusCodes.OK.intValue
+          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+          val result = mapper.readTree(entityAs[String]).get("result")
+          if (result == null)
+            fail("Serialization failed for object SidechainApiResponseBody")
+
+          assertEquals(1, result.elements().asScala.length)
+          assertTrue(result.get("peer").isObject)
+
+          assertEquals(pair._1.toString, result.get("peer").get("remoteAddress").textValue())
+          assertEquals(pair._2.lastHandshake, result.get("peer").get("lastHandshake").asLong())
+          assertEquals(0, result.get("peer").get("lastMessage").asLong())
+          assertEquals(pair._2.peerSpec.nodeName, result.get("peer").get("name").textValue())
+          assertEquals(pair._2.peerSpec.agentName, result.get("peer").get("agentName").textValue())
+          assertEquals(pair._2.peerSpec.protocolVersion.toString, result.get("peer").get("protocolVersion").textValue())
+          assertEquals(pair._2.connectionType.get.toString, result.get("peer").get("connectionType").textValue())
+        }
+      })
+    }
+
+    "reply at /addToBlacklist" in {
+      // 2 peers
+      Post(basePath + "addToBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqAddToBlacklist("92.92.92.92:27017", 40))) ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertEquals(result, null)
+      }
+    }
+
+    "reply at /removeFromBlacklist" in {
+      // 2 peers
+      Post(basePath + "removeFromBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("/92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertEquals(result, null)
+      }
+    }
+
+    "reply at /removePeer" in {
+      // 2 peers
+      Post(basePath + "removePeer").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("/92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertEquals(result, null)
+      }
+    }
+
     "reply at /connect" in {
       // valid host
       Post(basePath + "connect")
@@ -170,28 +246,6 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
 
       Post(basePath + "connect").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.Unauthorized.intValue
-      }
-    }
-
-    "reply at /blacklistedPeers" in {
-      Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("addresses").isArray)
-        val nodes = result.get("addresses").elements().asScala.toArray
-        assertEquals(nodes(0).textValue(), inetAddrBlackListed_1.getAddress.toString)
-        assertEquals(nodes(1).textValue(), inetAddrBlackListed_2.getAddress.toString)
-      }
-      // api error
-      sidechainApiMockConfiguration.setShould_peerManager_GetBlacklistedPeers_reply(false)
-      Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 
