@@ -170,9 +170,13 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         ret = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret)
 
-        assert_true(len(ret['mcAddresses']) == 2)
-        assert_true(taddr1 in ret['mcAddresses'])
-        assert_true(taddr2 in ret['mcAddresses'])
+        # check we have just one sc address association
+        assert_true(len(ret['keysOwnership']) == 1)
+        # check we have two mc address associated to sc address
+        assert_true(len(ret['keysOwnership'][sc_address]) == 2)
+        # check we have exactly those mc address
+        assert_true(taddr1 in ret['keysOwnership'][sc_address])
+        assert_true(taddr2 in ret['keysOwnership'][sc_address])
 
         ret = removeKeysOwnership(sc_node,
                                  sc_address=sc_address,
@@ -185,9 +189,19 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         ret = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret)
 
-        assert_true(len(ret['mcAddresses']) == 1)
-        assert_true(taddr1 in ret['mcAddresses'])
-        assert_true(taddr2 not in ret['mcAddresses'])
+        # check we have just one sc address association
+        assert_true(len(ret['keysOwnership']) == 1)
+        # check we have only one mc address associated to sc address
+        assert_true(len(ret['keysOwnership'][sc_address]) == 1)
+        # check we have exactly that mc address
+        assert_true(taddr1 in ret['keysOwnership'][sc_address])
+        assert_true(taddr2 not in ret['keysOwnership'][sc_address])
+
+        # get association for a sc address not yet associated to any mc address
+        ret = getKeysOwnership(sc_node, sc_address=sc_address2)
+        pprint.pprint(ret)
+        # check we have no association for this sc address
+        assert_true(len(ret['keysOwnership']) == 0)
 
         # negative cases
         # 1. try to add the an ownership already there
@@ -312,10 +326,13 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         ret = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret)
 
+        # check we have just one sc address association
+        assert_true(len(ret['keysOwnership']) == 1)
         # check we have the previous 2 mc addresses plus 10 just associated
-        assert_true(len(ret['mcAddresses']) == 12)
+        assert_true(len(ret['keysOwnership'][sc_address]) == 12)
         for taddr in taddr_list:
-            assert_true(taddr in ret['mcAddresses'])
+            assert_true(taddr in ret['keysOwnership'][sc_address])
+
 
         # remove an mc addr and check we have 11 of them
         taddr_rem = taddr_list[4]
@@ -334,9 +351,12 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         ret = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(ret)
 
-        assert_true(len(ret['mcAddresses']) == 11)
+        # check we have just one sc address association
+        assert_true(len(ret['keysOwnership']) == 1)
+        # check we have the expected number
+        assert_true(len(ret['keysOwnership'][sc_address]) == 11)
         for taddr in taddr_list:
-            assert_true(taddr in ret['mcAddresses'])
+            assert_true(taddr in ret['keysOwnership'][sc_address])
 
         # add an association for a different sc address
         taddr_sc2 = mc_node.getnewaddress()
@@ -367,6 +387,16 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check the receipt has a status failed
         forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=0)
 
+        ret = getKeysOwnership(sc_node)
+        pprint.pprint(ret)
+
+        # check we have two sc address associations
+        assert_true(len(ret['keysOwnership']) == 2)
+        # check we have the expected numbers
+        assert_true(len(ret['keysOwnership'][sc_address]) == 11)
+        assert_true(len(ret['keysOwnership'][sc_address2]) == 1)
+        assert_true(taddr_sc2 in ret['keysOwnership'][sc_address2])
+
         # execute native smart contract for getting all associations
         method = 'getAllKeyOwnerships()'
         abi_str = function_signature_to_4byte_selector(method)
@@ -386,6 +416,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
         exp_len = 32 + 32 + 12*(3*32)
         assert_equal(resultStringLength, 2*exp_len)
+
+
 
 if __name__ == "__main__":
     SCEvmMcAddressOwnership().main()

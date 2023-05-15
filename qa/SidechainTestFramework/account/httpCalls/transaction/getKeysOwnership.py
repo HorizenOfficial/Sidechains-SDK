@@ -1,9 +1,9 @@
 import json
 
 
-def getKeysOwnership(sidechainNode, *, sc_address, api_key=None):
+def getKeysOwnership(sidechainNode, *, sc_address=None, api_key=None):
     j = {
-            "scAddress" : sc_address
+            "scAddressOpt" : sc_address
     }
 
     request = json.dumps(j)

@@ -867,13 +867,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
           withNodeView { sidechainNodeView =>
             val accountState = sidechainNodeView.getNodeState
-            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(body.scAddress)
+            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(body.scAddressOpt)
 
-            if (listOfMcAddrOwnerships.nonEmpty) {
-              ApiResponseUtil.toResponse(RespMcAddresses(listOfMcAddrOwnerships.map(_.mcTransparentAddress).toList))
-            } else {
-              ApiResponseUtil.toResponse(RespMcAddresses(Seq().toList))
+            val resultMap = listOfMcAddrOwnerships.groupBy(_.scAddress).map {
+              case (k,v) => (k,v.map(_.mcTransparentAddress))
             }
+
+            ApiResponseUtil.toResponse(RespMcAddrOwnership(resultMap))
+
           }
         }
       }
@@ -983,7 +984,7 @@ object AccountTransactionRestScheme {
   private[horizen] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class RespMcAddresses(mcAddresses: List[String]) extends SuccessResponse
+  private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private [api] case class RespForgerInfo(
@@ -1076,8 +1077,8 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class ReqGetMcAddrOwnership(scAddress: Option[String]) {
-    require(scAddress != null, "SC address must be provided")
+  private[horizen] case class ReqGetMcAddrOwnership(scAddressOpt: Option[String]) {
+    require(scAddressOpt != null, "SC address opt must be provided")
   }
 
   @JsonView(Array(classOf[Views.Default]))
