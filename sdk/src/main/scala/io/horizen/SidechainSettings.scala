@@ -140,4 +140,12 @@ case class SidechainSettings(
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
-)
+){
+  require(sparkzSettings.network.handlingTransactionsEnabled || (!forger.automaticForging &&
+    !withdrawalEpochCertificateSettings.submitterIsEnabled && !withdrawalEpochCertificateSettings.certificateSigningIsEnabled),
+    s"Node that does not support transaction handling cannot be forger, certificate submitter or certificate signer: " +
+      s"automaticForging: ${forger.automaticForging}, " +
+      s"submitterIsEnable: ${withdrawalEpochCertificateSettings.submitterIsEnabled}, " +
+      s"certificateSigningIsEnabled: ${withdrawalEpochCertificateSettings.certificateSigningIsEnabled}")
+
+}
