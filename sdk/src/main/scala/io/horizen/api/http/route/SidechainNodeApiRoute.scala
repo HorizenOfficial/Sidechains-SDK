@@ -200,7 +200,7 @@ case class SidechainNodeApiRoute[
             nonExecTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
             execTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
 
-            withdrawalEpochNum = viewAccount.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch //not sure what this is
+            withdrawalEpochNum = viewAccount.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch
 
             consensusEpoch = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.epoch
             epochForgersStake = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.forgersStake
