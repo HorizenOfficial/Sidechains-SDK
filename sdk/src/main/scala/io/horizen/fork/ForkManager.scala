@@ -1,5 +1,7 @@
 package io.horizen.fork
 
+import scala.reflect.ClassTag
+
 object ForkManager {
   private var initialized = false
 
@@ -16,7 +18,7 @@ object ForkManager {
   /**
    * List of optional sidechain forks, these are configured by the sidechain.
    */
-  private var optionalSidechainForks: Seq[MandatorySidechainFork] = Seq()
+  private var optionalSidechainForks: Map[Int, OptionalSidechainFork] = _
 
   /**
    * Finds the latest fork in the given sequence of forks with an activation height less or equal than the given height.
@@ -43,12 +45,19 @@ object ForkManager {
     findActiveFork(sidechainForks, consensusEpoch).orNull
   }
 
+  def getOptionalSidechainFork[T >: Null](consensusEpoch: Int)(implicit tag: ClassTag[T]): T = {
+    assertInitialized()
+    val forksOfTypeT = optionalSidechainForks.collect({ case (i, fork: T) => (i, fork) })
+    findActiveFork(forksOfTypeT, consensusEpoch).orNull
+  }
+
   def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
     if (initialized) throw new IllegalStateException("ForkManager is already initialized.")
 
     // preselect the network as it cannot change during runtime
     mainchainForks = ForkUtil.selectNetwork(networkName, MainchainFork.forks)
-    sidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.getMandatorySidechainForks)
+    sidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.mandatorySidechainForks)
+    optionalSidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.optionalSidechainForks)
 
     initialized = true
   }
