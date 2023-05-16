@@ -200,7 +200,8 @@ class SidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = if (sidechainSettings.apiRateLimiter.enabled) {
-    SidechainTransactionRateLimiterActorRef(nodeViewHolderRef, sidechainSettings.apiRateLimiter)
+    val rateLimiterActorRef: ActorRef = SidechainTransactionRateLimiterActorRef(nodeViewHolderRef, sidechainSettings.apiRateLimiter)
+    SidechainTransactionActorRef(rateLimiterActorRef)
   } else {
     SidechainTransactionActorRef(nodeViewHolderRef)
   }
