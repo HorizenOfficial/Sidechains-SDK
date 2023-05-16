@@ -219,10 +219,6 @@ case class SidechainNodeApiRoute[
               case _ =>
             }
           case viewSidechain:SidechainNodeView =>
-            nonExecTransactionSize = viewSidechain.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].size
-            execTransactionSize = viewSidechain.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes
-            execTransactionSize = viewSidechain.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage
-
             withdrawalEpochNum = viewSidechain.getNodeState.asInstanceOf[SidechainState].getWithdrawalEpochInfo.epoch
 
             consensusEpoch = viewSidechain.getNodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo._2.epoch
