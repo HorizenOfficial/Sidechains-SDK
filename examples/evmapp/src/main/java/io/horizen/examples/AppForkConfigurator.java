@@ -1,14 +1,12 @@
 package io.horizen.examples;
 
-import io.horizen.account.fork.GasFeeFork$;
+import io.horizen.account.fork.GasFeeFork;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.fork.OptionalSidechainFork;
 import io.horizen.fork.SidechainForkConsensusEpoch;
-import scala.Predef;
-import scala.collection.JavaConverters;
-import scala.collection.immutable.Map;
+import io.horizen.utils.Pair;
 
-import java.util.HashMap;
+import java.util.List;
 
 public class AppForkConfigurator extends ForkConfigurator {
     @Override
@@ -17,9 +15,9 @@ public class AppForkConfigurator extends ForkConfigurator {
     }
 
     @Override
-    public Map<SidechainForkConsensusEpoch, OptionalSidechainFork> getOptionalSidechainForks() {
-        var forks = new HashMap<SidechainForkConsensusEpoch, OptionalSidechainFork>();
-        forks.put(new SidechainForkConsensusEpoch(0, 0, 0), GasFeeFork$.MODULE$.DefaultGasFeeFork());
-        return JavaConverters.mapAsScalaMapConverter(forks).asScala().toMap(Predef.$conforms());
+    public List<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>> getOptionalSidechainForks() {
+        return List.of(
+            new Pair<>(new SidechainForkConsensusEpoch(0, 0, 0), GasFeeFork.DefaultGasFeeFork())
+        );
     }
 }

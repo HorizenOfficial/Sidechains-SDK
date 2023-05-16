@@ -1,5 +1,9 @@
 package io.horizen.fork
 
+import io.horizen.utils.Pair
+
+import java.util
+import scala.jdk.CollectionConverters.asScalaBufferConverter
 import scala.util.Try
 
 abstract class ForkConfigurator {
@@ -10,21 +14,22 @@ abstract class ForkConfigurator {
   val fork1activation: SidechainForkConsensusEpoch
 
   /**
-   * Return the map of configured activations to mandatory sidechain forks.
+   * Return the map of configured consensus epoch numbers to mandatory sidechain forks.
    */
   final lazy val mandatorySidechainForks: Map[SidechainForkConsensusEpoch, MandatorySidechainFork] =
     MandatorySidechainFork.forks(fork1activation)
 
   /**
-   * Return the map of optional sidechain forks and their activations.
+   * Return the map of optional sidechain forks and their consensus epoch numbers.
    */
   final lazy val optionalSidechainForks: Map[SidechainForkConsensusEpoch, OptionalSidechainFork] =
-    OptionalSidechainFork.forks(getOptionalSidechainForks)
+    OptionalSidechainFork.forks(getOptionalSidechainForks.asScala.map(x => (x.getKey, x.getValue)).toMap)
 
   /**
-   * TODO: refactor somehow, because the scala Map is ugly to work with in Java
+   * Return a list of optional forks with their consensus epoch numbers.
    */
-  def getOptionalSidechainForks: Map[SidechainForkConsensusEpoch, OptionalSidechainFork] = Map()
+  def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+    new util.ArrayList()
 
   final def check(): Try[Unit] = Try {
     // fork configurations are validated on first access

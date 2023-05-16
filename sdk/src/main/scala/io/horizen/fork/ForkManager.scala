@@ -45,10 +45,10 @@ object ForkManager {
     findActiveFork(sidechainForks, consensusEpoch).orNull
   }
 
-  def getOptionalSidechainFork[T >: Null](consensusEpoch: Int)(implicit tag: ClassTag[T]): T = {
+  def getOptionalSidechainFork[T <: OptionalSidechainFork](consensusEpoch: Int)(implicit tag: ClassTag[T]): Option[T] = {
     assertInitialized()
     val forksOfTypeT = optionalSidechainForks.collect({ case (i, fork: T) => (i, fork) })
-    findActiveFork(forksOfTypeT, consensusEpoch).orNull
+    findActiveFork(forksOfTypeT, consensusEpoch)
   }
 
   def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
