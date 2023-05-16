@@ -7,7 +7,6 @@ import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageV
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.AccountState
-import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import io.horizen.api.http.route.SidechainNodeRestSchema._
@@ -22,7 +21,6 @@ import io.horizen.utils.BytesUtils
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.node.SidechainNodeView
 import io.horizen.utxo.state.SidechainState
-import io.horizen.wallet.AbstractWallet
 import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
 import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
@@ -38,7 +36,7 @@ import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
-import scala.io.{BufferedSource, Source}
+import scala.io.Source
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
@@ -184,7 +182,9 @@ case class SidechainNodeApiRoute[
 
         val lastScBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
         val lastScBlock = nodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
-        val lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
+        var lastMcBlockReferenceHash = ""
+        if (!lastScBlock.isEmpty)
+          lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
 
         var withdrawalEpochNum = -1
         var consensusEpoch = -1
@@ -264,7 +264,7 @@ case class SidechainNodeApiRoute[
           scWithdrawalEpochLength = Option(params.withdrawalEpochLength),
           scWithdrawalEpochNum = if (withdrawalEpochNum != -1) Option(withdrawalEpochNum) else Option.empty,
           scEnv = Option(scEnv),
-          lastMcBlockReferenceHash = Option(lastMcBlockReferenceHash),
+          lastMcBlockReferenceHash = if (lastMcBlockReferenceHash != "") Option(lastMcBlockReferenceHash) else Option.empty,
           numberOfPeers = Option(allPeersNum),
           numberOfConnectedPeers = Option(connectedToNum),
           numberOfBlacklistedPeers = Option(blacklistedNum),
