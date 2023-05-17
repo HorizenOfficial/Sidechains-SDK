@@ -392,7 +392,7 @@ class SidechainInfo(object):
                 raise RuntimeError("\n===> Error: could not handle --debugnode option. "
                                    "It should be --debugnode=[sc_idx,node_idx]")
             sc_idx = int(args[0])
-            if not (0 <= sc_idx < SidechainInfo.num_of_sidechains - 1):
+            if not (0 <= sc_idx < SidechainInfo.num_of_sidechains):
                 raise RuntimeError(
                     "\n===> Error: could not handle --debugnode option. Sidechain index {} out of range [{}, {}]"
                     .format(sc_idx, 0, SidechainInfo.num_of_sidechains - 1))
