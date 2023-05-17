@@ -264,7 +264,8 @@ class SidechainInfo(object):
                  cert_sig_threshold=5,
                  # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
                  # If no value for given Node N index is present then the default value is assigned later: range(7)
-                 submitters_private_keys_indexes=[]
+                 submitters_private_keys_indexes=[],
+                 magic_bytes=None
                  ):
 
         super().__init__()
@@ -300,6 +301,7 @@ class SidechainInfo(object):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.submitters_private_keys_indexes = submitters_private_keys_indexes
+        self.magic_bytes = magic_bytes if magic_bytes is not None else list(os.urandom(4))
 
     def sc_setup_nodes_configuration(self, mc_node):
         sc_nodes_configuration = []
@@ -318,7 +320,8 @@ class SidechainInfo(object):
                 if self.websocket_server_ports[x] is not None else 0,
                 cert_submitter_enabled=(x == 0),  # last first is a submitter
                 submitter_private_keys_indexes=self.submitters_private_keys_indexes[x]
-                if len(self.submitters_private_keys_indexes) > x else None
+                if len(self.submitters_private_keys_indexes) > x else None,
+                magic_bytes=self.magic_bytes
             ))
 
         return sc_nodes_configuration
@@ -430,7 +433,8 @@ class UTXOSidechainInfo(SidechainInfo):
                  websocket_server_ports=[],
                  cert_max_keys=7,
                  cert_sig_threshold=5,
-                 submitters_private_keys_indexes=[]
+                 submitters_private_keys_indexes=[],
+                 magic_bytes=None
                  ):
 
         super().__init__(
@@ -451,7 +455,8 @@ class UTXOSidechainInfo(SidechainInfo):
                          websocket_server_ports,
                          cert_max_keys,
                          cert_sig_threshold,
-                         submitters_private_keys_indexes)
+                         submitters_private_keys_indexes,
+                         magic_bytes)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes,
@@ -482,6 +487,7 @@ class AccountSidechainInfo(SidechainInfo):
                  cert_max_keys=7,
                  cert_sig_threshold=5,
                  submitters_private_keys_indexes=[],
+                 magic_bytes=None,
                  allow_unprotected_txs=True,
                  max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
                  max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
@@ -508,7 +514,8 @@ class AccountSidechainInfo(SidechainInfo):
                          websocket_server_ports,
                          cert_max_keys,
                          cert_sig_threshold,
-                         submitters_private_keys_indexes)
+                         submitters_private_keys_indexes,
+                         magic_bytes)
         self.allow_unprotected_txs = allow_unprotected_txs
         self.max_nonce_gap = max_nonce_gap
         self.max_account_slots = max_account_slots

@@ -508,6 +508,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'KNOWN_PEERS': json.dumps(sc_node_config.known_peers),
         'STORAGE_BACKUP_INTERVAL': json.dumps(sc_node_config.storage_backup_interval),
         'STORAGE_BACKUP_DELAY': json.dumps(sc_node_config.storage_backup_delay),
+        'MAGIC_BYTES': sc_node_config.magic_bytes,
         'ALLOW_UNPROTECTED_TXS': json.dumps(sc_node_config.allow_unprotected_txs),
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
