@@ -543,7 +543,9 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
-        'TX_LIFETIME': sc_node_config.tx_lifetime
+        'TX_LIFETIME': sc_node_config.tx_lifetime,
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
