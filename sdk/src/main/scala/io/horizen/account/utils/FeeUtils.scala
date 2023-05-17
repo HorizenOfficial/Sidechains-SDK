@@ -5,11 +5,9 @@ import io.horizen.account.history.AccountHistory
 import sparkz.core.block.Block.BlockId
 
 import java.math.BigInteger
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 object FeeUtils {
 
-  val GAS_LIMIT: BigInteger = BigInteger.valueOf(30000000L)
   val INITIAL_BASE_FEE: BigInteger = BigInteger.valueOf(1000000000)
   val BASE_FEE_CHANGE_DENOMINATOR: BigInteger = BigInteger.valueOf(8)
   val BASE_FEE_ELASTICITY_MULTIPLIER: BigInteger = BigInteger.valueOf(2)
@@ -19,11 +17,7 @@ object FeeUtils {
     if (parentId == history.params.sidechainGenesisBlockParentId) {
       return INITIAL_BASE_FEE
     }
-
-    history.getBlockById(parentId).asScala match {
-      case None => INITIAL_BASE_FEE
-      case Some(block) => calculateBaseFeeForBlock(block)
-    }
+    history.modifierById(parentId).map(calculateBaseFeeForBlock).getOrElse(INITIAL_BASE_FEE)
   }
 
   def calculateNextBaseFee(block: AccountBlock): BigInteger = {

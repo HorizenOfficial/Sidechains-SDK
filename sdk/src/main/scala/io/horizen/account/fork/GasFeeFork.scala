@@ -1,6 +1,6 @@
 package io.horizen.account.fork
 
-import io.horizen.fork.OptionalSidechainFork
+import io.horizen.fork.{ForkManager, OptionalSidechainFork}
 
 import java.math.BigInteger
 
@@ -12,5 +12,9 @@ case class GasFeeFork(
 ) extends OptionalSidechainFork
 
 object GasFeeFork {
-  def DefaultGasFeeFork: GasFeeFork = GasFeeFork()
+  def get(epochNumber: Int): GasFeeFork = {
+    ForkManager.getOptionalSidechainFork[GasFeeFork](epochNumber).getOrElse(DefaultGasFeeFork)
+  }
+
+  val DefaultGasFeeFork: GasFeeFork = GasFeeFork()
 }

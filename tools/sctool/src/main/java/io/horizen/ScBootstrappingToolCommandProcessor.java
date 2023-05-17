@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.secret.PrivateKeySecp256k1Creator;
 import io.horizen.account.utils.FeeUtils;
 import io.horizen.account.block.AccountBlock;
@@ -914,7 +915,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 BigInteger gasUsed = BigInteger.ZERO;
 
-                BigInteger gasLimit = FeeUtils.GAS_LIMIT();
+                BigInteger gasLimit = GasFeeFork.DefaultGasFeeFork().blockGasLimit();
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 

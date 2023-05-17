@@ -3,6 +3,7 @@ package io.horizen.account.utils
 import io.horizen.SidechainTypes
 import io.horizen.account.api.rpc.types.EthereumTransactionView
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proof.SignatureSecp256k1
@@ -31,7 +32,7 @@ import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
 import io.horizen.utxo.box.Box
-import org.mockito.ArgumentMatchers.{any, anyString}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -284,7 +285,7 @@ case class AccountMockDataHelper(genesis: Boolean)
   def getMockedBlock(
       baseFee: BigInteger = FeeUtils.INITIAL_BASE_FEE,
       gasUsed: Long = 0L,
-      gasLimit: BigInteger = FeeUtils.GAS_LIMIT,
+      gasLimit: BigInteger = DefaultGasFeeFork.blockGasLimit,
       blockId: ModifierId = null,
       parentBlockId: ModifierId = null,
       txs: Seq[SidechainTypes#SCAT] = Seq.empty[SidechainTypes#SCAT]

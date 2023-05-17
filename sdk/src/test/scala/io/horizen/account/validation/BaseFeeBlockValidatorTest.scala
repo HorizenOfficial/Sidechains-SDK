@@ -2,6 +2,7 @@ package io.horizen.account.validation
 
 import io.horizen.account.utils.FeeUtils
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.history.validation.{BaseFeeBlockValidator, InvalidBaseFeeException}
 import io.horizen.account.utils.AccountMockDataHelper
@@ -15,12 +16,12 @@ import java.math.BigInteger
 import scala.util.Random
 
 class BaseFeeBlockValidatorTest extends JUnitSuite {
-  val mockedGenesisBlock: AccountBlock = AccountMockDataHelper(true).getMockedBlock(FeeUtils.INITIAL_BASE_FEE, 0, FeeUtils.GAS_LIMIT, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
+  val mockedGenesisBlock: AccountBlock = AccountMockDataHelper(true).getMockedBlock(FeeUtils.INITIAL_BASE_FEE, 0, DefaultGasFeeFork.blockGasLimit, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
 
   @Test
   def genesisBlockCheck(): Unit = {
     val mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
-    val mockedBlock: AccountBlock = mockHelper.getMockedBlock(BigInteger.ZERO, 0, FeeUtils.GAS_LIMIT, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
+    val mockedBlock: AccountBlock = mockHelper.getMockedBlock(BigInteger.ZERO, 0, DefaultGasFeeFork.blockGasLimit, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
     val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(Some(mockedGenesisBlock))
 
     // Test 1: Successful validation, block is genesis block with initial base fee
