@@ -160,7 +160,8 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.regtestId,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
     )
 
     case "testnet" => TestNetParams(
@@ -188,7 +189,8 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.testnetId,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
     )
 
     case "mainnet" => MainNetParams(
@@ -216,7 +218,8 @@ abstract class AbstractSidechainApp
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       chainId = chainInfo.mainnetId,
       isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing
+      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }

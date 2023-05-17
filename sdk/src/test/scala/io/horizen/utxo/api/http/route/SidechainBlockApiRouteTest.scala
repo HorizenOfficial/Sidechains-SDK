@@ -8,6 +8,7 @@ import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.forge.ForgingInfo
 import io.horizen.json.SerializationUtil
+import io.horizen.params.MainNetParams
 import org.junit.Assert._
 import sparkz.util.bytesToId
 
@@ -372,5 +373,39 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", JOptional.empty()).code)
       }
     }
+  }
+
+  "When isHandlingTransactionsEnabled = false API " should {
+    val params = MainNetParams(isHandlingTransactionsEnabled = false)
+    val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef,
+      mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
+
+    "Failed reply at /startForging" in {
+
+      Post(basePath + "startForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "Failed reply at /stopForging" in {
+
+      Post(basePath + "stopForging").addCredentials(credentials) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "Failed reply at /generate" in {
+      Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 2}") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+
   }
 }

@@ -204,6 +204,40 @@ object AccountSidechainNodeViewHolder {
 }
 
 object AccountNodeViewHolderRef {
+
+  private def createNodeViewHolder(sidechainSettings: SidechainSettings,
+                                   historyStorage: AccountHistoryStorage,
+                                   consensusDataStorage: ConsensusDataStorage,
+                                   stateMetadataStorage: AccountStateMetadataStorage,
+                                   stateDbStorage: Database,
+                                   customMessageProcessors: Seq[MessageProcessor],
+                                   secretStorage: SidechainSecretStorage,
+                                   params: NetworkParams,
+                                   timeProvider: NetworkTimeProvider,
+                                   genesisBlock: AccountBlock): AccountSidechainNodeViewHolder = {
+    if (params.isHandlingTransactionsEnabled)
+      new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+        consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)
+    else
+      new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+        consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock){
+
+        override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock],
+                                             memPool: AccountMemoryPool, state: AccountState): AccountMemoryPool = memPool
+
+        override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
+          newTxs.foreach { tx =>
+            context.system.eventStream.publish(
+              FailedTransaction(
+                tx.id,
+                new Exception("Transactions handling disabled"),
+                immediateFailure = false // This won't penalize the sender, because there can be legacy nodes that don't support seeder nodes as peer
+              )
+            )
+          }
+        }
+      }
+  }
   def props(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
@@ -214,8 +248,8 @@ object AccountNodeViewHolderRef {
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
-    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
-      consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
+    Props(createNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
