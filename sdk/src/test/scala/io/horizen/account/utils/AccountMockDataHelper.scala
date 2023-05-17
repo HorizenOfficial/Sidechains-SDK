@@ -24,7 +24,7 @@ import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, StateDB}
 import io.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import io.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import io.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.proposition.Proposition
 import io.horizen.secret.{Secret, SecretSerializer}
 import io.horizen.storage.{SidechainSecretStorage, Storage}
@@ -230,6 +230,9 @@ case class AccountMockDataHelper(genesis: Boolean)
     ))
 
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
+    val regTestParams = RegTestParams()
+    Mockito.when(history.params.consensusSecondsInSlot).thenReturn(regTestParams.consensusSecondsInSlot)
+    Mockito.when(history.params.consensusSlotsInEpoch).thenReturn(regTestParams.consensusSlotsInEpoch)
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
@@ -243,6 +246,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.getBlockById(any())).thenReturn(Optional.empty[AccountBlock])
     Mockito.when(history.getBlockById(blockId)).thenReturn(Optional.of(block.get))
+    Mockito.when(history.modifierById(blockId)).thenReturn(block)
 
     Mockito.when(history.getStorageBlockById(any())).thenReturn(None)
     Mockito.when(history.getStorageBlockById(blockId)).thenReturn(Some(block.get))
@@ -343,6 +347,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(block.bytes).thenReturn(new Array[Byte](256))
     Mockito.when(block.header.vrfOutput).thenReturn(VrfGenerator.generateVrfOutput(1111))
     Mockito.when(block.timestamp).thenReturn(1000000000L)
+    Mockito.when(block.header.timestamp).thenReturn(1000000000L)
     block
   }
 
@@ -375,7 +380,7 @@ case class AccountMockDataHelper(genesis: Boolean)
 
       override def getIntermediateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
     }
-    Mockito.when(state.params).thenReturn(TestNetParams())
+    Mockito.when(state.params).thenReturn(RegTestParams())
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))

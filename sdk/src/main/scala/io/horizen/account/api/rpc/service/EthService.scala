@@ -46,7 +46,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
@@ -701,7 +700,7 @@ class EthService(
     pendingStateView.updateTransactionReceipts(receiptList)
 
     // update next base fee
-    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block))
+    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block, networkParams))
 
     pendingStateView
   }
@@ -1026,7 +1025,7 @@ class EthService(
           }
         }
         // calculate baseFee for the next block after the requested range
-        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock, networkParams)
 
         new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
       }

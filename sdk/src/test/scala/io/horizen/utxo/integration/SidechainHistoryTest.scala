@@ -55,8 +55,7 @@ class SidechainHistoryTest extends JUnitSuite
 
   @Before
   def setUp(): Unit = {
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 

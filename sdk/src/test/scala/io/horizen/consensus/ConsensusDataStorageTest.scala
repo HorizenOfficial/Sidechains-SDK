@@ -15,8 +15,7 @@ class ConsensusDataStorageTest {
 
   @Before
   def init(): Unit = {
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test

@@ -53,7 +53,7 @@ trait AccountBlockHeaderFixture {
     val unsignedHeader = AccountBlockHeader(
       blockVersion,
       bytesToId(parentId),
-      random.nextInt(100) + 10000,
+      random.nextInt(100) + 90000,
       forgingStakeInfo,
       merklePath,
       vrfProof,

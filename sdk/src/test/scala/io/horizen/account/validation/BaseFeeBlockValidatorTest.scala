@@ -1,22 +1,27 @@
 package io.horizen.account.validation
 
-import io.horizen.account.utils.FeeUtils
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.history.validation.{BaseFeeBlockValidator, InvalidBaseFeeException}
-import io.horizen.account.utils.AccountMockDataHelper
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.horizen.account.utils.{AccountMockDataHelper, FeeUtils}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.util.bytesToId
 import org.web3j.utils.Numeric
+import sparkz.util.bytesToId
 
 import java.math.BigInteger
-import scala.util.Random
+import scala.util.{Random, Success}
 
 class BaseFeeBlockValidatorTest extends JUnitSuite {
   val mockedGenesisBlock: AccountBlock = AccountMockDataHelper(true).getMockedBlock(FeeUtils.INITIAL_BASE_FEE, 0, DefaultGasFeeFork.blockGasLimit, bytesToId(Numeric.hexStringToByteArray("123")), bytesToId(new Array[Byte](32)))
+
+  @Before
+  def init(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+  }
 
   @Test
   def genesisBlockCheck(): Unit = {
@@ -42,7 +47,7 @@ class BaseFeeBlockValidatorTest extends JUnitSuite {
     var mockedBlock: AccountBlock = mockHelper.getMockedBlock(BigInteger.valueOf(875000000), gasUsed, gasLimit, bytesToId(Numeric.hexStringToByteArray("456")), bytesToId(Numeric.hexStringToByteArray("123")))
 
     // Test 1: Successful validation, block is one after genesis block with 12.5% decrease, meaning genesis block was empty
-    assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
+    assertEquals(Success(()), BaseFeeBlockValidator().validate(mockedBlock, mockedHistory))
 
     mockedHistory = mockHelper.getMockedAccountHistory(Some(mockedBlock))
 

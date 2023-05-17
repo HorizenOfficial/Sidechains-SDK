@@ -222,7 +222,7 @@ class AccountState(
       stateView.updateTransactionReceipts(receiptList)
 
       // update next base fee
-      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
+      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod, params))
 
       stateView.commit(idToVersion(mod.id))
 
