@@ -68,12 +68,12 @@ class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkPa
           case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
           // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
           case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.epoch)
           // case we have chain cert for the given epoch return its quality.
           case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
           // case the chain certificate epoch is a newer than submitter epoch thrown an exception
           case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.epoch)
           // no known certs
           case _ => 0
         }
