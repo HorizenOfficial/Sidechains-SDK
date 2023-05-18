@@ -288,7 +288,7 @@ case class SidechainNodeApiRoute[
       errorLogs = source.get.getLines().filter(_.contains("[ERROR]")).toArray
     } catch {
       case e: Exception =>
-        log.error(e.getMessage)
+        log.debug(e.getMessage)
     } finally {
       source.foreach(_.close())
     }
