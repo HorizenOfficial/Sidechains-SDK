@@ -177,6 +177,7 @@ testScriptsUtxo=(
     'sc_mempool_min_fee_rate.py'
     'sc_multiple_certs.py'
     'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_multiple_cert_submitters.py'
     'sc_multiple_pending_certs_non_ceasing.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
