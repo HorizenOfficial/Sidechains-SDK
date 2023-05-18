@@ -409,34 +409,7 @@ abstract class AbstractCertificateSubmitter[
                   proofWithQuality.getValue
                 } try to send it to mainchain")
 
-                // check if there are already certificates present in mempool for current or higher epoch
-                var isCertificateAlreadyPresent = false
-                mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
-                  case Success(mcRefTry) =>
-                    (mcRefTry.mempoolCertInfo, mcRefTry.chainCertInfo) match {
-                      case (Some(mcInfo), Some(ccInfo)) =>
-                        if ((mcInfo.epoch >= certificateRequest.epochNumber && mcInfo.certHash != null) || (ccInfo.epoch >= certificateRequest.epochNumber && ccInfo.certHash != null)) {
-                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
-                          isCertificateAlreadyPresent = true
-                        }
-                      case (Some(mcInfo), _) =>
-                        if (mcInfo.epoch >= certificateRequest.epochNumber && mcInfo.certHash != null) {
-                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
-                          isCertificateAlreadyPresent = true
-                        }
-                      case (_, Some(ccInfo)) =>
-                        if (ccInfo.epoch >= certificateRequest.epochNumber && ccInfo.certHash != null) {
-                          log.info(s"Submission not needed. Certificate already present in epoch " + dataForProofGeneration.referencedEpochNumber)
-                          isCertificateAlreadyPresent = true
-                        }
-                      case _ =>
-                        log.info("Top quality certificate is empty. Trying to send the new certificate anyway.")
-                    }
-                  case Failure(_) =>
-                    log.info("Check for top quality certificates before sending it failed. Trying to send the new certificate anyway.")
-                }
-
-                if (!isCertificateAlreadyPresent)
+                if (submissionStrategy.checkQuality(status))
                   mainchainChannel.sendCertificate(certificateRequest) match {
                     case Success(certificate) =>
                       log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))

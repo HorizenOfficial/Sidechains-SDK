@@ -36,7 +36,7 @@ Test:
     - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
     - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
     - check epoch 0 certificate with not backward transfers in the MC mempool
-    - check that only one SC node forged certificate successfuly, and the other one contains 'submission not needed message'
+    - check that only one SC node forged certificate successfully, and the other one contains 'submission not needed message'
 """
 
 
