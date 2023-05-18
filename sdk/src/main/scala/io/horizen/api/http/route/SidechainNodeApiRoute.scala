@@ -271,7 +271,7 @@ case class SidechainNodeApiRoute[
           nonExecutableTxSize = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(nonExecTransactionSize) else Option.empty,
           lastCertQuality = if (certQuality != -1) Option(certQuality) else Option.empty,
           lastCertEpoch = if (certEpoch != -1) Option(certEpoch) else Option.empty,
-          lastCertBtrFree = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
+          lastCertBtrFee = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
           lastCertFtMinAmount = if (certFtMinAmount != -1) Option(certFtMinAmount) else Option.empty,
           lastCertHash = if (certHash != "") Option(certHash) else Option.empty,
           errors = if (errorLines != null) Option(errorLines) else Option.empty
@@ -555,7 +555,7 @@ object SidechainNodeRestSchema {
                                          nonExecutableTxSize: Option[Int],
                                          lastCertEpoch : Option[Int],
                                          lastCertQuality : Option[Long],
-                                         lastCertBtrFree : Option[Long],
+                                         lastCertBtrFee : Option[Long],
                                          lastCertFtMinAmount : Option[Long],
                                          lastCertHash : Option[String],
                                          errors: Option[Array[String]]

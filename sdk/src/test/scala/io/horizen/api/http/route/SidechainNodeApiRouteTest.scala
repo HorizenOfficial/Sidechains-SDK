@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodReject
 import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.api.http.route.SidechainNodeRestSchema._
 import io.horizen.json.SerializationUtil
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.{assertEquals, assertNotNull, assertTrue}
 
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
@@ -15,6 +15,46 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
   override val basePath = "/node/"
 
   "The Api should to" should {
+
+    "reply at /info" in {
+      Post(basePath + "info") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object RespNodeInfo")
+
+        assertEquals(26, result.elements().asScala.length)
+        assertTrue(result.isObject)
+
+        assertEquals("node0", result.get("nodeName").textValue())
+        assertEquals("signer,submitter", result.get("nodeType").textValue())
+        assertEquals("0.0.1", result.get("protocolVersion").textValue())
+        assertEquals("2-Hop", result.get("agentName").textValue())
+        assertNotNull(result.get("sdkVersion").textValue())
+        assertNotNull(result.get("scId").textValue())
+        assertEquals("ceasing", result.get("scType").textValue())
+        assertEquals("UTXO", result.get("scModel").textValue())
+        assertEquals(230, result.get("scBlockHeight").asLong())
+        assertEquals(3, result.get("scConsensusEpoch").asLong())
+        assertEquals(300000, result.get("epochForgersStake").asLong())
+        assertEquals(100, result.get("scWithdrawalEpochLength").asLong())
+        assertEquals(1, result.get("scWithdrawalEpochNum").asLong())
+        assertEquals("unit test", result.get("scEnv").textValue())
+        assertEquals("0000000000000000000000000000000000000000000000000000000000000000", result.get("lastMcBlockReferenceHash").textValue())
+        assertEquals(3, result.get("numberOfPeers").asLong())
+        assertEquals(2, result.get("numberOfConnectedPeers").asLong())
+        assertEquals(2, result.get("numberOfBlacklistedPeers").asLong())
+        assertEquals(0, result.get("numOfTxInMempool").asLong())
+        assertEquals(128, result.get("mempoolUsedSizeKBytes").asLong())
+        assertEquals(4, result.get("mempoolUsedPercentage").asLong())
+        assertEquals(3, result.get("lastCertEpoch").asLong())
+        assertEquals(6, result.get("lastCertQuality").asLong())
+        assertEquals(241, result.get("lastCertBtrFee").asLong())
+        assertEquals(21, result.get("lastCertFtMinAmount").asLong())
+        assertEquals("0000000000000000000000000000000000000000000000000000000000000000", result.get("lastCertHash").textValue())
+      }
+    }
 
     "reject and reply with http error" in {
       Get(basePath).addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
