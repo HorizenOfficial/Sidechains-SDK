@@ -143,6 +143,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
     val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
     Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+    Mockito.when(mockedSparkzSettings.logDir).thenAnswer(_ => File.createTempFile("tmp", ""))
     mockedSparkzSettings
   })
   Mockito.when(mockedSidechainSettings.logInfo).thenAnswer(_ => LogInfoSettings())

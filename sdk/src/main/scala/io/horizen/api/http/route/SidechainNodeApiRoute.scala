@@ -248,7 +248,7 @@ case class SidechainNodeApiRoute[
           nodeType = Option(nodeTypes),
           protocolVersion = Option(protocolVersion),
           agentName = Option(agentName),
-          sdkVersion = Option(sdkVersion),
+          sdkVersion = if (sdkVersion != null) Option(sdkVersion) else Option.empty,
           scId = Option(sidechainId),
           scType = Option(if (params.isNonCeasing) "non ceasing" else "ceasing"),
           scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option("UTXO") else Option("Account"),
@@ -296,12 +296,16 @@ case class SidechainNodeApiRoute[
   }
 
   private def getSDKVersion: String = {
-    val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
-    val pomFile = new File(sdkPath)
-    val pomXml = XML.loadFile(pomFile)
-    val versionTag = (pomXml \ "version").head
-    val sdkVersion = versionTag.text
-    sdkVersion
+    try {
+      val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
+      val pomFile = new File(sdkPath)
+      val pomXml = XML.loadFile(pomFile)
+      val versionTag = (pomXml \ "version").head
+      return versionTag.text
+    } catch {
+      case e:Throwable => log.error(e.getMessage)
+    }
+    null
   }
 
   private def getNodeTypes: String = {
