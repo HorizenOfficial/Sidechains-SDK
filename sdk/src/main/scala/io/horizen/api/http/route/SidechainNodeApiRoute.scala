@@ -138,8 +138,7 @@ case class SidechainNodeApiRoute[
   }
 
   def nodeInfo: Route = (path("info") & post) {
-    try {
-      applyOnNodeView { nodeView =>
+      withNodeView { sidechainNodeView =>
         var nonExecTransactionSize = 0
         var execTransactionSize = 0
 
@@ -178,10 +177,10 @@ case class SidechainNodeApiRoute[
         Await.result(resultConnected, settings.timeout)
         Await.result(resultAllPeers, settings.timeout)
 
-        val scBlockHeight = nodeView.getNodeHistory.getCurrentHeight
+        val scBlockHeight = sidechainNodeView.getNodeHistory.getCurrentHeight
 
-        val lastScBlockId = nodeView.getNodeHistory.getLastBlockIds(1)
-        val lastScBlock = nodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
+        val lastScBlockId = sidechainNodeView.getNodeHistory.getLastBlockIds(1)
+        val lastScBlock = sidechainNodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
         var lastMcBlockReferenceHash = ""
         if (!lastScBlock.isEmpty)
           lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
@@ -195,7 +194,7 @@ case class SidechainNodeApiRoute[
         var certBtrFee:Long = -1
         var certFtMinAmount:Long = -1
         var certHash:String = ""
-        nodeView match {
+        sidechainNodeView match {
           case viewAccount: AccountNodeView =>
             nonExecTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
             execTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
@@ -205,7 +204,7 @@ case class SidechainNodeApiRoute[
             consensusEpoch = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.epoch
             epochForgersStake = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.forgersStake
 
-            nodeView.getNodeState.asInstanceOf[AccountState].lastCertificateReferencedEpoch match {
+            sidechainNodeView.getNodeState.asInstanceOf[AccountState].lastCertificateReferencedEpoch match {
               case Some(referencedEpoch) =>
                 viewAccount.getNodeState.getTopQualityCertificate(referencedEpoch) match {
                   case Some(cert) =>
@@ -238,7 +237,7 @@ case class SidechainNodeApiRoute[
               case _ =>
             }
         }
-        val numOfTxInMempool = nodeView.getNodeMemoryPool.getSize
+        val numOfTxInMempool = sidechainNodeView.getNodeMemoryPool.getSize
 
         val errorLines:Array[String] = getErrorLogs
         val sdkVersion = getSDKVersion
@@ -252,11 +251,11 @@ case class SidechainNodeApiRoute[
           sdkVersion = Option(sdkVersion),
           scId = Option(sidechainId),
           scType = Option(if (params.isNonCeasing) "non ceasing" else "ceasing"),
-          scModel = if (nodeView.isInstanceOf[SidechainNodeView]) Option("UTXO") else Option("Account"),
+          scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option("UTXO") else Option("Account"),
           scBlockHeight = Option(scBlockHeight),
           scConsensusEpoch = if (consensusEpoch != -1) Option(consensusEpoch) else Option.empty,
           epochForgersStake = if (epochForgersStake != -1) Option(epochForgersStake) else Option.empty,
-          nextBaseFee = if (nodeView.isInstanceOf[AccountNodeView]) Option(nodeView.getNodeState.asInstanceOf[AccountState].getView.getNextBaseFee) else Option.empty,
+          nextBaseFee = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(sidechainNodeView.getNodeState.asInstanceOf[AccountState].getView.getNextBaseFee) else Option.empty,
           scWithdrawalEpochLength = Option(params.withdrawalEpochLength),
           scWithdrawalEpochNum = if (withdrawalEpochNum != -1) Option(withdrawalEpochNum) else Option.empty,
           scEnv = Option(scEnv),
@@ -264,12 +263,12 @@ case class SidechainNodeApiRoute[
           numberOfPeers = Option(allPeersNum),
           numberOfConnectedPeers = Option(connectedToNum),
           numberOfBlacklistedPeers = Option(blacklistedNum),
-          maxMemPoolSlots = if (nodeView.isInstanceOf[AccountNodeView]) Option(app.sidechainSettings.accountMempool.maxMemPoolSlots) else Option.empty,
+          maxMemPoolSlots = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(app.sidechainSettings.accountMempool.maxMemPoolSlots) else Option.empty,
           numOfTxInMempool = Option(numOfTxInMempool),
-          mempoolUsedSizeKBytes = if (nodeView.isInstanceOf[SidechainNodeView]) Option(nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes) else Option.empty,
-          mempoolUsedPercentage = if (nodeView.isInstanceOf[SidechainNodeView]) Option(nodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage) else Option.empty,
-          executableTxSize = if (nodeView.isInstanceOf[AccountNodeView]) Option(execTransactionSize) else Option.empty,
-          nonExecutableTxSize = if (nodeView.isInstanceOf[AccountNodeView]) Option(nonExecTransactionSize) else Option.empty,
+          mempoolUsedSizeKBytes = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option(sidechainNodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes) else Option.empty,
+          mempoolUsedPercentage = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option(sidechainNodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage) else Option.empty,
+          executableTxSize = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(execTransactionSize) else Option.empty,
+          nonExecutableTxSize = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(nonExecTransactionSize) else Option.empty,
           lastCertQuality = if (certQuality != -1) Option(certQuality) else Option.empty,
           lastCertEpoch = if (certEpoch != -1) Option(certEpoch) else Option.empty,
           lastCertBtrFree = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
@@ -278,9 +277,6 @@ case class SidechainNodeApiRoute[
           errors = if (errorLines != null) Option(errorLines) else Option.empty
         ))
       }
-    } catch {
-      case e: Throwable => SidechainApiError(e)
-    }
   }
 
   private def getErrorLogs: Array[String] = {
