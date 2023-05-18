@@ -197,6 +197,7 @@ public final class BytesUtils {
 
     public static final int HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH = 20;
     public static final int HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH = 35;
+    public static final int HORIZEN_MC_SIGNATURE_BASE_64_LENGTH = 88;
 
     private static final int HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH = 2;
     private static final int HORIZEN_PUBLIC_KEY_ADDRESS_CHECKSUM_LENGTH = 4;

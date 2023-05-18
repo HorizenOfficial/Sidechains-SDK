@@ -2,51 +2,49 @@ package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
-import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
-import BigIntegerUInt256.getUnsignedByteArray
-import io.horizen.account.state.McAddrOwnershipData.decodeMcAddress
+import io.horizen.account.state.McAddrOwnershipData.{decodeMcAddress, decodeMcSignature}
 import io.horizen.json.Views
 import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils
-import io.horizen.utils.BytesUtils.padWithZeroBytes
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes3, Bytes32}
+import org.web3j.abi.datatypes.generated.{Bytes24, Bytes3, Bytes32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
-
-import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util
 
 
-case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1)
+case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: String)
   extends ABIEncodable[StaticStruct] {
 
   require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
     s"Invalid mc address length: ${mcTransparentAddress.length}")
 
+  require(mcSignature.length == BytesUtils.HORIZEN_MC_SIGNATURE_BASE_64_LENGTH,
+    s"Invalid mc signature length: ${mcSignature.length}")
+
   override def asABIType(): StaticStruct = {
-    val t_v = getUnsignedByteArray(mcSignature.getV)
-    val t_r = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), Secp256k1.SIGNATURE_RS_SIZE)
-    val t_s = padWithZeroBytes(getUnsignedByteArray(mcSignature.getS), Secp256k1.SIGNATURE_RS_SIZE)
+
 
     val mcAddrBytes = mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
+    val mcSignatureBytes = mcSignature.getBytes(StandardCharsets.UTF_8)
+
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new AbiAddress(scAddress.toString),
       new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
       new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)),
-      new Bytes1(t_v),
-      new Bytes32(t_r),
-      new Bytes32(t_s))
+      new Bytes24(util.Arrays.copyOfRange(mcSignatureBytes, 0, 24)),
+      new Bytes32(util.Arrays.copyOfRange(mcSignatureBytes, 24, 56)),
+      new Bytes32(util.Arrays.copyOfRange(mcSignatureBytes, 56, BytesUtils.HORIZEN_MC_SIGNATURE_BASE_64_LENGTH)))
     new StaticStruct(listOfParams)
+
   }
 
   override def toString: String = "%s(scAddress: %s, mcAddress: %s, signature: %s)"
     .format(
       this.getClass.toString,
-      scAddress.toString, mcTransparentAddress, mcSignature.toString)
+      scAddress.toString, mcTransparentAddress, mcSignature)
 }
 
 object AddNewOwnershipCmdInputDecoder
@@ -61,19 +59,21 @@ object AddNewOwnershipCmdInputDecoder
       new TypeReference[Bytes3]() {},
       new TypeReference[Bytes32]() {},
       // signature
-      new TypeReference[Bytes1]() {},
+      new TypeReference[Bytes24]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {}))
   }
 
+
   override def createType(listOfParams: util.List[Type[_]]): AddNewOwnershipCmdInput = {
     val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
-    val mcTransparentAddrress = decodeMcAddress(listOfParams.get(1).asInstanceOf[Bytes3], listOfParams.get(2).asInstanceOf[Bytes32])
-    val mcSignature = new SignatureSecp256k1(
-      new BigInteger(1, listOfParams.get(3).asInstanceOf[Bytes1].getValue),
-      new BigInteger(1, listOfParams.get(4).asInstanceOf[Bytes32].getValue),
-      new BigInteger(1, listOfParams.get(5).asInstanceOf[Bytes32].getValue)
-    )
+    val mcTransparentAddrress = decodeMcAddress(
+      listOfParams.get(1).asInstanceOf[Bytes3],
+      listOfParams.get(2).asInstanceOf[Bytes32])
+    val mcSignature = decodeMcSignature(
+      listOfParams.get(3).asInstanceOf[Bytes24],
+      listOfParams.get(4).asInstanceOf[Bytes32],
+      listOfParams.get(5).asInstanceOf[Bytes32])
 
     AddNewOwnershipCmdInput(scAddress, mcTransparentAddrress, mcSignature)
   }
@@ -194,6 +194,9 @@ case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
 object McAddrOwnershipData {
   def decodeMcAddress(first3Bytes: Bytes3, last32Bytes: Bytes32): String = {
     new String(first3Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
+  }
+  def decodeMcSignature(first24Bytes: Bytes24, middle32Bytes: Bytes32, last32Bytes: Bytes32): String = {
+    new String(first24Bytes.getValue ++ middle32Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
   }
 }
 

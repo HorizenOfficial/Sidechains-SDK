@@ -169,7 +169,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // verify the ownership validating the signature
-    if (!isValidOwnershipSignature(scAddress, mcTransparentAddress, mcSignature)) {
+    val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
+    if (!isValidOwnershipSignature(scAddress, mcTransparentAddress, mcSignSecp256k1)) {
       throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
     }
 

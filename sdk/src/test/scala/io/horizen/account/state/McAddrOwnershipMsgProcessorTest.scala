@@ -157,7 +157,7 @@ class McAddrOwnershipMsgProcessorTest
 
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, getMcSignature(mcSignatureStr1))
+      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
 
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(
@@ -192,7 +192,7 @@ class McAddrOwnershipMsgProcessorTest
       assertEquals("Wrong number of logs", 0, listOfLogs.length)
 
       // add a second association
-      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, getMcSignature(mcSignatureStr2))
+      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr2)
 
       val data2: Array[Byte] = cmdInput2.encode()
       val msg2 = getMessage(
@@ -335,8 +335,8 @@ class McAddrOwnershipMsgProcessorTest
       // add some mc address associations for sc address 1
       for (i <- 0 until listOfMcAddrSign1.size()) {
         val mcAddr = listOfMcAddrSign1.get(i)._1
-        val mcSig = getMcSignature(listOfMcAddrSign1.get(i)._2)
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSig)
+        val mcSignature = listOfMcAddrSign1.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -355,8 +355,8 @@ class McAddrOwnershipMsgProcessorTest
       // add some mc address associations for sc address 2
       for (i <- 0 until listOfMcAddrSign2.size()) {
         val mcAddr = listOfMcAddrSign2.get(i)._1
-        val mcSig = getMcSignature(listOfMcAddrSign2.get(i)._2)
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj2, mcAddr, mcSig)
+        val mcSignature = listOfMcAddrSign2.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(scAddressObj2, mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -416,8 +416,8 @@ class McAddrOwnershipMsgProcessorTest
       // add some mc sc address associations
       for (i <- 0 until numOfOwnerships) {
         val mcAddr = listOfMcAddrSign1.get(i)._1
-        val mcSig = getMcSignature(listOfMcAddrSign1.get(i)._2)
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSig)
+        val mcSignature = listOfMcAddrSign1.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -462,7 +462,7 @@ class McAddrOwnershipMsgProcessorTest
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, getMcSignature(mcSignatureStr1))
+      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
       val data: Array[Byte] = cmdInput.encode()
 
       val msg = getMessage(
@@ -517,9 +517,7 @@ class McAddrOwnershipMsgProcessorTest
       assertTrue(ex.getMessage.contains("is not the one specified in input"))
 
       // try using a wrong signature
-      var cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1,
-        mcAddrStr2,
-        getMcSignature(mcSignatureStr1))
+      var cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr1)
       var dataBad: Array[Byte] = cmdInputBad.encode()
 
       msgBad = getMessage(
@@ -534,9 +532,7 @@ class McAddrOwnershipMsgProcessorTest
       assertTrue(ex.getMessage.contains("not a valid mc signature"))
 
       // try using a wrong signature
-      cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1,
-        mcAddrStr2,
-        getMcSignature(mcSignatureStr1))
+      cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr1)
       dataBad = cmdInputBad.encode()
 
       msgBad = getMessage(
@@ -554,9 +550,7 @@ class McAddrOwnershipMsgProcessorTest
       val btcAddr = "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
       val ex2 = intercept[IllegalArgumentException] {
 
-        cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1,
-          btcAddr,
-          getMcSignature(mcSignatureStr1))
+        cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, btcAddr, mcSignatureStr1)
 
         dataBad = cmdInputBad.encode()
       }
@@ -565,7 +559,7 @@ class McAddrOwnershipMsgProcessorTest
       // try adding a new association using a mc address already associated to a sc address, should fail
       createSenderAccount(view, initialAmount, scAddressObj2)
 
-      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj2, mcAddrStr1, getMcSignature(mcSignatureStr3_2))
+      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj2, mcAddrStr1, mcSignatureStr3_2)
       val data2: Array[Byte] = cmdInput2.encode()
 
       val msg2 = getMessage(
@@ -594,7 +588,7 @@ class McAddrOwnershipMsgProcessorTest
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, getMcSignature(mcSignatureStr1))
+      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
 
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(

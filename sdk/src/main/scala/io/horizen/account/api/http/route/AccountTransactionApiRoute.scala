@@ -934,9 +934,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     val (scAddress, _) = checkScMcAddresses(ownershipInfo.scAddress, Some(ownershipInfo.mcTransparentAddress))
 
     // this throws if the signature is not correctly base64 encoded
-    val mcSignature: SignatureSecp256k1 = getMcSignature(ownershipInfo.mcSignature)
+    getMcSignature(ownershipInfo.mcSignature)
 
-    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(scAddress, ownershipInfo.mcTransparentAddress, mcSignature)
+    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(
+      scAddress, ownershipInfo.mcTransparentAddress, ownershipInfo.mcSignature)
 
     Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
   }
