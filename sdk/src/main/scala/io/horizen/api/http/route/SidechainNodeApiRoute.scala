@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import io.horizen.account.api.rpc.service.RpcUtils
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.node.AccountNodeView
 import io.horizen.account.state.AccountState
@@ -31,7 +32,6 @@ import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
-import java.io.File
 import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
@@ -39,7 +39,6 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-import scala.xml.XML
 
 case class SidechainNodeApiRoute[
   TX <: Transaction,
@@ -182,7 +181,7 @@ case class SidechainNodeApiRoute[
         val lastScBlockId = sidechainNodeView.getNodeHistory.getLastBlockIds(1)
         val lastScBlock = sidechainNodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
         var lastMcBlockReferenceHash = ""
-        if (!lastScBlock.isEmpty)
+        if (!lastScBlock.isEmpty && lastScBlock.get().mainchainBlockReferencesData.nonEmpty)
           lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
 
         var withdrawalEpochNum = -1
@@ -240,7 +239,6 @@ case class SidechainNodeApiRoute[
         val numOfTxInMempool = sidechainNodeView.getNodeMemoryPool.getSize
 
         val errorLines:Array[String] = getErrorLogs
-        val sdkVersion = getSDKVersion
         val nodeTypes = getNodeTypes
 
         ApiResponseUtil.toResponse(RespNodeInfo(
@@ -248,7 +246,7 @@ case class SidechainNodeApiRoute[
           nodeType = Option(nodeTypes),
           protocolVersion = Option(protocolVersion),
           agentName = Option(agentName),
-          sdkVersion = if (sdkVersion != null) Option(sdkVersion) else Option.empty,
+          sdkVersion = Option(RpcUtils.getClientVersion),
           scId = Option(sidechainId),
           scType = Option(if (params.isNonCeasing) "non ceasing" else "ceasing"),
           scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option("UTXO") else Option("Account"),
@@ -293,19 +291,6 @@ case class SidechainNodeApiRoute[
       source.foreach(_.close())
     }
     errorLogs
-  }
-
-  private def getSDKVersion: String = {
-    try {
-      val sdkPath = sys.env.getOrElse("SIDECHAIN_SDK", "") + "/pom.xml"
-      val pomFile = new File(sdkPath)
-      val pomXml = XML.loadFile(pomFile)
-      val versionTag = (pomXml \ "version").head
-      return versionTag.text
-    } catch {
-      case e:Throwable => log.error(e.getMessage)
-    }
-    null
   }
 
   private def getNodeTypes: String = {

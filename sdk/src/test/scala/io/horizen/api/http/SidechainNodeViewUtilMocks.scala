@@ -3,10 +3,10 @@ package io.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainBlockReference, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import io.horizen.consensus.{ConsensusEpochInfo}
+import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import io.horizen.params.MainNetParams
@@ -61,14 +61,11 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
   val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
 
-  val mockMainchainBlockReferenceData:MainchainBlockReferenceData =  mock[MainchainBlockReferenceData]
-  Mockito.when(mockMainchainBlockReferenceData.headerHash) thenAnswer(_ => new Array[Byte](32))
-
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
     SidechainBlock.BLOCK_VERSION,
     Instant.now.getEpochSecond - 10000,
-    Seq(mockMainchainBlockReferenceData),
+    Seq(),
     Seq(),
     Seq(),
     Seq(),
