@@ -6,7 +6,7 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList._
 import io.horizen.account.state.ForgerStakeMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, removeNode}
+import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, uncheckedRemoveNode}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -98,7 +98,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
     // remove the data from the linked list
-    removeNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
 
     // remove the stake
     view.removeAccountStorageBytes(contractAddress, stakeId)

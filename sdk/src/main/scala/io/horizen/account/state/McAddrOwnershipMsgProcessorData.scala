@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets
 import java.util
 
 
-case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: String, mcSignature: String)
+case class AddNewOwnershipCmdInput(mcTransparentAddress: String, mcSignature: String)
   extends ABIEncodable[StaticStruct] {
 
   require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
@@ -31,7 +31,6 @@ case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: Str
     val mcSignatureBytes = mcSignature.getBytes(StandardCharsets.UTF_8)
 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
-      new AbiAddress(scAddress.toString),
       new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
       new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)),
       new Bytes24(util.Arrays.copyOfRange(mcSignatureBytes, 0, 24)),
@@ -41,10 +40,10 @@ case class AddNewOwnershipCmdInput(scAddress: Address, mcTransparentAddress: Str
 
   }
 
-  override def toString: String = "%s(scAddress: %s, mcAddress: %s, signature: %s)"
+  override def toString: String = "%s(mcAddress: %s, signature: %s)"
     .format(
       this.getClass.toString,
-      scAddress.toString, mcTransparentAddress, mcSignature)
+      mcTransparentAddress, mcSignature)
 }
 
 object AddNewOwnershipCmdInputDecoder
@@ -53,8 +52,6 @@ object AddNewOwnershipCmdInputDecoder
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
-      // sc address
-      new TypeReference[AbiAddress]() {},
       // mc transparent address
       new TypeReference[Bytes3]() {},
       new TypeReference[Bytes32]() {},
@@ -66,16 +63,15 @@ object AddNewOwnershipCmdInputDecoder
 
 
   override def createType(listOfParams: util.List[Type[_]]): AddNewOwnershipCmdInput = {
-    val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
     val mcTransparentAddrress = decodeMcAddress(
-      listOfParams.get(1).asInstanceOf[Bytes3],
-      listOfParams.get(2).asInstanceOf[Bytes32])
+      listOfParams.get(0).asInstanceOf[Bytes3],
+      listOfParams.get(1).asInstanceOf[Bytes32])
     val mcSignature = decodeMcSignature(
-      listOfParams.get(3).asInstanceOf[Bytes24],
-      listOfParams.get(4).asInstanceOf[Bytes32],
-      listOfParams.get(5).asInstanceOf[Bytes32])
+      listOfParams.get(2).asInstanceOf[Bytes24],
+      listOfParams.get(3).asInstanceOf[Bytes32],
+      listOfParams.get(4).asInstanceOf[Bytes32])
 
-    AddNewOwnershipCmdInput(scAddress, mcTransparentAddrress, mcSignature)
+    AddNewOwnershipCmdInput(mcTransparentAddrress, mcSignature)
   }
 }
 
@@ -96,7 +92,7 @@ case class GetOwnershipsCmdInput(scAddress: Address)
       scAddress.toString)
 }
 
-case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: Option[String])
+case class RemoveOwnershipCmdInput(mcTransparentAddressOpt: Option[String])
   extends ABIEncodable[StaticStruct] {
 
 
@@ -111,17 +107,16 @@ case class RemoveOwnershipCmdInput(scAddress: Address, mcTransparentAddressOpt: 
     }
 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
-      new AbiAddress(scAddress.toString),
       new Bytes3(util.Arrays.copyOfRange(mcAddrBytes, 0, 3)),
       new Bytes32(util.Arrays.copyOfRange(mcAddrBytes, 3, BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH))
     )
     new StaticStruct(listOfParams)
   }
 
-  override def toString: String = "%s(scAddress: %s, mcAddress: %s)"
+  override def toString: String = "%s(mcAddress: %s)"
     .format(
       this.getClass.toString,
-      scAddress.toString, mcTransparentAddressOpt.getOrElse("undef"))
+      mcTransparentAddressOpt.getOrElse("undef"))
 }
 
 object GetOwnershipsCmdInputDecoder
@@ -146,8 +141,6 @@ object RemoveOwnershipCmdInputDecoder
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
-      // sc address
-      new TypeReference[AbiAddress]() {},
       // mc transparent address
       new TypeReference[Bytes3]() {},
       new TypeReference[Bytes32]() {},
@@ -155,11 +148,10 @@ object RemoveOwnershipCmdInputDecoder
   }
 
   override def createType(listOfParams: util.List[Type[_]]): RemoveOwnershipCmdInput = {
-    val scAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
     val mcTransparentAddress =
-      decodeMcAddress(listOfParams.get(1).asInstanceOf[Bytes3], listOfParams.get(2).asInstanceOf[Bytes32])
+      decodeMcAddress(listOfParams.get(0).asInstanceOf[Bytes3], listOfParams.get(1).asInstanceOf[Bytes32])
 
-    RemoveOwnershipCmdInput(scAddress, Some(mcTransparentAddress))
+    RemoveOwnershipCmdInput(Some(mcTransparentAddress))
   }
 }
 

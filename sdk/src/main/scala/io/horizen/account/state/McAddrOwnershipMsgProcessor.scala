@@ -3,10 +3,9 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, removeNode}
+import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, uncheckedRemoveNode}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -60,39 +59,31 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
   }
 
-  def existsOwnershipData(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean = {
-    // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
-    val data = view.getAccountStorage(contractAddress, ownershipId)
-    // getting a not existing key from state DB using RAW strategy
-    // gives an array of 32 bytes filled with 0, while using CHUNK strategy
-    // gives an empty array instead
-    !data.sameElements(NULL_HEX_STRING_32)
-  }
-
-  private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: AddressProposition, mcTransparentAddress: String): Unit = {
+  private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
 
     // add a new node to the linked list pointing to this obj data
     addNewNode(view, ownershipId, contractAddress, LinkedListTipKey, LinkedListNullValue)
 
-    val mcAddrOwnershipData = McAddrOwnershipData(scAddress.address().toStringNoPrefix, mcTransparentAddress)
+    val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
 
     // store the ownership data
     view.updateAccountStorageBytes(contractAddress, ownershipId,
       McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
   }
 
-  private def removeMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]) : Unit =
+  private def uncheckedRemoveMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]) : Unit =
   {
+    // we assume that the caller have checked that the address association really exists in the stateDb.
     val nodeToRemoveId = Blake2b256.hash(ownershipId)
 
     // remove the data from the linked list
-    removeNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
 
     // remove the ownership association
     view.removeAccountStorageBytes(contractAddress, ownershipId)
   }
 
-  def isValidOwnershipSignature(scAddress: AddressProposition, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
+  def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
     val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
@@ -100,7 +91,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
 
-    val hashedMsg = getMcHashedMsg(BytesUtils.toHexString(scAddress.pubKeyBytes()))
+    val hashedMsg = getMcHashedMsg(scAddress.toStringNoPrefix)
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
@@ -150,27 +141,21 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val inputParams = getArgumentsFromData(msg.getData)
 
     val cmdInput = AddNewOwnershipCmdInputDecoder.decode(inputParams)
-    val scAddress = new AddressProposition(cmdInput.scAddress)
     val mcTransparentAddress = cmdInput.mcTransparentAddress
     val mcSignature = cmdInput.mcSignature
 
-    if (!msg.getFrom.equals(cmdInput.scAddress)) {
-      throw new ExecutionRevertedException(
-        s"sc account ${msg.getFrom.toStringNoPrefix} is not the one specified in input ${cmdInput.scAddress.toStringNoPrefix}")
-    }
-
     // compute ownershipId
-    val newOwnershipId = getOwnershipId(scAddress.address(), mcTransparentAddress)
+    val newOwnershipId = getOwnershipId(msg.getFrom, mcTransparentAddress)
 
     // check we do not already have this obj in the db
-    if (existsOwnershipData(view, newOwnershipId)) {
+    if (ownershipDataExist(view, newOwnershipId)) {
       throw new ExecutionRevertedException(
         s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
     }
 
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
-    if (!isValidOwnershipSignature(scAddress, mcTransparentAddress, mcSignSecp256k1)) {
+    if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1)) {
       throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
     }
 
@@ -183,11 +168,11 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // add the obj to stateDb
-    addMcAddrOwnership(view, newOwnershipId, scAddress, mcTransparentAddress)
+    addMcAddrOwnership(view, newOwnershipId, msg.getFrom, mcTransparentAddress)
     log.debug(s"Added ownership to stateDb: newOwnershipId=${BytesUtils.toHexString(newOwnershipId)}," +
-      s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
+      s" scAddress=${msg.getFrom}, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
 
-    val addNewMcAddrOwnershipEvt = AddMcAddrOwnership(scAddress.address(), mcTransparentAddress)
+    val addNewMcAddrOwnershipEvt = AddMcAddrOwnership(msg.getFrom, mcTransparentAddress)
     val evmLog = getEthereumConsensusDataLog(addNewMcAddrOwnershipEvt)
     view.addLog(evmLog)
 
@@ -214,30 +199,24 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val inputParams = getArgumentsFromData(msg.getData)
 
     val cmdInput = RemoveOwnershipCmdInputDecoder.decode(inputParams)
-    val scAddress = new AddressProposition(cmdInput.scAddress)
-
-    if (!msg.getFrom.equals(cmdInput.scAddress)) {
-      throw new ExecutionRevertedException(
-        s"sc account ${msg.getFrom.toStringNoPrefix} is not the one specified in input ${cmdInput.scAddress.toStringNoPrefix}")
-    }
 
     cmdInput.mcTransparentAddressOpt match {
       case Some(mcTransparentAddress) =>
         // compute ownershipId
-        val ownershipId = getOwnershipId(scAddress.address(), mcTransparentAddress)
+        val ownershipId = getOwnershipId(msg.getFrom, mcTransparentAddress)
 
-        // check we do not already have this obj in the db
-        if (!existsOwnershipData(view, ownershipId)) {
+        // check we have this obj in the db
+        if (!ownershipDataExist(view, ownershipId)) {
           throw new ExecutionRevertedException(
             s"Ownership ${BytesUtils.toHexString(ownershipId)} does not exists")
         }
 
         // remove the obj from stateDb
-        removeMcAddrOwnership(view, ownershipId)
-        log.debug(s"Removed ownership from stateDb: newOwnershipId=${BytesUtils.toHexString(ownershipId)}," +
-          s" scAddress=$scAddress, mcPubKeyBytes=$mcTransparentAddress")
+        uncheckedRemoveMcAddrOwnership(view, ownershipId)
+        log.debug(s"Removed ownership from stateDb: ownershipId=${BytesUtils.toHexString(ownershipId)}," +
+          s" scAddress=${msg.getFrom}, mcPubKeyBytes=$mcTransparentAddress")
 
-        val removeMcAddrOwnershipEvt = RemoveMcAddrOwnership(scAddress.address(), mcTransparentAddress)
+        val removeMcAddrOwnershipEvt = RemoveMcAddrOwnership(msg.getFrom, mcTransparentAddress)
         val evmLog = getEthereumConsensusDataLog(removeMcAddrOwnershipEvt)
         view.addLog(evmLog)
 
@@ -302,8 +281,12 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   override def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean = {
-    existsOwnershipData(view, ownershipId)
-  }
+    // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
+    val data = view.getAccountStorage(contractAddress, ownershipId)
+    // getting a not existing key from state DB using RAW strategy
+    // gives an array of 32 bytes filled with 0, while using CHUNK strategy
+    // gives an empty array instead
+    !data.sameElements(NULL_HEX_STRING_32)  }
 
   private def isMcAddrAlreadyAssociated(view: BaseAccountStateView, mcAddress: String): Option[String] = {
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
@@ -359,8 +342,8 @@ object McAddrOwnershipMsgProcessor {
 
     val decodedMcSignature: Array[Byte] = Base64.decode(mcSignatureString).get
 
-    // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating a compressed
-    // format of the pub key. We are not using this info
+    // we subtract 0x04 from first byte which is added by mainchain to the v value indicating uncompressed
+    // format of the recoverable pub key. We are not using this info
     val v: BigInteger = BigInteger.valueOf(decodedMcSignature(0) - 0x4)
     val r: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 1, 33))
     val s: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 33, 65))

@@ -205,7 +205,7 @@ public class McSignatureTest {
         String strMcSignature = "IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw=";
 
         byte[] decodedMcSignature = Base64.decode(strMcSignature).get();
-        // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating a compressed
+        // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating uncompressed
         // format of the pub key. We are not using this info
         BigInteger v = BigInteger.valueOf(decodedMcSignature[0] - 0x4);
         BigInteger r = new BigInteger(1, Arrays.copyOfRange(decodedMcSignature, 1, 33));

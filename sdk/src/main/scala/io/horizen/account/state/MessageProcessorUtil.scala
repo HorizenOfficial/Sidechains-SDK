@@ -32,7 +32,7 @@ object MessageProcessorUtil {
   // Each node is stored in stateDb as key/value pair:
   //     key=Hash(node.dataKey) / value = node
   // Note:
-  // 1) we use Blake256b hash since stateDb internally uses Keccak hash of dataId as key for forger stake data records
+  // 1) we use Blake256b hash since stateDb internally uses Keccak hash of dataId as key for data records
   // and it would clash
   // 2) TIP value is stored in the state db as well, initialized as NULL value
 
@@ -120,7 +120,7 @@ object MessageProcessorUtil {
         LinkedListNodeSerializer.parseBytesTry(data) match {
           case Success(obj) => Some(obj)
           case Failure(exception) =>
-            throw new ExecutionRevertedException("Error while parsing forger info.", exception)
+            throw new ExecutionRevertedException("Error while parsing data.", exception)
         }
       }
     }
@@ -161,8 +161,8 @@ object MessageProcessorUtil {
         .map(view.updateAccountStorageBytes(contract_address, nodeId, _))
     }
 
-    def removeNode(view: BaseAccountStateView, nodeToRemoveId: Array[Byte],
-                           contract_address: Address, listTipKey: Array[Byte], listNullValue: Array[Byte]): Unit = {
+    def uncheckedRemoveNode(view: BaseAccountStateView, nodeToRemoveId: Array[Byte],
+                            contract_address: Address, listTipKey: Array[Byte], listNullValue: Array[Byte]): Unit = {
 
       // we assume that the caller have checked that the data really exists in the stateDb.
       // in this case we must necessarily have a linked list node

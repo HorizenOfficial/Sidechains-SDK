@@ -144,7 +144,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         self.block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
 
-
         sc_address = remove_0x_prefix(self.evm_address)
 
         lag_list = mc_node.listaddressgroupings()
@@ -249,13 +248,14 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # 3. try to use invalid parameters
         # 3.1 illegal sc address
         try:
+            invalidScAddr = "1234h"
             sendKeysOwnership(sc_node,
-                              sc_address="1234",
+                              sc_address=invalidScAddr,
                               mc_addr=taddr2,
                               mc_signature=mc_signature2)
-        except SCAPIException as err:
-            print("Expected exception thrown: {}".format(str(err.error)))
-            assert_true("Invalid SC address" in str(err.error))
+        except Exception as err:
+            print("Expected exception thrown: {}".format(str(err)))
+            assert_true("Account " + invalidScAddr + " is invalid " in str(err))
         else:
             fail("invalid sc address should not work")
 

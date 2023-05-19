@@ -1,9 +1,7 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, RemoveOwnershipCmd, getMcSignature, getOwnershipId}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, RemoveOwnershipCmd, getOwnershipId}
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.ZenWeiConverter
@@ -11,6 +9,7 @@ import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
@@ -19,9 +18,9 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
-
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.security.Security
 import java.util
 import java.util.Optional
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
@@ -31,6 +30,9 @@ class McAddrOwnershipMsgProcessorTest
     with MockitoSugar
     with MessageProcessorFixture
     with StoreFixture {
+
+  // for ripemd160 hash
+  Security.addProvider(new BouncyCastleProvider)
 
   val dummyBigInteger: BigInteger = BigInteger.ONE
   val negativeAmount: BigInteger = BigInteger.valueOf(-1)
@@ -42,13 +44,10 @@ class McAddrOwnershipMsgProcessorTest
   val messageProcessor: McAddrOwnershipMsgProcessor = McAddrOwnershipMsgProcessor(mockNetworkParams)
   val contractAddress: Address = messageProcessor.contractAddress
 
-  // create private/public key pair
-  val privateKey: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("nativemsgprocessortest".getBytes(StandardCharsets.UTF_8))
-  val ownerAddressProposition: AddressProposition = privateKey.publicImage()
-
   val scAddrStr1: String = "00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"
   val scAddressObj1 = new Address("0x"+scAddrStr1)
 
+  // signature 'i' is obtained signing the same scAddrStr1 string using the priv key corresponding to mc addr 'i'
   val mcAddrStr1: String = "ztZCfBPUpLo4NyoBEfyAxEpQRTdqwF8pv71"
   val mcSignatureStr1: String = "H+Kf9j69tdQLU3PTGROjEQjJ+wxydbc9b50ZJDVNwm5QbM07e4RJXckGM3s0QOg78aIEDSgXiqMLw1Mwce69LnE="
   val mcAddrStr2: String = "ztmNNo4HiRkkrdjE3kTKt3unQYBYQip2UEs"
@@ -157,7 +156,7 @@ class McAddrOwnershipMsgProcessorTest
 
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
+      val cmdInput = AddNewOwnershipCmdInput(mcAddrStr1, mcSignatureStr1)
 
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(
@@ -179,8 +178,8 @@ class McAddrOwnershipMsgProcessorTest
       // Checking log
       var listOfLogs = view.getLogs(txHash1)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      var expectedAddStakeEvt = AddMcAddrOwnership(scAddressObj1, mcAddrStr1)
-      checkAddNewOwnershipEvent(expectedAddStakeEvt, listOfLogs(0))
+      var expectedAddEvt = AddMcAddrOwnership(scAddressObj1, mcAddrStr1)
+      checkAddNewOwnershipEvent(expectedAddEvt, listOfLogs(0))
 
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
@@ -192,7 +191,7 @@ class McAddrOwnershipMsgProcessorTest
       assertEquals("Wrong number of logs", 0, listOfLogs.length)
 
       // add a second association
-      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr2)
+      val cmdInput2 = AddNewOwnershipCmdInput(mcAddrStr2, mcSignatureStr2)
 
       val data2: Array[Byte] = cmdInput2.encode()
       val msg2 = getMessage(
@@ -212,11 +211,11 @@ class McAddrOwnershipMsgProcessorTest
       // Checking log
       listOfLogs = view.getLogs(txHash3)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
-      expectedAddStakeEvt = AddMcAddrOwnership(scAddressObj1, mcAddrStr2)
-      checkAddNewOwnershipEvent(expectedAddStakeEvt, listOfLogs(0))
+      expectedAddEvt = AddMcAddrOwnership(scAddressObj1, mcAddrStr2)
+      checkAddNewOwnershipEvent(expectedAddEvt, listOfLogs(0))
 
       // remove first ownership association
-      val removeCmdInput1 = RemoveOwnershipCmdInput(scAddressObj1, Some(mcAddrStr1))
+      val removeCmdInput1 = RemoveOwnershipCmdInput(Some(mcAddrStr1))
       val msg3 = getMessage(
         contractAddress,
         BigInteger.ZERO,
@@ -303,7 +302,7 @@ class McAddrOwnershipMsgProcessorTest
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
       createSenderAccount(view, initialAmount)
 
-      // try getting the list of stakes with some extra byte after op code (should fail)
+      // try getting the list of objs with some extra byte after op code (should fail)
       val data: Array[Byte] = new Array[Byte](1)
       val msg = getDefaultMessage(
         BytesUtils.fromHexString(GetListOfAllOwnershipsCmd),
@@ -336,7 +335,7 @@ class McAddrOwnershipMsgProcessorTest
       for (i <- 0 until listOfMcAddrSign1.size()) {
         val mcAddr = listOfMcAddrSign1.get(i)._1
         val mcSignature = listOfMcAddrSign1.get(i)._2
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSignature)
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -356,7 +355,7 @@ class McAddrOwnershipMsgProcessorTest
       for (i <- 0 until listOfMcAddrSign2.size()) {
         val mcAddr = listOfMcAddrSign2.get(i)._1
         val mcSignature = listOfMcAddrSign2.get(i)._2
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj2, mcAddr, mcSignature)
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -417,7 +416,7 @@ class McAddrOwnershipMsgProcessorTest
       for (i <- 0 until numOfOwnerships) {
         val mcAddr = listOfMcAddrSign1.get(i)._1
         val mcSignature = listOfMcAddrSign1.get(i)._2
-        val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddr, mcSignature)
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
 
         val data: Array[Byte] = cmdInput.encode()
         val msg = getMessage(contractAddress, BigInteger.ZERO,
@@ -447,6 +446,12 @@ class McAddrOwnershipMsgProcessorTest
       // remove the last element we have
       checkRemoveItemFromList(view, listOfExpectedData, 0)
 
+      // call msg processor for removing a not existing association. In this casethe linked list is not even accessed
+      val ex = intercept[ExecutionRevertedException] {
+        removeOwnership(view, new Address("0x"+scAddrStr1), mcAddrStr1_2)
+      }
+      assertTrue(ex.getMessage.contains("does not exist"))
+
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
@@ -462,7 +467,7 @@ class McAddrOwnershipMsgProcessorTest
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
+      val cmdInput = AddNewOwnershipCmdInput(mcAddrStr1, mcSignatureStr1)
       val data: Array[Byte] = cmdInput.encode()
 
       val msg = getMessage(
@@ -514,10 +519,10 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("is not the one specified in input"))
+      assertTrue(ex.getMessage.contains("not a valid mc signature"))
 
       // try using a wrong signature
-      var cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr1)
+      var cmdInputBad = AddNewOwnershipCmdInput(mcAddrStr2, mcSignatureStr1)
       var dataBad: Array[Byte] = cmdInputBad.encode()
 
       msgBad = getMessage(
@@ -532,7 +537,7 @@ class McAddrOwnershipMsgProcessorTest
       assertTrue(ex.getMessage.contains("not a valid mc signature"))
 
       // try using a wrong signature
-      cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr2, mcSignatureStr1)
+      cmdInputBad = AddNewOwnershipCmdInput(mcAddrStr2, mcSignatureStr1)
       dataBad = cmdInputBad.encode()
 
       msgBad = getMessage(
@@ -550,7 +555,7 @@ class McAddrOwnershipMsgProcessorTest
       val btcAddr = "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
       val ex2 = intercept[IllegalArgumentException] {
 
-        cmdInputBad = AddNewOwnershipCmdInput(scAddressObj1, btcAddr, mcSignatureStr1)
+        cmdInputBad = AddNewOwnershipCmdInput(btcAddr, mcSignatureStr1)
 
         dataBad = cmdInputBad.encode()
       }
@@ -559,7 +564,7 @@ class McAddrOwnershipMsgProcessorTest
       // try adding a new association using a mc address already associated to a sc address, should fail
       createSenderAccount(view, initialAmount, scAddressObj2)
 
-      val cmdInput2 = AddNewOwnershipCmdInput(scAddressObj2, mcAddrStr1, mcSignatureStr3_2)
+      val cmdInput2 = AddNewOwnershipCmdInput(mcAddrStr1, mcSignatureStr3_2)
       val data2: Array[Byte] = cmdInput2.encode()
 
       val msg2 = getMessage(
@@ -588,7 +593,7 @@ class McAddrOwnershipMsgProcessorTest
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
       createSenderAccount(view, initialAmount, scAddressObj1)
 
-      val cmdInput = AddNewOwnershipCmdInput(scAddressObj1, mcAddrStr1, mcSignatureStr1)
+      val cmdInput = AddNewOwnershipCmdInput(mcAddrStr1, mcSignatureStr1)
 
       val data: Array[Byte] = cmdInput.encode()
       val msg = getMessage(
@@ -602,7 +607,7 @@ class McAddrOwnershipMsgProcessorTest
       val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
-      val removeCmdInput = RemoveOwnershipCmdInput(scAddressObj1, Some(mcAddrStr1))
+      val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddrStr1))
 
       // try removing with a value amount not null (value 1)
       var msgBad = getMessage(contractAddress, BigInteger.ONE,
@@ -654,10 +659,11 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("is not the one specified in input"))
+      var ownershipIdStr = BytesUtils.toHexString(getOwnershipId(origin, mcAddrStr1))
+      assertTrue(ex.getMessage.contains("Ownership " + ownershipIdStr + " does not exists"))
 
       // should fail because there is not that association between sender and mc addr
-      var removeCmdInputBad = RemoveOwnershipCmdInput(origin, Some(mcAddrStr1))
+      var removeCmdInputBad = RemoveOwnershipCmdInput(Some(mcAddrStr1))
       msgBad = getMessage(contractAddress, BigInteger.ZERO,
         BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInputBad.encode(),
         randomNonce, origin
@@ -665,12 +671,12 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      val ownershipIdStr = BytesUtils.toHexString(getOwnershipId(origin, mcAddrStr1))
+      ownershipIdStr = BytesUtils.toHexString(getOwnershipId(origin, mcAddrStr1))
       assertTrue(ex.getMessage.contains("Ownership " + ownershipIdStr + " does not exists"))
 
       // should fail because mc address in not legal (we take a shorter BTC address)
       val btcAddr = "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
-      removeCmdInputBad = RemoveOwnershipCmdInput(scAddressObj1, Some(btcAddr))
+      removeCmdInputBad = RemoveOwnershipCmdInput(Some(btcAddr))
       val ex2 = intercept[IllegalArgumentException] {
         msgBad = getMessage(contractAddress, BigInteger.ZERO,
           BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInputBad.encode(),
@@ -689,7 +695,7 @@ class McAddrOwnershipMsgProcessorTest
     // get the info related to the item to remove
     val info = inputList.remove(itemPosition)
 
-    // call msg processor for removing the selected stake
+    // call msg processor for removing the selected obj
     removeOwnership(stateView, new Address("0x"+info.scAddress), info.mcTransparentAddress)
 
     // call msg processor for retrieving the resulting list of forgers
@@ -735,7 +741,7 @@ class McAddrOwnershipMsgProcessorTest
     val nonce = randomNonce
 
     // create command arguments
-    val removeCmdInput = RemoveOwnershipCmdInput(scAddress, Some(mcTransparentAddress))
+    val removeCmdInput = RemoveOwnershipCmdInput(Some(mcTransparentAddress))
     val data: Array[Byte] = removeCmdInput.encode()
     val msg = getMessage(
       contractAddress,
