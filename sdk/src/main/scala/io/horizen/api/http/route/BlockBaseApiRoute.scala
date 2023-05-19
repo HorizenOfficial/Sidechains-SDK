@@ -161,38 +161,30 @@ abstract class BlockBaseApiRoute[
 
   def startForging: Route = (post & path("startForging")) {
     withBasicAuth {
-          _ => {
-            if (params.isHandlingTransactionsEnabled) {
-              val future = forgerRef ? StartForging
-              val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
-              result match {
-                case Success(_) =>
-                  ApiResponseUtil.toResponse(RespStartForging)
-                case Failure(e) =>
-                  ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", JOptional.of(e)))
-              }
-            }
-            else
-              ApiResponseUtil.toResponse(ErrorNotEnabledOnSeederNode())
-          }
+      _ => {
+        val future = forgerRef ? StartForging
+        val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+        result match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespStartForging)
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", JOptional.of(e)))
+        }
+      }
     }
   }
 
   def stopForging: Route = (post & path("stopForging")) {
     withBasicAuth {
       _ => {
-        if (params.isHandlingTransactionsEnabled) {
-          val future = forgerRef ? StopForging
-          val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
-          result match {
-            case Success(_) =>
-              ApiResponseUtil.toResponse(RespStopForging)
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
-          }
+        val future = forgerRef ? StopForging
+        val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+        result match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespStopForging)
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
         }
-        else
-          ApiResponseUtil.toResponse(ErrorNotEnabledOnSeederNode())
       }
     }
   }
@@ -218,33 +210,27 @@ abstract class BlockBaseApiRoute[
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]) { body =>
-      if (params.isHandlingTransactionsEnabled) {
+      if (body.transactionsBytes.nonEmpty && !params.isInstanceOf[RegTestParams]) {
+        ApiResponseUtil.toResponse(ErrorBlockNotCreated(
+          s"Block was not created: transactionsBytes parameter can be used only in regtest", JOptional.empty()))
+      } else {
 
-        if (body.transactionsBytes.nonEmpty && !params.isInstanceOf[RegTestParams]) {
-          ApiResponseUtil.toResponse(ErrorBlockNotCreated(
-            s"Block was not created: transactionsBytes parameter can be used only in regtest", JOptional.empty()))
-        } else {
+        // any exception raised by parsing bytes will result in the offending tx being excluded from container
+        // and that is acceptable because forcing a tx is a feature used in testing
+        val forcedTx: Iterable[TX] = body.transactionsBytes
+          .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
+          .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
 
-          // any exception raised by parsing bytes will result in the offending tx being excluded from container
-          // and that is acceptable because forcing a tx is a feature used in testing
-          val forcedTx: Iterable[TX] = body.transactionsBytes
-            .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
-            .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
+        val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
+        val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
 
-          val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
-          val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
-
-          Await.result(submitResultFuture, timeout.duration) match {
-            case Success(id) =>
-              ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.of(e)))
-          }
+        Await.result(submitResultFuture, timeout.duration) match {
+          case Success(id) =>
+            ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.of(e)))
         }
       }
-      else
-        ApiResponseUtil.toResponse(ErrorNotEnabledOnSeederNode())
-
     }
   }
 }
@@ -374,12 +360,6 @@ object BlockBaseErrorResponse {
 
   case class ErrorGetForgingInfo(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0108"
-  }
-
-  case class ErrorNotEnabledOnSeederNode() extends ErrorResponse {
-    override val description: String = "Invalid operation on node not supporting transactions."
-    override val code: String = "0109"
-    override val exception: JOptional[Throwable] = JOptional.empty()
   }
 
 }

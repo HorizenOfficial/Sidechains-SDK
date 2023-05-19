@@ -10,10 +10,10 @@ import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import io.horizen.account.utils.{AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.BlockBaseErrorResponse.ErrorInvalidBlockId
 import io.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
-import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.BlockBaseApiRoute
+import io.horizen.api.http.route.{BlockBaseApiRoute, DisableApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.json.Views
 import io.horizen.node.NodeWalletBase
@@ -26,9 +26,9 @@ import java.util.{Optional => JOptional}
 import scala.concurrent.ExecutionContext
 import scala.jdk.OptionConverters.RichOptional
 
-case class AccountBlockApiRoute(
+class AccountBlockApiRoute(
     override val settings: RESTApiSettings,
-    sidechainNodeViewHolderRef: ActorRef,
+    override val sidechainNodeViewHolderRef: ActorRef,
     sidechainBlockActorRef: ActorRef,
     companion: SparkzSerializer[SidechainTypes#SCAT],
     forgerRef: ActorRef,
@@ -46,7 +46,7 @@ case class AccountBlockApiRoute(
       AccountNodeView
     ](settings, sidechainBlockActorRef, companion, forgerRef, params) {
 
-  override val route: Route = pathPrefix("block") {
+  override def route: Route = pathPrefix("block") {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~
       getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo ~
       getCurrentHeight
@@ -91,6 +91,26 @@ case class AccountBlockApiRoute(
   }
 }
 
+object AccountBlockApiRoute {
+  def apply(settings: RESTApiSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            sidechainBlockActorRef: ActorRef,
+            companion: SparkzSerializer[SidechainTypes#SCAT],
+            forgerRef: ActorRef,
+            params: NetworkParams
+          )(implicit context: ActorRefFactory, ec: ExecutionContext): AccountBlockApiRoute = {
+    if (params.isHandlingTransactionsEnabled)
+      new AccountBlockApiRoute(settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, companion, forgerRef, params)
+    else
+      new AccountBlockApiRoute(settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, companion, forgerRef, params)
+        with DisableApiRoute {
+
+        def listOfDisabledEndpoints: Seq[String] = Seq("startForging","stopForging", "generate")
+        val myPathPrefix: String = "block"
+      }
+  }
+
+}
 object AccountBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))

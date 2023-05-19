@@ -44,6 +44,7 @@ import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.Optional
@@ -72,7 +73,10 @@ class EthService(
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   implicit val timeout: Timeout = new Timeout(nvtimeout)
 
-  private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+  override def isNotAllowed(method: Method) = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
+
+
+  private def applyOnAccountView[R](functionToBeApplied: NV => R) = {
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
@@ -230,12 +234,14 @@ class EthService(
 
 
   @RpcMethod("eth_sendTransaction")
+  @NotAllowedOnSeederNode
   def sendTransaction(params: TransactionArgs): Hash = {
     val tx = signTransaction(params)
     sendRawTransaction(tx)
   }
 
   @RpcMethod("eth_signTransaction")
+  @NotAllowedOnSeederNode
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val unsignedTx =
@@ -256,6 +262,7 @@ class EthService(
    * gives context to the signed message and prevents signing of transactions.
    */
   @RpcMethod("eth_sign")
+  @NotAllowedOnSeederNode
   def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
     val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
@@ -746,6 +753,7 @@ class EthService(
   }
 
   @RpcMethod("eth_sendRawTransaction")
+  @NotAllowedOnSeederNode
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
     val tx = try {
       EthereumTransactionDecoder.decode(signedTxData)

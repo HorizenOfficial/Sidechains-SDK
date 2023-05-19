@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import io.horizen.api.http.route.BlockBaseErrorResponse._
 import io.horizen.api.http.route.BlockBaseRestSchema._
-import io.horizen.api.http.route.SidechainApiRouteTest
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, SidechainApiRouteTest}
 import io.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.forge.ForgingInfo
 import io.horizen.json.SerializationUtil
@@ -379,6 +379,79 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
     val params = MainNetParams(isHandlingTransactionsEnabled = false)
     val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef,
       mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
+
+    "reply at /findById" in {
+      sidechainApiMockConfiguration.setShould_history_getBlockById_return_value(true)
+      Post(basePath + "findById")
+        .withEntity(SerializationUtil.serialize(ReqFindById("valid_block_id_0000000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
+    "reply at /findLastIds" in {
+      Post(basePath + "findLastIds")
+        .withEntity(SerializationUtil.serialize(ReqLastIds(1))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+       }
+    }
+
+    "reply at /findIdByHeight" in {
+      sidechainApiMockConfiguration.setShould_history_getBlockIdByHeight_return_value(true)
+      Post(basePath + "findIdByHeight")
+        .withEntity(SerializationUtil.serialize(ReqFindIdByHeight(1))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
+    "reply at /best" in {
+      sidechainApiMockConfiguration.setShould_history_getCurrentHeight_return_value(true)
+      Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
+    "reply at /findBlockInfoById" in {
+      sidechainApiMockConfiguration.setShould_history_getBlockInfoById_return_value(true)
+      Post(basePath + "findBlockInfoById")
+        .withEntity(SerializationUtil.serialize(ReqFindBlockInfoById("valid_block_id_0000000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
+    "Successfully reply at /forgingInfo" in {
+      val expectedConsensusSecondsInSlot = 1000
+      val expectedConsensusSlotsInEpoch = 60
+      val expectedEpochNumber = intToConsensusEpochNumber(5)
+      val expectedSlotNumber = intToConsensusSlotNumber(6)
+      val expectedBestEpochAndSlot = ConsensusEpochAndSlot(expectedEpochNumber, expectedSlotNumber)
+      val expectedForgingEnabled = true
+
+      sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply =
+        Success(ForgingInfo(expectedConsensusSecondsInSlot, expectedConsensusSlotsInEpoch, expectedBestEpochAndSlot, expectedForgingEnabled))
+
+      Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
 
     "Failed reply at /startForging" in {
 

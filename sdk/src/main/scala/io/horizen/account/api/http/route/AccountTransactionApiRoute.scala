@@ -20,7 +20,7 @@ import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.TransactionBaseApiRoute
+import io.horizen.api.http.route.{DisableApiRoute, TransactionBaseApiRoute}
 import io.horizen.api.http.route.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
@@ -44,8 +44,8 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
-                                      sidechainNodeViewHolderRef: ActorRef,
+class AccountTransactionApiRoute(override val settings: RESTApiSettings,
+                                 override val sidechainNodeViewHolderRef: ActorRef,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
                                       params: NetworkParams,
@@ -65,7 +65,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = pathPrefix("transaction") {
+  override def route: Route = pathPrefix("transaction") {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
@@ -769,6 +769,30 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 }
+
+object AccountTransactionApiRoute {
+  def apply(settings: RESTApiSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            sidechainTransactionActorRef: ActorRef,
+            companion: SidechainAccountTransactionsCompanion,
+            params: NetworkParams,
+            circuitType: CircuitTypes
+           )(implicit context: ActorRefFactory, ec: ExecutionContext): AccountTransactionApiRoute = {
+    if (params.isHandlingTransactionsEnabled)
+      new AccountTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
+    else
+      new AccountTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
+        with DisableApiRoute {
+
+        def listOfDisabledEndpoints: Seq[String] = Seq("createLegacyEIP155Transaction","createEIP1559Transaction",
+          "createLegacyTransaction", "sendTransaction", "signTransaction", "makeForgerStake", "withdrawCoins",
+          "spendForgingStake", "createSmartContract", "openForgerList", "createKeyRotationTransaction")
+        val myPathPrefix: String = "transaction"
+      }
+  }
+
+}
+
 
 object AccountTransactionRestScheme {
 

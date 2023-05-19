@@ -5,6 +5,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.request.RpcRequest
+import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
@@ -27,13 +28,16 @@ import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
-import org.junit.{Before, Test}
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.{Assert, Before, Test}
+import org.mockito.Mockito
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
+import sparkz.core.block.Block
 import sparkz.core.bytesToId
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
@@ -307,7 +311,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   }"""
 
   private var ethService: EthService = _
-  private var senderWithSecret: String = _
+  protected var senderWithSecret: String = _
+  protected var networkParams: RegTestParams = _
 
   @Before
   def setUp(): Unit = {
@@ -315,10 +320,11 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val genesisBlockId = bytesToId(
       Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000123")
     )
-    val networkParams = RegTestParams(
+    networkParams = Mockito.spy(RegTestParams(
       sidechainGenesisBlockId = genesisBlockId,
       initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement()
-    )
+    ))
+
     val receipt: EthereumReceipt =
       createTestEthereumReceipt(
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
@@ -455,7 +461,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
    * @return
    *   value returned by the RPC method, before serialization
    */
-  private def rpc(method: String, params: Any*): Object = {
+  protected def rpc(method: String, params: Any*): Object = {
     val jsonParams = EthJsonMapper.serialize(params)
     val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
     val request = new RpcRequest(mapper.readTree(json))
@@ -1416,5 +1422,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
     }
   }
+
 
 }
