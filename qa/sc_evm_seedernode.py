@@ -41,7 +41,7 @@ def check_error_not_enabled_on_seeder_node(result):
     assert_equal("1111", result["error"]["code"])
 
 
-class SCEvmMempool(AccountChainSetup):
+class SCEvmSeederNode(AccountChainSetup):
 
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=3, connect_nodes=False)
@@ -289,4 +289,4 @@ class SCEvmMempool(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    SCEvmMempool().main()
+    SCEvmSeederNode().main()
