@@ -1010,31 +1010,34 @@ class EthService(
       // limit the range of blocks by the number of available blocks and cap at 1024
       val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
-      if (blocks < 1) return new EthereumFeeHistoryView()
-      // calculate block number of the "oldest" block in the range
-      val oldestBlock = requestedBlockInfo.height + 1 - blocks
+      if (blocks < 1) {
+        new EthereumFeeHistoryView()
+      } else {
+        // calculate block number of the "oldest" block in the range
+        val oldestBlock = requestedBlockInfo.height + 1 - blocks
 
-      // include the calculated base fee of the next block after the requested range
-      val baseFeePerGas = new Array[BigInteger](blocks + 1)
-      val gasUsedRatio = new Array[Double](blocks)
-      val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
+        // include the calculated base fee of the next block after the requested range
+        val baseFeePerGas = new Array[BigInteger](blocks + 1)
+        val gasUsedRatio = new Array[Double](blocks)
+        val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
 
-      using(nodeView.state.getView) { stateView =>
-        for (i <- 0 until blocks) {
-          val block = nodeView.history
-            .blockIdByHeight(oldestBlock + i)
-            .map(ModifierId(_))
-            .flatMap(nodeView.history.getStorageBlockById)
-            .get
-          baseFeePerGas(i) = block.header.baseFee
-          gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
-          if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
+        using(nodeView.state.getView) { stateView =>
+          for (i <- 0 until blocks) {
+            val block = nodeView.history
+              .blockIdByHeight(oldestBlock + i)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .get
+            baseFeePerGas(i) = block.header.baseFee
+            gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
+            if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
+          }
         }
-      }
-      // calculate baseFee for the next block after the requested range
-      baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+        // calculate baseFee for the next block after the requested range
+        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
 
-      new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
+        new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
+      }
     }
   }
 

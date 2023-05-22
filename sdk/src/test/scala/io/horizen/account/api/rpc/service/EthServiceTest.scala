@@ -1322,6 +1322,18 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Block count", "Newest block (tag)", "Reward percentiles", "Expected output"),
       (
+        "0x0",
+        "latest",
+        null,
+        """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
+      ),
+      (
+        "0x0",
+        "latest",
+        Array(20, 50, 70),
+        """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
+      ),
+      (
         "0x1",
         "latest",
         Array(20, 50, 70),
