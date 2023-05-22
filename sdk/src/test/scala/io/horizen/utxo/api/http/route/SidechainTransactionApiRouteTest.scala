@@ -3,10 +3,12 @@ package io.horizen.utxo.api.http.route
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.google.common.primitives.Bytes
-import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.api.http.route.TransactionBaseRestScheme.{ReqAllTransactions, ReqDecodeTransactionBytes}
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, SidechainApiRouteTest}
+import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.json.SerializationUtil
+import io.horizen.params.MainNetParams
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
@@ -503,4 +505,206 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
     }
   }
-}
+
+  "When isHandlingTransactionsEnabled = false API " should {
+    val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray, isHandlingTransactionsEnabled = false)
+    val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings,
+      mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
+      sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
+
+    "reply at /allTransactions" in {
+      Post(basePath + "allTransactions")
+        .withEntity(SerializationUtil.serialize(ReqAllTransactions(None))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+
+      }
+    }
+
+    "reply at /findById" in {
+      // Reset mocks
+
+      sidechainApiMockConfiguration.setShould_memPool_searchTransactionInMemoryPool_return_value(true)
+      sidechainApiMockConfiguration.setShould_history_searchTransactionInBlockchain_return_value(true)
+      sidechainApiMockConfiguration.setShould_history_searchTransactionInBlock_return_value(true)
+
+      val transactionFound = memoryPool.get(0)
+      val transactionIdValid = transactionFound.id
+      Post(basePath + "findById")
+        .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), None))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+
+      }
+    }
+
+    "reply at /decodeTransactionBytes" in {
+      Post(basePath + "decodeTransactionBytes")
+        .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes(
+          BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(memoryPool.get(0)))))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        assertNotNull(result)
+      }
+    }
+
+    "failed reply at /createCoreTransaction" in {
+      // parameter 'format' = true
+      val transactionInput: List[TransactionInput] = List(utilMocks.box_1.id(), utilMocks.box_2.id(), utilMocks.box_3.id()).map(id => TransactionInput(BytesUtils.toHexString(id)))
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 30))
+      val withdrawalRequests: List[TransactionWithdrawalRequestOutput] = List()
+      val forgerOutputs: List[TransactionForgerOutput] = List()
+
+      Post(basePath + "createCoreTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqCreateCoreTransaction(transactionInput, transactionOutput, withdrawalRequests, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+   }
+
+    "failed reply at /createCoreTransactionSimplified" in {
+      // parameter 'format' = true
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 30))
+      val withdrawalRequests: List[TransactionWithdrawalRequestOutput] = List()
+      val forgerOutputs: List[TransactionForgerOutput] = List()
+
+      Post(basePath + "createCoreTransactionSimplified")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqCreateCoreTransactionSimplified(
+        transactionOutput, withdrawalRequests, forgerOutputs, 1L, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /sendCoinsToAddress" in {
+      sidechainApiMockConfiguration.setShould_history_getTransactionsSortedByFee_return_value(true)
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 2))
+      Post(basePath + "sendCoinsToAddress")
+        .addCredentials(credentials)
+        .withEntity(
+          //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None, None, None))
+        ) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /withdrawCoins" in {
+      // parameter 'format' = true
+      val withdrawalRequests: List[TransactionWithdrawalRequestOutput] = List(TransactionWithdrawalRequestOutput("", 1L))
+
+      Post(basePath + "withdrawCoins")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithdrawCoins(
+        withdrawalRequests,  Some(1L)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /makeForgerStake" in {
+      // parameter 'format' = true
+      val forgerOutput: List[TransactionForgerOutput] = List(TransactionForgerOutput("", Some(""), "", 1L))
+
+      Post(basePath + "makeForgerStake")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqCreateForgerStake(
+        forgerOutput, Some(1L)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+
+    "failed reply at /spendForgingStake" in {
+      // parameter 'format' = true
+      // Spend 1 forger box to create 1 regular box and 1 forger box
+      val transactionInput: List[TransactionInput] = List(utilMocks.box_4.id()).map(id => TransactionInput(BytesUtils.toHexString(id)))
+      val regularOutputs: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 10))
+      val forgerOutputs: List[TransactionForgerOutput] = List(TransactionForgerOutput(
+        BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
+        None,
+        BytesUtils.toHexString(utilMocks.box_4.vrfPubKey().bytes),
+        10))
+
+      Post(basePath + "spendForgingStake")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+
+    "failed reply at /createOpenStakeTransaction" in {
+      // parameter 'format' = true
+      // Spend 1 forger box to create 1 regular box and 1 forger box
+      val transactionInput: TransactionInput = TransactionInput(BytesUtils.toHexString(utilMocks.box_4.id()))
+
+      Post(basePath + "createOpenStakeTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqOpenStake(transactionInput,
+              "nn", 1, Some(true), Some(true), Some(1L)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /createOpenStakeTransactionSimplified" in {
+      // parameter 'format' = true
+      // Spend 1 forger box to create 1 regular box and 1 forger box
+
+      Post(basePath + "createOpenStakeTransactionSimplified")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqOpenStakeSimplified(
+        "nn", 1, Some(true), Some(true), Some(1L)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /sendTransaction" in {
+      val transaction = memoryPool.get(0)
+      val transactionBytes = sidechainTransactionsCompanion.toBytes(transaction)
+      // parameter 'format' = true
+      sidechainApiMockConfiguration.setShould_transactionActor_BroadcastTransaction_reply(true)
+      Post(basePath + "sendTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqSendTransactionPost(BytesUtils.toHexString(transactionBytes)))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+    "failed reply at /createKeyRotationTransaction" in {
+       Post(basePath + "createKeyRotationTransaction")
+        .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqCreateKeyRotationTransaction(
+        1, 1, "nn", "n", "w", "q", Some(true), Some(true), Some(1L)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotEnabledOnSeederNode().code)
+      }
+    }
+
+  }
+
+
+
+  }

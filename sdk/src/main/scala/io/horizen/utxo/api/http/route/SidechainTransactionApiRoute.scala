@@ -6,9 +6,9 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.TransactionBaseApiRoute
-import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorBadCircuit
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
+import io.horizen.api.http.route.{DisableApiRoute, TransactionBaseApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.json.Views
@@ -17,7 +17,6 @@ import io.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import io.horizen.proposition._
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
@@ -27,6 +26,7 @@ import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainCoreTransaction}
 import sparkz.core.settings.RESTApiSettings
+
 import java.util.{Collections, ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -35,8 +35,8 @@ import scala.reflect.ClassTag
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
 
-case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
-                                        sidechainNodeViewHolderRef: ActorRef,
+class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
+                                   override val sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams,
@@ -55,7 +55,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
-  override val route: Route = pathPrefix("transaction") {
+  override def route: Route = pathPrefix("transaction") {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
     sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~
       createOpenStakeTransaction ~ createOpenStakeTransactionSimplified ~ createKeyRotationTransaction
@@ -674,6 +674,37 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 }
+
+
+object SidechainTransactionApiRoute {
+
+  def apply(settings: RESTApiSettings,
+            sidechainNodeViewHolderRef: ActorRef,
+            sidechainTransactionActorRef: ActorRef,
+            companion: SidechainTransactionsCompanion,
+            params: NetworkParams,
+            circuitType: CircuitTypes
+           )(implicit context: ActorRefFactory, ec: ExecutionContext): SidechainTransactionApiRoute = {
+    if (params.isHandlingTransactionsEnabled)
+      new SidechainTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
+    else
+      new SidechainTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
+        with DisableApiRoute {
+
+        // There is a possible bug in Akka so when 2 paths where one is a substring of the other are next to each other
+        // the path matcher doesn't work. As a work around, the longer path must be before the contained path e.g.:
+        // - "createCoreTransaction", "createCoreTransactionSimplified" DOESN'T WORK
+        // - "createCoreTransactionSimplified", "createCoreTransaction" WORKS
+        override  def listOfDisabledEndpoints: Seq[String] = Seq( "createCoreTransactionSimplified", "createCoreTransaction",
+          "sendCoinsToAddress","sendTransaction", "withdrawCoins","makeForgerStake","spendForgingStake",
+          "createOpenStakeTransactionSimplified", "createOpenStakeTransaction", "createKeyRotationTransaction")
+
+        override  val myPathPrefix: String = "transaction"
+      }
+  }
+
+}
+
 
 
 object SidechainTransactionRestScheme {

@@ -247,8 +247,44 @@ object SidechainNodeViewHolderRef {
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
-    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
+    Props(createNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage,
+      utxoMerkleTreeProvider, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage,
+      cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
+
+  private def createNodeViewHolder(sidechainSettings: SidechainSettings, historyStorage: SidechainHistoryStorage,
+                                   consensusDataStorage: ConsensusDataStorage, stateStorage: SidechainStateStorage,
+                                   forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                   utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
+                                   walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+                                   walletTransactionStorage: SidechainWalletTransactionStorage,
+                                   forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                   cswDataProvider: SidechainWalletCswDataProvider, backupStorage: BackupStorage,
+                                   params: NetworkParams, timeProvider: NetworkTimeProvider,
+                                   applicationWallet: ApplicationWallet, applicationState: ApplicationState,
+                                   genesisBlock: SidechainBlock) = {
+    if (params.isHandlingTransactionsEnabled)
+      new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)
+    else
+      new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock){
+        override protected def updateMemPool(removedBlocks: Seq[SidechainBlock], appliedBlocks: Seq[SidechainBlock],
+                                             memPool: SidechainMemoryPool, state: SidechainState): SidechainMemoryPool = memPool
+
+        override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCBT]): Unit = {
+          newTxs.foreach { tx =>
+            context.system.eventStream.publish(
+              FailedTransaction(
+                tx.asInstanceOf[Transaction].id,
+                new Exception("Transactions handling disabled"),
+                immediateFailure = false // This won't penalize the sender, because there can be legacy nodes that don't support seeder nodes as peer
+              )
+            )
+          }
+        }
+      }
+
+  }
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,

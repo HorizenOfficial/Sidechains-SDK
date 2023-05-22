@@ -19,7 +19,9 @@ trait DisableApiRoute extends ApiRoute {
 
   private def matches(endpointsNames: Seq[String]): PathMatcher0 = {
     require(endpointsNames.nonEmpty, "List of endpoint names cannot be empty")
-    endpointsNames.foldLeft[PathMatcher0](endpointsNames.head){ (res, tmp) => res | tmp}
+    endpointsNames.tail.foldLeft[PathMatcher0](endpointsNames.head){
+      (res, tmp) => res | tmp
+    }
   }
 
 }

@@ -784,10 +784,10 @@ object AccountTransactionApiRoute {
       new AccountTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
         with DisableApiRoute {
 
-        def listOfDisabledEndpoints: Seq[String] = Seq("createLegacyEIP155Transaction","createEIP1559Transaction",
+        override def listOfDisabledEndpoints: Seq[String] = Seq("createLegacyEIP155Transaction","createEIP1559Transaction",
           "createLegacyTransaction", "sendTransaction", "signTransaction", "makeForgerStake", "withdrawCoins",
           "spendForgingStake", "createSmartContract", "openForgerList", "createKeyRotationTransaction")
-        val myPathPrefix: String = "transaction"
+        override val myPathPrefix: String = "transaction"
       }
   }
 

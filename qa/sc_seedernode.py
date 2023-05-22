@@ -7,14 +7,19 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo
+from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import generate_next_block, \
     connect_sc_nodes, assert_equal, \
-    assert_true, bootstrap_sidechain_nodes, AccountModel, get_next_epoch_slot, generate_forging_request
+    assert_true, bootstrap_sidechain_nodes, AccountModel, get_next_epoch_slot, generate_forging_request, start_sc_nodes, \
+    check_wallet_coins_balance
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
+from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.wallet.importSecret import http_wallet_importSecret
 from httpCalls.wallet.importSecrets import http_wallet_importSecrets
-from test_framework.util import forward_transfer_to_sidechain, fail, websocket_port_by_mc_node_index
+from sc_evm_seedernode import check_error_not_enabled_on_seeder_node
+from test_framework.util import forward_transfer_to_sidechain, fail, websocket_port_by_mc_node_index, assert_false
 
 """
 Checks the behavior of a seeder node, i.e. a node that doesn't support local or remote transactions.
@@ -30,23 +35,19 @@ Test:
     - Try to create a block on seeder node. Verify that an error is returned
     - Check that wallet endpoints don't exist on seeder node.
     - Check that Submitter endpoints don't exist on seeder node. 
-    - Check disabled Transaction APIs on seeder node. 
-    - Check that read-write ETH RPC are not allowed on seeder node. 
+    - Check disabled transaction endpoint APIs
+    - Check disabled CSW endpoint APIs
     - On node 1 create some blocks containing txs and then revert them. Verify that in node 1 and node 3 the 
     transactions are in their mempool, while the node seeder mempool remains empty
     
 """
 
 
-def check_error_not_enabled_on_seeder_node(result):
-    assert_true("error" in result)
-    assert_equal("1111", result["error"]["code"])
+class SCSeederNode(SidechainTestFramework):
 
-
-class SCEvmSeederNode(AccountChainSetup):
-
-    def __init__(self):
-        super().__init__(number_of_sidechain_nodes=3, connect_nodes=False)
+    number_of_mc_nodes = 1
+    number_of_sidechain_nodes = 3
+    withdrawalEpochLength = 10
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -54,29 +55,27 @@ class SCEvmSeederNode(AccountChainSetup):
             SCNodeConfiguration(
                 MCConnectionInfo(
                     address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                api_key=self.API_KEY,
-                remote_keys_manager_enabled=self.remote_keys_manager_enabled),
+                ),
             SCNodeConfiguration(
                 MCConnectionInfo(
                     address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                api_key=self.API_KEY,
-                remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                 cert_submitter_enabled=False,
                 cert_signing_enabled=False,
                 handling_txs_enabled=False),
             SCNodeConfiguration(
                 MCConnectionInfo(
                     address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                api_key=self.API_KEY,
-                remote_keys_manager_enabled=self.remote_keys_manager_enabled),
+                ),
 
         ]
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 600, self.withdrawalEpochLength, csw_enabled=True),
                                          *sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
-                                                                 block_timestamp_rewind=self.block_timestamp_rewind,
-                                                                 model=AccountModel)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
+
+    def sc_setup_nodes(self):
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -86,17 +85,17 @@ class SCEvmSeederNode(AccountChainSetup):
         connect_sc_nodes(sc_node_1, 1)
         connect_sc_nodes(sc_node_1, 2)
 
-        # transfer some fund from MC to SC1 at a new evm address, then mine mc block
-        evm_address_sc1 = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+        # transfer some fund from MC to SC1 at a new address, then mine mc block
+        sc_address_1 = http_wallet_createPrivateKey25519(sc_node_1)
+        sc_address_3 = http_wallet_createPrivateKey25519(sc_node_3)
 
         ft_amount_in_zen = Decimal('500.0')
 
-        mc_return_address = mc_node.getnewaddress()
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
-                                      evm_address_sc1,
+                                      sc_address_1,
                                       ft_amount_in_zen,
-                                      mc_return_address=mc_return_address,
+                                      mc_return_address=mc_node.getnewaddress(),
                                       generate_block=True)
 
         self.sync_all()
@@ -111,11 +110,7 @@ class SCEvmSeederNode(AccountChainSetup):
         assert_equal(best_3, best_seeder, "Seeder node best block is not equal to node 3 best")
 
         # Create a transaction on node 1. Verify that the tx is in node 3 mempool but seeder node mempool is empty
-        nonce_addr_1 = 0
-        createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
-                                 nonce=nonce_addr_1, gasLimit=230000, maxPriorityFeePerGas=900000000,
-                                 maxFeePerGas=900000000, value=1)
-        nonce_addr_1 += 1
+        sendCoinsToAddress(sc_node_1, sc_address_3, 10, fee=0)
 
         time.sleep(5)
         assert_equal(1, len(allTransactions(sc_node_1, False)['transactionIds']))
@@ -214,132 +209,146 @@ class SCEvmSeederNode(AccountChainSetup):
         else:
             fail("expected exception when calling Submitter method")
 
-        ##############################################################################
-        # Check disabled Transaction APIs
-        ##############################################################################
+        # Check that Transaction API are not accessible
 
-        # Check createLegacyEIP155Transaction
-        request = {
-            "from": evm_address_sc1,
-            "to": evm_address_sc1,
-            "nonce": 0,
-            "gasLimit": 100000,
-            "gasPrice": 1,
-            "value": 1,
-            "data": None,
-            "signature_v": None,
-            "signature_r": None,
-            "signature_s": None
-        }
-        result = sc_node_seeder.transaction_createLegacyEIP155Transaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
 
-        # Check createEIP1559Transaction
-        request = {
-            "from": evm_address_sc1,
-            "to": evm_address_sc1,
-            "nonce": 0,
-            "gasLimit": 100000,
-            "maxPriorityFeePerGas": 1000,
-            "maxFeePerGas": 1100,
-            "value": 1,
-            "data": None,
-            "signature_v": None,
-            "signature_r": None,
-            "signature_s": None
+        # Checking createCoreTransactionSimplified
+        mc_address2 = self.nodes[0].getnewaddress()
+        withdrawal_requests = [{"mainchainAddress": mc_address2,
+                                "value": 1000}
+                               ]
+
+        core_transaction_request = {
+            "regularOutputs": [],
+            "withdrawalRequests": withdrawal_requests,
+            "forgerOutputs": [],
+            "fee": 0
         }
 
-        result = sc_node_seeder.transaction_createEIP1559Transaction(json.dumps(request))
+        result = sc_node_seeder.transaction_createCoreTransactionSimplified(json.dumps(core_transaction_request))
         check_error_not_enabled_on_seeder_node(result)
 
-        # Check createLegacyTransaction
-        request = {
-            "from": evm_address_sc1,
-            "to": evm_address_sc1,
-            "nonce": 0,
-            "gasLimit": 100000,
-            "gasPrice": 1,
-            "value": 1,
-            "data": None,
-            "signature_v": None,
-            "signature_r": None,
-            "signature_s": None,
-            "outputRawBytes": True
-        }
-        result = sc_node_seeder.transaction_createLegacyTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+        # Checking createCoreTransaction
+        forger_box = sc_node_1.wallet_allBoxes()["result"]["boxes"][0]
 
-        # Check sendTransaction
-        raw_tx = "96dc24d6874a9b01e4a7b7e5b74db504db3731f764293769caef100f551efadf7d378a015faca6ae62ae30a9bf5e3c6aa94f58597edc381d0ec167fa0c84635e12a2d13ab965866ebf7c7aae458afedef1c17e08eb641135f592774e18401e0104f8e7f8e0d98e3230332e3133322e39342e31333784787beded84556c094cf8528c39342e3133372e342e31333982765fb840621168019b7491921722649cd1aa9608f23f8857d782e7495fb6765b821002c4aac6ba5da28a5c91b432e5fcc078931f802ffb5a3ababa42adee7a0c927ff49ef8528c3136322e3234332e34362e39829dd4b840e437a4836b77ad9d9ffe73ee782ef2614e6d8370fcf62191a6e488276e23717147073a7ce0b444d485fff5a0c34c4577251a7a990cf80d8542e21b95aa8c5e6cdd8e3230332e3133322e39342e31333788ffffffffa5aadb3a84556c095384556c0919"
-
-        request = {
-            "transactionBytes": raw_tx
-        }
-        result = sc_node_seeder.transaction_sendTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
-
-        # Check signTransaction
-        request = {
-            "from": evm_address_sc1,
-            "transactionBytes": raw_tx
-        }
-        result = sc_node_seeder.transaction_signTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
-
-        # Check makeForgerStake
-
-        blockSignPubKey = sc_node_1.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
-        vrf_public_key = sc_node_1.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
-        request = {"forgerStakeInfo": {
-            "ownerAddress": evm_address_sc1,
-            "blockSignPublicKey": blockSignPubKey,
-            "vrfPubKey": vrf_public_key,
-            "value": 10
-        },
-            "nonce": 0
+        # Try to withdraw coins from SC to MC: amount below the dust threshold
+        core_transaction_request = {
+            "transactionInputs": [{"boxId": forger_box["id"]}],
+            "regularOutputs": [{"publicKey": sc_address_1, "value": forger_box["value"] - 100}],
+            "withdrawalRequests": [{"mainchainAddress": mc_address2,
+                                    "value": 1000}],
+            "forgerOutputs": []
         }
 
-        result = sc_node_seeder.transaction_makeForgerStake(json.dumps(request))
+        result = sc_node_seeder.transaction_createCoreTransaction(json.dumps(core_transaction_request))
         check_error_not_enabled_on_seeder_node(result)
 
-        # Check withdrawCoins
+        # Checking sendCoinsToAddress
         request = {
-            "nonce": 0,
-            "withdrawalRequest":
+            "outputs": [
                 {
-                    "mainchainAddress": str(mc_return_address),
-                    "value": 1
-                },
-            "gasInfo": {
-                "gasLimit": 10000,
-                "maxFeePerGas": 100,
-                "maxPriorityFeePerGas": 100
-            }
+                    "publicKey": str(sc_address_3),
+                    "value": 10
+                }
+            ],
+            "fee": 0
         }
+        result = sc_node_seeder.transaction_sendCoinsToAddress(json.dumps(request))
+        check_error_not_enabled_on_seeder_node(result)
+
+        # Checking sendTransaction
+        core_transaction_request = {
+            "transactionInputs": [{"boxId": forger_box["id"]}],
+            "regularOutputs": [{"publicKey": sc_address_1, "value": forger_box["value"] - 100}],
+            "withdrawalRequests": [{"mainchainAddress": mc_address2,
+                                    "value": 90}],
+            "forgerOutputs": []
+        }
+
+        coreTransactionJson = sc_node_1.transaction_createCoreTransaction(json.dumps(core_transaction_request))
+
+        result = sc_node_seeder.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
+        check_error_not_enabled_on_seeder_node(result)
+
+        # Checking withdrawCoins
+        request = {
+            "outputs": [
+                {
+                    "mainchainAddress": mc_address2,
+                    "value": 100
+                    }
+                ],
+            "fee": 0
+            }
         result = sc_node_seeder.transaction_withdrawCoins(json.dumps(request))
         check_error_not_enabled_on_seeder_node(result)
 
-        # Check spendForgingStake
-        stake_id_genesis = sc_node_seeder.transaction_allForgingStakes()["result"]['stakes'][0]['stakeId']
-        result = sc_node_seeder.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stake_id_genesis)}))
+        # Checking makeForgerStake
+
+        rewards_address = sc_node_1.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        vrf_address = sc_node_1.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
+        forgerStakes = {
+            "outputs": [
+                {
+                    "publicKey": sc_address_1,
+                    "blockSignPublicKey": rewards_address,
+                    "vrfPubKey": vrf_address,
+                    "value": 10000000000  # in Satoshi
+                }
+            ],
+            "fee": 0
+        }
+        result = sc_node_seeder.transaction_makeForgerStake(json.dumps(forgerStakes))
         check_error_not_enabled_on_seeder_node(result)
 
-        # Check createSmartContract
+        # Checking spendForgingStake
+        all_forger_boxes_req = {"boxTypeClass": "ForgerBox"}
+        forger_box_id = sc_node_1.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"][0]["id"]
+        spend_forger_stakes_req = {
+            "transactionInputs": [
+                {
+                "boxId": forger_box_id
+                }
+            ],
+            "regularOutputs": [
+                {
+                    "publicKey": sc_address_1,
+                    "value": self.sc_nodes_bootstrap_info.genesis_account_balance * 100000000  # in Satoshi
+                }
+            ],
+            "forgerOutputs": []
+        }
+
+        result = sc_node_seeder.transaction_spendForgingStake(json.dumps(spend_forger_stakes_req))
+        check_error_not_enabled_on_seeder_node(result)
+
+        # Checking createOpenStakeTransactionSimplified
         request = {
-            "contractCode": "0x8888",
-        }
-        result = sc_node_seeder.transaction_createSmartContract(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
-
-        # Check openForgerList
-        j = {
+            "forgerProposition": sc_address_1,
             "forgerIndex": 0,
+            "fee": 0,
+            "format": False,
+            "automaticSend": True
         }
-        result = sc_node_seeder.transaction_openForgerList(json.dumps(request))
+        result = sc_node_seeder.transaction_createOpenStakeTransactionSimplified(json.dumps(request))
         check_error_not_enabled_on_seeder_node(result)
 
-        # Check createKeyRotationTransaction
+        # Checking createOpenStakeTransaction
+
+        request = {
+            "transactionInput":
+                {
+                    "boxId": forger_box_id
+                },
+            "regularOutputProposition": sc_address_1,
+            "forgerIndex": 0,
+            "fee": 0,
+            "format": False,
+            "automaticSend": False
+        }
+        result = sc_node_seeder.transaction_createOpenStakeTransaction(json.dumps(request))
+        check_error_not_enabled_on_seeder_node(result)
+
         request = {
             "keyType": 0,
             "keyIndex": 0,
@@ -347,52 +356,28 @@ class SCEvmSeederNode(AccountChainSetup):
             "signingKeySignature": "0",
             "masterKeySignature": "0",
             "newKeySignature": "0",
-            "nonce": 0,
-            "gasInfo": {
-                "gasLimit": 10000,
-                "maxFeePerGas": 100,
-                "maxPriorityFeePerGas": 100
-            }
+            "format": True,
+            "automaticSend": True
         }
         result = sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
         check_error_not_enabled_on_seeder_node(result)
 
-        ##############################################################################
-        # Check that read-write ETH RPC are not allowed
-        ##############################################################################
+        # Check that CSW API are not accessible
 
-        response = sc_node_seeder.rpc_eth_sendRawTransaction(raw_tx)
-        self.check_rpc_not_allowed(response)
+        is_csw_enabled = sc_node_seeder.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
 
-        payload = {
-            "type": 0,
-            "nonce": 10,
-            "gas": 23000,
-            "value": 1,
-            "from": evm_address_sc1,
-            "gasPrice": 1000
-        }
+        result = sc_node_seeder.csw_cswBoxIds()
+        check_error_not_enabled_on_seeder_node(result)
 
-        response = sc_node_seeder.rpc_eth_signTransaction(payload)
-        self.check_rpc_not_allowed(response)
+        result = sc_node_seeder.csw_cswInfo()
+        check_error_not_enabled_on_seeder_node(result)
 
-        payload = ["0x335a48952dfc1434c33878d692c42bede32071f9", "0xdeadbeef"]
+        result = sc_node_seeder.csw_nullifier()
+        check_error_not_enabled_on_seeder_node(result)
 
-        response = sc_node_seeder.rpc_eth_sign(payload)
-        self.check_rpc_not_allowed(response)
-
-        payload = {
-            "nonce": "0x1",
-            "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
-            "gasPrice": "0x9184e72a000",
-            "gas": "0x76c0",
-            "to": "0x52cceccf519c4575a3cbf3bff5effa5e9181cec4",
-            "from": "0x335a48952dfc1434c33878d692c42bede32071f9",
-            "value": "0x9184e72a"
-        }
-
-        response = sc_node_seeder.rpc_eth_sendTransaction(payload)
-        self.check_rpc_not_allowed(response)
+        result = sc_node_seeder.csw_generateCswProof()
+        check_error_not_enabled_on_seeder_node(result)
 
         # Creates some blocks containing txs and then revert them. Verify that in node 1 and node 3 the transactions
         # are in their mempool, while the node seeder mempool remains empty
@@ -401,14 +386,9 @@ class SCEvmSeederNode(AccountChainSetup):
 
         list_of_mc_block_hash_to_be_reverted = []
         for j in range(max_num_of_blocks):
-            for i in range(j * self.max_account_slots, (j + 1) * (self.max_account_slots - 1)):
-                createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1,
-                                         toAddress=evm_address_sc1, nonce=nonce_addr_1,
-                                         gasLimit=230000, maxPriorityFeePerGas=900000000,
-                                         maxFeePerGas=900000000, value=1)
-                nonce_addr_1 += 1
-            list_of_mc_block_hash_to_be_reverted.append(mc_node.generate(1)[0])
+            sendCoinsToAddress(sc_node_1, sc_address_3, 10, fee=0)
             generate_next_block(sc_node_1, "first node")
+            list_of_mc_block_hash_to_be_reverted.append(mc_node.generate(1)[0])
 
         self.sc_sync_all()
 
@@ -429,12 +409,7 @@ class SCEvmSeederNode(AccountChainSetup):
         assert_true(len(allTransactions(sc_node_3, False)['transactionIds']) > 0)
         assert_equal(0, len(allTransactions(sc_node_seeder, False)['transactionIds']))
 
-    @staticmethod
-    def check_rpc_not_allowed(response):
-        assert_true("error" in response)
-        assert_equal("Action not allowed", response['error']['message'])
-        assert_equal(2, response['error']['code'])
 
 
 if __name__ == "__main__":
-    SCEvmSeederNode().main()
+    SCSeederNode().main()

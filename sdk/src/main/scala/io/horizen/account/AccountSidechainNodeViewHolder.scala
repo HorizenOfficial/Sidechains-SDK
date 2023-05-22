@@ -238,6 +238,7 @@ object AccountNodeViewHolderRef {
         }
       }
   }
+
   def props(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,

@@ -6,7 +6,7 @@ import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.SidechainApiRoute
+import io.horizen.api.http.route.{DisableApiRoute, SidechainApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
@@ -80,8 +80,15 @@ object SidechainCswApiRoute {
             params: NetworkParams)
            (implicit context: ActorRefFactory, ec: ExecutionContext): SidechainCswApiRoute = {
     require(params != null, "Network parameters must not be NULL")
-   if (params.isCSWEnabled)
-      SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get)
+    if (params.isCSWEnabled) {
+      if (params.isHandlingTransactionsEnabled)
+        SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get)
+      else
+        new SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get) with DisableApiRoute {
+          override def listOfDisabledEndpoints: Seq[String] = Seq("cswBoxIds", "generateCswProof", "cswInfo", "nullifier")
+          override val myPathPrefix: String = "csw"
+       }
+    }
     else
       SidechainCswApiRouteCSWDisabled(settings, sidechainNodeViewHolderRef, params)
   }
@@ -92,7 +99,7 @@ object SidechainCswApiRoute {
                                                                           cswManager: ActorRef)
                                                                          (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
 
-    override val route: Route = pathPrefix("csw") {
+    override def route: Route = pathPrefix("csw") {
       hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ isCeasedSidechainWithdrawalEnabled
     }
 
@@ -197,7 +204,7 @@ object SidechainCswApiRoute {
                                                                            override val sidechainNodeViewHolderRef: ActorRef,
                                                                            override val params: NetworkParams)
                                                                           (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
-    override val route: Route = pathPrefix("csw") {
+    override def route: Route = pathPrefix("csw") {
       hasCeased ~ isCeasedSidechainWithdrawalEnabled ~ notImplemented
     }
 

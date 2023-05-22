@@ -79,8 +79,8 @@ object SidechainBlockApiRoute {
       new SidechainBlockApiRoute(settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, companion, forgerRef, params)
         with DisableApiRoute {
 
-        def listOfDisabledEndpoints: Seq[String] = Seq("startForging","stopForging", "generate")
-        val myPathPrefix: String = "block"
+        override def listOfDisabledEndpoints: Seq[String] = Seq("startForging","stopForging", "generate")
+        override val myPathPrefix: String = "block"
       }
   }
 
