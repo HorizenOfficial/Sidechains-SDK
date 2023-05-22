@@ -1,7 +1,7 @@
 import json
 
 
-def redeem(sidechainNode, proposition, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot,
+def redeemTransaction(sidechainNode, proposition, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot,
            nextScCommitmentTreeRoot,
            proof, messageType, senderSidechain, sender, receiverSidechain, receiver, payload, fee):
     j = {

@@ -7,7 +7,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, assert_true, generate_next_blocks, \
     assert_equal, generate_next_block
 from httpCalls.transaction.sendTransaction import sendTransaction
-from httpCalls.transaction.vote.redeem import redeem
+from httpCalls.transaction.vote.redeemTransaction import redeemTransaction
 from httpCalls.sc2sc.createRedeemMessage import createRedeemMessage
 from httpCalls.transaction.vote.sendVoteMessageToSidechain import sendVoteMessageToSidechain
 from httpCalls.wallet.balance import http_wallet_balance
@@ -105,7 +105,7 @@ class CrossChainToBeRemoved(SidechainTestFramework):
         redeem_message = createRedeemMessage(sc_node, 'VERSION_1', 1, sc_id, user_address, sc_id, user_address, '00000008')["result"]["redeemMessage"]
         message = redeem_message["message"]
 
-        redeem_tx = redeem(
+        redeem_tx = redeemTransaction(
             sc_node,
             user_address,
             redeem_message["certificateDataHash"],

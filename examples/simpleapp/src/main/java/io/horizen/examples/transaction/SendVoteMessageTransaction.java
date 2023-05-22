@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static io.horizen.examples.transaction.TransactionIdsEnum.SendVoteToSidechainTransactionId;
+
 public final class SendVoteMessageTransaction extends AbstractRegularTransaction {
     public static final byte TX_VERSION = 1;
     private final CrossChainMessageBoxData outputMsgBoxData;
@@ -79,7 +81,7 @@ public final class SendVoteMessageTransaction extends AbstractRegularTransaction
 
     @Override
     public byte transactionTypeId() {
-        return 0;
+        return SendVoteToSidechainTransactionId.id();
     }
 
     @Override
@@ -100,8 +102,6 @@ public final class SendVoteMessageTransaction extends AbstractRegularTransaction
     @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         super.transactionSemanticValidity();
-
-        System.out.println("Inside the validation: " + BytesUtils.toHexString(outputMsgBoxData.getReceiverSidechain()));
 
         ByteBuffer byteBuffer = ByteBuffer.wrap(outputMsgBoxData.getPayload());
         int vote = byteBuffer.getInt();

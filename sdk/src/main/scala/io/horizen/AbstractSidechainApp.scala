@@ -133,33 +133,6 @@ abstract class AbstractSidechainApp
       s"Current value: $consensusSecondsInSlot")
   }
 
-  // Generate Coboundary Marlin Proving System dlog keys
-  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
-  if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
-    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
-  }
-
-  if (!isCSWEnabled) {
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    if (sc2scIsActive) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
-  }
-
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -265,6 +238,33 @@ abstract class AbstractSidechainApp
 
   // Configure Horizen address json serializer specifying proper network type.
   JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
+
+  // Generate Coboundary Marlin Proving System dlog keys
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
+  if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
+  }
+
+  if (!isCSWEnabled) {
+    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
+    if (sc2scIsActive) {
+      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
+      )
+      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
+      )
+      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
+      if (keyFilesDontExist) {
+        log.info("Generating Sc2Sc snark keys. It may take some time.")
+        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
+
+        if (!keysCreated) {
+          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
+        }
+      }
+    }
+  }
 
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {

@@ -25,7 +25,6 @@ import java.util.Optional;
 public class Sc2scImplZendoo implements Sc2scCircuit {
 
     private static final int SEGMENT_SIZE = 1 << 15;
-    private static final int DLOG_KEYS_SIZE = 1 << 18;
     public static final int CUSTOM_FIELDS_NUM = 32;
 
     @Override

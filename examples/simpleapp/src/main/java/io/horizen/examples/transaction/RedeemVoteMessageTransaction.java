@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static io.horizen.examples.transaction.TransactionIdsEnum.RedeemVoteTransactionId;
+
 public final class RedeemVoteMessageTransaction extends AbstractCrossChainRedeemTransaction {
     public static final byte TX_VERSION = 1;
     private final byte version;
@@ -69,7 +71,7 @@ public final class RedeemVoteMessageTransaction extends AbstractCrossChainRedeem
 
     @Override
     public byte transactionTypeId() {
-        return 0;
+        return RedeemVoteTransactionId.id();
     }
 
     @Override

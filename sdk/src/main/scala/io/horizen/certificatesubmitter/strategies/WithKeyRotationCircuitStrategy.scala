@@ -124,17 +124,12 @@ class WithKeyRotationCircuitStrategy[
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
 
-    val previousCertificateBytes: Array[Byte] = sc2ScDataForCertificate match {
+    val (previousCertificateBytes, messageTreeRootHash): (Array[Byte], Array[Byte]) = sc2ScDataForCertificate match {
       case Some(sc2scData) => sc2scData.previousTopQualityCertificateHash match {
-        case Some(cert) => cert
-        case None => Array.emptyByteArray
+        case Some(cert) => (cert, sc2scData.messagesTreeRoot)
+        case None => (Array.emptyByteArray, sc2scData.messagesTreeRoot)
       }
-      case None => Array.emptyByteArray
-    }
-
-    val messageTreeRootHash = sc2ScDataForCertificate match {
-      case Some(sc2scData) => sc2scData.messagesTreeRoot
-      case None => Array.emptyByteArray
+      case None => (Array.emptyByteArray, Array.emptyByteArray)
     }
 
     val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
