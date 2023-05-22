@@ -1,3 +1,6 @@
+**0.7.1**
+1. PeerToPeer and API rate limiting
+
 **0.7.0**
 1. Account model introduced. EvmApp application example added.
 2. Base package renamed from `com.horizen` to `io.horizen`
