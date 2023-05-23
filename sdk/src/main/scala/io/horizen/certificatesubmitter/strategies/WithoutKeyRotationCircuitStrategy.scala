@@ -69,9 +69,6 @@ class WithoutKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
-    // todo: remove this from certificatedataWITHOUTkeyrotation
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = None
-
     val signersPublicKeyWithSignatures = status.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
@@ -82,7 +79,6 @@ class WithoutKeyRotationCircuitStrategy[
       sidechainId,
       backwardTransfers,
       endEpochCumCommTreeHash,
-      sc2ScDataForCertificate,
       btrFee,
       ftMinAmount,
       signersPublicKeyWithSignatures,

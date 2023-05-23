@@ -128,7 +128,6 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       sidechainId = FieldElement.createRandom.serializeFieldElement(),
       backwardTransfers = Seq[BackwardTransfer](),
       endEpochCumCommTreeHash = FieldElement.createRandom.serializeFieldElement(),
-      sc2ScDataForCertificate = Option.empty,
       btrFee = WithoutKeyRotationCircuitStrategyTest.btrFee,
       ftMinAmount = WithoutKeyRotationCircuitStrategyTest.ftMinAmount,
       schnorrKeyPairs = schnorrPropositionsAndSchnorrProofs,
