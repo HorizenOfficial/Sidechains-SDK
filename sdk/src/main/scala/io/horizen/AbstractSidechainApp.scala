@@ -136,7 +136,7 @@ abstract class AbstractSidechainApp
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+      sidechainId = BytesUtils.toMainchainFormat(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,

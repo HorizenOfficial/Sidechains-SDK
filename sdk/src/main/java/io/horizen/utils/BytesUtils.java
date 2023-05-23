@@ -177,6 +177,10 @@ public final class BytesUtils {
         return res;
     }
 
+    public static byte[] toMainchainFormat(byte[] bytes) {
+        return reverseBytes(bytes);
+    }
+
     // Get byte array from hex string;
     public static byte[] fromHexString(String hex) {
         return BaseEncoding.base16().lowerCase().decode(hex.toLowerCase());

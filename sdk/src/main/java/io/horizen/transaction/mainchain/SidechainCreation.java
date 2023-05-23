@@ -61,7 +61,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 //                    VrfPublicKey.KEY_LENGTH + ", actual: " + output.customCreationData().length);
 //        }
         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
-        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.toMainchainFormat(output.address()));
         long value = output.amount();
 
         // we must not read past the vfr key bytes in the custom data

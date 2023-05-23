@@ -115,8 +115,8 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                     String provingKeyPath
     ) {
         return Sc2Sc.createProof(
-                BytesUtils.reverseBytes(nextScTxCommitmentRoot),
-                BytesUtils.reverseBytes(scTxCommitmentRoot),
+                BytesUtils.toMainchainFormat(nextScTxCommitmentRoot),
+                BytesUtils.toMainchainFormat(scTxCommitmentRoot),
                 messageHash.getValue(),
                 nextWithdrawalCertificate,
                 currWithdrawalCertificate,
@@ -136,8 +136,8 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                      byte[] proof,
                                      String verifyKeyPath) {
         return Sc2Sc.verifyProof(
-                BytesUtils.reverseBytes(nextScTxCommitmentRootCertEpoch),
-                BytesUtils.reverseBytes(scTxCommitmentRootCertEpoch),
+                BytesUtils.toMainchainFormat(nextScTxCommitmentRootCertEpoch),
+                BytesUtils.toMainchainFormat(scTxCommitmentRootCertEpoch),
                 messageHash.getValue(),
                 proof,
                 verifyKeyPath
