@@ -38,9 +38,8 @@ Test:
 """
 
 
-def check_error_not_enabled_on_seeder_node(result):
-    assert_true("error" in result)
-    assert_equal("1111", result["error"]["code"])
+def check_error_not_enabled_on_seeder_node(err):
+    assert_true("Invalid operation on node not supporting transactions." in err.error)
 
 
 class SCEvmSeederNode(AccountChainSetup):
@@ -128,13 +127,22 @@ class SCEvmSeederNode(AccountChainSetup):
 
         # Try to start forging. Verify that an error is returned
 
-        res = sc_node_seeder.block_startForging()
-        check_error_not_enabled_on_seeder_node(res)
+        try:
+            sc_node_seeder.block_startForging()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
+
 
         # Try to stop forging. Verify that an error is returned
 
-        res = sc_node_seeder.block_stopForging()
-        check_error_not_enabled_on_seeder_node(res)
+        try:
+            sc_node_seeder.block_stopForging()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Try to create a block. Verify that an error is returned
 
@@ -145,8 +153,12 @@ class SCEvmSeederNode(AccountChainSetup):
 
         next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, False)
 
-        forge_result = sc_node_seeder.block_generate(generate_forging_request(next_epoch, next_slot, None))
-        check_error_not_enabled_on_seeder_node(forge_result)
+        try:
+            sc_node_seeder.block_generate(generate_forging_request(next_epoch, next_slot, None))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check that wallet endpoints don't exist on seeder node
         try:
@@ -231,8 +243,13 @@ class SCEvmSeederNode(AccountChainSetup):
             "signature_r": None,
             "signature_s": None
         }
-        result = sc_node_seeder.transaction_createLegacyEIP155Transaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createLegacyEIP155Transaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check createEIP1559Transaction
         request = {
@@ -249,8 +266,12 @@ class SCEvmSeederNode(AccountChainSetup):
             "signature_s": None
         }
 
-        result = sc_node_seeder.transaction_createEIP1559Transaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_createEIP1559Transaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check createLegacyTransaction
         request = {
@@ -266,8 +287,13 @@ class SCEvmSeederNode(AccountChainSetup):
             "signature_s": None,
             "outputRawBytes": True
         }
-        result = sc_node_seeder.transaction_createLegacyTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createLegacyTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check sendTransaction
         raw_tx = "96dc24d6874a9b01e4a7b7e5b74db504db3731f764293769caef100f551efadf7d378a015faca6ae62ae30a9bf5e3c6aa94f58597edc381d0ec167fa0c84635e12a2d13ab965866ebf7c7aae458afedef1c17e08eb641135f592774e18401e0104f8e7f8e0d98e3230332e3133322e39342e31333784787beded84556c094cf8528c39342e3133372e342e31333982765fb840621168019b7491921722649cd1aa9608f23f8857d782e7495fb6765b821002c4aac6ba5da28a5c91b432e5fcc078931f802ffb5a3ababa42adee7a0c927ff49ef8528c3136322e3234332e34362e39829dd4b840e437a4836b77ad9d9ffe73ee782ef2614e6d8370fcf62191a6e488276e23717147073a7ce0b444d485fff5a0c34c4577251a7a990cf80d8542e21b95aa8c5e6cdd8e3230332e3133322e39342e31333788ffffffffa5aadb3a84556c095384556c0919"
@@ -275,16 +301,26 @@ class SCEvmSeederNode(AccountChainSetup):
         request = {
             "transactionBytes": raw_tx
         }
-        result = sc_node_seeder.transaction_sendTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_sendTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check signTransaction
         request = {
             "from": evm_address_sc1,
             "transactionBytes": raw_tx
         }
-        result = sc_node_seeder.transaction_signTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_signTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check makeForgerStake
 
@@ -299,8 +335,12 @@ class SCEvmSeederNode(AccountChainSetup):
             "nonce": 0
         }
 
-        result = sc_node_seeder.transaction_makeForgerStake(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_makeForgerStake(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check withdrawCoins
         request = {
@@ -316,28 +356,49 @@ class SCEvmSeederNode(AccountChainSetup):
                 "maxPriorityFeePerGas": 100
             }
         }
-        result = sc_node_seeder.transaction_withdrawCoins(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_withdrawCoins(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check spendForgingStake
         stake_id_genesis = sc_node_seeder.transaction_allForgingStakes()["result"]['stakes'][0]['stakeId']
-        result = sc_node_seeder.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stake_id_genesis)}))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_spendForgingStake(
+                json.dumps({"stakeId": str(stake_id_genesis)}))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check createSmartContract
         request = {
             "contractCode": "0x8888",
         }
-        result = sc_node_seeder.transaction_createSmartContract(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createSmartContract(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check openForgerList
         j = {
             "forgerIndex": 0,
         }
-        result = sc_node_seeder.transaction_openForgerList(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_openForgerList(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
+
 
         # Check createKeyRotationTransaction
         request = {
@@ -354,8 +415,13 @@ class SCEvmSeederNode(AccountChainSetup):
                 "maxPriorityFeePerGas": 100
             }
         }
-        result = sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         ##############################################################################
         # Check that read-write ETH RPC are not allowed

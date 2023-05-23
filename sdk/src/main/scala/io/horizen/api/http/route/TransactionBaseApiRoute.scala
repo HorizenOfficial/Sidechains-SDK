@@ -37,7 +37,9 @@ abstract class TransactionBaseApiRoute[
                                   sidechainTransactionActorRef: ActorRef,
                                   companion: SparkzSerializer[TX])
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
+
+  val myPathPrefix: String = "transaction"
 
   /**
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.

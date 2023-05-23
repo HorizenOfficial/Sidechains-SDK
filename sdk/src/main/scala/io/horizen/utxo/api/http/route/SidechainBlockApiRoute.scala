@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.{BlockBaseApiRoute, DisableApiRoute}
+import io.horizen.api.http.route.BlockBaseApiRoute
 import io.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.json.Views
@@ -23,14 +23,14 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 
 
-class SidechainBlockApiRoute(
-                             override val settings: RESTApiSettings,
-                             override val sidechainNodeViewHolderRef: ActorRef,
-                             sidechainBlockActorRef: ActorRef,
-                             companion: SparkzSerializer[SidechainTypes#SCBT],
-                             forgerRef: ActorRef,
-                             params: NetworkParams)
-                           (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+case class SidechainBlockApiRoute(
+                                   override val settings: RESTApiSettings,
+                                   sidechainNodeViewHolderRef: ActorRef,
+                                   sidechainBlockActorRef: ActorRef,
+                                   companion: SparkzSerializer[SidechainTypes#SCBT],
+                                   forgerRef: ActorRef,
+                                   params: NetworkParams)
+                                 (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends BlockBaseApiRoute[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
@@ -42,7 +42,7 @@ class SidechainBlockApiRoute(
     NodeMemoryPool,
     SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params){
 
-  override def route: Route = pathPrefix("block") {
+  override val route: Route = pathPrefix(myPathPrefix) {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~
       stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo ~ getCurrentHeight
   }
@@ -61,31 +61,6 @@ class SidechainBlockApiRoute(
     }
   }
 }
-
-
-object SidechainBlockApiRoute {
-
-
-  def apply(settings: RESTApiSettings,
-            sidechainNodeViewHolderRef: ActorRef,
-            sidechainBlockActorRef: ActorRef,
-            companion: SparkzSerializer[SidechainTypes#SCBT],
-            forgerRef: ActorRef,
-            params: NetworkParams
-           )(implicit context: ActorRefFactory, ec: ExecutionContext): SidechainBlockApiRoute = {
-    if (params.isHandlingTransactionsEnabled)
-      new SidechainBlockApiRoute(settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, companion, forgerRef, params)
-    else
-      new SidechainBlockApiRoute(settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, companion, forgerRef, params)
-        with DisableApiRoute {
-
-        override def listOfDisabledEndpoints: Seq[String] = Seq("startForging","stopForging", "generate")
-        override val myPathPrefix: String = "block"
-      }
-  }
-
-}
-
 
 object SidechainBlockRestSchema {
   @JsonView(Array(classOf[Views.Default]))

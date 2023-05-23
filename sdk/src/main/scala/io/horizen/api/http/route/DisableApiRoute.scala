@@ -1,34 +1,22 @@
 package io.horizen.api.http.route
 
-import akka.http.scaladsl.server.{PathMatcher0, Route}
-import io.horizen.api.http.{ApiResponseUtil, ErrorResponse}
-import sparkz.core.api.http.ApiRoute
-import java.util.{Optional => JOptional}
+import io.horizen.params.NetworkParams
 
-trait DisableApiRoute extends ApiRoute {
-  private def disabledEndpoint: Route =  (post & path(matches(listOfDisabledEndpoints))){
-    ApiResponseUtil.toResponse(ErrorNotEnabledOnSeederNode())
-  }
+//This trait can be used by a core API route if it needs to disable some (or all) endpoints in specific cases (e.g.
+// seeder node)
+trait DisableApiRoute {
 
-  def listOfDisabledEndpoints: Seq[String]
-  protected val myPathPrefix: String
-
-  abstract override def route: Route = pathPrefix(myPathPrefix) {
-    disabledEndpoint
-  } ~ super.route
-
-  private def matches(endpointsNames: Seq[String]): PathMatcher0 = {
-    require(endpointsNames.nonEmpty, "List of endpoint names cannot be empty")
-    endpointsNames.tail.foldLeft[PathMatcher0](endpointsNames.head){
-      (res, tmp) => res | tmp
-    }
-  }
+  type EndpointPath = String
+  type EndpointPrefix = String
+  type ErrorMsg = String
+  // Returns the list of endpoints that need to be disabled. It returns a sequence of tuples where first element is
+  // the endpoint path prefix (e.g. "wallet", "transaction"), the second element is the endpoint path
+  // (e.g. "sendTransaction") and the third is an optional message error.
+  def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])]
 
 }
 
 
-case class ErrorNotEnabledOnSeederNode() extends ErrorResponse {
-  override val description: String = "Invalid operation on node not supporting transactions."
-  override val code: String = "1111"
-  override val exception: JOptional[Throwable] = JOptional.empty()
+object ErrorNotEnabledOnSeederNode {
+  val description: String = "Invalid operation on node not supporting transactions."
 }

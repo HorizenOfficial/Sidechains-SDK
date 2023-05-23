@@ -123,13 +123,21 @@ class SCSeederNode(SidechainTestFramework):
 
         # Try to start forging. Verify that an error is returned
 
-        res = sc_node_seeder.block_startForging()
-        check_error_not_enabled_on_seeder_node(res)
+        try:
+            sc_node_seeder.block_startForging()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Try to stop forging. Verify that an error is returned
 
-        res = sc_node_seeder.block_stopForging()
-        check_error_not_enabled_on_seeder_node(res)
+        try:
+            sc_node_seeder.block_stopForging()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Try to create a block. Verify that an error is returned
 
@@ -140,8 +148,12 @@ class SCSeederNode(SidechainTestFramework):
 
         next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, False)
 
-        forge_result = sc_node_seeder.block_generate(generate_forging_request(next_epoch, next_slot, None))
-        check_error_not_enabled_on_seeder_node(forge_result)
+        try:
+            sc_node_seeder.block_generate(generate_forging_request(next_epoch, next_slot, None))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check that wallet endpoints don't exist on seeder node
         try:
@@ -225,8 +237,12 @@ class SCSeederNode(SidechainTestFramework):
             "fee": 0
         }
 
-        result = sc_node_seeder.transaction_createCoreTransactionSimplified(json.dumps(core_transaction_request))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_createCoreTransactionSimplified(json.dumps(core_transaction_request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking createCoreTransaction
         forger_box = sc_node_1.wallet_allBoxes()["result"]["boxes"][0]
@@ -240,8 +256,12 @@ class SCSeederNode(SidechainTestFramework):
             "forgerOutputs": []
         }
 
-        result = sc_node_seeder.transaction_createCoreTransaction(json.dumps(core_transaction_request))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_createCoreTransaction(json.dumps(core_transaction_request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking sendCoinsToAddress
         request = {
@@ -253,8 +273,13 @@ class SCSeederNode(SidechainTestFramework):
             ],
             "fee": 0
         }
-        result = sc_node_seeder.transaction_sendCoinsToAddress(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_sendCoinsToAddress(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking sendTransaction
         core_transaction_request = {
@@ -267,8 +292,12 @@ class SCSeederNode(SidechainTestFramework):
 
         coreTransactionJson = sc_node_1.transaction_createCoreTransaction(json.dumps(core_transaction_request))
 
-        result = sc_node_seeder.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking withdrawCoins
         request = {
@@ -280,8 +309,13 @@ class SCSeederNode(SidechainTestFramework):
                 ],
             "fee": 0
             }
-        result = sc_node_seeder.transaction_withdrawCoins(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_withdrawCoins(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking makeForgerStake
 
@@ -298,8 +332,13 @@ class SCSeederNode(SidechainTestFramework):
             ],
             "fee": 0
         }
-        result = sc_node_seeder.transaction_makeForgerStake(json.dumps(forgerStakes))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_makeForgerStake(json.dumps(forgerStakes))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking spendForgingStake
         all_forger_boxes_req = {"boxTypeClass": "ForgerBox"}
@@ -319,8 +358,12 @@ class SCSeederNode(SidechainTestFramework):
             "forgerOutputs": []
         }
 
-        result = sc_node_seeder.transaction_spendForgingStake(json.dumps(spend_forger_stakes_req))
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.transaction_spendForgingStake(json.dumps(spend_forger_stakes_req))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking createOpenStakeTransactionSimplified
         request = {
@@ -330,8 +373,13 @@ class SCSeederNode(SidechainTestFramework):
             "format": False,
             "automaticSend": True
         }
-        result = sc_node_seeder.transaction_createOpenStakeTransactionSimplified(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createOpenStakeTransactionSimplified(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Checking createOpenStakeTransaction
 
@@ -346,8 +394,13 @@ class SCSeederNode(SidechainTestFramework):
             "format": False,
             "automaticSend": False
         }
-        result = sc_node_seeder.transaction_createOpenStakeTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createOpenStakeTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         request = {
             "keyType": 0,
@@ -359,25 +412,46 @@ class SCSeederNode(SidechainTestFramework):
             "format": True,
             "automaticSend": True
         }
-        result = sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
-        check_error_not_enabled_on_seeder_node(result)
+
+        try:
+            sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Check that CSW API are not accessible
 
         is_csw_enabled = sc_node_seeder.csw_isCSWEnabled()["result"]["cswEnabled"]
         assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
 
-        result = sc_node_seeder.csw_cswBoxIds()
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.csw_cswBoxIds()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
-        result = sc_node_seeder.csw_cswInfo()
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.csw_cswInfo()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
-        result = sc_node_seeder.csw_nullifier()
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.csw_nullifier()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
-        result = sc_node_seeder.csw_generateCswProof()
-        check_error_not_enabled_on_seeder_node(result)
+        try:
+            sc_node_seeder.csw_generateCswProof()
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
 
         # Creates some blocks containing txs and then revert them. Verify that in node 1 and node 3 the transactions
         # are in their mempool, while the node seeder mempool remains empty

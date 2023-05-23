@@ -20,13 +20,14 @@ import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.{DisableApiRoute, TransactionBaseApiRoute}
 import io.horizen.api.http.route.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, TransactionBaseApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.evm.Address
 import io.horizen.json.Views
 import io.horizen.node.NodeWalletBase
 import io.horizen.params.NetworkParams
@@ -34,7 +35,6 @@ import io.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
 import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.Address
 import sparkz.core.settings.RESTApiSettings
 
 import java.math.BigInteger
@@ -44,8 +44,8 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-class AccountTransactionApiRoute(override val settings: RESTApiSettings,
-                                 override val sidechainNodeViewHolderRef: ActorRef,
+case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
+                                      sidechainNodeViewHolderRef: ActorRef,
                                       sidechainTransactionActorRef: ActorRef,
                                       companion: SidechainAccountTransactionsCompanion,
                                       params: NetworkParams,
@@ -65,7 +65,7 @@ class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override def route: Route = pathPrefix("transaction") {
+  override val route: Route = pathPrefix(myPathPrefix) {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
@@ -768,31 +768,27 @@ class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     None
   }
 
-}
-
-object AccountTransactionApiRoute {
-  def apply(settings: RESTApiSettings,
-            sidechainNodeViewHolderRef: ActorRef,
-            sidechainTransactionActorRef: ActorRef,
-            companion: SidechainAccountTransactionsCompanion,
-            params: NetworkParams,
-            circuitType: CircuitTypes
-           )(implicit context: ActorRefFactory, ec: ExecutionContext): AccountTransactionApiRoute = {
-    if (params.isHandlingTransactionsEnabled)
-      new AccountTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
-    else
-      new AccountTransactionApiRoute(settings, sidechainNodeViewHolderRef, sidechainTransactionActorRef, companion, params, circuitType)
-        with DisableApiRoute {
-
-        override def listOfDisabledEndpoints: Seq[String] = Seq("createLegacyEIP155Transaction","createEIP1559Transaction",
-          "createLegacyTransaction", "sendTransaction", "signTransaction", "makeForgerStake", "withdrawCoins",
-          "spendForgingStake", "createSmartContract", "openForgerList", "createKeyRotationTransaction")
-        override val myPathPrefix: String = "transaction"
-      }
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (myPathPrefix, "createLegacyEIP155Transaction", error),
+        (myPathPrefix, "createEIP1559Transaction", error),
+        (myPathPrefix, "createLegacyTransaction", error),
+        (myPathPrefix, "sendTransaction", error),
+        (myPathPrefix, "signTransaction", error),
+        (myPathPrefix, "makeForgerStake", error),
+        (myPathPrefix, "withdrawCoins", error),
+        (myPathPrefix, "spendForgingStake", error),
+        (myPathPrefix, "createSmartContract", error),
+        (myPathPrefix, "openForgerList", error),
+        (myPathPrefix, "createKeyRotationTransaction", error),
+      )
+    } else
+      Seq.empty
   }
 
 }
-
 
 object AccountTransactionRestScheme {
 

@@ -15,6 +15,7 @@ import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.companion.SidechainSecretsCompanion
 import io.horizen.json.Views
 import io.horizen.node._
+import io.horizen.params.NetworkParams
 import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret._
 import io.horizen.transaction.Transaction
@@ -44,9 +45,10 @@ abstract class WalletBaseApiRoute[
                                    sidechainNodeViewHolderRef: ActorRef,
                                    sidechainSecretsCompanion: SidechainSecretsCompanion
                         )(implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
 
 
+  val myPathPrefix: String = "wallet"
 
   /**
    * Create new Vrf secret and return corresponding public key
@@ -256,6 +258,17 @@ abstract class WalletBaseApiRoute[
       }
     }
   }
+
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (myPathPrefix, "", error)
+      )
+    } else
+      Seq.empty
+  }
+
 
 }
 

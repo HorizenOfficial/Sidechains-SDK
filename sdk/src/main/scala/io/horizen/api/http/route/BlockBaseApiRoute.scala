@@ -47,7 +47,9 @@ abstract class BlockBaseApiRoute[
                                   forgerRef: ActorRef,
                                   params: NetworkParams)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
+
+  val myPathPrefix:String = "block"
 
   /**
    * The sidechain block by its id.
@@ -233,6 +235,19 @@ abstract class BlockBaseApiRoute[
       }
     }
   }
+
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (myPathPrefix, "startForging", error),
+        (myPathPrefix, "stopForging", error),
+        (myPathPrefix, "generate", error)
+      )
+    } else
+      Seq.empty
+  }
+
 }
 
 

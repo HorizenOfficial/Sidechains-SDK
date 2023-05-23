@@ -6,7 +6,7 @@ import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.{DisableApiRoute, SidechainApiRoute}
+import io.horizen.api.http.route.{DisableApiRoute, ErrorNotEnabledOnSeederNode, SidechainApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import io.horizen.json.Views
 import io.horizen.params.NetworkParams
@@ -43,7 +43,7 @@ abstract class SidechainCswApiRoute (override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
-
+  val myPathPrefix: String = "csw"
   /**
    * Return ceasing status of the Sidechain
    */
@@ -80,26 +80,21 @@ object SidechainCswApiRoute {
             params: NetworkParams)
            (implicit context: ActorRefFactory, ec: ExecutionContext): SidechainCswApiRoute = {
     require(params != null, "Network parameters must not be NULL")
-    if (params.isCSWEnabled) {
-      if (params.isHandlingTransactionsEnabled)
-        SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get)
-      else
-        new SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get) with DisableApiRoute {
-          override def listOfDisabledEndpoints: Seq[String] = Seq("cswBoxIds", "generateCswProof", "cswInfo", "nullifier")
-          override val myPathPrefix: String = "csw"
-       }
-    }
+   if (params.isCSWEnabled)
+      SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get)
     else
       SidechainCswApiRouteCSWDisabled(settings, sidechainNodeViewHolderRef, params)
   }
+
 
   private[SidechainCswApiRoute] case class SidechainCswApiRouteCSWEnabled(override val settings: RESTApiSettings,
                                                                           override val sidechainNodeViewHolderRef: ActorRef,
                                                                           override val params: NetworkParams,
                                                                           cswManager: ActorRef)
-                                                                         (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
+                                                                         (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+    extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) with DisableApiRoute {
 
-    override def route: Route = pathPrefix("csw") {
+    override val route: Route = pathPrefix(myPathPrefix) {
       hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ isCeasedSidechainWithdrawalEnabled
     }
 
@@ -123,14 +118,13 @@ object SidechainCswApiRoute {
                   case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
                   case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
                 }
-              case Failure(e) => {
+              case Failure(e) =>
                 log.error("Unexpected error during CSW proof generation.")
                 ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
-              }
             }
           }
         }
-        }
+      }
     }
 
     /**
@@ -183,28 +177,40 @@ object SidechainCswApiRoute {
         Try {
           Await.result(cswManager ? GetBoxNullifier(BytesUtils.fromHexString(body.boxId)), timeout.duration).asInstanceOf[Try[Array[Byte]]]
         } match {
-          case Success(nullifierTry: Try[Array[Byte]]) => {
+          case Success(nullifierTry: Try[Array[Byte]]) =>
             nullifierTry match {
               case Success(nullifier: Array[Byte]) => ApiResponseUtil.toResponse(RespNullifier(BytesUtils.toHexString(nullifier)))
               case Failure(e) =>
                 log.error(e.getMessage)
                 ApiResponseUtil.toResponse(ErrorRetrievingNullifier(e.getMessage, JOptional.of(e)))
             }
-          }
-          case Failure(e) => {
+          case Failure(e) =>
             log.error("Unexpected error during retrieving the nullifier.")
             ApiResponseUtil.toResponse(ErrorRetrievingNullifier("Unexpected error during retrieving the nullifier.", JOptional.of(e)))
-          }
         }
       }
+    }
+
+    override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+      if (!params.isHandlingTransactionsEnabled) {
+        val error = Some(ErrorNotEnabledOnSeederNode.description)
+        Seq(
+          (myPathPrefix, "cswBoxIds", error),
+          (myPathPrefix, "generateCswProof", error),
+          (myPathPrefix, "cswInfo", error),
+          (myPathPrefix, "nullifier", error)
+        )
+      } else
+        Seq.empty
     }
   }
 
   private[SidechainCswApiRoute] case class SidechainCswApiRouteCSWDisabled(override val settings: RESTApiSettings,
                                                                            override val sidechainNodeViewHolderRef: ActorRef,
                                                                            override val params: NetworkParams)
-                                                                          (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
-    override def route: Route = pathPrefix("csw") {
+                                                                          (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+    extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
+    override val route: Route = pathPrefix(myPathPrefix) {
       hasCeased ~ isCeasedSidechainWithdrawalEnabled ~ notImplemented
     }
 
