@@ -489,7 +489,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
+        'API_KEY_HASH': f'apiKeyHash = "{api_key_hash}"' if (api_key_hash != "") else '\r',
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_INCOMING_CONNECTIONS': sc_node_config.max_incoming_connections,
