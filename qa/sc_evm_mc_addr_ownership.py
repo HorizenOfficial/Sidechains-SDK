@@ -2,12 +2,11 @@
 import json
 import pprint
 from decimal import Decimal
-from eth_abi import decode, encode_abi
+from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_topic, encode_hex, \
-    function_signature_to_4byte_selector, to_normalized_address
+    function_signature_to_4byte_selector
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import contract_function_static_call, __make_static_call_payload, \
-    format_evm
+from SidechainTestFramework.account.ac_utils import format_evm
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
@@ -247,8 +246,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         # 3. try to use invalid parameters
         # 3.1 illegal sc address
+        invalidScAddr = "1234h"
         try:
-            invalidScAddr = "1234h"
             sendKeysOwnership(sc_node,
                               sc_address=invalidScAddr,
                               mc_addr=taddr2,

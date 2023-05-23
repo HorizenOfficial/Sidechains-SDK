@@ -107,8 +107,10 @@ class McAddrOwnershipMsgProcessorTest
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calculated using this site: https://emn178.github.io/online-tools/keccak_256.html
-    assertEquals("Wrong MethodId for AddNewOwnershipCmd", "3bafc174", McAddrOwnershipMsgProcessor.AddNewOwnershipCmd)
-    assertEquals("Wrong MethodId for RemoveOwnershipCmd", "4c21d829", McAddrOwnershipMsgProcessor.RemoveOwnershipCmd)
+    assertEquals("Wrong MethodId for AddNewOwnershipCmd", "b56af4ef", McAddrOwnershipMsgProcessor.AddNewOwnershipCmd)
+    assertEquals("Wrong MethodId for RemoveOwnershipCmd", "9183c0da", McAddrOwnershipMsgProcessor.RemoveOwnershipCmd)
+    assertEquals("Wrong MethodId for GetListOfAllOwnershipsCmd", "8ef05457", McAddrOwnershipMsgProcessor.GetListOfAllOwnershipsCmd)
+    assertEquals("Wrong MethodId for GetListOfOwnershipsCmd", "169e2d15", McAddrOwnershipMsgProcessor.GetListOfOwnershipsCmd)
   }
 
   @Test
