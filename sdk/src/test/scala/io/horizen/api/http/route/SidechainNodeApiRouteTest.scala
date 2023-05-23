@@ -17,7 +17,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
   "The Api should to" should {
 
     "reply at /info" in {
-      Post(basePath + "info") ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "info").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
