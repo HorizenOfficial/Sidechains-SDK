@@ -51,6 +51,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val isCSWEnabled: Boolean = true
     override val isNonCeasing: Boolean = false
     override val minVirtualWithdrawalEpochLength: Int = 10
+    override val mcBlockRefDelay : Int = 0
   }
 
   val defaultConsensusFork = ConsensusParamsFork.DefaultConsensusParamsFork

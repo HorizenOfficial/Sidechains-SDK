@@ -23,7 +23,7 @@ import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils, WithdrawalEpochUtils}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -54,7 +54,8 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val chainInfo : ChainInfo
+   val chainInfo : ChainInfo,
+   val mcBlockReferenceDelay : Int
   )
   extends Application with SparkzLogging
 {
@@ -256,6 +257,9 @@ abstract class AbstractSidechainApp
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
   } else {
+    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params))
+      throw new IllegalArgumentException("Mainchain Block reference delay is equal or more certificate submission window length. Certificate cannot be submitted.")
+
     log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 

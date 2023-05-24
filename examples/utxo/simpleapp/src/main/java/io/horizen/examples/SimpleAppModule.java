@@ -76,6 +76,10 @@ public class SimpleAppModule extends SidechainAppModule
 
         String appVersion = "";
 
+        // It's integer parameter that defines Mainchain Block Reference delay.
+        // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+        int mcBlockReferenceDelay = 1;
+
         // Here I can add my custom rest api and/or override existing one
         List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
 
@@ -164,5 +168,8 @@ public class SimpleAppModule extends SidechainAppModule
         bind(String.class)
                 .annotatedWith(Names.named("AppVersion"))
                 .toInstance(appVersion);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
+                .toInstance(mcBlockReferenceDelay);
     }
 }

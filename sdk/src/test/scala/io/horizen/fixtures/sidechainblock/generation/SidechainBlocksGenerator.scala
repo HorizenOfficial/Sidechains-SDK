@@ -550,6 +550,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val isCSWEnabled: Boolean = params.isCSWEnabled
       override val isNonCeasing: Boolean = params.isNonCeasing
       override val minVirtualWithdrawalEpochLength: Int = 10
+      override val mcBlockRefDelay : Int = 0
     }
   }
 

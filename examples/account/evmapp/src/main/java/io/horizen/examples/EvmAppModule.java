@@ -61,6 +61,10 @@ public class EvmAppModule extends AccountAppModule {
 
         String appVersion = "";
 
+        // It's integer parameter that defines Mainchain Block Reference delay.
+        // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+        int mcBlockReferenceDelay = 1;
+
         // use a custom object which implements the stopAll() method
         SidechainAppStopper applicationStopper = new EvmAppStopper();
 
@@ -103,5 +107,8 @@ public class EvmAppModule extends AccountAppModule {
         bind(String.class)
                 .annotatedWith(Names.named("AppVersion"))
                 .toInstance(appVersion);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
+                .toInstance(mcBlockReferenceDelay);
     }
 }
