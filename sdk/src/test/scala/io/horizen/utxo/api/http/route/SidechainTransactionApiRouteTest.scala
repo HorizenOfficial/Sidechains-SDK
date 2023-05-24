@@ -16,6 +16,7 @@ import org.junit.Assert._
 import java.nio.charset.StandardCharsets
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success}
 
 class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 
@@ -343,6 +344,35 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes("AAABBBCCC"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`text/plain(UTF-8)`
+      }
+
+      //Test taken from the vulnerability of the ListSerializer.parse() with no heap allocation limit
+      Post(basePath + "decodeTransactionBytes")
+        .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes(
+          BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(memoryPool.get(0)))))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        //Verify that we are able to decode the transaction
+        val txBytes = sidechainTransactionsCompanion.toBytes(memoryPool.get(0))
+        assertTrue(sidechainTransactionsCompanion.parseBytesTry(txBytes).isSuccess)
+
+        // modifying payload such that tx type is MC2SCAggregatedTransaction, and inserting large list elements count (2047483645)
+        txBytes(0) = 0x02  // id for MC2SCAggregatedTransaction tx type
+        txBytes(1) = 0x01  // MC2SC_AGGREGATED_TRANSACTION_VERSION = 1
+
+        // 0xfa 0xfb 0xd0 0xa0 0x0f - 2047483645 elements
+        txBytes(2) = 0xfa.toByte
+        txBytes(3) = 0xfb.toByte
+        txBytes(4) = 0xd0.toByte
+        txBytes(5) = 0xa0.toByte
+        txBytes(6) = 0x0f.toByte
+
+        //Verify that we don't preallocate the ArrayList size based on the fake size of the list
+        noException should be thrownBy sidechainTransactionsCompanion.parseBytesTry(txBytes)
       }
     }
 
