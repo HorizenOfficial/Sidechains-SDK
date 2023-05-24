@@ -22,5 +22,7 @@
 		<module>tools/sctool</module>
 		<module>tools/dbtool</module>
 		<module>tools/signingtool</module>
+		<module>tools/sidechains-sdk-account_sctools</module>
+		<module>tools/sidechains-sdk-utxo_sctools</module>
 	</modules>
 </project>
