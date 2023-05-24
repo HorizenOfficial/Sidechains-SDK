@@ -1,14 +1,22 @@
 package io.horizen.utils;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import sparkz.crypto.hash.Blake2b256;
-
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.util.Random;
 
 public final class Utils
 {
+    static {
+        // for Ripemd160 hash
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+    }
+
     private Utils() {}
 
     public static final int SHA256_LENGTH = 32;
