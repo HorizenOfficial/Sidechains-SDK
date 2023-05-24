@@ -57,7 +57,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqCreateRedeemMessage]) { body =>
 
           val crossChainMessage = new CrossChainMessageImpl(
-            CrossChainProtocolVersion.valueOf(body.message.protocolVersion),
+            CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
             body.message.messageType,
             BytesUtils.fromHexString(body.message.senderSidechain),
             BytesUtils.fromHexString(body.message.sender),
@@ -88,7 +88,7 @@ object Sc2scApiRouteRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class CrossChainMessageEle(
-                                                protocolVersion: String,
+                                                protocolVersion: Short,
                                                 messageType: Int,
                                                 senderSidechain: String,
                                                 sender: String,

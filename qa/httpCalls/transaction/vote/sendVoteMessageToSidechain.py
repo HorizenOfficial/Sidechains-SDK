@@ -1,7 +1,7 @@
 import json
 
 
-def sendVoteMessageToSidechain(sidechainNode, proposition, vote, receivingSidechain, receivingAddress, fee):
+def send_vote_message_to_sidechain(sidechainNode, proposition, vote, receivingSidechain, receivingAddress, fee):
     j = {
         "proposition": proposition,
         "vote": vote,

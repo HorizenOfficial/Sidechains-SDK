@@ -7,9 +7,9 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, assert_true, generate_next_blocks, \
     assert_equal, generate_next_block
 from httpCalls.transaction.sendTransaction import sendTransaction
-from httpCalls.transaction.vote.redeemTransaction import redeemTransaction
+from httpCalls.transaction.vote.redeemTransaction import redeem_transaction
 from httpCalls.sc2sc.createRedeemMessage import createRedeemMessage
-from httpCalls.transaction.vote.sendVoteMessageToSidechain import sendVoteMessageToSidechain
+from httpCalls.transaction.vote.sendVoteMessageToSidechain import send_vote_message_to_sidechain
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.wallet.allBoxes import http_wallet_allBoxes
@@ -79,7 +79,7 @@ class CrossChainToBeRemoved(SidechainTestFramework):
         user_address = http_wallet_createPrivateKey25519(sc_node)
 
         sc_id = self.sc_nodes_bootstrap_info.sidechain_id
-        result = sendVoteMessageToSidechain(sc_node, user_address, '8', sc_id, user_address, 100)
+        result = send_vote_message_to_sidechain(sc_node, user_address, '8', sc_id, user_address, 100)
         sendTransaction(sc_node, result["transactionBytes"])
 
         self.sc_sync_all()
@@ -102,10 +102,10 @@ class CrossChainToBeRemoved(SidechainTestFramework):
 
         time.sleep(20)
 
-        redeem_message = createRedeemMessage(sc_node, 'VERSION_1', 1, sc_id, user_address, sc_id, user_address, '00000008')["result"]["redeemMessage"]
+        redeem_message = createRedeemMessage(sc_node, 1, 1, sc_id, user_address, sc_id, user_address, '00000008')["result"]["redeemMessage"]
         message = redeem_message["message"]
 
-        redeem_tx = redeemTransaction(
+        redeem_tx = redeem_transaction(
             sc_node,
             user_address,
             redeem_message["certificateDataHash"],
