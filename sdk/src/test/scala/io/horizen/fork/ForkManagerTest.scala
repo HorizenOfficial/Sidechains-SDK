@@ -1,6 +1,6 @@
 package io.horizen.fork
 
-import org.junit.Assert.{assertNotNull, assertNull, assertTrue}
+import org.junit.Assert.{assertEquals, assertNotNull, assertNull, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
@@ -15,18 +15,18 @@ class ForkManagerTest extends JUnitSuite {
 
   @Test
   def ForkManagerTest(): Unit = {
-    val simpleForkConfigurator = new SimpleForkConfigurator
+    val forkConfigurator = new SimpleForkConfigurator
 
-    var res = Try.apply(ForkManager.init(simpleForkConfigurator, "wrongname"))
+    var res = Try.apply(ForkManager.init(forkConfigurator, "wrongname"))
     assertTrue("Expected failure on ForkManager initialization", res.isFailure)
 
     res = Try.apply(ForkManager.init(new BadForkConfigurator, "regtest"))
     assertTrue("Expected failure on ForkManager initialization", res.isFailure)
 
-    res = Try.apply(ForkManager.init(simpleForkConfigurator, "regtest"))
+    res = Try.apply(ForkManager.init(forkConfigurator, "regtest"))
     assertTrue("Expected successed ForkManager initialization", res.isSuccess)
 
-    res = Try.apply(ForkManager.init(simpleForkConfigurator, "regtest"))
+    res = Try.apply(ForkManager.init(forkConfigurator, "regtest"))
     assertTrue("Expected failure on ForkManager initialization", res.isFailure)
 
     val mainchainFork1 = ForkManager.getMainchainFork(419)
@@ -49,5 +49,25 @@ class ForkManagerTest extends JUnitSuite {
     val sidechainConsensusFork4 = ForkManager.getSidechainFork(11)
     assertNotNull("Expected to get sidechain fork", sidechainConsensusFork4)
     assertTrue("Expected not to get sidechain fork", sidechainConsensusFork4.isInstanceOf[SidechainFork1])
+  }
+
+  @Test
+  def ForkManagerOptionalForksTest(): Unit = {
+    ForkManager.init(new GoodOptionalForkConfigurator, "regtest");
+    assertEquals(
+      "expected bar=0 at consensus epoch 0",
+      Some(MustNotDecreaseFork(0, 0)),
+      ForkManager.getOptionalSidechainFork[MustNotDecreaseFork](0)
+    )
+    assertEquals(
+      "expected bar=1 at consensus epoch 1",
+      Some(MustNotDecreaseFork(0, 1)),
+      ForkManager.getOptionalSidechainFork[MustNotDecreaseFork](1)
+    )
+    assertEquals(
+      "expected bar=2 at consensus epoch 2",
+      Some(MustNotDecreaseFork(0, 2)),
+      ForkManager.getOptionalSidechainFork[MustNotDecreaseFork](2)
+    )
   }
 }
