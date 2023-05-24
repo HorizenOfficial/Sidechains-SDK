@@ -70,7 +70,7 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
     assertEquals("AccountBlockHeader id is different", header.id, serializedHeader.id)
 
     // Set to true to regenerate regression data
-    if(true) {
+    if(false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/accountblockheader_hex"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
