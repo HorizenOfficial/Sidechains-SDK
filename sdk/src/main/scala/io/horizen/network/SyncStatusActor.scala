@@ -132,9 +132,12 @@ class SyncStatusActor[
           val revertedBlocks: Int = lastAppliedBlockIds.indexOf(sidechainBlock.parentId)
           if (revertedBlocks == -1) {
             // Must never happen
-            // Crash the actor and start from scratch
-            throw new IllegalStateException(s"SyncStatusActor: unexpected new tip appeared ${sidechainBlock.id}")
+            // Crash the actor throwing an exception and start from scratch
+            val noMatchingBlocksException = new IllegalStateException(s"SyncStatusActor: unexpected new tip appeared ${sidechainBlock.id}")
+            noMatchingBlocksException.setStackTrace(Array.empty)
+            throw noMatchingBlocksException
           }
+
           currentBlock = currentBlock - revertedBlocks + 1
           lastAppliedBlockIds.drop(revertedBlocks)
           // We must not consider fork blocks of the same height as "syncing"
