@@ -65,7 +65,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
            @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("AppVersion") appVersion: String
+           @Named("AppVersion") appVersion: String,
+           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -91,7 +92,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           rejectedApiPaths,
           applicationStopper,
           forkConfigurator,
-          appVersion
+          appVersion,
+          mcBlockReferenceDelay
         )
       }
     }

@@ -194,11 +194,11 @@ abstract class AbstractForgeMessageBuilder[
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-      // to not to include mcblock references data from different withdrawal epochs
-      val maxReferenceDataNumber: Int = withdrawalEpochMcBlocksLeft
-
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
       val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
+
+      // to not to include mcblock references data from different withdrawal epochs
+      val maxReferenceDataNumber: Int = Math.min(withdrawalEpochMcBlocksLeft, nextMainchainReferenceDataHeaderHashes.size - params.mcBlockRefDelay)
 
       val mainchainReferenceDataHeaderHashesToInclude = nextMainchainReferenceDataHeaderHashes.take(maxReferenceDataNumber)
       val mainchainHeadersHashesToInclude = newHeaderHashes

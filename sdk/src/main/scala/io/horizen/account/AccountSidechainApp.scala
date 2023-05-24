@@ -56,7 +56,8 @@ class AccountSidechainApp @Inject()
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
-   @Named("AppVersion") appVersion: String
+   @Named("AppVersion") appVersion: String,
+   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -64,7 +65,8 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo
+    chainInfo,
+    mcBlockReferenceDelay
   )
 {
 
