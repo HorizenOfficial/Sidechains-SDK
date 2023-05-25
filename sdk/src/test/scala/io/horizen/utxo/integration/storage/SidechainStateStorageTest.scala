@@ -449,8 +449,8 @@ class SidechainStateStorageTest
     val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
-    val ccMsgHash1 = new CrossChainMessageHash(BytesUtils.fromHexString("3a0ac71d16d9cbbf3973b8cb41e43b65"))
-    val ccMsgHash2 = new CrossChainMessageHash(BytesUtils.fromHexString("0f8da0549b2fd8b580e8664e98e4030d"))
+    val ccMsgHash1 = new CrossChainMessageHash(BytesUtils.fromHexString("3a0ac71d16d9cbbf3973b8cb41e43b653a0ac71d16d9cbbf3973b8cb41e43b65"))
+    val ccMsgHash2 = new CrossChainMessageHash(BytesUtils.fromHexString("0f8da0549b2fd8b580e8664e98e4030d3a0ac71d16d9cbbf3973b8cb41e43b65"))
     val crossChainMsgHashes = Seq(ccMsgHash1, ccMsgHash2)
 
     assertTrue("Update(insert) must be successful.",

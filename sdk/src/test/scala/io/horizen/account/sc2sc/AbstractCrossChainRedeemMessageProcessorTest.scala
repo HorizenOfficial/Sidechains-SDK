@@ -188,9 +188,9 @@ class CrossChainRedeemMessageProcessorImpl(networkParams: NetworkParams, sc2scCi
   override protected def getAccountCrossChainRedeemMessageFromMessage(msg: Message): AccountCrossChainRedeemMessage = {
     val accountCrossChainMessage = AccountCrossChainMessage(
       messageType = 1,
-      sender = "d504dbfde192182c68d2bcec6e452049".getBytes,
+      sender = BytesUtils.fromHexString("d504dbfde192182c68d2bcec6e452049"),
       receiverSidechain = receiverSidechain,
-      receiver = "0303908acce9dd1078bdf16a87a9d9f8".getBytes,
+      receiver = BytesUtils.fromHexString("0303908acce9dd1078bdf16a87a9d9f8"),
       payload = "my payload".getBytes,
     )
     val certificateDataHash = BytesUtils.fromHexString("8b4a3cf70f33a2b9692d1bd5c612e2903297b35289e59c9be7afa0984befd230")
