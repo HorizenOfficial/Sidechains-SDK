@@ -12,8 +12,7 @@ case class AddCrossChainRedeemMessage(
                                        @(Parameter @getter)(2) certificateDataHash: Bytes32,
                                        @(Parameter @getter)(3) nextCertificateDataHash: Bytes32,
                                        @(Parameter @getter)(4) scCommitmentTreeRoot: Bytes32,
-                                       @(Parameter @getter)(5) nextScCommitmentTreeRoot: Bytes32,
-                                       @(Parameter @getter)(6) proof: DynamicBytes
+                                       @(Parameter @getter)(5) nextScCommitmentTreeRoot: Bytes32
                                      )
 
 object AddCrossChainRedeemMessage {
@@ -22,15 +21,13 @@ object AddCrossChainRedeemMessage {
              certificateDataHash: Array[Byte],
              nextCertificateDataHash: Array[Byte],
              scCommitmentTreeRoot: Array[Byte],
-             nextScCommitmentTreeRoot: Array[Byte],
-             proof: Array[Byte],
+             nextScCommitmentTreeRoot: Array[Byte]
            ): AddCrossChainRedeemMessage =
     new AddCrossChainRedeemMessage(
       new DynamicBytes(AccountCrossChainMessageSerializer.toBytes(accountCrossChainMessage)),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
-      new Bytes32(nextScCommitmentTreeRoot),
-      new DynamicBytes(proof)
+      new Bytes32(nextScCommitmentTreeRoot)
     )
 }

@@ -5,8 +5,7 @@ import io.horizen.json.Views;
 import sparkz.core.serialization.BytesSerializable;
 
 @JsonView(Views.Default.class)
-public interface CrossChainMessage  extends BytesSerializable {
-
+public interface CrossChainMessage extends BytesSerializable {
     CrossChainProtocolVersion getProtocolVersion(); //version of the protocol for future extensions
     int getMessageType();
     byte[] getSenderSidechain();

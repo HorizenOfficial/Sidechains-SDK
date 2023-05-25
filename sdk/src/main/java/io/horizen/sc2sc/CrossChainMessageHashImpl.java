@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 public class CrossChainMessageHashImpl implements CrossChainMessageHash {
 
-    private byte[] val;
+    private final byte[] val;
 
     public CrossChainMessageHashImpl(byte[] val){
         this.val = val;

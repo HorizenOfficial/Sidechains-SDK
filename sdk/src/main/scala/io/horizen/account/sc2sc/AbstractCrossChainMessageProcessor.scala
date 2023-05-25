@@ -27,8 +27,7 @@ trait CrossChainMessageProvider {
 }
 abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
 
-  val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch
-  val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+  private val MaxCrossChainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch
 
   protected def execGetListOfCrosschainMessages(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     if (msg.getValue.signum() != 0) {
@@ -75,8 +74,8 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
                                       view: AccountStateView,
                                       currentEpochNum: Int): Array[Byte] = {
     val numOfReqs = getMessageEpochCounter(view, currentEpochNum)
-    if (numOfReqs >= MaxCrosschainMessagesPerEpoch) {
-      throw new ExecutionRevertedException("Reached maximum number of CrosschainMessages per epoch: request is invalid")
+    if (numOfReqs >= MaxCrossChainMessagesPerEpoch) {
+      throw new ExecutionRevertedException("Reached maximum number of CrossChainMessages per epoch: request is invalid")
     }
 
     val request = AccountCrossChainMessage(messageType, sender.toBytes, receiverSidechain, receiver, payload)
@@ -84,7 +83,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
 
     //check for duplicates in this and other message processor, in any epoch
     if (view.getCrossChainMessageHashEpoch(messageHash).nonEmpty) {
-      throw new ExecutionRevertedException("Dupicate crosschain message")
+      throw new ExecutionRevertedException("Duplicate CrossChain message")
     }
 
     val nextNum: Int = numOfReqs + 1

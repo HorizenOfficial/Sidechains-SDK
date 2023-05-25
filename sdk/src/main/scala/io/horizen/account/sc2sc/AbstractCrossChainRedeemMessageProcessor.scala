@@ -6,7 +6,7 @@ import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedExceptio
 import io.horizen.cryptolibprovider.{CryptoLibProvider, Sc2scCircuit}
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, Constants}
 import sparkz.crypto.hash.Keccak256
 
 import java.nio.charset.StandardCharsets
@@ -36,15 +36,14 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       accCcRedeemMessage.certificateDataHash,
       accCcRedeemMessage.nextCertificateDataHash,
       accCcRedeemMessage.scCommitmentTreeRoot,
-      accCcRedeemMessage.nextScCommitmentTreeRoot,
-      accCcRedeemMessage.proof
+      accCcRedeemMessage.nextScCommitmentTreeRoot
     )
     val evmLog = getEthereumConsensusDataLog(event)
     view.addLog(evmLog)
   }
 
   private def addCrossChainMessageToView(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(
+    val messageHash = sc2scCircuit.getCrossChainMessageHash(
       AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcRedeemMessage.accountCrossChainMessage, networkParams)
     )
     setCrossChainMessageHash(messageHash, view)
@@ -62,7 +61,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     try {
       val accountCcMsg = ccRedeemMgs.accountCrossChainMessage
       // validate arguments' semantics
-      validateSemantics(accountCcMsg.receiver, accountCcMsg.receiverSidechain, accountCcMsg.sender)
+      validateSemantics(accountCcMsg)
 
       // Validate the receiving sidechain matches with this scId
       validateScId(networkParams.sidechainId, accountCcMsg.receiverSidechain)
@@ -82,13 +81,15 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     }
   }
 
-  private def validateSemantics(byteArraysToValidate: Array[Byte]*): Unit = {
-    val byteArrayMaxLength = 64
-    byteArraysToValidate.foreach(arrayToValidate => {
-      if (arrayToValidate.isEmpty || arrayToValidate.length > byteArrayMaxLength) {
-        throw new IllegalArgumentException(s"Value ${BytesUtils.toHexString(arrayToValidate)} is semantically wrong")
-      }
-    })
+  private def validateSemantics(msg: AccountCrossChainMessage): Unit = {
+    if (msg.receiverSidechain.isEmpty || msg.receiverSidechain.length > Constants.SIDECHAIN_ID_SIZE)
+      throw new IllegalArgumentException(s"Receiver sidechain size in CrossChain message is semantically wrong")
+
+    if (msg.receiver.isEmpty || msg.receiver.length > Constants.ABI_ADDRESS_SIZE)
+      throw new IllegalArgumentException(s"Receiver address size in CrossChain message is semantically wrong")
+
+    if (msg.sender.isEmpty || msg.sender.length > Constants.ABI_ADDRESS_SIZE)
+      throw new IllegalArgumentException(s"Sender size in CrossChain message is semantically wrong")
   }
 
   private def validateScId(scId: Array[Byte], receivingScId: Array[Byte]): Unit = {
