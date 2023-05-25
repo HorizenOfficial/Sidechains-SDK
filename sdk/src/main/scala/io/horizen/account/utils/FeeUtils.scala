@@ -32,23 +32,26 @@ object FeeUtils {
     val gasTarget = blockHeader.gasLimit.divide(feeFork.baseFeeElasticityMultiplier)
 
     // If the parent gasUsed is the same as the target, the baseFee remains unchanged
-    if (blockHeader.gasUsed.equals(gasTarget)) {
-      return blockHeader.baseFee
-    }
-
-    val gasDiff = blockHeader.gasUsed.subtract(gasTarget)
-
-    val baseFeeDiff = gasDiff.abs
-      .multiply(blockHeader.baseFee)
-      .divide(gasTarget)
-      .divide(feeFork.baseFeeChangeDenominator)
-
-    if (gasDiff.signum == 1) {
-      // If the parent block used more gas than its target, the baseFee should increase
-      blockHeader.baseFee.add(baseFeeDiff.max(BigInteger.ONE)).max(feeFork.baseFeeMinimum)
+    val nextBaseFee = if (blockHeader.gasUsed.equals(gasTarget)) {
+      blockHeader.baseFee
     } else {
-      // Otherwise if the parent block used less gas than its target, the baseFee should decrease
-      blockHeader.baseFee.subtract(baseFeeDiff).max(feeFork.baseFeeMinimum)
+      val gasDiff = blockHeader.gasUsed.subtract(gasTarget)
+
+      val baseFeeDiff = gasDiff.abs
+        .multiply(blockHeader.baseFee)
+        .divide(gasTarget)
+        .divide(feeFork.baseFeeChangeDenominator)
+
+      if (gasDiff.signum == 1) {
+        // If the parent block used more gas than its target, the baseFee should increase
+        blockHeader.baseFee.add(baseFeeDiff.max(BigInteger.ONE))
+      } else {
+        // Otherwise if the parent block used less gas than its target, the baseFee should decrease
+        blockHeader.baseFee.subtract(baseFeeDiff)
+      }
     }
+
+    // apply a lower limit to the base fee
+    nextBaseFee.max(feeFork.baseFeeMinimum)
   }
 }
