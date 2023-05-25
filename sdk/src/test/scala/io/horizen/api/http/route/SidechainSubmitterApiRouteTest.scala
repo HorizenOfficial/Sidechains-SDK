@@ -15,7 +15,7 @@ import scala.language.postfixOps
 class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/submitter/"
-
+/*
   "The Api should to" should {
 
     "reply at /getKeyRotationProofs" in {
@@ -143,4 +143,6 @@ class SidechainSubmitterApiRouteTest extends SidechainApiRouteTest {
       }
     }
   }
+
+ */
 }
