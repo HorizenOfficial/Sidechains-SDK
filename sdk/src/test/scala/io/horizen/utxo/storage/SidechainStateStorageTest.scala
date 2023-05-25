@@ -58,13 +58,11 @@ class SidechainStateStorageTest
 
   val params: NetworkParams = MainNetParams()
 
-
-
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val _temporaryFolder = new TemporaryFolder()
 
-  val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true)
+  val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
 
   val crossChainMessages : Seq[CrossChainMessage] = Seq(
     SidechainState.buildCrosschainMessageFromUTXO(getRandomCrossMessageBox(System.currentTimeMillis()), nonCeasingParams)
@@ -173,7 +171,6 @@ class SidechainStateStorageTest
     assertTrue("Storage should contain Box that was tried to remove.", stateStorage.getBox(boxList(3).id()).isDefined)
     assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
   }
-
 
   @Test
   def testUpdateNonCeasing(): Unit = {

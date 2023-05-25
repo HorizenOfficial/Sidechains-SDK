@@ -427,7 +427,7 @@ class SidechainStateStorageTest
 
   @Test
   def nonCeasingScTxCommitmentHashesFlow(): Unit = {
-    val nonCeasingParams = MainNetParams(isNonCeasing = true)
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
     val hashScTxsCommitment1 = "hashScTxsCommitment1".getBytes
@@ -446,7 +446,7 @@ class SidechainStateStorageTest
 
   @Test
   def nonCeasingCrossChainMessageHashesFlow(): Unit = {
-    val nonCeasingParams = MainNetParams(isNonCeasing = true)
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
     val ccMsgHash1 = new CrossChainMessageHashImpl("ccMessage1".getBytes)
