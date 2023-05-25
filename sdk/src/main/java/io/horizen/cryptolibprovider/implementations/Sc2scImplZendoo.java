@@ -4,7 +4,6 @@ import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.commitmenttreenative.ScCommitmentCertPath;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
-import com.horizen.merkletreenative.InMemoryAppendOnlyMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
@@ -14,10 +13,8 @@ import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.cryptolibprovider.utils.HashUtils;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
-import io.horizen.sc2sc.CrossChainMessageHashImpl;
 import io.horizen.utils.FieldElementsContainer;
 
-import java.util.List;
 import java.util.Optional;
 
 public class Sc2scImplZendoo implements Sc2scCircuit {
@@ -90,7 +87,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                 FieldElementsContainer fieldElementsContainer = FieldElementUtils.deserializeMany(msg.bytes());
                 FieldElement fe = HashUtils.fieldElementListHash(fieldElementsContainer.getFieldElementCollection())
         ) {
-            return new CrossChainMessageHashImpl(fe.serializeFieldElement());
+            return new CrossChainMessageHash(fe.serializeFieldElement());
         }
     }
 }

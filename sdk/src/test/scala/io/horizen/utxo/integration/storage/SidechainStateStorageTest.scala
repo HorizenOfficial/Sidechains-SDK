@@ -6,8 +6,8 @@ import io.horizen.utxo.companion._
 import io.horizen.consensus._
 import io.horizen.fixtures._
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.sc2sc.CrossChainMessageHashImpl
-import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import io.horizen.sc2sc.CrossChainMessageHash
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
@@ -449,8 +449,8 @@ class SidechainStateStorageTest
     val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
-    val ccMsgHash1 = new CrossChainMessageHashImpl("ccMessage1".getBytes)
-    val ccMsgHash2 = new CrossChainMessageHashImpl("ccMessage2".getBytes)
+    val ccMsgHash1 = new CrossChainMessageHash(BytesUtils.fromHexString("3a0ac71d16d9cbbf3973b8cb41e43b65"))
+    val ccMsgHash2 = new CrossChainMessageHash(BytesUtils.fromHexString("0f8da0549b2fd8b580e8664e98e4030d"))
     val crossChainMsgHashes = Seq(ccMsgHash1, ccMsgHash2)
 
     assertTrue("Update(insert) must be successful.",

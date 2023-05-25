@@ -57,7 +57,7 @@ public class CrossChainMessageTest {
 
     @Test
     public void serializeHashTest(){
-        CrossChainMessageHash cm = new CrossChainMessageHashImpl(randomHash);
+        CrossChainMessageHash cm = new CrossChainMessageHash(randomHash);
         byte[] val = cm.bytes();
         CrossChainMessageHash cm2 =  CrossChainMessageHashSerializer.getSerializer().parseBytes(val);
         assertArrayEquals(cm.bytes(), cm2.bytes());
