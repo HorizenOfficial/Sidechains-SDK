@@ -16,5 +16,5 @@ This module offers a way to create a sidechain's configuration file and some uti
 **Usage**
 
 As an example of usage you can refer to:
- - [UTXO bootstrapping tool](examples/utxo/utxoapp_sctool)
- - [Account bootstrapping tool](examples/account/evmapp_sctool)
+ - [UTXO bootstrapping tool](../../examples/utxo/utxoapp_sctool)
+ - [Account bootstrapping tool](../../examples/account/evmapp_sctool)
