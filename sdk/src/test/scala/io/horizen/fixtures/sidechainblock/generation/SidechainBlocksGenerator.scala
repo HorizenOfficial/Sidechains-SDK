@@ -30,6 +30,7 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.Random
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)
@@ -547,6 +548,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val chainId: Long = 11111111
       override val isCSWEnabled: Boolean = params.isCSWEnabled
       override val isNonCeasing: Boolean = params.isNonCeasing
+      override val getLogsSizeLimit: Int = params.getLogsSizeLimit
+      override val getLogsQueryTimeout: FiniteDuration = params.getLogsQueryTimeout
       override val minVirtualWithdrawalEpochLength: Int = 10
     }
   }
