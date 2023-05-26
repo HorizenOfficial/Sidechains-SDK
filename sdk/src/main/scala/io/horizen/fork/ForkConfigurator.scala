@@ -4,7 +4,6 @@ import io.horizen.utils.Pair
 
 import java.util
 import scala.jdk.CollectionConverters.asScalaBufferConverter
-import scala.util.Try
 
 abstract class ForkConfigurator {
 
@@ -31,7 +30,7 @@ abstract class ForkConfigurator {
   def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
     new util.ArrayList()
 
-  final def check(): Try[Unit] = Try {
+  final def check(): Unit = {
     // fork configurations are validated on first access
     mandatorySidechainForks
     optionalSidechainForks

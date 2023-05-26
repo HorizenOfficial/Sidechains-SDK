@@ -1,30 +1,36 @@
 package io.horizen.fork
 
 import io.horizen.utils.Pair
-import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 import java.util
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
-import scala.util.Success
 
+/**
+ * "Bad" fork because one of the activation epochs is negative, i.e. before the default that activate at 0.
+ */
 class BadForkConfigurator extends ForkConfigurator {
   override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, -5)
 }
 
+/**
+ * Too many sc2sc forks, only one is allowed.
+ */
 class BadSc2scForkConfigurator extends ForkConfigurator {
   override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 5)
 
   override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = {
     Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
-      new Pair(SidechainForkConsensusEpoch(0, 0, 0), DefaultSc2scFork()),
-      new Pair(SidechainForkConsensusEpoch(0, 0, 1), DefaultSc2scFork()),
-      new Pair(SidechainForkConsensusEpoch(0, 0, 2), DefaultSc2scFork()),
+      new Pair(SidechainForkConsensusEpoch(0, 0, 0), Sc2scFork(sc2scCanSend = true)),
+      new Pair(SidechainForkConsensusEpoch(0, 0, 1), Sc2scFork(sc2scCanReceive = true)),
     ).asJava
   }
 }
 
+/**
+ * Defines a custom fork types that validates that its values are never decreasing in a fork.
+ */
 case class MustNotDecreaseFork(foo: Long, bar: Long) extends OptionalSidechainFork {
   private def mustNotDecrease(a: Long, b: Long): Long = {
     if (b < a) throw new RuntimeException("parameter must not decrease")
@@ -38,6 +44,9 @@ case class MustNotDecreaseFork(foo: Long, bar: Long) extends OptionalSidechainFo
   }
 }
 
+/**
+ * Uses the MustNotDecreaseFork and fails its validation (one of the values decreases in a fork).
+ */
 class BadOptionalForkConfigurator extends ForkConfigurator {
   override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 5)
 
@@ -70,10 +79,11 @@ class ForkConfiguratorTest extends JUnitSuite {
 
   @Test
   def testConfiguration(): Unit = {
-    assertNotEquals("Expected failed check", Success(()), badForkConfigurator.check())
-    assertNotEquals("Expected failed check", Success(()), badSc2scForkConfigurator.check())
-    assertNotEquals("Expected failed check", Success(()), badOptionalForkConfigurator.check())
-    assertEquals("Expected failed check", Success(()), goodOptionalForkConfigurator.check())
-    assertEquals("Expected successful check", Success(()), simpleForkConfigurator.check())
+    assertThrows[RuntimeException](badForkConfigurator.check())
+    assertThrows[ExceptionInInitializerError](badSc2scForkConfigurator.check())
+    assertThrows[RuntimeException](badOptionalForkConfigurator.check())
+    // these should not throw
+    goodOptionalForkConfigurator.check()
+    simpleForkConfigurator.check()
   }
 }

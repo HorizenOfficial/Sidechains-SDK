@@ -107,7 +107,7 @@ trait ConsensusDataProvider {
     // And moreover `buildVrfMessage` expect for the concatenated value with the value that fits FieldElement.
     // TODO: think about the usage of VRF inside the circuit.
     val nonceLength = ForkManager.getSidechainFork(currentEpoch).nonceLength
-    val resultHash = nonceMessageDigest.digest();
+    val resultHash = nonceMessageDigest.digest()
     NonceConsensusEpochInfo(byteArrayToConsensusNonce(resultHash.slice(0, nonceLength)))
   }
 
