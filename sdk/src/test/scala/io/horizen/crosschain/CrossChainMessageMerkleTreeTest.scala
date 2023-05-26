@@ -46,7 +46,7 @@ class CrossChainMessageMerkleTreeTest {
       FieldElementUtils.deserializeMany(msg3.bytes)
     ) { (tree, feContainer) =>
       Using.resource(
-        HashUtils.fieldElementListHash(feContainer.getFieldElementCollection)
+        HashUtils.fieldElementsListHash(feContainer.getFieldElementCollection)
       ) { msg3Fe =>
         val leafIndex = ccMsgMerkleTree.insertMessagesInMerkleTreeWithIndex(tree, messages, msg3)
         Using.resource(

@@ -85,7 +85,7 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
     public CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg) throws Exception {
         try (
                 FieldElementsContainer fieldElementsContainer = FieldElementUtils.deserializeMany(msg.bytes());
-                FieldElement fe = HashUtils.fieldElementListHash(fieldElementsContainer.getFieldElementCollection())
+                FieldElement fe = HashUtils.fieldElementsListHash(fieldElementsContainer.getFieldElementCollection())
         ) {
             return new CrossChainMessageHash(fe.serializeFieldElement());
         }
