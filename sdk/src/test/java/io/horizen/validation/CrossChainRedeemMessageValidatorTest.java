@@ -121,7 +121,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(true);
 
         // Act
@@ -155,7 +155,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -190,7 +190,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -227,7 +227,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -277,7 +277,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(sidechainSettings.genesisData()).thenReturn(genesisDataSettings);
         when(genesisDataSettings.scId()).thenReturn(scId);
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);

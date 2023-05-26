@@ -3,7 +3,7 @@ package io.horizen.account.sc2sc
 import com.google.common.primitives.Bytes
 import io.horizen.account.state.events.AddCrossChainRedeemMessage
 import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
-import io.horizen.cryptolibprovider.{CryptoLibProvider, Sc2scCircuit}
+import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.utils.{BytesUtils, Constants}
@@ -43,9 +43,8 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   }
 
   private def addCrossChainMessageToView(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
-    val messageHash = sc2scCircuit.getCrossChainMessageHash(
-      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcRedeemMessage.accountCrossChainMessage, networkParams)
-    )
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcRedeemMessage.accountCrossChainMessage, networkParams)
+    val messageHash = ccMsg.getCrossChainMessageHash
     setCrossChainMessageHash(messageHash, view)
   }
 
@@ -99,7 +98,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   }
 
   private def validateDoubleMessageRedeem(ccMsg: CrossChainMessage, view: BaseAccountStateView): Unit = {
-    val currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg)
+    val currentMsgHash = ccMsg.getCrossChainMessageHash
     val ccMsgFromRedeemAlreadyExists = view.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash)
     if (ccMsgFromRedeemAlreadyExists) {
       throw new IllegalArgumentException(s"Message $ccMsg has already been redeemed")
@@ -121,9 +120,8 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateProof(ccRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
     val accCcMsg = ccRedeemMessage.accountCrossChainMessage
-    val ccMsgHash = sc2scCircuit.getCrossChainMessageHash(
-      AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcMsg, networkParams)
-    )
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(accCcMsg, networkParams)
+    val ccMsgHash = ccMsg.getCrossChainMessageHash
     val isProofValid = sc2scCircuit.verifyRedeemProof(
       ccMsgHash,
       ccRedeemMessage.scCommitmentTreeRoot,

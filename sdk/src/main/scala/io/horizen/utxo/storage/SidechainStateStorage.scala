@@ -517,7 +517,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           ccMessages.add(b)
 
           //store also every  single hash separately with its epoch
-          val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(b)
+          val singleMessageHash = b.getCrossChainMessageHash
           updateList.add(new JPair(getCrosschainMessageSingleKey(singleMessageHash),
             new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
         }

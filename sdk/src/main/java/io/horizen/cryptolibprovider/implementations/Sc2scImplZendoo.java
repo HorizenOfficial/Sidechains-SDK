@@ -18,7 +18,6 @@ import io.horizen.utils.FieldElementsContainer;
 import java.util.Optional;
 
 public class Sc2scImplZendoo implements Sc2scCircuit {
-
     private static final int SEGMENT_SIZE = 1 << 15;
     public static final int CUSTOM_FIELDS_NUM = 32;
 
@@ -79,15 +78,5 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                 proof,
                 verifyKeyPath
         );
-    }
-
-    @Override
-    public CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg) throws Exception {
-        try (
-                FieldElementsContainer fieldElementsContainer = FieldElementUtils.deserializeMany(msg.bytes());
-                FieldElement fe = HashUtils.fieldElementsListHash(fieldElementsContainer.getFieldElementCollection())
-        ) {
-            return new CrossChainMessageHash(fe.serializeFieldElement());
-        }
     }
 }

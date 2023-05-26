@@ -213,7 +213,7 @@ class SidechainStateStorageTest
     val ccMessages = new JArrayList[CrossChainMessage]()
     ccMessages.add(crossChainMessages.last)
     //store also every  single hash separately with its epoch
-    val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(ccMessages.get(0))
+    val singleMessageHash = ccMessages.get(0).getCrossChainMessageHash
     toUpdate.add(new Pair(stateStorage.getCrosschainMessageSingleKey(singleMessageHash),
       new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
     toUpdate.add(new Pair(stateStorage.getCrosschainMessagesKey(withdrawalEpochInfo.epoch, 0),

@@ -1,7 +1,7 @@
 package io.horizen.crosschain
 
 import io.horizen.cryptolibprovider.utils.{FieldElementUtils, HashUtils}
-import io.horizen.sc2sc.{CrossChainMessageImpl, CrossChainProtocolVersion}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.Assertions.intercept
@@ -12,9 +12,9 @@ class CrossChainMessageMerkleTreeTest {
   @Test
   def ifMessageIsNotIncludedInMessagesList_getCrossChainMessageMerklePath_throwsIllegalArgumentException(): Unit = {
     // Arrange
-    val msg1 = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain1".getBytes, "sender1".getBytes, "receiverSidechain1".getBytes, "receiver1".getBytes, "payload1".getBytes)
-    val msg2 = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain2".getBytes, "sender2".getBytes, "receiverSidechain2".getBytes, "receiver2".getBytes, "payload2".getBytes)
-    val notIncludedMsg = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain3".getBytes, "sender3".getBytes, "receiverSidechain3".getBytes, "receiver3".getBytes, "payload3".getBytes)
+    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "sender1".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "receiver1".getBytes, "payload1".getBytes)
+    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "sender2".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "receiver2".getBytes, "payload2".getBytes)
+    val notIncludedMsg = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "sender3".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "receiver3".getBytes, "payload3".getBytes)
     val messages = Seq(msg1, msg2)
     val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
@@ -35,9 +35,9 @@ class CrossChainMessageMerkleTreeTest {
   @Test
   def verifyMessageMerklePathCorrectness(): Unit = {
     // Arrange
-    val msg1 = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain1".getBytes, "sender1".getBytes, "receiverSidechain1".getBytes, "receiver1".getBytes, "payload1".getBytes)
-    val msg2 = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain2".getBytes, "sender2".getBytes, "receiverSidechain2".getBytes, "receiver2".getBytes, "payload2".getBytes)
-    val msg3 = new CrossChainMessageImpl(CrossChainProtocolVersion.VERSION_1, 1, "senderSidechain3".getBytes, "sender3".getBytes, "receiverSidechain3".getBytes, "receiver3".getBytes, "payload3".getBytes)
+    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "sender1".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "receiver1".getBytes, "payload1".getBytes)
+    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "sender2".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "receiver2".getBytes, "payload2".getBytes)
+    val msg3 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "sender3".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "receiver3".getBytes, "payload3".getBytes)
     val messages = Seq(msg1, msg2, msg3)
     val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 

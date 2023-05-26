@@ -15,13 +15,9 @@ import com.horizen.sc2scnative.Sc2Sc;
 import io.horizen.crosschain.CrossChainMessageMerkleTree;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
-import io.horizen.cryptolibprovider.utils.HashUtils;
-import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
-import io.horizen.sc2sc.CrossChainMessageImpl;
+import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
-import io.horizen.utils.FieldElementsContainer;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -33,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 public class Sc2scImplZendooTest {
@@ -98,12 +93,12 @@ public class Sc2scImplZendooTest {
         // We'll create tx commitment for a epoch with one certificate and
         // another one for next epoch with another certificate. From this
         // commitments we'll extract the path and then create a circuit.
-        CrossChainMessage msg1 = new CrossChainMessageImpl(
+        CrossChainMessage msg1 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1".getBytes(),
+                "senderSidechain1senderSidechain1".getBytes(),
                 "sender1".getBytes(),
-                "receiverSidechain1".getBytes(),
+                "receiverSidechain1receiverSidech".getBytes(),
                 "receiver1".getBytes(),
                 "payload1".getBytes()
         );
@@ -113,7 +108,7 @@ public class Sc2scImplZendooTest {
         byte[] scId = generateFieldRandomBytes(r);
         Seq<CrossChainMessage> messages = JavaConverters.asScalaIteratorConverter(List.of(msg1).iterator()).asScala().toSeq();
         int msgTreeIndex = ccMsgMerkleTree.insertMessagesInMerkleTreeWithIndex(msgTree, messages, msg1);
-        CrossChainMessageHash msgHash = circuit.getCrossChainMessageHash(msg1);
+        CrossChainMessageHash msgHash = msg1.getCrossChainMessageHash();
         byte[] msgRoot = ccMsgMerkleTree.getCrossChainMessageTreeRoot(msgTree);
 
         WithdrawalCertificate currWithdrawalCertificate = WithdrawalCertificate.getRandom(

@@ -53,7 +53,7 @@ trait Sc2ScUtils[
   def buildRedeemMessage(sourceMessage: CrossChainMessage, state: MS, history: HIS, params: NetworkParams): Try[CrossChainRedeemMessage] = {
     //check the message has been previously posted and we are in the correct epoch
     val currentEpoch = state.getWithdrawalEpochInfo.epoch
-    val messageHash = sc2scCircuitFunctions.getCrossChainMessageHash(sourceMessage)
+    val messageHash = sourceMessage.getCrossChainMessageHash
     val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
     state.getCrossChainMessageHashEpoch(messageHash) match {

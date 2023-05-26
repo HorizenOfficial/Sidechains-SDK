@@ -31,7 +31,8 @@ class CrossChainMessageValidator(
       } else {
         val allCrossMessagesHashes = scala.collection.mutable.Seq[CrossChainMessageHash]()
         allCrossMessagesBox.foreach(box => {
-          val currentHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], networkParams))
+          val ccMsg = SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], networkParams)
+          val currentHash = ccMsg.getCrossChainMessageHash
           if (allCrossMessagesHashes.contains(currentHash)) {
             throw new IllegalArgumentException(s"Block ${scBlock.id} contains duplicated CrossChainMessageBox")
           } else {
@@ -62,10 +63,8 @@ class CrossChainMessageValidator(
         throw new Exception(s"CrossChainMessages not allowed in this sidechain")
       } else {
         ccBoxes.foreach(cmBox => {
-          val messageHash =
-            CryptoLibProvider
-              .sc2scCircuitFunctions
-              .getCrossChainMessageHash(SidechainState.buildCrosschainMessageFromUTXO(cmBox.asInstanceOf[CrossChainMessageBox], networkParams))
+          val ccMsg = SidechainState.buildCrosschainMessageFromUTXO(cmBox.asInstanceOf[CrossChainMessageBox], networkParams)
+          val messageHash = ccMsg.getCrossChainMessageHash
 
           if (scState.getCrossChainMessageHashEpoch(messageHash).isDefined) {
             throw new Exception("CrossChainMessage already found in state")

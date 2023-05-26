@@ -9,7 +9,7 @@ public class CrossChainMessageSerializer<T extends CrossChainMessage> implements
     private static CrossChainMessageSerializer serializer;
 
     static {
-        serializer = new CrossChainMessageSerializer<CrossChainMessageImpl>();
+        serializer = new CrossChainMessageSerializer<CrossChainMessage>();
     }
 
     @Override
@@ -35,7 +35,7 @@ public class CrossChainMessageSerializer<T extends CrossChainMessage> implements
         byte[] receiverSidechain = reader.getBytes(32);
         byte[] receiver = reader.getBytes(reader.getInt());
         byte[] payload = reader.getBytes(reader.getInt());
-        return (T)new CrossChainMessageImpl(
+        return (T)new CrossChainMessage(
             CrossChainProtocolVersion.fromShort(protocolVersion),
             messageType,
             senderSidechain,

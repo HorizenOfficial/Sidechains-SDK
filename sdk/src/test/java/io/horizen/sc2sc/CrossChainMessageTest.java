@@ -1,6 +1,5 @@
 package io.horizen.sc2sc;
 
-import io.horizen.sc2sc.*;
 import org.junit.Before;
 import org.junit.Test;
 import java.util.Random;
@@ -35,7 +34,7 @@ public class CrossChainMessageTest {
 
     @Test
     public void serializeTest(){
-        CrossChainMessage cm = new CrossChainMessageImpl(
+        CrossChainMessage cm = new CrossChainMessage(
                 version,
                 messageType,
                 senderSidechain,

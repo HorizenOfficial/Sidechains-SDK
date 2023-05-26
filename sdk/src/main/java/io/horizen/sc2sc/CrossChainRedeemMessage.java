@@ -1,7 +1,5 @@
 package io.horizen.sc2sc;
 
-import io.horizen.sc2sc.CrossChainMessage;
-
 public interface CrossChainRedeemMessage {
 
     CrossChainMessage getMessage();

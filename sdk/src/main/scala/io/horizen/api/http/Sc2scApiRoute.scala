@@ -12,7 +12,7 @@ import io.horizen.api.http.Sc2scApiRouteRestScheme.{ReqCreateRedeemMessage, Resp
 import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.json.Views
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
-import io.horizen.sc2sc.{CrossChainMessageImpl, CrossChainProtocolVersion, CrossChainRedeemMessage}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -56,7 +56,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
       _ =>
       entity(as[ReqCreateRedeemMessage]) { body =>
 
-        val crossChainMessage = new CrossChainMessageImpl(
+        val crossChainMessage = new CrossChainMessage(
           body.message.protocolVersion,
           body.message.messageType,
           BytesUtils.fromHexString(body.message.senderSidechain),

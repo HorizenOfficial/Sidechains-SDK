@@ -2,7 +2,6 @@ package io.horizen.utxo.box;
 
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.sc2sc.CrossChainMessage;
-import io.horizen.sc2sc.CrossChainMessageImpl;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
 import io.horizen.utils.Ed25519;
 import io.horizen.utils.Pair;
@@ -28,7 +27,7 @@ public class CrossChainRedeemMessageBoxSerializerTest {
         byte[] seed = "12345".getBytes();
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(seed);
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(keyPair.getValue());
-        CrossChainMessage message = new CrossChainMessageImpl(
+        CrossChainMessage message = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 0,
                 "d504dbfde192182c68d2bcec6e452049".getBytes(StandardCharsets.UTF_8),

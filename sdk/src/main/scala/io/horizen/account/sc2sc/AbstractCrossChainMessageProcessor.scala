@@ -5,19 +5,16 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.AddCrossChainMessage
-import io.horizen.account.state.{AccountStateView, BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
-import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.account.state._
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, CrossChainProtocolVersion}
-import io.horizen.utils.ZenCoinsUtils
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainProtocolVersion}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.{StaticStruct, Type}
 import org.web3j.abi.datatypes.generated.Uint32
+import org.web3j.abi.datatypes.{StaticStruct, Type}
 import sparkz.crypto.hash.Keccak256
 
-import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
@@ -79,7 +76,8 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
     }
 
     val request = AccountCrossChainMessage(messageType, sender.toBytes, receiverSidechain, receiver, payload)
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, networkParams))
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, networkParams)
+    val messageHash = ccMsg.getCrossChainMessageHash
 
     //check for duplicates in this and other message processor, in any epoch
     if (view.getCrossChainMessageHashEpoch(messageHash).nonEmpty) {
@@ -133,7 +131,7 @@ abstract class AbstractCrossChainMessageProcessor(networkParams: NetworkParams) 
 
 object AbstractCrossChainMessageProcessor {
   private[horizen] def buildCrosschainMessageFromAccount(data: AccountCrossChainMessage, params: NetworkParams): CrossChainMessage = {
-    new CrossChainMessageImpl(
+    new CrossChainMessage(
       CrossChainProtocolVersion.VERSION_1,
       data.messageType,
       params.sidechainId,

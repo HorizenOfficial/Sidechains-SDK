@@ -15,11 +15,11 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     private byte[] proof;
 
     public CrossChainRedeemMessageImpl(CrossChainMessage message,
-             byte[] certificateDataHash,
-             byte[] nextCertificateDataHash,
-             byte[] scCommitmentTreeRoot,
-             byte[] nextScCommitmentTreeRoot,
-             byte[] proof){
+                                       byte[] certificateDataHash,
+                                       byte[] nextCertificateDataHash,
+                                       byte[] scCommitmentTreeRoot,
+                                       byte[] nextScCommitmentTreeRoot,
+                                       byte[] proof){
         this.message = message;
         this.certificateDataHash = certificateDataHash;
         this.nextCertificateDataHash = nextCertificateDataHash;

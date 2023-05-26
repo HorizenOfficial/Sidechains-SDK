@@ -105,7 +105,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     assertTrue("The list of crosschain messages is not empty", res.isEmpty)
 
     Mockito
-      .when(mockNetworkParams.sidechainId).thenReturn("scId".getBytes)
+      .when(mockNetworkParams.sidechainId).thenReturn("f3281225c13d6e6c79befd1781daaaf5".getBytes)
 
     // With some cross chain messages from different providers
     var fakeMessages: List[CrossChainMessage] = List()
@@ -129,7 +129,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
       assertEquals("wrong payload", fakeMessages(index).getPayload, wr.getPayload)
     })
 
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(res(1))
+    val messageHash = res(1).getCrossChainMessageHash
     Mockito
       .when(stateView.crossChainMessageProviders(0).getCrossChainMessageHashEpoch(messageHash, stateView))
       .thenReturn(Some(epochNum))
