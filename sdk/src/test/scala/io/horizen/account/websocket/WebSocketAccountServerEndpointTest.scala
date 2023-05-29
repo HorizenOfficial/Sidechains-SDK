@@ -5,7 +5,7 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import io.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.{SidechainSettings, SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
@@ -81,7 +81,11 @@ class WebSocketAccountServerEndpointTest extends JUnitSuite with MockitoSugar wi
     mockedSyncStatusActorRef = mockedDummyActorRef,
   ).rpcProcessor
 
-  private val server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, 9035)
+  private val mockedWebsocketServerSettings = WebSocketServerSettings(
+    wsServer = true, wsServerPort = 9035
+  )
+
+  private var server: ActorRef = WebSocketAccountServerRef(mockedSidechainNodeViewHolderRef, rpcProcessor, mockedWebsocketServerSettings)
 
   @After
   def after(): Unit = {

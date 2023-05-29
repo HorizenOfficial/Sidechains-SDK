@@ -71,6 +71,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
     // used in both generateCertProofInfo and generateCswProofInfo cmds
     private static boolean dlogKeyInit = false;
+    private static int maxSeedLength = 1000;
+    private static int minSeedLength = 6;
 
     private static boolean initDlogKey() {
         if (dlogKeyInit) {
@@ -182,6 +184,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 "\thelp\n" +
                 "\tgeneratekey <arguments>\n" +
                 "\tgenerateVrfKey <arguments>\n" +
+                "\tgenerateAccountKey <arguments>\n" +
                 "\tgenerateCertificateSignerKey <arguments>\n" +
                 "\tgenerateCertProofInfo <arguments>\n" +
                 "\tgenerateCswProofInfo <arguments>\n" +
@@ -193,7 +196,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgeneratekey {\"seed\":\"my seed\"}");
+                "\tgeneratekey {\"seed\":\"my seed\"}" +
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -202,7 +206,19 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             printGenerateKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
-        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+
+        String seed = json.get("seed").asText();
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
@@ -217,7 +233,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateVrfKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
+                "\tgenerateVrfKey {\"seed\":\"my seed\"}" +
+                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
@@ -228,7 +245,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+        String seed = json.get("seed").asText();
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("vrfSecret", BytesUtils.toHexString(secretsCompanion.toBytes(vrfSecretKey)));
@@ -241,7 +264,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateAccountKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+                "\tgenerateAccountKey {\"seed\":\"my seed\"}" +
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateAccountKey(JsonNode json) {
@@ -250,8 +274,20 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
+        String seed = json.get("seed").asText();
+
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
-        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("accountSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secret)));
@@ -264,7 +300,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
+                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}" +
+                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateCertificateSignerKey(JsonNode json) {
@@ -273,8 +310,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        byte[] seed = json.get("seed").asText().getBytes(StandardCharsets.UTF_8);
-        SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed);
+        String seed = json.get("seed").asText();
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         ObjectNode resJson = mapper.createObjectNode();

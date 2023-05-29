@@ -36,6 +36,7 @@ import io.horizen.utxo.websocket.server.WebSocketServerRef
 import io.horizen._
 import io.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import io.horizen.utxo.forge.ForgerRef
+import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -48,30 +49,30 @@ import scala.io.{Codec, Source}
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class SidechainApp @Inject()
-(@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
- @Named("CustomBoxSerializers") customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
- @Named("CustomSecretSerializers") override val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
- @Named("CustomTransactionSerializers") customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
- @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
- @Named("ApplicationState") val applicationState: ApplicationState,
- @Named("SecretStorage") secretStorage: Storage,
- @Named("WalletBoxStorage") walletBoxStorage: Storage,
- @Named("WalletTransactionStorage") walletTransactionStorage: Storage,
- @Named("StateStorage") stateStorage: Storage,
- @Named("StateForgerBoxStorage") forgerBoxStorage: Storage,
- @Named("StateUtxoMerkleTreeStorage") utxoMerkleTreeStorage: Storage,
- @Named("HistoryStorage") historyStorage: Storage,
- @Named("WalletForgingBoxesInfoStorage") walletForgingBoxesInfoStorage: Storage,
- @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
- @Named("ConsensusStorage") consensusStorage: Storage,
- @Named("BackupStorage") backUpStorage: Storage,
- @Named("CustomApiGroups") val customApiGroups: JList[SidechainApplicationApiGroup],
- @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
- @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
- @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
- @Named("Sc2ScConfiguration") override val sc2scConfigurator: Sc2ScConfigurator,
- @Named("ConsensusSecondsInSlot") secondsInSlot: Int
-)
+  (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
+   @Named("CustomBoxSerializers") customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
+   @Named("CustomSecretSerializers") override val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomTransactionSerializers") customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
+   @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
+   @Named("ApplicationState") val applicationState: ApplicationState,
+   @Named("SecretStorage") secretStorage: Storage,
+   @Named("WalletBoxStorage") walletBoxStorage: Storage,
+   @Named("WalletTransactionStorage") walletTransactionStorage: Storage,
+   @Named("StateStorage") stateStorage: Storage,
+   @Named("StateForgerBoxStorage") forgerBoxStorage: Storage,
+   @Named("StateUtxoMerkleTreeStorage") utxoMerkleTreeStorage: Storage,
+   @Named("HistoryStorage") historyStorage: Storage,
+   @Named("WalletForgingBoxesInfoStorage") walletForgingBoxesInfoStorage: Storage,
+   @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
+   @Named("ConsensusStorage") consensusStorage: Storage,
+   @Named("BackupStorage") backUpStorage: Storage,
+   @Named("CustomApiGroups") val customApiGroups: JList[SidechainApplicationApiGroup],
+   @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
+   @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
+   @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
+   @Named("Sc2ScConfiguration") override val sc2scConfigurator: Sc2ScConfigurator,
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+  )
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
@@ -199,7 +200,7 @@ class SidechainApp @Inject()
       SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, sc2scConfigurator, params)
+  val sidechainBlockForgerActorRef: ActorRef = forge.ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
@@ -214,7 +215,8 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if (sidechainSettings.websocketServer.wsServer) {
+  val websocketServerSettings: WebSocketServerSettings = sidechainSettings.websocketServer
+  if (websocketServerSettings.wsServer) {
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef, sidechainSettings.websocketServer.wsServerPort)
   }
 

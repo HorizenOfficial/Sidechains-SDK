@@ -3,6 +3,7 @@ package io.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import akka.stream.javadsl.Sink
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.SidechainRejectionApiRoute
@@ -365,7 +366,10 @@ abstract class AbstractSidechainApp
     log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
 
     val bindAddress = settings.restApi.bindAddress
-    Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).bind(combinedRoute)
+    Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).connectionSource().to(Sink.foreach { connection =>
+      log.info("New REST api connection from address :: %s".format(connection.remoteAddress.toString))
+      connection.handleWithAsyncHandler(combinedRoute)
+    }).run()
 
     //Remove the Logger shutdown hook
     LogManager.getFactory match {

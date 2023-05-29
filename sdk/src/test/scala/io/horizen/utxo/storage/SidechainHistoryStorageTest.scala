@@ -347,13 +347,17 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     // Test 11: get activeChainFrom
     // active chain from genesis block
-    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainAfter(activeChainBlockList.head.id, None).size)
+    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainSince(activeChainBlockList.head.id, None).size)
+    assertEquals("Storage returned wrong active chain size", height - 1, historyStorage.activeChainAfter(activeChainBlockList.head.id, None).size)
     // active chain from 5th block
-    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainAfter(activeChainBlockList(4).id, None).size)
+    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainSince(activeChainBlockList(4).id, None).size)
+    assertEquals("Storage returned wrong active chain size", height - 5, historyStorage.activeChainAfter(activeChainBlockList(4).id, None).size)
     // active chain last block id height
-    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainAfter(activeChainBlockList.last.id, None).size)
+    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainSince(activeChainBlockList.last.id, None).size)
+    assertEquals("Storage returned wrong active chain size", 0, historyStorage.activeChainAfter(activeChainBlockList.last.id, None).size)
     // active chain from fork last block id
-    assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id, None).isEmpty)
+    assertTrue("Storage active chain since forked block should be empty", historyStorage.activeChainSince(forkChainBlockList.last.id, None).isEmpty)
+    assertTrue("Storage active chain after forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id, None).isEmpty)
 
 
     // Test 12: get semanticValidity

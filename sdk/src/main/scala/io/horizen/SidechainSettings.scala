@@ -27,7 +27,7 @@ case class WebSocketClientSettings(
 case class WebSocketServerSettings(
     wsServer: Boolean = false,
     wsServerPort: Int = 8025
-) extends SensitiveStringer
+)
 
 case class GenesisDataSettings(
     scGenesisBlockHex: String,

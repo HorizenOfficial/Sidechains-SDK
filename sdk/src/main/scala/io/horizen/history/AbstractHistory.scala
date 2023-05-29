@@ -5,13 +5,13 @@ import io.horizen.account.state.HistoryBlockHashProvider
 import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain._
 import io.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.node.NodeHistoryBase
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.storage.leveldb.Algos.encoder
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
@@ -200,7 +200,7 @@ abstract class AbstractHistory[
         // fork length is more than params.maxHistoryRewritingLength
           (Seq[ModifierId](), Seq[ModifierId]())
         else
-          (newBestChain, storage.activeChainAfter(newBestChain.head, None))
+          (newBestChain, storage.activeChainSince(newBestChain.head, None))
 
       case None => (Seq[ModifierId](), Seq[ModifierId]())
     }
@@ -294,7 +294,7 @@ abstract class AbstractHistory[
       throw new IllegalArgumentException("Can't ask for a number of blocks = Int.MaxInt!")
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        storage.activeChainAfter(commonBlockId, Some(size + 1)).tail.map(id => (SidechainBlockBase.ModifierTypeId, id))      case None =>
+        storage.activeChainAfter(commonBlockId, Some(size)).map(id => (SidechainBlockBase.ModifierTypeId, id))      case None =>
         //log.warn("Found chain without common block ids from remote")
         Seq()
     }

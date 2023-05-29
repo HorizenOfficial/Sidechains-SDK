@@ -146,6 +146,8 @@ abstract class AbstractHistoryStorage[
 
   def activeChainBlockId(height: Int): Option[ModifierId] = activeChain.idByHeight(height)
 
+  def activeChainSince(blockId: ModifierId, limit: Option[Int]): Seq[ModifierId] = activeChain.chainSince(blockId, limit)
+
   def activeChainAfter(blockId: ModifierId, limit: Option[Int]): Seq[ModifierId] = activeChain.chainAfter(blockId, limit)
 
   def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: McHeaderHash): Option[PM] = {
