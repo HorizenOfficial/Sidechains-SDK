@@ -71,8 +71,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
     // used in both generateCertProofInfo and generateCswProofInfo cmds
     private static boolean dlogKeyInit = false;
-    private static int maxSeedLength = 1000;
-    private static int minSeedLength = 6;
+    private static final int maxSeedLength = 1000;
+    private static final int minSeedLength = 6;
+    private final SidechainModel<?> scModel;
 
     private static boolean initDlogKey() {
         if (dlogKeyInit) {
@@ -85,8 +86,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         return true;
     }
 
-    public ScBootstrappingToolCommandProcessor(MessagePrinter printer) {
+    public ScBootstrappingToolCommandProcessor(MessagePrinter printer, SidechainModel<?> scModel) {
         super(printer);
+        this.scModel = scModel;
     }
 
     @Override
@@ -791,11 +793,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        // Undocumented optional argument, that is used in STF to decrease genesis block timestamps
-        // to be able to generate next sc blocks without delays.
-        // can be used only in Regtest network
-        int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
-
         // Parsing the info: scid, powdata vector, mc block height, mc block hex, mc initial BlockSCTxCommTreeCumulativeHash
         int offset = 0;
         try {
@@ -855,9 +852,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
-            List<MainchainHeader> mainchainHeadersData = Collections.singletonList(mcRef.header());
-
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
             if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
@@ -880,119 +874,22 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             VrfProof vrfProof = vrfSecretKey.prove(vrfMessage).getKey();
             VrfOutput vrfOutput = vrfProof.proofToVrfOutput(vrfSecretKey.publicImage(), vrfMessage).get();
             MerklePath mp = new MerklePath(new ArrayList<>());
-            // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
-            long currentTimeSeconds = System.currentTimeMillis() / 1000;
-            long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
             int withdrawalEpochLength;
             String sidechainBlockHex;
-            byte block_version;
 
             // are we building a utxo or account model based block?
-            if (model.equals("account")) {
-                block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
-                // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
-
-                byte[] stateRoot;
-                try {
-                    stateRoot = getGenesisStateRoot(mainchainBlockReferencesData, params);
-                }
-                catch (Exception e) {
-                    printer.print(String.format("Error: 'Could not get genesis state root: %s", e.getMessage()));
-                    return;
-                }
-
-                byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH.toBytes(); // empty root hash (no receipts)
-
-                // taken from the creation cc out
-                AddressProposition forgerAddress = new AddressProposition(
-                          MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
-                                  sidechainCreation.getScCrOutput().address()));
-
-                BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
-
-                BigInteger gasUsed = BigInteger.ZERO;
-
-                BigInteger gasLimit = FeeUtils.GAS_LIMIT();
-
-                SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
-
-                ForgingStakeInfo forgingStakeInfo = sidechainCreation.getAccountForgerStakeInfo();
-
-                Bloom logsBloom = new Bloom();
-
-                AccountBlock accountBlock = AccountBlock.create(
-                        params.sidechainGenesisBlockParentId(),
-                        block_version,
-                        timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<AccountTransaction<Proposition, Proof<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<AccountBlockHeader>>()).asScala().toSeq(),
-                        key,
-                        forgingStakeInfo,
-                        vrfProof,
-                        vrfOutput,
-                        mp,
-                        feePaymentsHash,
-                        stateRoot,
-                        receiptsRoot,
-                        forgerAddress,
-                        baseFee,
-                        gasUsed,
-                        gasLimit,
-                        sidechainTransactionsCompanion,
-                        logsBloom,
-                        scala.Option.empty()
-                ).get();
-
-                try {
-                    SidechainCreation creationOutput = (SidechainCreation) accountBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                }
-                catch (Exception e) {
-                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                    return;
-                }
-
-                sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
-            } else {
-                block_version = SidechainBlock.BLOCK_VERSION();
-                // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = new byte[32];
-
-                ForgerBox forgerBox = sidechainCreation.getBox();
-                ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
-
-                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), CircuitTypes.NaiveThresholdSignatureCircuit());
-
-                SidechainBlock sidechainBlock = SidechainBlock.create(
-                        params.sidechainGenesisBlockParentId(),
-                        block_version,
-                        timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
-                        key,
-                        forgingStakeInfo,
-                        vrfProof,
-                        mp,
-                        feePaymentsHash,
-                        sidechainTransactionsCompanion,
-                        scala.Option.empty()
-                ).get();
-
-                try {
-                    SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                } catch (Exception e) {
-                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                    return;
-                }
-                sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            SidechainBlockBase<?, ?> blockBase = scModel.buildScGenesisBlock(
+                    mcRef, sidechainCreation, json, key, vrfProof, vrfOutput, mp, params
+            );
+            try {
+                SidechainCreation creationOutput = (SidechainCreation) blockBase.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+            } catch (Exception e) {
+                printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                return;
             }
+            sidechainBlockHex = BytesUtils.toHexString(blockBase.bytes());
 
             boolean isNonCeasing = (withdrawalEpochLength == 0);
 
@@ -1037,39 +934,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 );
         } catch (Exception e) {
             printer.print(String.format("Error: 'info' data is corrupted: %s", e.getMessage()));
-        }
-    }
-
-    private AccountStateView getStateView(scala.collection.Seq<MessageProcessor> mps) {
-        var dbm = new MemoryDatabase();
-        StateDB stateDb = new StateDB(dbm, new Hash(AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT()));
-        return new AccountStateView(null, stateDb, mps);
-    }
-
-    private byte[] getGenesisStateRoot(List<MainchainBlockReferenceData> mainchainBlockReferencesData, NetworkParams params) throws MessageProcessorInitializationException {
-        // TODO customMessageProcessors - for the time being we do not handle them in the bootstrapping tool.
-        // If needed they should be somehow passed as parameters and added here
-        Seq<MessageProcessor> customMessageProcessors = new ListBuffer<MessageProcessor>();
-
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
-
-        AccountStateView view = getStateView(messageProcessorSeq);
-        try(view){
-
-            // init all the message processors
-            scala.collection.Iterator iter = messageProcessorSeq.iterator();
-            while (iter.hasNext()) {
-                ((MessageProcessor)iter.next()).init(view);
-            }
-
-            // apply sc creation output, this will call forger stake msg processor
-            for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-                view.applyMainchainBlockReferenceData(mcBlockRefData);
-            }
-
-            // get the state root after all state-changing operations
-            return view.getIntermediateRoot();
-
         }
     }
 
