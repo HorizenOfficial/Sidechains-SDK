@@ -144,16 +144,16 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // compute ownershipId
     val newOwnershipId = getOwnershipId(msg.getFrom, mcTransparentAddress)
 
-    // check we do not already have this obj in the db
-    if (ownershipDataExist(view, newOwnershipId)) {
-      throw new ExecutionRevertedException(
-        s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
-    }
-
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
     if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1)) {
       throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
+    }
+
+    // check we do not already have this obj in the db
+    if (ownershipDataExist(view, newOwnershipId)) {
+      throw new ExecutionRevertedException(
+        s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
     }
 
     // check mc address is not yet associated to any sc address. This could happen by mistake or even if a malicious voter wants
