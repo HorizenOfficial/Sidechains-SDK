@@ -6,7 +6,6 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList._
 import io.horizen.account.state.ForgerStakeMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, uncheckedRemoveNode}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -84,7 +83,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
                      stakedAmount: BigInteger): Unit = {
 
     // add a new node to the linked list pointing to this forger stake data
-    addNewNode(view, stakeId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    addNewNode(view, stakeId, contractAddress)
 
     val forgerStakeData = ForgerStakeData(
       ForgerPublicKeys(blockSignProposition, vrfPublicKey), new AddressProposition(ownerPublicKey), stakedAmount)
@@ -98,7 +97,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
     // remove the data from the linked list
-    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
 
     // remove the stake
     view.removeAccountStorageBytes(contractAddress, stakeId)
@@ -194,7 +193,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
-    while (!linkedListNodeRefIsNull(nodeReference, LinkedListNullValue)) {
+    while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
       stakeList = item +: stakeList
       nodeReference = prevNodeReference

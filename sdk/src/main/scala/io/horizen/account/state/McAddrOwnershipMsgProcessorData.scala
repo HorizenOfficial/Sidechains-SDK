@@ -103,7 +103,7 @@ case class RemoveOwnershipCmdInput(mcTransparentAddressOpt: Option[String])
           s"Invalid mc address length: ${mcTransparentAddress.length}")
         mcTransparentAddress.getBytes(StandardCharsets.UTF_8)
       case None =>
-        new Array[Byte](35)
+        new Array[Byte](BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)
     }
 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(

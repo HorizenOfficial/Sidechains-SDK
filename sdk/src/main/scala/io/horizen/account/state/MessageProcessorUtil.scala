@@ -107,7 +107,10 @@ object MessageProcessorUtil {
     }
   }
 
-  object NativeSmartContractLinkedList {
+  trait NativeSmartContractLinkedList {
+
+    val listTipKey: Array[Byte]
+    val listNullValue: Array[Byte]
 
     def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address): Option[LinkedListNode] = {
       val data = view.getAccountStorageBytes(contract_address, nodeId)
@@ -126,13 +129,13 @@ object MessageProcessorUtil {
     }
 
     def addNewNode(view: BaseAccountStateView, dataId: Array[Byte],
-                   contract_address: Address, listTipKey: Array[Byte], listNullValue: Array[Byte]): Unit = {
+                   contract_address: Address): Unit = {
       val oldTip = view.getAccountStorage(contract_address, listTipKey)
 
       val newTip = Blake2b256.hash(dataId)
 
       // modify previous node (if any) to point at this one
-      modifyNode(view, oldTip, contract_address, listNullValue) { previousNode =>
+      modifyNode(view, oldTip, contract_address) { previousNode =>
         LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, newTip)
       }
 
@@ -145,10 +148,10 @@ object MessageProcessorUtil {
           LinkedListNode(dataId, oldTip, listNullValue)))
     }
 
-    def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address, listNullValue: Array[Byte])(
+    def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address)(
       modify: LinkedListNode => LinkedListNode
     ): Option[Unit] = {
-      if (linkedListNodeRefIsNull(nodeId, listNullValue)) return None
+      if (linkedListNodeRefIsNull(nodeId)) return None
       // find original node
       findLinkedListNode(view, nodeId, contract_address)
         // if the node was not found we want to revert execution
@@ -162,19 +165,19 @@ object MessageProcessorUtil {
     }
 
     def uncheckedRemoveNode(view: BaseAccountStateView, nodeToRemoveId: Array[Byte],
-                            contract_address: Address, listTipKey: Array[Byte], listNullValue: Array[Byte]): Unit = {
+                            contract_address: Address): Unit = {
 
       // we assume that the caller have checked that the data really exists in the stateDb.
       // in this case we must necessarily have a linked list node
       val nodeToRemove = findLinkedListNode(view, nodeToRemoveId, contract_address).get
 
       // modify previous node if any
-      modifyNode(view, nodeToRemove.previousNodeKey, contract_address, listNullValue) { previousNode =>
+      modifyNode(view, nodeToRemove.previousNodeKey, contract_address) { previousNode =>
         LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
       }
 
       // modify next node if any
-      modifyNode(view, nodeToRemove.nextNodeKey, contract_address, listNullValue) { nextNode =>
+      modifyNode(view, nodeToRemove.nextNodeKey, contract_address) { nextNode =>
         LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
       } getOrElse {
         // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
@@ -185,7 +188,7 @@ object MessageProcessorUtil {
       view.removeAccountStorageBytes(contract_address, nodeToRemoveId)
     }
 
-    def linkedListNodeRefIsNull(ref: Array[Byte], listNullValue: Array[Byte]): Boolean =
+    def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
       BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(listNullValue))
 
   }

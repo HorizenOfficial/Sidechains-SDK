@@ -911,7 +911,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
       // check decoded length
       require(decodedMcPubKeyHash.length == BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH,
-        s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be 35, found ${decodedMcPubKeyHash.length}")
+        s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be ${BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH}, found ${decodedMcPubKeyHash.length}")
 
   }
 
@@ -1058,7 +1058,7 @@ object AccountTransactionRestScheme {
                                                         gasInfo: Option[EIP1559GasInfo]
                                                       ) {
     require(ownershipInfo != null, "MC address ownership info must be provided")
-    require(ownershipInfo.scAddress.length == 40, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
+    require(ownershipInfo.scAddress.length == 2*Address.LENGTH, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
     // for the time being do not allow null mc address. In future we can use a null value for removing all sc address ownerships
     require(ownershipInfo.mcTransparentAddress.isDefined, "MC address must be specified")
   }

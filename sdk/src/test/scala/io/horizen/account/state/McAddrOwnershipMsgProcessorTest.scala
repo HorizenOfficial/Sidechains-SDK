@@ -9,7 +9,6 @@ import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
@@ -20,7 +19,6 @@ import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.security.Security
 import java.util
 import java.util.Optional
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
@@ -30,9 +28,6 @@ class McAddrOwnershipMsgProcessorTest
     with MockitoSugar
     with MessageProcessorFixture
     with StoreFixture {
-
-  // for ripemd160 hash
-  Security.addProvider(new BouncyCastleProvider)
 
   val dummyBigInteger: BigInteger = BigInteger.ONE
   val negativeAmount: BigInteger = BigInteger.valueOf(-1)
@@ -483,16 +478,27 @@ class McAddrOwnershipMsgProcessorTest
       val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
+
+      // try adding with a value amount not null
+      var msgBad = getMessage(contractAddress, BigInteger.ONE.negate(),
+        BytesUtils.fromHexString(AddNewOwnershipCmd) ++ cmdInput.encode(),
+        randomNonce, scAddressObj1
+      )
+      var ex = intercept[ExecutionRevertedException] {
+        withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
+      }
+      assertTrue(ex.getMessage.contains("Value must be zero"))
+
       // try processing a msg with a trailing byte in the arguments, should fail
       val badData = Bytes.concat(data, new Array[Byte](1))
-      var msgBad = getMessage(
+      msgBad = getMessage(
         contractAddress,
         BigInteger.ZERO,
         BytesUtils.fromHexString(AddNewOwnershipCmd) ++ badData,
         randomNonce,
         scAddressObj1)
 
-      var ex = intercept[ExecutionRevertedException] {
+      ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
       assertTrue(ex.getMessage.contains("Wrong message data field length"))

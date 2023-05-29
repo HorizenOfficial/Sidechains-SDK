@@ -116,6 +116,7 @@ testScriptsEvm=(
     'account_websocket_server.py'
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
+    'sc_evm_mc_addr_ownership.py'
 );
 
 testScriptsUtxo=(

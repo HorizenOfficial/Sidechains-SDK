@@ -210,7 +210,7 @@ public final class BytesUtils {
 
     public static byte[] fromHorizenMcTransparentAddress(String address, NetworkParams params) {
         if(address.length() != HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect Horizen public key address length %d", address.length()));
+            throw new IllegalArgumentException(String.format("Incorrect Horizen mc transparent address length %d", address.length()));
 
         byte[] addressBytesWithChecksum = Base58.decode(address).get();
         byte[] addressBytes = Arrays.copyOfRange(addressBytesWithChecksum, 0, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH + HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH);

@@ -5,7 +5,6 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
-import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{addNewNode, linkedListNodeRefIsNull, uncheckedRemoveNode}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -42,8 +41,6 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   // ecdsa curve y^2 mod p = (x^3 + 7) mod p
   val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
 
-  val networkParams: NetworkParams = params
-
   override def init(view: BaseAccountStateView): Unit = {
     super.init(view)
     // set the initial value for the linked list last element (null hash)
@@ -62,7 +59,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
 
     // add a new node to the linked list pointing to this obj data
-    addNewNode(view, ownershipId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    addNewNode(view, ownershipId, contractAddress)
 
     val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
 
@@ -77,7 +74,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val nodeToRemoveId = Blake2b256.hash(ownershipId)
 
     // remove the data from the linked list
-    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress, LinkedListTipKey, LinkedListNullValue)
+    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
 
     // remove the ownership association
     view.removeAccountStorageBytes(contractAddress, ownershipId)
@@ -130,7 +127,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     // check that msg.value is zero
     if (msg.getValue.signum() != 0) {
-      throw new ExecutionRevertedException("Value must not be zero")
+      throw new ExecutionRevertedException("Value must be zero")
     }
 
     // check that sender account exists
@@ -265,7 +262,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     var ownershipsList = Seq[McAddrOwnershipData]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
-    while (!linkedListNodeRefIsNull(nodeReference, LinkedListNullValue)) {
+    while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
       scAddressOpt match {
         case Some(scAddr) =>
@@ -290,7 +287,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
   private def isMcAddrAlreadyAssociated(view: BaseAccountStateView, mcAddress: String): Option[String] = {
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
-    while (!linkedListNodeRefIsNull(nodeReference, LinkedListNullValue)) {
+    while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
       if (item.mcTransparentAddress.equals(mcAddress))
         return Some(item.scAddress)

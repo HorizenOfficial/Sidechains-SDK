@@ -1,11 +1,14 @@
 package io.horizen.account.state
 
-import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList.{findLinkedListNode, linkedListNodeRefIsNull}
+import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 
 import scala.util.{Failure, Success}
 
-object ForgerStakeLinkedList {
+object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
+
+  override val listTipKey: Array[Byte] = ForgerStakeMsgProcessor.LinkedListTipKey
+  override val listNullValue: Array[Byte] = ForgerStakeMsgProcessor.LinkedListNullValue
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
     val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
@@ -24,7 +27,7 @@ object ForgerStakeLinkedList {
   }
 
   def getStakeListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
-    if (!linkedListNodeRefIsNull(tip, ForgerStakeMsgProcessor.LinkedListNullValue)) {
+    if (!linkedListNodeRefIsNull(tip)) {
       val node = findLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(

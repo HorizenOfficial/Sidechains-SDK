@@ -18,7 +18,7 @@ from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_byt
 
 """
 Configuration: 
-    - 1 SC node
+    - 2 SC node
     - 1 MC node
 
 Test:
@@ -48,6 +48,7 @@ def check_add_ownership_event(event, sc_addr, mc_addr, op="add"):
     elif op == "remove":
         sig = 'RemoveMcAddrOwnership(address,bytes3,bytes32)'
     else:
+        sig = ""
         assert_false("Invalid op = " + op)
 
     assert_equal(2, len(event['topics']), "Wrong number of topics in event")
