@@ -8,7 +8,7 @@ from SidechainTestFramework.scutil import EVM_APP_SLOT_TIME, SLOTS_IN_EPOCH, gen
 from test_framework.util import assert_equal, assert_false, fail
 
 
-class SCEVMSCFork(AccountChainSetup):
+class SCEVMGasFeeFork(AccountChainSetup):
 
     def __init__(self):
         # rewind genesis block by 20 epochs, so we jump ahead for testing purposes
@@ -76,4 +76,4 @@ class SCEVMSCFork(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    SCEVMSCFork().main()
+    SCEVMGasFeeFork().main()
