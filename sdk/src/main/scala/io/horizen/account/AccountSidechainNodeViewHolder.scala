@@ -16,7 +16,7 @@ import io.horizen.consensus._
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import io.horizen.{AbstractSidechainNodeViewHolder, NodeViewHolderForSeederNode, SidechainSettings, SidechainTypes}
 import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
@@ -170,7 +170,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
-  override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
+  override protected def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
     newTxs.foreach {
       case tx if Some(tx).filter(_.isInstanceOf[EthereumTransaction]).map(_.asInstanceOf[EthereumTransaction])
         .exists(ethTx => !sidechainSettings.accountMempool.allowUnprotectedTxs && ethTx.isLegacy && !ethTx.isEIP155) =>
@@ -197,6 +197,30 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 }
 
+/* In a Seeder node transactions handling is disabled, so there is a specific NodeViewHolder */
+class AccountSidechainNodeViewHolderForSeederNode(sidechainSettings: SidechainSettings,
+                                     params: NetworkParams,
+                                     timeProvider: NetworkTimeProvider,
+                                     historyStorage: AccountHistoryStorage,
+                                     consensusDataStorage: ConsensusDataStorage,
+                                     stateMetadataStorage: AccountStateMetadataStorage,
+                                     stateDbStorage: Database,
+                                     customMessageProcessors: Seq[MessageProcessor],
+                                     secretStorage: SidechainSecretStorage,
+                                     genesisBlock: AccountBlock)
+  extends  AccountSidechainNodeViewHolder(sidechainSettings,
+    params,
+    timeProvider,
+    historyStorage,
+    consensusDataStorage,
+    stateMetadataStorage,
+    stateDbStorage,
+    customMessageProcessors,
+    secretStorage,
+    genesisBlock)
+    with NodeViewHolderForSeederNode[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock]
+
+
 object AccountSidechainNodeViewHolder {
 
   case class NewExecTransactionsEvent(newExecTxs: Iterable[SidechainTypes#SCAT]) extends NodeViewHolderEvent
@@ -215,29 +239,16 @@ object AccountNodeViewHolderRef {
                                    params: NetworkParams,
                                    timeProvider: NetworkTimeProvider,
                                    genesisBlock: AccountBlock): AccountSidechainNodeViewHolder = {
-    if (params.isHandlingTransactionsEnabled)
-      new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+    if (isASeederNode(params))
+      new AccountSidechainNodeViewHolderForSeederNode(sidechainSettings, params, timeProvider, historyStorage,
         consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)
     else
       new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
-        consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock){
+        consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)
 
-        override protected def updateMemPool(removedBlocks: Seq[AccountBlock], appliedBlocks: Seq[AccountBlock],
-                                             memPool: AccountMemoryPool, state: AccountState): AccountMemoryPool = memPool
-
-        override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {
-          newTxs.foreach { tx =>
-            context.system.eventStream.publish(
-              FailedTransaction(
-                tx.id,
-                new Exception("Transactions handling disabled"),
-                immediateFailure = false // This won't penalize the sender, because there can be legacy nodes that don't support seeder nodes as peer
-              )
-            )
-          }
-        }
-      }
   }
+
+  private def isASeederNode(params: NetworkParams): Boolean = !params.isHandlingTransactionsEnabled
 
   def props(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,

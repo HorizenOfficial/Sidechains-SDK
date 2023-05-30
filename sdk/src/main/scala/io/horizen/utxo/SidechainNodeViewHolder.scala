@@ -228,6 +228,44 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 }
 
+/* In a Seeder node transactions handling is disabled, so there is a specific NodeViewHolder */
+class SidechainNodeViewHolderForSeederNode(sidechainSettings: SidechainSettings,
+                              historyStorage: SidechainHistoryStorage,
+                              consensusDataStorage: ConsensusDataStorage,
+                              stateStorage: SidechainStateStorage,
+                              forgerBoxStorage: SidechainStateForgerBoxStorage,
+                              utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
+                              walletBoxStorage: SidechainWalletBoxStorage,
+                              secretStorage: SidechainSecretStorage,
+                              walletTransactionStorage: SidechainWalletTransactionStorage,
+                              forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                              cswDataProvider: SidechainWalletCswDataProvider,
+                              backupStorage: BackupStorage,
+                              params: NetworkParams,
+                              timeProvider: NetworkTimeProvider,
+                              applicationWallet: ApplicationWallet,
+                              applicationState: ApplicationState,
+                              genesisBlock: SidechainBlock)
+
+  extends SidechainNodeViewHolder(sidechainSettings,
+    historyStorage,
+    consensusDataStorage,
+    stateStorage,
+    forgerBoxStorage,
+    utxoMerkleTreeProvider,
+    walletBoxStorage,
+    secretStorage,
+    walletTransactionStorage,
+    forgingBoxesInfoStorage,
+    cswDataProvider,
+    backupStorage,
+    params,
+    timeProvider,
+    applicationWallet,
+    applicationState,
+    genesisBlock) with NodeViewHolderForSeederNode[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock]
+
+
 object SidechainNodeViewHolderRef {
 
   def props(sidechainSettings: SidechainSettings,
@@ -262,29 +300,16 @@ object SidechainNodeViewHolderRef {
                                    params: NetworkParams, timeProvider: NetworkTimeProvider,
                                    applicationWallet: ApplicationWallet, applicationState: ApplicationState,
                                    genesisBlock: SidechainBlock) = {
-    if (params.isHandlingTransactionsEnabled)
-      new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)
+    if (isASeederNode(params))
+      new SidechainNodeViewHolderForSeederNode(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)
     else
       new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock){
-        override protected def updateMemPool(removedBlocks: Seq[SidechainBlock], appliedBlocks: Seq[SidechainBlock],
-                                             memPool: SidechainMemoryPool, state: SidechainState): SidechainMemoryPool = memPool
-
-        override def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCBT]): Unit = {
-          newTxs.foreach { tx =>
-            context.system.eventStream.publish(
-              FailedTransaction(
-                tx.asInstanceOf[Transaction].id,
-                new Exception("Transactions handling disabled"),
-                immediateFailure = false // This won't penalize the sender, because there can be legacy nodes that don't support seeder nodes as peer
-              )
-            )
-          }
-        }
-      }
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)
 
   }
+
+  private def isASeederNode(params: NetworkParams): Boolean = !params.isHandlingTransactionsEnabled
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
