@@ -88,7 +88,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
 
-    val hashedMsg = getMcHashedMsg(scAddress.toStringNoPrefix)
+    val hashedMsg = getMcHashedMsg(scAddress.toString)
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)

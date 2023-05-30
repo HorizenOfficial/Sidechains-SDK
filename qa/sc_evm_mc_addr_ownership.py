@@ -145,13 +145,14 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         self.sc_sync_all()
 
         sc_address = remove_0x_prefix(self.evm_address)
+        sc_address_prefix = add_0x_prefix(self.evm_address)
 
         lag_list = mc_node.listaddressgroupings()
         taddr1, val = get_address_with_balance(lag_list)
 
         assert_true(taddr1 is not None)
 
-        mc_signature1 = mc_node.signmessage(taddr1, sc_address)
+        mc_signature1 = mc_node.signmessage(taddr1, sc_address_prefix)
         print("scAddr: " + sc_address)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature1)
@@ -173,7 +174,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             if taddr2 != taddr1:
                 break
 
-        mc_signature2 = mc_node.signmessage(taddr2, sc_address)
+        mc_signature2 = mc_node.signmessage(taddr2, sc_address_prefix)
         print("mcAddr: " + taddr2)
         print("mcSignature: " + mc_signature2)
 
@@ -322,7 +323,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         for i in range(10):
             taddr = mc_node.getnewaddress()
             taddr_list.append(taddr)
-            mc_signature = mc_node.signmessage(taddr, sc_address)
+            mc_signature = mc_node.signmessage(taddr, sc_address_prefix)
             print("mcAddr: " + taddr)
             print("mcSignature: " + mc_signature)
 
@@ -374,7 +375,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         # add an association for a different sc address
         taddr_sc2 = mc_node.getnewaddress()
-        mc_signature_sc2 = mc_node.signmessage(taddr_sc2, sc_address2)
+        sc_address2_prefix = add_0x_prefix(sc_address2)
+        mc_signature_sc2 = mc_node.signmessage(taddr_sc2, sc_address2_prefix)
         print("scAddr: " + sc_address2)
         print("mcAddr: " + taddr_sc2)
         print("mcSignature: " + mc_signature_sc2)
@@ -388,7 +390,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address2, mc_addr=taddr_sc2)
 
         # associate to sc address 2 a mc addr already associated to sc address 1, the tx is rejected
-        mc_signature_sc2 = mc_node.signmessage(taddr1, sc_address2)
+        mc_signature_sc2 = mc_node.signmessage(taddr1, sc_address2_prefix)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature_sc2)
 

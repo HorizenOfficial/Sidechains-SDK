@@ -43,16 +43,16 @@ class McAddrOwnershipMsgProcessorTest
   val scAddressObj1 = new Address("0x"+scAddrStr1)
 
   // signature 'i' is obtained signing the same scAddrStr1 string using the priv key corresponding to mc addr 'i'
-  val mcAddrStr1: String = "ztZCfBPUpLo4NyoBEfyAxEpQRTdqwF8pv71"
-  val mcSignatureStr1: String = "H+Kf9j69tdQLU3PTGROjEQjJ+wxydbc9b50ZJDVNwm5QbM07e4RJXckGM3s0QOg78aIEDSgXiqMLw1Mwce69LnE="
-  val mcAddrStr2: String = "ztmNNo4HiRkkrdjE3kTKt3unQYBYQip2UEs"
-  val mcSignatureStr2: String = "H5e1LHFxg0GVNyHsUYLk5CRuNw5HE81ltTWttLcJqgKgLCZ/dyRb7su8RZ8K0PqDFvaF5Tz7rC/iTFo/hY1lUL0="
-  val mcAddrStr3: String = "zthsGkV1AySAz4B1Fc26rmoWXmstGat3Cff"
-  val mcSignatureStr3: String = "IES/Dw5cn8OAJJmBvz+A7NzpFdltKp4T9pZEp026EjooD5nK4X/lVSCR8y+UBrg5KV4WEczhd8XCQN13PJAA/h8="
-  val mcAddrStr4: String = "ztZzwb8xagvmgzC4emko6yotro6yvACjysb"
-  val mcSignatureStr4: String = "H4Djo6V/pnIMHghBAhpkS6BGVi1Ivjd18nTdgEAA236vcJMg6XsDaEpZDJ6QORPqZzpwAAgVbobdrWlb8hgf0L0="
-  val mcAddrStr5: String = "ztmpFnfERETw1mh61RKTL3kQSQqE2toKbi2"
-  val mcSignatureStr5: String = "HykxEWY9fvuOkkmwuTeFvqQT42iowRKBPO8H/E562XfZFUvKQ7Ge0zfIz9RqSsmq2/isH/nXck1Bifc1QtWWBhI="
+  val mcAddrStr1: String = "ztUQUpuQeTbsC1jANUZESrCxftp8HGWQPhT"
+  val mcSignatureStr1: String = "IJkRaIwH2mUNU9dOQrZnyTv4yDKMjm18VSZe0XDGmKmuLCuiNFPzScA4VxjzvCaRHulF42gdkNbZOhTmrNJRDYw="
+  val mcAddrStr2: String = "ztm27jNrMbrRoHaCM1grjnSkqAs6ZKRbzhy"
+  val mcSignatureStr2: String = "IJF3Lpl9+a53u+BfHDbH+cQsb/nH/v01/j1yUYR215VxApmrdf7OffesVlX+eGU77w6eC+MjTo+R/xn/MKXTM8E="
+  val mcAddrStr3: String = "ztnmbLeuV9DjtEnBBLDgqVc71yGXPiFr1Ek"
+  val mcSignatureStr3: String = "IBbjUMb/Qz0AndZsGBtKWopunreR6AMO93L9y3EDxGFfFlGxabiTvNth/UNNSVMpDUOk61eOkoDPuqYgba9+JZ4="
+  val mcAddrStr4: String = "ztaLF4tF7LizLdtvbUxxRgxZCthtmDPGwEv"
+  val mcSignatureStr4: String = "H5p8z9TH+qPISIXBXiWse0PLOFGoelAfX9liR53kDbZ1QAE3zYhMsydpzPbVgXTrs7bCRUCowqeklnMyHRAh2vA="
+  val mcAddrStr5: String = "ztkKP9iKjwS1UsKGYuh6yxRNLmmfDeqkQeQ"
+  val mcSignatureStr5: String = "INSe5Ij25p1/GQxqPXgeRX02NYawknOKVA3AHjHkrLIrQJpOOC5Ap1WmhUiaA6c4F+ID2Wg3hhbCYOl2uazfBxQ="
 
   val listOfMcAddrSign1 = new util.ArrayList[(String, String)]()
   listOfMcAddrSign1.add((mcAddrStr1, mcSignatureStr1))
@@ -64,17 +64,17 @@ class McAddrOwnershipMsgProcessorTest
   // a second sc address and its data
   val scAddrStr2: String = "ca12fcb886cbf73a39d87aac9610f8a303536642"
   val scAddressObj2 = new Address("0x"+scAddrStr2)
-  val mcAddrStr1_2: String = "ztnk6C64rDE47y7UMgYYaeHzaXADijQLdYZ"
-  val mcSignatureStr1_2: String = "IJes9PQlOEekl0owF7ooKo27Cb4fucoyg2do7ROdUeQ2MOzjLOrGkZe7JQFdRDu3ml2pvN7SzFWmBaTO58M32PA="
-  val mcAddrStr2_2: String = "ztqpQ21Ly5fAvab89AcZLoSomLvguRJzfML"
-  val mcSignatureStr2_2: String = "ILijk4AbkpXy8jd/rG4sFFxHPMsVOW0x4EGkbspRznGtaNQ3b4mE/H1e85yZRvGnayZHPqzRz84KXVHbwGoRniE="
+  val mcAddrStr1_2: String = "ztgqkxyxr2d1oumBvjWpwcfKVwZLZ1kaWm2"
+  val mcSignatureStr1_2: String = "HwQ18kELDbdyon5v+K81MEo7QCfWko+y0vhJUKPP/+q9OynDfgQVLyv7vsODIB+3oIvVYqqReZm3zUjES2FfsKE="
+  val mcAddrStr2_2: String = "ztVMKff4ZTNxYsUqWyrABWnwUHa37tyNpt7"
+  val mcSignatureStr2_2: String = "HxXS6mMVPyaU+2jBBHNz6+ndWr3CFiOChFhOEr5pZHpFFgDXKTSG4fLEGSh3brpvaR7A686FhZzO84LQ/LOMF5k="
 
   val listOfMcAddrSign2 = new util.ArrayList[(String, String)]()
   listOfMcAddrSign2.add((mcAddrStr1_2, mcSignatureStr1_2))
   listOfMcAddrSign2.add((mcAddrStr2_2, mcSignatureStr2_2))
 
   // and here is the signature of the mcAddrStr1 made using the second sc address as msg. It is useful for negative tests
-  val mcSignatureStr3_2 ="H/lg23bngpXWzdxq+roC7sKEwXzY8PZoRzO9ZEoCTu9pQKD67nJmJ9cLonodedbRdY4hsYLJ56GeK9U16uGvv6g="
+  val mcSignatureStr3_2 ="IMxoNXyPUh797yJMJNyArnzSAZ8AitGaPlXQlUMDO6mxA5o1VYWLgAmdJv8OLTRARKNesrUFOhkxA8XSK8fj9Ug="
 
   val AddNewEventSig: Array[Byte] = getEventSignature("AddMcAddrOwnership(address,bytes3,bytes32)")
   val NumOfIndexedAddNewEvtParams = 1

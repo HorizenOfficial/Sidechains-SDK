@@ -151,25 +151,26 @@ public class McSignatureTest {
           zend rpc command for getting the signature of an input message given a transparent address. The signature will
           be applied using the private key corresponding to the transparent address:
 
-              $ src/zen-cli -regtest signmessage ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2 00c8f107a09cd4f463afc2f1e6e5bf6022ad4600
-              IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw=
+              $ src/zen-cli -regtest signmessage "ztdKq1uqVEfVjhJ16kyKEANmeJes1xfmpP1" "0x00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"
+              IOc348/la3bqCb31IQg0DEVOowg6f3cKll+SmZ6ip4KVR37qp0aG72iqZwdulDmj+1bid+IdIJJhoOm1kMqCX/s=
+
 
 
           zend rpc command for getting info about a transparent address, including its pub key
 
-              $ src/zen-cli -regtest validateaddress ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2
+              $ src/zen-cli -regtest validateaddress "ztdKq1uqVEfVjhJ16kyKEANmeJes1xfmpP1"
               {
-                  "isvalid": true,
-                  "address": "ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2",
-                  "scriptPubKey": "76a914cddf99fb527636c2911235cda4ab07698f659ec688ac20bb1acf2c1fc1228967a611c7db30632098f0c641855180b5fe23793b72eea50d00b4",
-                  "ismine": true,
-                  "iswatchonly": false,
-                  "isscript": false,
-                  "pubkey": "0275e40b8af8b7e8e8d30a821ab659dae06d819d13672826e785953fb037a31d5c",
-                  "pubkeyhash": "c69e658f6907aba4cd351291c2367652fb99dfcd",
-                  "iscompressed": true,
-                  "account": ""
+                "isvalid": true,
+                "address": "ztdKq1uqVEfVjhJ16kyKEANmeJes1xfmpP1",
+                "scriptPubKey": "76a9146f8ef406a53658c6d2341c61c8294f0b1a6d1aec88ac209c59a98e645f356c5da540fbd3c249c1e7278a60cef9052572ea111446e60200038c6c13b4",
+                "ismine": true,
+                "iswatchonly": false,
+                "isscript": false,
+                "pubkey": "039f6b8c47c7d66a7a3c67c523b49ee6c77af7d41d96cf74942c2c9ac24425e645",
+                "iscompressed": true,
+                "account": ""
               }
+
          */
 
 
@@ -178,7 +179,7 @@ public class McSignatureTest {
         //    And we can not get the taddr from the recovered address because it is hashed too (see
         //    mcAddressProposition below)
         // 2. here we have 33 bytes. The first byte 0x02/03 is a tag indicating the parity value of the compressed format
-        String strMcPubKey = "0275e40b8af8b7e8e8d30a821ab659dae06d819d13672826e785953fb037a31d5c";
+        String strMcPubKey = "039f6b8c47c7d66a7a3c67c523b49ee6c77af7d41d96cf74942c2c9ac24425e645";
 
         // in order to get an address proposition we must get the uncompressed format of the mc pub key from the
         // compressed one:
@@ -198,11 +199,11 @@ public class McSignatureTest {
 
         System.out.println("mcAddressProposition = " + BytesUtils.toHexString(mcAddressProposition.pubKeyBytes()));
 
-        byte[] hashedMsg = getMcHashedMsg("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600");
+        byte[] hashedMsg = getMcHashedMsg("0x00c8f107a09cd4f463afc2f1e6e5bf6022ad4600");
         System.out.println("hashed msg = " + BytesUtils.toHexString(hashedMsg));
 
         // base64 encoded signature as it is returned by rpc cmd above
-        String strMcSignature = "IDgebBBTdzx10ItOJGbOsd6hfNVSjo/kGI7QxX/fDBcPdzJ3AUQ7TZ2pv401N2SyaIckJ4nrZisR9O/n6pX7Qyw=";
+        String strMcSignature = "IOc348/la3bqCb31IQg0DEVOowg6f3cKll+SmZ6ip4KVR37qp0aG72iqZwdulDmj+1bid+IdIJJhoOm1kMqCX/s=";
 
         byte[] decodedMcSignature = Base64.decode(strMcSignature).get();
         // we subtract 0x04 from first byte which is a tag added by mainchain to the v value indicating uncompressed
@@ -232,7 +233,7 @@ public class McSignatureTest {
         assertArrayEquals(recoveredPubKeyBytes, mcAddressProposition.pubKeyBytes());
 
         // check we have consistent mcpubkey and taddr
-        String taddr ="ztmvX9UznQbP4AQSkLJCKxQwhUkrBm866G2";
+        String taddr ="ztdKq1uqVEfVjhJ16kyKEANmeJes1xfmpP1";
         byte[] mcPubkeyhash = Ripemd160Sha256Hash(recCompressedPubKeyBytes);
 
         String computedTaddr = toHorizenPublicKeyAddress(
