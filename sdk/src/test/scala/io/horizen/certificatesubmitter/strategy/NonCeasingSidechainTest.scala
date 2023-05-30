@@ -129,7 +129,7 @@ class NonCeasingSidechainTest extends JUnitSuite
         )
       }
     })
-    assertFalse("QQuality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
 
     //test - higher quality certificate present
     Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {

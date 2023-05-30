@@ -32,6 +32,8 @@ class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkPa
         case Success(currentCertificateTopQuality) =>
           if (status.knownSigs.size > currentCertificateTopQuality)
             return true
+          else
+            log.info(s"Submission not needed. Certificate of equal or higher quality already present in epoch " + status.referencedEpoch)
         case Failure(e) => e match {
           // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
           case ex: WebsocketErrorResponseException =>

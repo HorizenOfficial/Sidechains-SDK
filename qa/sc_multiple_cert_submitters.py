@@ -108,10 +108,9 @@ class SCMultipleCertSubmitters(SidechainTestFramework):
         with open(os.path.join(self.options.tmpdir + "/sc_node0/log", "debugLog.txt")) as node0, open(os.path.join(self.options.tmpdir + "/sc_node1/log", "debugLog.txt")) as node1:
             log0 = node0.read()
             log1 = node1.read()
-            submission_error = "[ERROR]"
+            submission_not_needed_msg = "Submission not needed. Certificate of equal or higher quality already present in epoch 0"
             submission_successful = "Backward transfer certificate response had been received"
-            assert_true((submission_error not in log0 and submission_successful in log1) or (submission_error not in log1 and submission_successful in log0))
-
+            assert_true((submission_not_needed_msg in log0 and submission_successful in log1) or (submission_not_needed_msg in log1 and submission_successful in log0))
 
 if __name__ == "__main__":
     SCMultipleCertSubmitters().main()
