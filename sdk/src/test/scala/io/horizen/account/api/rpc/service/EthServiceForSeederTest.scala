@@ -102,6 +102,113 @@ class EthServiceForSeederTest extends EthServiceTest {
 
   }
 
+  @Test
+  override def eth_call(): Unit = {
+
+    val transactionArgsMap1 = Map(
+      "from" -> senderWithSecret,
+      "to" -> "0x0000000000000000000022222222222222222222",
+      "value" -> "0xE8D4A51000",
+      "data" -> "0x",
+      "gasPrice" -> "0x4B9ACA00",
+      "nonce" -> "0x1",
+    )
+    val transactionArgsMap2 = Map(
+      "from" -> senderWithSecret,
+      "to" -> "0x0000000000000000000011111111111111111111",
+      "value" -> "0xE8D4A51000",
+      "data" -> "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+      "gasPrice" -> "0x4B9ACA00",
+      "nonce" -> "0x1",
+    )
+
+    val validCases = Table(
+      ("Transaction args", "tag"),
+      (transactionArgsMap1, "0x2"),
+      (transactionArgsMap1, "latest"),
+      (transactionArgsMap1, null),
+      (transactionArgsMap2, "latest"),
+      // EIP-1898 cases
+      (transactionArgsMap1, Map("blockNumber" -> "0x2")),
+      (transactionArgsMap1, Map("blockNumber" -> null)),
+      (transactionArgsMap1, Map("blockHash" -> "0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253")),
+      (transactionArgsMap1, Map("blockHash" -> null))
+    )
+
+    forAll(validCases) { (transactionArgs, tag) =>
+      val exc = intercept[RpcException] {
+        rpc("eth_call", transactionArgs, tag)
+      }
+      assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+    }
+
+  }
+
+  @Test
+  override def eth_estimateGas(): Unit = {
+    val validCases = Table(
+      ("Transaction args"),
+      (
+        Map(
+          "from" -> senderWithSecret,
+          "to" -> "0x0000000000000000000022222222222222222222",
+          "value" -> "0xE8D4A51000",
+          "data" -> "0x",
+          "gasPrice" -> "0x4B9ACA00",
+          "nonce" -> "0x1",
+        )
+        ),
+      (
+        Map(
+          "from" -> senderWithSecret,
+          "to" -> "0x0000000000000000000011111111111111111111",
+          "value" -> "0xE8D4A51000",
+          "data" -> "0x4267ec5edbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
+          "gasPrice" -> "0x4B9ACA00",
+          "nonce" -> "0x1",
+        )
+        )
+    )
+
+    forAll(validCases) { transactionArgs =>
+      val exc = intercept[RpcException] {
+        rpc("eth_estimateGas", transactionArgs)
+      }
+      assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+    }
+  }
+
+  @Test
+  override def txpool_status(): Unit = {
+    val exc = intercept[RpcException] {
+      rpc("txpool_status")
+    }
+    assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+  }
+
+  @Test
+  override def txpool_content(): Unit = {
+    val exc = intercept[RpcException] {
+      rpc("txpool_content")
+    }
+    assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+  }
+
+  @Test
+  override def txpool_contentFrom(): Unit = {
+    val exc = intercept[RpcException] {
+      rpc("txpool_contentFrom")
+    }
+    assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+  }
+
+  @Test
+  override def txpool_inspect(): Unit = {
+    val exc = intercept[RpcException] {
+      rpc("txpool_inspect")
+    }
+    assertEquals("Wrong exception", RpcCode.ActionNotAllowed.code, exc.error.code)
+  }
 
 
 }

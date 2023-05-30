@@ -4,6 +4,7 @@ import time
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
+from SidechainTestFramework.account.ac_utils import format_evm
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo
@@ -458,6 +459,24 @@ class SCEvmSeederNode(AccountChainSetup):
         }
 
         response = sc_node_seeder.rpc_eth_sendTransaction(payload)
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_eth_call(payload, "latest")
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_eth_estimateGas(payload)
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_txpool_status()
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_txpool_content()
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_txpool_contentFrom('0x'+evm_address_sc1)
+        self.check_rpc_not_allowed(response)
+
+        response = sc_node_seeder.rpc_txpool_inspect()
         self.check_rpc_not_allowed(response)
 
         # Creates some blocks containing txs and then revert them. Verify that in node 1 and node 3 the transactions

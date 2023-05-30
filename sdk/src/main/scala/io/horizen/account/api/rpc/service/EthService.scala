@@ -47,7 +47,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
@@ -73,7 +72,7 @@ class EthService(
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   implicit val timeout: Timeout = new Timeout(nvtimeout)
 
-  override def isNotAllowed(method: Method) = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
+  override def isNotAllowed(method: Method): Boolean = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
 
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R) = {
@@ -107,6 +106,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_status")
+  @NotAllowedOnSeederNode
   def txpoolStatus(): TxPoolStatus = applyOnAccountView { nodeView =>
     new TxPoolStatus(
       nodeView.pool.getExecutableTransactions.size(),
@@ -115,6 +115,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_content")
+  @NotAllowedOnSeederNode
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
       nodeView.pool.getExecutableTransactionsMap,
@@ -123,6 +124,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_contentFrom")
+  @NotAllowedOnSeederNode
   def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
     new TxPoolContentFrom(
       nodeView.pool.getExecutableTransactionsMapFrom(from),
@@ -131,6 +133,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_inspect")
+  @NotAllowedOnSeederNode
   def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
     new TxPoolInspect(
       nodeView.pool.getExecutableTransactionsMapInspect,
@@ -224,6 +227,7 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def call(params: TransactionArgs, input: Object): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val tag = getBlockTagByEip1898Input(nodeView, input)
@@ -376,6 +380,7 @@ class EthService(
 
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       doEstimateGas(nodeView, params, tag)
