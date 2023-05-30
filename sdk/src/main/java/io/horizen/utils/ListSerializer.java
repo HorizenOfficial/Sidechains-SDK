@@ -42,8 +42,8 @@ public class ListSerializer<T extends BytesSerializable> implements SparkzSerial
             throw new IllegalArgumentException("Input data contains to many elements - " + objectsCount);
 
         //To avoid someone to create a malicious object which has a really big objectCount that can cause an Heap out of memory error
-        //we want to don't preallocate the ArrayList size except if this number of objects is less than 1000
-        //(we calculated to have max 4000 elements inside a MCAggregatedTransaction outputs but we decided to lowered to 1000)
+        //we don't want preallocate the ArrayList size except if this number of objects is less than 1000
+        //(we calculated to have max 4000 elements inside a MCAggregatedTransaction outputs but we decided to lower to 1000)
         //we do this alternative initialization because for efficiency reason we prefer to allocate the dimension in advance when possible.
         List<T> objectsList;
         if (objectsCount <= 1000)
