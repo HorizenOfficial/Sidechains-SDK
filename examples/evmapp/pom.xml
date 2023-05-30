@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.horizen</groupId>
 	<artifactId>sidechains-sdk-evmapp</artifactId>
-	<version>0.7.1-SNAPSHOT</version>
+	<version>0.7.0-SNAPSHOT</version>
 	<inceptionYear>2022</inceptionYear>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -15,7 +15,7 @@
 		<dependency>
 			<groupId>io.horizen</groupId>
 			<artifactId>sidechains-sdk</artifactId>
-			<version>0.7.1-SNAPSHOT</version>
+			<version>0.7.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
