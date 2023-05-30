@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logging
 import time
+import os
+import re
 from datetime import datetime
 from eth_utils import add_0x_prefix
 
@@ -217,6 +219,16 @@ class EvmSyncStatus(AccountChainSetup):
         print('NODE 1 HEIGHT')
         print(sc_node_1_height)
 
+        # check the warn message in the log file
+        os.chdir(self.options.tmpdir + "/sc_node1/log")
+        pattern = r'\bSyncStatusActor: unexpected new tip ([a-zA-Z0-9-]+) appeared due to recent node restart\b'
+        pattern_match = False
+        with open('debugLog.txt', 'r') as file:
+            for line in file:
+                match = re.search(pattern, line)
+                if match:
+                    pattern_match = True
+        assert_true(pattern_match)
 
 if __name__ == "__main__":
     EvmSyncStatus().main()
