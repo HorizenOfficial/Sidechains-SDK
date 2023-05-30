@@ -29,7 +29,7 @@ public class AppForkConfigurator extends ForkConfigurator {
                 )
             ),
             new Pair<>(
-                new SidechainForkConsensusEpoch(5, 5, 5),
+                new SidechainForkConsensusEpoch(15, 15, 15),
                 new GasFeeFork(
                     BigInteger.valueOf(25000000),
                     BigInteger.valueOf(2),
