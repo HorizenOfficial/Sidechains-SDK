@@ -48,7 +48,7 @@ abstract class WalletBaseApiRoute[
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
 
 
-  val myPathPrefix: String = "wallet"
+  val walletPathPrefix: String = "wallet"
 
   /**
    * Create new Vrf secret and return corresponding public key
@@ -263,7 +263,7 @@ abstract class WalletBaseApiRoute[
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
-        (myPathPrefix, "", error)
+        (walletPathPrefix, "", error)
       )
     } else
       Seq.empty

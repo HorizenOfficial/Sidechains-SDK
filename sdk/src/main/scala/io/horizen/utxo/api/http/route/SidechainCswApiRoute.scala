@@ -43,7 +43,7 @@ abstract class SidechainCswApiRoute (override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
-  val myPathPrefix: String = "csw"
+  val cswPathPrefix: String = "csw"
   /**
    * Return ceasing status of the Sidechain
    */
@@ -94,7 +94,7 @@ object SidechainCswApiRoute {
                                                                          (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
     extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) with DisableApiRoute {
 
-    override val route: Route = pathPrefix(myPathPrefix) {
+    override val route: Route = pathPrefix(cswPathPrefix) {
       hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ isCeasedSidechainWithdrawalEnabled
     }
 
@@ -119,7 +119,7 @@ object SidechainCswApiRoute {
                   case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
                 }
               case Failure(e) =>
-                log.error("Unexpected error during CSW proof generation.")
+                log.error("Unexpected error during CSW proof generation.", e)
                 ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
             }
           }
@@ -143,10 +143,9 @@ object SidechainCswApiRoute {
                 ApiResponseUtil.toResponse(ErrorRetrievingCswInfo(e.getMessage, JOptional.of(e)))
               }
             }
-          case Failure(e) => {
-            log.error("Unexpected error during retrieving CSW info.")
+          case Failure(e) =>
+            log.error("Unexpected error during retrieving CSW info.", e)
             ApiResponseUtil.toResponse(ErrorRetrievingCswInfo("Unexpected error during retrieving CSW info.", JOptional.of(e)))
-          }
         }
       }
     }
@@ -163,7 +162,7 @@ object SidechainCswApiRoute {
           ApiResponseUtil.toResponse(RespCswBoxIds(boxIdsStr))
         }
         case Failure(e) => {
-          log.error("Unexpected error during retrieving CSW Box Ids.")
+          log.error("Unexpected error during retrieving CSW Box Ids.", e)
           ApiResponseUtil.toResponse(ErrorRetrievingCswBoxIds("Unexpected error during retrieving CSW Box Ids.", JOptional.of(e)))
         }
       }
@@ -185,7 +184,7 @@ object SidechainCswApiRoute {
                 ApiResponseUtil.toResponse(ErrorRetrievingNullifier(e.getMessage, JOptional.of(e)))
             }
           case Failure(e) =>
-            log.error("Unexpected error during retrieving the nullifier.")
+            log.error("Unexpected error during retrieving the nullifier.", e)
             ApiResponseUtil.toResponse(ErrorRetrievingNullifier("Unexpected error during retrieving the nullifier.", JOptional.of(e)))
         }
       }
@@ -195,10 +194,10 @@ object SidechainCswApiRoute {
       if (!params.isHandlingTransactionsEnabled) {
         val error = Some(ErrorNotEnabledOnSeederNode.description)
         Seq(
-          (myPathPrefix, "cswBoxIds", error),
-          (myPathPrefix, "generateCswProof", error),
-          (myPathPrefix, "cswInfo", error),
-          (myPathPrefix, "nullifier", error)
+          (cswPathPrefix, "cswBoxIds", error),
+          (cswPathPrefix, "generateCswProof", error),
+          (cswPathPrefix, "cswInfo", error),
+          (cswPathPrefix, "nullifier", error)
         )
       } else
         Seq.empty
@@ -210,7 +209,7 @@ object SidechainCswApiRoute {
                                                                            override val params: NetworkParams)
                                                                           (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
     extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
-    override val route: Route = pathPrefix(myPathPrefix) {
+    override val route: Route = pathPrefix(cswPathPrefix) {
       hasCeased ~ isCeasedSidechainWithdrawalEnabled ~ notImplemented
     }
 

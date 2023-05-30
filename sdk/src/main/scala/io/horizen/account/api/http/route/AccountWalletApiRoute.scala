@@ -46,7 +46,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     NodeAccountMemoryPool,
     AccountNodeView](settings, sidechainNodeViewHolderRef, sidechainSecretsCompanion) {
 
-  override val route: Route = pathPrefix(myPathPrefix) {
+  override val route: Route = pathPrefix(walletPathPrefix) {
     // some of these methods are in the base class
     createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ createPrivateKeySecp256k1 ~ getBalance ~ getTotalBalance ~
       getAllBalances ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets

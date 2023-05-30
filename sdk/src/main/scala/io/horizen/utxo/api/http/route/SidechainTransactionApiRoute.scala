@@ -56,7 +56,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
-  override val route: Route = pathPrefix(myPathPrefix) {
+  override val route: Route = pathPrefix(transactionPathPrefix) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
     sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~
       createOpenStakeTransaction ~ createOpenStakeTransactionSimplified ~ createKeyRotationTransaction
@@ -678,16 +678,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
-        (myPathPrefix, "createCoreTransaction", error),
-        (myPathPrefix, "createCoreTransactionSimplified", error),
-        (myPathPrefix, "sendCoinsToAddress", error),
-        (myPathPrefix, "sendTransaction", error),
-        (myPathPrefix, "withdrawCoins", error),
-        (myPathPrefix, "makeForgerStake", error),
-        (myPathPrefix, "spendForgingStake", error),
-        (myPathPrefix, "createOpenStakeTransactionSimplified", error),
-        (myPathPrefix, "createOpenStakeTransaction", error),
-        (myPathPrefix, "createKeyRotationTransaction", error),
+        (transactionPathPrefix, "createCoreTransaction", error),
+        (transactionPathPrefix, "createCoreTransactionSimplified", error),
+        (transactionPathPrefix, "sendCoinsToAddress", error),
+        (transactionPathPrefix, "sendTransaction", error),
+        (transactionPathPrefix, "withdrawCoins", error),
+        (transactionPathPrefix, "makeForgerStake", error),
+        (transactionPathPrefix, "spendForgingStake", error),
+        (transactionPathPrefix, "createOpenStakeTransactionSimplified", error),
+        (transactionPathPrefix, "createOpenStakeTransaction", error),
+        (transactionPathPrefix, "createKeyRotationTransaction", error),
       )
     } else
       Seq.empty

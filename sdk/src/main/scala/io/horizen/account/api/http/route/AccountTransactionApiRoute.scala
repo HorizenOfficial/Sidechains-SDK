@@ -65,7 +65,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = pathPrefix(myPathPrefix) {
+  override val route: Route = pathPrefix(transactionPathPrefix) {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
@@ -772,17 +772,17 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
-        (myPathPrefix, "createLegacyEIP155Transaction", error),
-        (myPathPrefix, "createEIP1559Transaction", error),
-        (myPathPrefix, "createLegacyTransaction", error),
-        (myPathPrefix, "sendTransaction", error),
-        (myPathPrefix, "signTransaction", error),
-        (myPathPrefix, "makeForgerStake", error),
-        (myPathPrefix, "withdrawCoins", error),
-        (myPathPrefix, "spendForgingStake", error),
-        (myPathPrefix, "createSmartContract", error),
-        (myPathPrefix, "openForgerList", error),
-        (myPathPrefix, "createKeyRotationTransaction", error),
+        (transactionPathPrefix, "createLegacyEIP155Transaction", error),
+        (transactionPathPrefix, "createEIP1559Transaction", error),
+        (transactionPathPrefix, "createLegacyTransaction", error),
+        (transactionPathPrefix, "sendTransaction", error),
+        (transactionPathPrefix, "signTransaction", error),
+        (transactionPathPrefix, "makeForgerStake", error),
+        (transactionPathPrefix, "withdrawCoins", error),
+        (transactionPathPrefix, "spendForgingStake", error),
+        (transactionPathPrefix, "createSmartContract", error),
+        (transactionPathPrefix, "openForgerList", error),
+        (transactionPathPrefix, "createKeyRotationTransaction", error),
       )
     } else
       Seq.empty

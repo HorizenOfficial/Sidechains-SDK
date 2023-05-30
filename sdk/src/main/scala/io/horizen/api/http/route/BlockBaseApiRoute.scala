@@ -49,7 +49,7 @@ abstract class BlockBaseApiRoute[
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
 
-  val myPathPrefix:String = "block"
+  val blockPathPrefix: String = "block"
 
   /**
    * The sidechain block by its id.
@@ -240,9 +240,9 @@ abstract class BlockBaseApiRoute[
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
-        (myPathPrefix, "startForging", error),
-        (myPathPrefix, "stopForging", error),
-        (myPathPrefix, "generate", error)
+        (blockPathPrefix, "startForging", error),
+        (blockPathPrefix, "stopForging", error),
+        (blockPathPrefix, "generate", error)
       )
     } else
       Seq.empty

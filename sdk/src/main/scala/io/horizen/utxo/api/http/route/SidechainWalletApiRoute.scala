@@ -41,7 +41,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
 
   //Please don't forget to add Auth for every new method of the wallet.
-  override val route: Route = pathPrefix(myPathPrefix) {
+  override val route: Route = pathPrefix(walletPathPrefix) {
     allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets
   }
 

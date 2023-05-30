@@ -45,9 +45,9 @@ case class SidechainSubmitterApiRoute[
   with DisableApiRoute
 {
 
-  val myPathPrefix = "submitter"
+  val submitterPathPrefix = "submitter"
 
-  override val route: Route = pathPrefix(myPathPrefix) {
+  override val route: Route = pathPrefix(submitterPathPrefix) {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
       isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner ~ getKeyRotationProof ~
       getSigningKeyRotationMessageToSign ~ getMasterKeyRotationMessageToSign ~ getCertifiersKeys
@@ -193,7 +193,7 @@ case class SidechainSubmitterApiRoute[
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
-        (myPathPrefix, "", error)
+        (submitterPathPrefix, "", error)
       )
     } else
       Seq.empty
