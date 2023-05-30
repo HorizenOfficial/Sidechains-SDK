@@ -1,7 +1,5 @@
 package io.horizen.fork
 
-import scala.reflect.ClassTag
-
 object ForkManager {
   private var initialized = false
 
@@ -45,7 +43,7 @@ object ForkManager {
     findActiveFork(sidechainForks, consensusEpoch).orNull
   }
 
-  def getOptionalSidechainFork[T <: OptionalSidechainFork](consensusEpoch: Int)(implicit tag: ClassTag[T]): Option[T] = {
+  def getOptionalSidechainFork[T <: OptionalSidechainFork : Manifest](consensusEpoch: Int): Option[T] = {
     assertInitialized()
     val forksOfTypeT = optionalSidechainForks.collect({ case (i, fork: T) => (i, fork) })
     findActiveFork(forksOfTypeT, consensusEpoch)
