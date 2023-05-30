@@ -140,7 +140,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         self.sc_sync_all()
 
-        recipient_keys = generate_account_proposition("seed3", 1)[0]
+        recipient_keys = generate_account_proposition("seed3", 1, self.model)[0]
         recipient_proposition = recipient_keys.proposition
 
         # Create a legacy transaction moving some fund from SC2 address to an external address.

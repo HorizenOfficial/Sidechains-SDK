@@ -1,11 +1,11 @@
 #!/bin/bash
 
 base_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/../..";
-pom_xml_locations=("${base_dir}" "${base_dir}/sdk" "${base_dir}/examples/simpleapp" "${base_dir}/tools/sctool")
+pom_xml_locations=("${base_dir}" "${base_dir}/sdk" "${base_dir}/examples/utxo/simpleapp" "${base_dir}/tools/sctool")
 
 # Conditional for evm branch
 if [ -d "${base_dir}/libevm" ]; then
-  pom_xml_locations+=("${base_dir}/evm" "${base_dir}/libevm" "${base_dir}/examples/evmapp")
+  pom_xml_locations+=("${base_dir}/evm" "${base_dir}/libevm" "${base_dir}/examples/account/evmapp")
 else
   pom_xml_locations+=("${base_dir}/tools/dbtool")
 fi

@@ -8,10 +8,15 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Scanner;
 
-public class ScBootstrappingTool {
+public abstract class AbstractScBootstrappingTool {
+    protected final MessagePrinter printer;
+    public AbstractScBootstrappingTool(MessagePrinter printer) {
+        this.printer = printer;
+    }
 
-    public static void main(String[] args) {
+    protected abstract ScBootstrappingToolCommandProcessor getBootstrappingToolCommandProcessor();
 
+    public void startCommandTool(String[] args) {
         // initialize log properties since this app uses log4j from sdk libraries
         // - temporary log dir
         String logDir = System.getProperty("java.io.tmpdir");
@@ -19,10 +24,9 @@ public class ScBootstrappingTool {
         String logFileName = "sc_bootstrapping_tool.log";
         // - default levels: all in the file and just errors on console
         LogInitializer.initLogManager(logDir, logFileName, "all", "error");
-        Logger logger = LogManager.getLogger(ScBootstrappingTool.class);
+        Logger logger = LogManager.getLogger(AbstractScBootstrappingTool.class);
 
-        MessagePrinter printer = new ConsolePrinter();
-        ScBootstrappingToolCommandProcessor processor = new ScBootstrappingToolCommandProcessor(printer);
+        ScBootstrappingToolCommandProcessor processor = getBootstrappingToolCommandProcessor();
         if(args.length > 0)
             try {
                 StringBuilder cmd = new StringBuilder(args[0]);
@@ -50,6 +54,5 @@ public class ScBootstrappingTool {
             }
         }
         logger.info("... exiting bootstrapping tool application.");
-
     }
 }
