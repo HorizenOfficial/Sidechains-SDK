@@ -112,7 +112,7 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
             assert_equal(master_key_rotation_proof, {})
 
         # Try to change the signing key 0
-        new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
+        new_signing_key = generate_cert_signer_secrets("random_seed", 1, self.model)[0]
         new_public_key = new_signing_key.publicKey
         epoch = get_withdrawal_epoch(sc_node)
         signing_key_message = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key, epoch)[
@@ -151,7 +151,7 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
         assert_equal(signer_key_rotation_proof["newKey"]["publicKey"], new_public_key)
 
         # Change again the same signature key
-        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
+        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1, self.model)[0]
         new_public_key_2 = new_signing_key_2.publicKey
         epoch = get_withdrawal_epoch(sc_node)
         signing_key_message_2 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_2, epoch)[
@@ -195,7 +195,7 @@ class SCKeyRotationAcrossEpochTest(AccountChainSetup):
         generate_next_block(sc_node, "first node")
 
         # Try to update signing key 0
-        new_signing_key_3 = generate_cert_signer_secrets("random_seed3", 1)[0]
+        new_signing_key_3 = generate_cert_signer_secrets("random_seed3", 1, self.model)[0]
         new_public_key_3 = new_signing_key_3.publicKey
         epoch = get_withdrawal_epoch(sc_node)
         signing_key_message_3 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_3, epoch)[

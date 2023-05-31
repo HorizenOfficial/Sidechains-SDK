@@ -5,7 +5,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, \
-    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block
+    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block, UtxoModel
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
@@ -34,8 +34,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
     # total of 5 allowed forgers
     number_of_forgers = 4
 
-    allowed_forger_propositions = generate_secrets("seed2", number_of_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed2", number_of_forgers)
+    allowed_forger_propositions = generate_secrets("seed2", number_of_forgers, UtxoModel)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed2", number_of_forgers, UtxoModel)
 
     def __init__(self):
         self.sc_nodes_bootstrap_info = None

@@ -7,7 +7,8 @@ from eth_utils import remove_0x_prefix
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.utils import convertZenToWei
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition, \
+    AccountModel
 from test_framework.util import assert_equal
 
 """
@@ -49,7 +50,7 @@ class SCEvmBaseFee(AccountChainSetup):
         transferred_amount = Decimal(2)
         transferred_amount_in_wei = convertZenToWei(transferred_amount)
 
-        recipient_keys = generate_account_proposition("seed3", 1)[0]
+        recipient_keys = generate_account_proposition("seed3", 1, self.model)[0]
         recipient_proposition = recipient_keys.proposition
         logging.info("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 
@@ -61,7 +62,7 @@ class SCEvmBaseFee(AccountChainSetup):
         )
 
         # send more zen to have more than one transaction in block
-        recipient_keys = generate_account_proposition("seed4", 1)[0]
+        recipient_keys = generate_account_proposition("seed4", 1, self.model)[0]
         recipient_proposition = recipient_keys.proposition
         logging.info("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 

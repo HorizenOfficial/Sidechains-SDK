@@ -51,7 +51,7 @@ class AccountChainSetup(SidechainTestFramework):
                  ):
 
         super().__init__()
-
+        self.model = AccountModel
 
         self.evm_address = None
         self.sc_nodes = None

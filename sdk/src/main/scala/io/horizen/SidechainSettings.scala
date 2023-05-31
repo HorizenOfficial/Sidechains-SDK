@@ -26,8 +26,7 @@ case class WebSocketClientSettings(
 
 case class WebSocketServerSettings(
     wsServer: Boolean = false,
-    wsServerPort: Int = 8025,
-    wsServerAllowedOrigins: Seq[String] = Seq()
+    wsServerPort: Int = 8025
 )
 
 case class GenesisDataSettings(
@@ -127,6 +126,12 @@ case class AccountMempoolSettings(
   require(txLifetime.toSeconds > 0, s"Transaction lifetime cannot be 0 or less seconds: $txLifetime")
 }
 
+case class ApiRateLimiterSettings(
+    enabled: Boolean = false,
+    minThroughput: Int = 10,
+    throttlingThresholdMs: Int = 2000,
+) extends SensitiveStringer
+
 case class Sc2ScSettings(
   sc2ScProvingKeyFilePath: Option[String],
   sc2ScVerificationKeyFilePath: Option[String]
@@ -146,5 +151,6 @@ case class SidechainSettings(
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
-    sc2sc: Sc2ScSettings
+    sc2sc: Sc2ScSettings,
+    apiRateLimiter: ApiRateLimiterSettings
 )

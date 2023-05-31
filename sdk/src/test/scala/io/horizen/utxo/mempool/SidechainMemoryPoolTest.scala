@@ -226,7 +226,7 @@ class SidechainMemoryPoolTest
     for (i <- 0 to (list.size - 2)) {
       assertEquals("Put tx operation must be success.", true, memoryPool.put(list.apply(i)).isSuccess)
     }
-    assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
+    assertEquals("MemoryPool must have correct size ", list.size - 1, memoryPool.size)
     assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
 
     //add one more tx, causing the maxPoolSize to be reached and lowest one to be evicted
@@ -258,6 +258,57 @@ class SidechainMemoryPoolTest
     assertEquals("MemoryPool must have correct size ", expectedMempoolSize, memoryPool.size)
     assertEquals("Old lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
     assertEquals("New lowest fee transaction must be present ", true, memoryPool.getTransactionById(aNewTx.id()).isPresent)
+  }
+
+  @Test
+  def putOverLimitedPoolSize(): Unit = {
+    val list = mutable.MutableList[RegularTransaction]()
+    val lowestFeeTx = getRegularRandomTransaction(10, 10)
+    val secondLowestFeeTx = getRegularRandomTransaction(20, 10)
+    val compatibleTransactin = getCompatibleTransaction(30, 10)
+    list += lowestFeeTx
+    list += secondLowestFeeTx
+    list += compatibleTransactin
+
+    val totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size() + compatibleTransactin.size()
+    val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(1, 0))
+    memoryPool.maxPoolSizeBytes = totalTxSize
+
+    //put all transaction
+    list.foreach(tx => memoryPool.put(tx))
+
+    assertEquals("MemoryPool must have correct size ", list.size, memoryPool.size)
+    assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
+
+    val incompatibleTx = getIncompatibleTransaction(40, 10)
+    assertEquals("Put tx operation must not be success.", false, memoryPool.put(incompatibleTx).isSuccess)
+    assertEquals("MemoryPool must have correct size ", list.size, memoryPool.size)
+    assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
+    assertEquals("Incompatible transaction must not be present ", false, memoryPool.getTransactionById(incompatibleTx.id()).isPresent)
+
+    // Try to put large transaction
+    var largeTransaction = getRegularRandomTransaction(15, 11)
+    assertEquals("Put tx operation must not be success.", false, memoryPool.put(largeTransaction).isSuccess)
+    assertEquals("MemoryPool must have correct size ", list.size, memoryPool.size)
+    assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
+    assertEquals("Second lowest fee transaction must be present ", true, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
+    assertEquals("Large transaction must not be present ", false, memoryPool.getTransactionById(largeTransaction.id()).isPresent)
+
+    // Try to put large transaction
+    largeTransaction = getRegularRandomTransaction(20, 11)
+    assertEquals("Put tx operation must not be success.", false, memoryPool.put(largeTransaction).isSuccess)
+    assertEquals("MemoryPool must have correct size ", list.size, memoryPool.size)
+    assertEquals("Lowest fee transaction must be present ", true, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
+    assertEquals("Second lowest fee transaction must be present ", true, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
+    assertEquals("Large transaction must not be present ", false, memoryPool.getTransactionById(largeTransaction.id()).isPresent)
+
+    // Try to put large transaction
+    largeTransaction = getRegularRandomTransaction(25, 11)
+    assertEquals("Put tx operation must be success.", true, memoryPool.put(largeTransaction).isSuccess)
+    assertEquals("MemoryPool must have correct size ", list.size - 1, memoryPool.size) // Two transaction has been removed
+    assertEquals("Lowest fee transaction must not be present ", false, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
+    assertEquals("Second lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
+    assertEquals("Large transaction must be present ", true, memoryPool.getTransactionById(largeTransaction.id()).isPresent)
   }
 
   @Test

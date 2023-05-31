@@ -6,11 +6,10 @@ import io.horizen.ChainInfo;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
-import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor;
+import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
 import io.horizen.account.transaction.AccountTransaction;
-import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
 import io.horizen.examples.api.VoteController;
@@ -26,9 +25,11 @@ import io.horizen.settings.SettingsReader;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
-import io.horizen.utxo.companion.SidechainTransactionsCompanion;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 
 public class EvmAppModule extends AccountAppModule {
     private final SettingsReader settingsReader;
@@ -63,11 +64,11 @@ public class EvmAppModule extends AccountAppModule {
 
         ChainInfo chainInfo = new ChainInfo(regTestId, testNetId, mainNetId);
 
+        byte[] scId = BytesUtils.fromHexString(sidechainSettings.genesisData().scId());
+        Sc2scCircuit circuit = new Sc2scImplZendoo();
         // Here I can add my custom logic to manage EthereumTransaction content.
         // todo: ricordarsi dell'ordine
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
-        byte[] scId = BytesUtils.fromHexString(sidechainSettings.genesisData().scId());
-        Sc2scCircuit circuit = new Sc2scImplZendoo();
         customMessageProcessors.add(new VoteMessageProcessor(scId));
         customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath().get(), circuit));
         customMessageProcessors.add(new EvmMessageProcessor());

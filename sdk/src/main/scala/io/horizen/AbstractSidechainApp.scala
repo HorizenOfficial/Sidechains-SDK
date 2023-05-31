@@ -3,6 +3,7 @@ package io.horizen
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import akka.stream.javadsl.Sink
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.SidechainRejectionApiRoute
@@ -48,16 +49,17 @@ import scala.util.{Failure, Success, Try}
 
 
 abstract class AbstractSidechainApp
-(val sidechainSettings: SidechainSettings,
- val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
- val rejectedApiPaths: JList[Pair[String, String]],
- val applicationStopper: SidechainAppStopper,
- val forkConfigurator: ForkConfigurator,
- val sc2scConfigurator: Sc2ScConfigurator,
- val chainInfo: ChainInfo,
- val consensusSecondsInSlot: Int
-)
-  extends Application with SparkzLogging {
+  (val sidechainSettings: SidechainSettings,
+   val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   val rejectedApiPaths : JList[Pair[String, String]],
+   val applicationStopper : SidechainAppStopper,
+   val forkConfigurator : ForkConfigurator,
+   val sc2scConfigurator: Sc2ScConfigurator,
+   val chainInfo : ChainInfo,
+   val consensusSecondsInSlot: Int
+  )
+  extends Application with SparkzLogging
+{
   override type TX <: Transaction
   override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
 
@@ -131,33 +133,6 @@ abstract class AbstractSidechainApp
   if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
     throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
       s"Current value: $consensusSecondsInSlot")
-  }
-
-  // Generate Coboundary Marlin Proving System dlog keys
-  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
-  if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
-    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
-  }
-
-  if (!isCSWEnabled) {
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    if (sc2scIsActive) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
   }
 
   // Init proper NetworkParams depend on MC network
@@ -266,6 +241,33 @@ abstract class AbstractSidechainApp
   // Configure Horizen address json serializer specifying proper network type.
   JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
 
+  // Generate Coboundary Marlin Proving System dlog keys
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
+  if(!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
+  }
+
+  if (!isCSWEnabled) {
+    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
+    if (sc2scIsActive) {
+      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
+      )
+      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
+      )
+      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
+      if (keyFilesDontExist) {
+        log.info("Generating Sc2Sc snark keys. It may take some time.")
+        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
+
+        if (!keysCreated) {
+          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
+        }
+      }
+    }
+  }
+
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
@@ -324,6 +326,9 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
+//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
+//  val applicationApiRoutes: Seq[ApplicationApiRoute]
+
   // Init API
   lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
@@ -341,7 +346,6 @@ abstract class AbstractSidechainApp
     .union(coreApiRoutes)
 
   lazy val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
-
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   val shutdownHookThread: Thread = new Thread("ShutdownHook-Thread") {
@@ -362,7 +366,10 @@ abstract class AbstractSidechainApp
     log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
 
     val bindAddress = settings.restApi.bindAddress
-    Http().newServerAt(bindAddress.getAddress.getHostAddress, bindAddress.getPort).bind(combinedRoute)
+    Http().newServerAt(bindAddress.getAddress.getHostAddress,bindAddress.getPort).connectionSource().to(Sink.foreach { connection =>
+      log.info("New REST api connection from address :: %s".format(connection.remoteAddress.toString))
+      connection.handleWithAsyncHandler(combinedRoute)
+    }).run()
 
     //Remove the Logger shutdown hook
     LogManager.getFactory match {
@@ -378,7 +385,7 @@ abstract class AbstractSidechainApp
 
   // this method does not override stopAll(), but it rewrites part of its contents
   def sidechainStopAll(fromEndpoint: Boolean = false): Unit = synchronized {
-    val currentThreadId = Thread.currentThread.getId
+    val currentThreadId      = Thread.currentThread.getId
     val shutdownHookThreadId = shutdownHookThread.getId
 
     // remove the shutdown hook for avoiding being called twice when we eventually call System.exit()
