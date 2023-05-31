@@ -21,8 +21,8 @@ abstract class ForkConfigurator {
   /**
    * Return the map of optional sidechain forks and their consensus epoch numbers.
    */
-  final lazy val optionalSidechainForks: Map[SidechainForkConsensusEpoch, OptionalSidechainFork] =
-    OptionalSidechainFork.forks(getOptionalSidechainForks.asScala.map(x => (x.getKey, x.getValue)).toMap)
+  final lazy val optionalSidechainForks: Seq[(SidechainForkConsensusEpoch, OptionalSidechainFork)] =
+    getOptionalSidechainForks.asScala.map(x => (x.getKey, x.getValue))
 
   /**
    * Return a list of optional forks with their consensus epoch numbers.
@@ -31,8 +31,11 @@ abstract class ForkConfigurator {
     new util.ArrayList()
 
   final def check(): Unit = {
-    // fork configurations are validated on first access
-    mandatorySidechainForks
-    optionalSidechainForks
+    // validate activations
+    ForkUtil.validate(mandatorySidechainForks)
+    ForkUtil.validate(optionalSidechainForks)
+    // allow each optional fork instance to validate against all other optional forks
+    val values = optionalSidechainForks.map(_._2)
+    optionalSidechainForks.foreach({ case (_, fork) => fork.validate(values) })
   }
 }

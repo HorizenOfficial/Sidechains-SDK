@@ -78,10 +78,9 @@ object MandatorySidechainFork {
    */
   def forks(
       fork1activation: SidechainForkConsensusEpoch,
-  ): Map[SidechainForkConsensusEpoch, MandatorySidechainFork] =
-    ForkUtil.validate(Map(
-      // the default values are always active since genesis
-      SidechainForkConsensusEpoch(0, 0, 0) -> DefaultSidechainFork(),
-      fork1activation -> SidechainFork1(),
-    ))
+  ): Map[SidechainForkConsensusEpoch, MandatorySidechainFork] = Map(
+    // the default values are always active since genesis
+    SidechainForkConsensusEpoch(0, 0, 0) -> DefaultSidechainFork(),
+    fork1activation -> SidechainFork1(),
+  )
 }

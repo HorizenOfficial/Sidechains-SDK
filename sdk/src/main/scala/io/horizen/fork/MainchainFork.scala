@@ -28,10 +28,8 @@ object MainchainFork {
   /**
    * Defines all mainchain forks, hardcoded.
    */
-  val forks: Map[MainchainForkHeight, MainchainFork] = ForkUtil.validate(
-    Map(
-      MainchainForkHeight(420, 926225, 1047624) -> SidechainSupportMainchainFork()
-    )
+  val forks: Map[MainchainForkHeight, MainchainFork] = Map(
+    MainchainForkHeight(420, 926225, 1047624) -> SidechainSupportMainchainFork()
   )
 
 }

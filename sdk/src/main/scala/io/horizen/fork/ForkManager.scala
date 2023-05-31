@@ -16,13 +16,12 @@ object ForkManager {
   /**
    * List of optional sidechain forks, these are configured by the sidechain.
    */
-  private var optionalSidechainForks: Map[Int, OptionalSidechainFork] = _
+  private var optionalSidechainForks: Seq[(Int, OptionalSidechainFork)] = _
 
   /**
    * Finds the latest fork in the given sequence of forks with an activation height less or equal than the given height.
    */
-  private def findActiveFork[T](forks: Map[Int, T], height: Int): Option[T] = {
-    // TODO: improve with binary search and/or TreeMap instead of Map
+  private def findActiveFork[T](forks: Traversable[(Int, T)], height: Int): Option[T] = {
     forks.foldLeft(Option.empty[T]) { case (active, (activation, fork)) =>
       if (activation <= height) Some(fork)
       else return active
@@ -52,10 +51,13 @@ object ForkManager {
   def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
     if (initialized) throw new IllegalStateException("ForkManager is already initialized.")
 
+    ForkUtil.validate(MainchainFork.forks)
+    forkConfigurator.check()
+
     // preselect the network as it cannot change during runtime
-    mainchainForks = ForkUtil.selectNetwork(networkName, MainchainFork.forks)
-    sidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.mandatorySidechainForks)
-    optionalSidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.optionalSidechainForks)
+    mainchainForks = ForkUtil.selectNetwork(networkName, MainchainFork.forks).toMap
+    sidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.mandatorySidechainForks).toMap
+    optionalSidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.optionalSidechainForks).toSeq
 
     initialized = true
   }
