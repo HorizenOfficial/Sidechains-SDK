@@ -126,6 +126,12 @@ case class AccountMempoolSettings(
   require(txLifetime.toSeconds > 0, s"Transaction lifetime cannot be 0 or less seconds: $txLifetime")
 }
 
+case class ApiRateLimiterSettings(
+    enabled: Boolean = false,
+    minThroughput: Int = 10,
+    throttlingThresholdMs: Int = 2000,
+) extends SensitiveStringer
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -140,4 +146,5 @@ case class SidechainSettings(
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
+    apiRateLimiter: ApiRateLimiterSettings,
 )
