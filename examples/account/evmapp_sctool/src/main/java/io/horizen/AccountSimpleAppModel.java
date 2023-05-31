@@ -18,7 +18,7 @@ public class AccountSimpleAppModel extends AbstractAccountModel {
         byte[] scId = BytesUtils.reverseBytes(params.sidechainId());
         Sc2scCircuit circuit = new Sc2scImplZendoo();
         customMessageProcessors.add(new VoteMessageProcessor(scId));
-        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, params.sc2ScVerificationKeyFilePath().get(), circuit));
+        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, params.sc2ScVerificationKeyFilePath(), circuit));
         return customMessageProcessors;
     }
 }

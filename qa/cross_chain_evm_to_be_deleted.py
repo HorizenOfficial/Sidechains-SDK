@@ -80,105 +80,106 @@ class CrossChainEvmToBeDeleted(AccountChainSetup):
         epoch = getWithdrawalEpochInfo(sc_node)
         print(f'THE EPOCH: {epoch}')
 
-        # # res = sendTransaction(sc_node, payload=tx_data)
-        # # print(f'THIS IS THE RESPONSE: {res}')
-        #
-        # nonce_addr_1 = 0
-        #
-        # balance = http_wallet_balance(sc_node, hex_evm_addr)
-        # print(f'THIS IS THE WALLET BALANCE {balance}')
-        #
-        # raw_tx = createEIP1559Transaction(sc_node,
-        #                                   fromAddress=hex_evm_addr.lower(),
-        #                                   toAddress='0000000000000000000055555555555555555555',
-        #                                   value=1,
-        #                                   nonce=0,
-        #                                   gasLimit=23000000,
-        #                                   maxPriorityFeePerGas=900000110,
-        #                                   maxFeePerGas=900001100,
-        #                                   data=tx_data
-        #                                   )
-        # print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
-        #
-        # generate_next_block(sc_node, "first node")
-        # self.sc_sync_all()
-        #
-        # sc_best_block = sc_node.block_best()["result"]
-        # logging.info(sc_best_block)
-        #
-        # for i in range(10):
-        #     mc_node.generate(9)
-        #     sc_best_block = generate_next_block(sc_node, "")
-        #     self.sc_sync_all()
-        #     logging.info(sc_best_block)
-        #
-        #     time.sleep(5)
-        #
-        #     mc_node.generate(1)
-        #     sc_best_block = generate_next_block(sc_node, "")
-        #     self.sc_sync_all()
-        #     logging.info(sc_best_block)
-        #
-        #     time.sleep(10)
-        #
-        # time.sleep(20)
-        #
-        # redeem_message = \
-        #     createAccountRedeemMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',sc_id)["result"]["redeemMessage"]
-        # print(f'THIS IS THE REDEEM MESSAGE {redeem_message}')
-        # cert_data_hash = redeem_message['certificateDataHash']
-        # next_cert_data_hash = redeem_message['nextCertificateDataHash']
-        # sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
-        # next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
-        # proof = redeem_message['proof']
-        # redeem_tx_data = redeemVoteMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',
-        #                                    cert_data_hash, next_cert_data_hash, sc_commitment_tree,
-        #                                    next_sc_commitment_tree, proof)
-        #
-        # raw_tx = createEIP1559Transaction(sc_node,
-        #                                   fromAddress=hex_evm_addr.lower(),
-        #                                   toAddress='0000000000000000000066666666666666666666',
-        #                                   value=1,
-        #                                   nonce=1,
-        #                                   gasLimit=23000000,
-        #                                   maxPriorityFeePerGas=900000110,
-        #                                   maxFeePerGas=900001100,
-        #                                   data=redeem_tx_data
-        #                                   )
-        # print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
-        #
-        # generate_next_block(sc_node, "first node")
-        # self.sc_sync_all()
-        #
-        # sc_best_block = sc_node.block_best()["result"]
-        # logging.info(sc_best_block)
-        #
-        # generate_next_block(sc_node, "first node")
-        # self.sc_sync_all()
-        #
-        # sc_best_block = sc_node.block_best()["result"]
-        # logging.info(sc_best_block)
-        #
-        # tx_body = showAllVotes(sc_node, evm_address.lower())
-        #
-        # raw_tx = createEIP1559Transaction(sc_node,
-        #                                   fromAddress=hex_evm_addr.lower(),
-        #                                   toAddress='0000000000000000000066666666666666666666',
-        #                                   value=1,
-        #                                   nonce=2,
-        #                                   gasLimit=23000000,
-        #                                   maxPriorityFeePerGas=900000110,
-        #                                   maxFeePerGas=900001100,
-        #                                   data=tx_body
-        #                                   )
-        # print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
-        #
-        # generate_next_block(sc_node, "first node")
-        # self.sc_sync_all()
-        #
-        # block = sc_node.block_best()
-        #
-        # print(f'the last block: {block}')
+        nonce_addr_1 = 0
+
+        balance = http_wallet_balance(sc_node, hex_evm_addr)
+        print(f'THIS IS THE WALLET BALANCE {balance}')
+
+        raw_tx = createEIP1559Transaction(sc_node,
+                                           fromAddress=hex_evm_addr.lower(),
+                                           toAddress='0000000000000000000055555555555555555555',
+                                           value=1,
+                                           nonce=0,
+                                           gasLimit=23000000,
+                                           maxPriorityFeePerGas=900000110,
+                                           maxFeePerGas=900001100,
+                                           data=tx_data
+                                           )
+        print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
+
+        generate_next_block(sc_node, "first node")
+
+        sc_best_block = sc_node.block_best()["result"]
+        logging.info(sc_best_block)
+
+        for i in range(5):
+            mc_node.generate(9)
+            sc_best_block = generate_next_block(sc_node, "")
+            logging.info(sc_best_block)
+
+            mc_node.generate(1)
+            sc_best_block = generate_next_block(sc_node, "")
+            logging.info(sc_best_block)
+
+        counter = 0
+        epoch = int(getWithdrawalEpochInfo(sc_node)['epoch'])
+
+        while epoch < 4:
+            counter += 1
+            epoch = int(getWithdrawalEpochInfo(sc_node)['epoch'])
+            mc_node.generate(1)
+            if counter % 2 == 0:
+                generate_next_block(sc_node, "")
+            else:
+                generate_next_block(sc_node, "")
+            time.sleep(5)
+
+        redeem_message = \
+             createAccountRedeemMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',sc_id)["result"]["redeemMessage"]
+        print(f'THIS IS THE REDEEM MESSAGE {redeem_message}')
+        cert_data_hash = redeem_message['certificateDataHash']
+        next_cert_data_hash = redeem_message['nextCertificateDataHash']
+        sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
+        next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
+        proof = redeem_message['proof']
+        redeem_tx_data = redeemVoteMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',
+                                            cert_data_hash, next_cert_data_hash, sc_commitment_tree,
+                                            next_sc_commitment_tree, proof)
+
+        raw_tx = createEIP1559Transaction(sc_node,
+                                           fromAddress=hex_evm_addr.lower(),
+                                           toAddress='0000000000000000000066666666666666666666',
+                                           value=1,
+                                           nonce=1,
+                                           gasLimit=23000000,
+                                           maxPriorityFeePerGas=900000110,
+                                           maxFeePerGas=900001100,
+                                           data=redeem_tx_data
+                                           )
+        print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        sc_best_block = sc_node.block_best()["result"]
+        logging.info(sc_best_block)
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        sc_best_block = sc_node.block_best()["result"]
+        logging.info(sc_best_block)
+
+        tx_body = showAllVotes(sc_node, evm_address.lower())
+
+        raw_tx = createEIP1559Transaction(sc_node,
+                                           fromAddress=hex_evm_addr.lower(),
+                                           toAddress='0000000000000000000066666666666666666666',
+                                           value=1,
+                                           nonce=2,
+                                           gasLimit=23000000,
+                                           maxPriorityFeePerGas=900000110,
+                                           maxFeePerGas=900001100,
+                                           data=tx_body
+                                           )
+        print(f'THIS IS THE FATIDICA RESPONSE {raw_tx}')
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        block = sc_node.block_best()
+
+        print(f'the last block: {block}')
 
 if __name__ == "__main__":
     CrossChainEvmToBeDeleted().main()

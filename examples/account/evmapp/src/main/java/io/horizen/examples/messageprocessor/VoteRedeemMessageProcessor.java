@@ -9,6 +9,7 @@ import io.horizen.examples.messageprocessor.decoder.RedeemSendVoteCmdInputDecode
 import io.horizen.params.NetworkParams;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.utils.BytesUtils;
+import scala.Option;
 import sparkz.crypto.hash.Keccak256;
 
 import java.nio.charset.StandardCharsets;
@@ -25,7 +26,7 @@ public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageP
     private SidechainSettings sidechainSettings;
     private Sc2scCircuit sc2scCircuit;
 
-    public VoteRedeemMessageProcessor(byte[] scId, String path, Sc2scCircuit sc2scCircuit) {
+    public VoteRedeemMessageProcessor(byte[] scId, Option<String> path, Sc2scCircuit sc2scCircuit) {
         super(scId, path, sc2scCircuit);
     }
 

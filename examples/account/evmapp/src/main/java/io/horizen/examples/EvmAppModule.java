@@ -70,7 +70,7 @@ public class EvmAppModule extends AccountAppModule {
         // todo: ricordarsi dell'ordine
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new VoteMessageProcessor(scId));
-        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath().get(), circuit));
+        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath(), circuit));
         customMessageProcessors.add(new EvmMessageProcessor());
 
         // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.

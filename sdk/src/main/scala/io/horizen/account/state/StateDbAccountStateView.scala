@@ -83,7 +83,7 @@ class StateDbAccountStateView(
   }
 
   def applyMainchainHeader(mcHeader: MainchainHeader): Unit = {
-//    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
+    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
   }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {

@@ -21,12 +21,12 @@ trait CrossChainRedeemMessageProvider {
 
 abstract class AbstractCrossChainRedeemMessageProcessor(
                                                          scId: Array[Byte],
-                                                         path: String,
+                                                         path: Option[String],
                                                          sc2scCircuit: Sc2scCircuit,
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
   protected def processRedeemMessage(msg: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Array[Byte] = {
     // todo: refactor the creation of ccMsg
-    //validateRedeemMsg(msg, view)
+    validateRedeemMsg(msg, view)
 
     addCrossChainMessageToView(view, msg)
 
@@ -148,12 +148,12 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       ccRedeemMessage.scCommitmentTreeRoot,
       ccRedeemMessage.nextScCommitmentTreeRoot,
       ccRedeemMessage.proof,
-      path
+      path.get
     )
 
-    //    if (!isProofValid) {
-    //      throw new IllegalArgumentException(s"Cannot verify this cross-chain message $accountCcMsg")
-    //    }
+    if (!isProofValid) {
+      throw new IllegalArgumentException(s"Cannot verify this cross-chain message $accountCcMsg")
+    }
   }
 
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
