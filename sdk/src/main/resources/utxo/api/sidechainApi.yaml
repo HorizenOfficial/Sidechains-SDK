@@ -1780,6 +1780,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /node/info:
+    post:
+      tags:
+        - node
+      summary: get general node information
+      description: Returns the general node information.
+      operationId: nodeInfo
+      security:
+        - basicAuth: [ ]
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      nodeName:
+                        type: string
+                      nodeType:
+                        type: string
+                      protocolVersion:
+                        type: string
+                      agentName:
+                        type: string
+                      sdkVersion:
+                        type: string
+                      scId:
+                        type: string
+                      scType:
+                        type: string
+                      scModel:
+                        type: string
+                      scBlockHeight:
+                        type: integer
+                      scConsensusEpoch:
+                        type: integer
+                      epochForgersStake:
+                        type: integer
+                        format: int64
+                      scWithdrawalEpochLength:
+                        type: integer
+                      scWithdrawalEpochNum:
+                        type: integer
+                      scEnv:
+                        type: string
+                      lastMcBlockReferenceHash:
+                        type: string
+                      numberOfPeers:
+                        type: integer
+                      numberOfConnectedPeers:
+                        type: integer
+                      numberOfBlacklistedPeers:
+                        type: integer
+                      numOfTxInMempool:
+                        type: integer
+                      mempoolUsedSizeKBytes:
+                        type: integer
+                      mempoolUsedPercentage:
+                        type: integer
+                      lastCertEpoch:
+                        type: integer
+                      lastCertQuality:
+                        type: integer
+                        format: int64
+                      lastCertBtrFee:
+                        type: integer
+                        format: int64
+                      lastCertFtMinAmount:
+                        type: integer
+                        format: int64
+                      lastCertHash:
+                        type: string
+                      errors:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /node/peer:
     post:
       tags:

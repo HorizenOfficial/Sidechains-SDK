@@ -3,20 +3,31 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.AbstractSidechainApp
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import io.horizen.account.api.rpc.service.RpcUtils
+import io.horizen.account.mempool.AccountMemoryPool
+import io.horizen.account.node.AccountNodeView
+import io.horizen.account.state.AccountState
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import io.horizen.api.http.route.SidechainNodeRestSchema._
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiError, SuccessResponse}
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.json.Views
+import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import io.horizen.params.NetworkParams
+import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
-import sparkz.core.api.http.{ApiResponse, ApiRoute}
+import io.horizen.utxo.mempool.SidechainMemoryPool
+import io.horizen.utxo.node.SidechainNodeView
+import io.horizen.utxo.state.SidechainState
+import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
+import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemovePeer, RemoveFromBlacklist}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -25,18 +36,29 @@ import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
+import scala.io.Source
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-case class SidechainNodeApiRoute(peerManager: ActorRef,
+case class SidechainNodeApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams)
-                                (implicit val context: ActorRefFactory, val ec: ExecutionContext) extends ApiRoute {
+                                (implicit val context: ActorRefFactory, val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ peerByAddress ~ addToBlacklist ~ removeFromBlacklist ~ removePeer
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ peerByAddress ~ addToBlacklist ~ removeFromBlacklist ~ removePeer ~ nodeInfo
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -112,6 +134,183 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     } catch {
       case e: Throwable => SidechainApiError(e)
     }
+  }
+
+  def nodeInfo: Route = (path("info") & post) {
+    withBasicAuth {
+      _ => {
+        withNodeView { sidechainNodeView =>
+          var nonExecTransactionSize = 0
+          var execTransactionSize = 0
+
+          val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
+
+          val nodeName = app.settings.network.nodeName
+          val agentName = app.settings.network.agentName
+          val protocolVersion = app.settings.network.appVersion
+
+          val scEnv = app.sidechainSettings.genesisData.mcNetwork //on which network is the node currently - mainnet/testnet/regtest
+
+          //blacklisted peers
+          var blacklistedNum = -1
+          val resultBlacklisted = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+            .map(blacklistedPeers => {
+              blacklistedNum = blacklistedPeers.length
+            })
+
+          //connected peers
+          var connectedToNum = -1
+          val resultConnected = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers)
+            .map(connectedPeers => {
+              connectedToNum = connectedPeers.length
+            })
+
+          //all peers
+          var allPeersNum = 0
+          val resultAllPeers = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
+            _.map {
+              case (_, _) =>
+                allPeersNum += 1
+            }
+          }
+
+          Await.result(resultBlacklisted, settings.timeout)
+          Await.result(resultConnected, settings.timeout)
+          Await.result(resultAllPeers, settings.timeout)
+
+          val scBlockHeight = sidechainNodeView.getNodeHistory.getCurrentHeight
+
+          val lastScBlockId = sidechainNodeView.getNodeHistory.getLastBlockIds(1)
+          val lastScBlock = sidechainNodeView.getNodeHistory.getBlockById(lastScBlockId.get(0))
+          var lastMcBlockReferenceHash = ""
+          if (!lastScBlock.isEmpty && lastScBlock.get().mainchainBlockReferencesData.nonEmpty)
+            lastMcBlockReferenceHash = BytesUtils.toHexString(lastScBlock.get().mainchainBlockReferencesData.head.headerHash)
+
+          var withdrawalEpochNum = -1
+          var consensusEpoch = -1
+          var epochForgersStake: Long = -1
+
+          var certQuality: Long = -1
+          var certEpoch: Int = -1
+          var certBtrFee: Long = -1
+          var certFtMinAmount: Long = -1
+          var certHash: String = ""
+          sidechainNodeView match {
+            case viewAccount: AccountNodeView =>
+              nonExecTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getNonExecutableTransactions.size()
+              execTransactionSize = viewAccount.getNodeMemoryPool.asInstanceOf[AccountMemoryPool].getExecutableTransactions.size()
+
+              withdrawalEpochNum = viewAccount.getNodeState.asInstanceOf[AccountState].getWithdrawalEpochInfo.epoch
+
+              consensusEpoch = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.epoch
+              epochForgersStake = viewAccount.getNodeState.asInstanceOf[AccountState].getCurrentConsensusEpochInfo._2.forgersStake
+
+              sidechainNodeView.getNodeState.asInstanceOf[AccountState].lastCertificateReferencedEpoch match {
+                case Some(referencedEpoch) =>
+                  viewAccount.getNodeState.getTopQualityCertificate(referencedEpoch) match {
+                    case Some(cert) =>
+                      certEpoch = cert.epochNumber
+                      certQuality = cert.quality
+                      certBtrFee = cert.btrFee
+                      certFtMinAmount = cert.ftMinAmount
+                      certHash = BytesUtils.toHexString(cert.hash)
+                    case _ =>
+                  }
+                case _ =>
+              }
+            case viewSidechain: SidechainNodeView =>
+              withdrawalEpochNum = viewSidechain.getNodeState.asInstanceOf[SidechainState].getWithdrawalEpochInfo.epoch
+
+              consensusEpoch = viewSidechain.getNodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo._2.epoch
+              epochForgersStake = viewSidechain.getNodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo._2.forgersStake
+
+              viewSidechain.getNodeState.asInstanceOf[SidechainState].lastCertificateReferencedEpoch() match {
+                case Some(referencedEpoch) =>
+                  viewSidechain.getNodeState.asInstanceOf[SidechainState].certificate(referencedEpoch) match {
+                    case Some(cert) =>
+                      certEpoch = cert.epochNumber
+                      certQuality = cert.quality
+                      certBtrFee = cert.btrFee
+                      certFtMinAmount = cert.ftMinAmount
+                      certHash = BytesUtils.toHexString(cert.hash)
+                    case _ =>
+                  }
+                case _ =>
+              }
+          }
+          val numOfTxInMempool = sidechainNodeView.getNodeMemoryPool.getSize
+
+          val errorLines: Array[String] = getErrorLogs
+          val nodeTypes = getNodeTypes
+
+          ApiResponseUtil.toResponse(RespNodeInfo(
+            nodeName = nodeName,
+            nodeType = nodeTypes,
+            protocolVersion = protocolVersion,
+            agentName = agentName,
+            sdkVersion = RpcUtils.getClientVersion,
+            scId = sidechainId,
+            scType = if (params.isNonCeasing) "non ceasing" else "ceasing",
+            scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) "UTXO" else "Account",
+            scBlockHeight = scBlockHeight,
+            scConsensusEpoch = consensusEpoch,
+            epochForgersStake = epochForgersStake,
+            nextBaseFee = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(sidechainNodeView.getNodeState.asInstanceOf[AccountState].getView.getNextBaseFee) else Option.empty,
+            scWithdrawalEpochLength = params.withdrawalEpochLength,
+            scWithdrawalEpochNum = withdrawalEpochNum,
+            scEnv = scEnv,
+            lastMcBlockReferenceHash = if (lastMcBlockReferenceHash != "") Option(lastMcBlockReferenceHash) else Option.empty,
+            numberOfPeers = allPeersNum,
+            numberOfConnectedPeers = if (connectedToNum != -1) Option(connectedToNum) else Option.empty,
+            numberOfBlacklistedPeers = if (blacklistedNum != -1) Option(blacklistedNum) else Option.empty,
+            maxMemPoolSlots = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(app.sidechainSettings.accountMempool.maxMemPoolSlots) else Option.empty,
+            numOfTxInMempool = numOfTxInMempool,
+            mempoolUsedSizeKBytes = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option(sidechainNodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes) else Option.empty,
+            mempoolUsedPercentage = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) Option(sidechainNodeView.getNodeMemoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage) else Option.empty,
+            executableTxSize = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(execTransactionSize) else Option.empty,
+            nonExecutableTxSize = if (sidechainNodeView.isInstanceOf[AccountNodeView]) Option(nonExecTransactionSize) else Option.empty,
+            lastCertQuality = if (certQuality != -1) Option(certQuality) else Option.empty,
+            lastCertEpoch = if (certEpoch != -1) Option(certEpoch) else Option.empty,
+            lastCertBtrFee = if (certBtrFee != -1) Option(certBtrFee) else Option.empty,
+            lastCertFtMinAmount = if (certFtMinAmount != -1) Option(certFtMinAmount) else Option.empty,
+            lastCertHash = if (certHash != "") Option(certHash) else Option.empty,
+            errors = if (errorLines != null) Option(errorLines) else Option.empty
+          ))
+        }
+      }
+    }
+  }
+
+  private def getErrorLogs: Array[String] = {
+    val logFilePath = app.sidechainSettings.sparkzSettings.logDir + "/" + app.sidechainSettings.logInfo.logFileName
+    var errorLogs: Array[String] = null
+    var source: Option[Source] = None
+    try {
+      source = Some(Source.fromFile(logFilePath))
+      errorLogs = source.get.getLines().filter(_.contains("[ERROR]")).toArray
+    } catch {
+      case e: Exception =>
+        log.debug(e.getMessage)
+    } finally {
+      source.foreach(_.close())
+    }
+    errorLogs
+  }
+
+  private def getNodeTypes: String = {
+    var nodeTypes = ""
+    if (app.sidechainSettings.forger.automaticForging)
+      nodeTypes += "forger"
+    if (app.sidechainSettings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled)
+      nodeTypes += ",signer"
+    if (app.sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+      nodeTypes += ",submitter"
+    if (nodeTypes == "")
+      nodeTypes = "simple node"
+    if (nodeTypes.charAt(0) == ',')
+      nodeTypes = nodeTypes.stripPrefix(",")
+
+    nodeTypes
   }
 
   def connect: Route = (post & path("connect")) {
@@ -320,6 +519,40 @@ object SidechainNodeRestSchema {
                                              connectionType: Option[String]
                                            )
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespNodeInfo(
+                                         nodeName: String,
+                                         nodeType: String,
+                                         protocolVersion: String,
+                                         agentName: String,
+                                         sdkVersion: String,
+                                         scId: String,
+                                         scType: String,
+                                         scModel: String,
+                                         scBlockHeight: Int,
+                                         scConsensusEpoch: Int,
+                                         epochForgersStake: Long,
+                                         nextBaseFee: Option[BigInt],
+                                         scWithdrawalEpochLength: Int,
+                                         scWithdrawalEpochNum: Int,
+                                         scEnv: String,
+                                         lastMcBlockReferenceHash: Option[String],
+                                         numberOfPeers: Int,
+                                         numberOfConnectedPeers: Option[Int],
+                                         numberOfBlacklistedPeers: Option[Int],
+                                         maxMemPoolSlots : Option[Int],
+                                         numOfTxInMempool: Int,
+                                         mempoolUsedSizeKBytes: Option[Int],
+                                         mempoolUsedPercentage: Option[Int],
+                                         executableTxSize: Option[Int],
+                                         nonExecutableTxSize: Option[Int],
+                                         lastCertEpoch : Option[Int],
+                                         lastCertQuality : Option[Long],
+                                         lastCertBtrFee : Option[Long],
+                                         lastCertFtMinAmount : Option[Long],
+                                         lastCertHash : Option[String],
+                                         errors: Option[Array[String]]
+                                     )  extends SuccessResponse
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
 
