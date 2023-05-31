@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import logging
-import time
 import os
 import re
+import time
 from datetime import datetime
 from eth_utils import add_0x_prefix
 
@@ -28,7 +28,7 @@ Configuration:
 WITHDRAWAL_EPOCH_LENGTH = 10
 websocket_server_port = 8026
 
-class EvmSyncStatus(AccountChainSetup):
+class EvmSyncStatusForgerNodes(AccountChainSetup):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -161,8 +161,7 @@ class EvmSyncStatus(AccountChainSetup):
         # Test
         # the test workflow is:
         # disconnect SC0 and SC1
-        # generate 500 blocks on SC0
-        # generate 50 blocks on SC1 (fork)
+        # generate 200 blocks on SC0
         # stop SC0
         # restart SC1
         # generate 3 blocks on SC1 to fill the sync status actor with new blocks
@@ -173,13 +172,9 @@ class EvmSyncStatus(AccountChainSetup):
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
         time.sleep(5)
 
-        # generate 500 blocks on node 0
-        logging.info("SC node 0 generates {} blocks...".format(500))
-        generate_next_blocks(sc_node0, "node 0", 500, verbose=False)
-
-        # generate 50 blocks on node 1
-        logging.info("SC node 0 generates {} blocks...".format(50))
-        generate_next_blocks(sc_node1, "node 1", 50, verbose=False)
+        # generate 200 blocks on node 0
+        logging.info("SC node 0 generates {} blocks...".format(200))
+        generate_next_blocks(sc_node0, "node 0", 200, verbose=False)
 
         # check the block height on the different nodes
         sc_node_0_height = int(sc_node0.block_best()["result"]["height"])
@@ -231,4 +226,4 @@ class EvmSyncStatus(AccountChainSetup):
         assert_true(pattern_match)
 
 if __name__ == "__main__":
-    EvmSyncStatus().main()
+    EvmSyncStatusForgerNodes().main()
