@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.horizen.account.block.AccountBlock;
 import io.horizen.account.block.AccountBlockHeader;
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion;
+import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.AccountStateView;
 import io.horizen.account.state.MessageProcessor;
@@ -83,7 +84,7 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
 
         BigInteger gasUsed = BigInteger.ZERO;
 
-        BigInteger gasLimit = FeeUtils.GAS_LIMIT();
+        BigInteger gasLimit = GasFeeFork.DefaultGasFeeFork().blockGasLimit();
 
         SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
