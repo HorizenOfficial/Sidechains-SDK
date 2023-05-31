@@ -29,7 +29,7 @@ import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
-import io.horizen.sc2sc.Sc2ScConfigurator
+import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScProverRef}
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -39,10 +39,10 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
-
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.io.{Codec, Source}
 
@@ -174,22 +174,32 @@ class AccountSidechainApp @Inject()
   )
   //Initialize RpcProcessor object with the rpcHandler
   val rpcProcessor = RpcProcessor(rpcHandler)
-  
+
   if(sidechainSettings.websocketServer.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer.wsServerPort)
+    val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }
+
+  var sc2scProverRef: Option[ActorRef] = if (sc2scConfigurator.canSendMessages) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-    AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
-    AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-    SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
-  )
+  override lazy val coreApiRoutes: Seq[ApiRoute] = {
+    var ret = Seq[ApiRoute](
+      MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool, AccountNodeView](settings.restApi, nodeViewHolderRef),
+      AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
+      SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
+      AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
+      AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
+      SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
+      route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
+    )
+
+    if (sc2scConfigurator.canSendMessages) {
+      ret = ret :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
+    }
+
+    ret
+  }
 
   val nodeViewProvider: NodeViewProvider[
     TX,

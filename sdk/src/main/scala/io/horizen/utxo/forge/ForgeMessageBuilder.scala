@@ -12,7 +12,7 @@ import io.horizen.proposition.Proposition
 import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.PrivateKey25519
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -164,20 +164,23 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
-      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
-      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()) {
+        //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
         nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes + allowedCrossChainMessageBoxes)
-      else
+      }
+      else {
         nodeView.pool.take(nodeView.pool.size)
+      }
 
-    (mempoolTx
+    val filtered = mempoolTx
       .filter(tx => {
         nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
           nodeView.state.validateWithWithdrawalEpoch(tx,
             WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferenceData.size, withdrawalEpochInfo, params).epoch
           ).isSuccess
       })
-      ++ forcedTx)
+
+    val filtered2 = (filtered ++ forcedTx)
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
@@ -188,7 +191,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           true // continue data collection
         }
       })
-      .map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
+
+    val mapped = filtered2.map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
+    mapped
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {

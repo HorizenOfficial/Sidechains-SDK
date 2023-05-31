@@ -110,7 +110,8 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     // With some cross chain messages from different providers
     var fakeMessages: List[CrossChainMessage] = List()
     (0 until 3).foreach(index => {
-      fakeMessages = fakeMessages :+ AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(getRandomAccountCrossMessage(index), mockNetworkParams)
+      // TODO: here bad sidechainId
+      fakeMessages = fakeMessages :+ AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(getRandomAccountCrossMessage(index), "mockNetworkParams".getBytes)
     })
 
     Mockito

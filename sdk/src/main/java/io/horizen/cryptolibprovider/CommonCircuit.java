@@ -71,8 +71,22 @@ public class  CommonCircuit {
         );
     }
 
+    public static WithdrawalCertificate createWithdrawalCertificateBad(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        return new WithdrawalCertificate(
+                FieldElement.deserialize(cert.sidechainId()),
+                cert.epochNumber(),
+                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs())
+                        .stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                cert.quality(),
+                FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
+                cert.btrFee(),
+                cert.ftMinAmount(),
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+        );
+    }
+
     public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
-        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
+        try(WithdrawalCertificate wc = createWithdrawalCertificateBad(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
             return hashFe.serializeFieldElement();
         }
     }

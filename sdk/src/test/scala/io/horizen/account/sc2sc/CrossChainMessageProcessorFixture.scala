@@ -15,8 +15,8 @@ trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
 
   val mcAddr = new MCPublicKeyHashProposition(randomBytes(20))
 
-  def getMessageProcessorTestImpl(networkParams: NetworkParams) : AbstractCrossChainMessageProcessor = {
-     new CrossChainMessageProcessorTestImpl(networkParams)
+  def getMessageProcessorTestImpl(sidechainId: Array[Byte]) : AbstractCrossChainMessageProcessor = {
+     new CrossChainMessageProcessorTestImpl(sidechainId)
   }
 
   def listOfCrosschainMessages(epochNun: Int): Message = {
@@ -26,7 +26,7 @@ trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
   }
 }
 
-class CrossChainMessageProcessorTestImpl(networkParams: NetworkParams)  extends AbstractCrossChainMessageProcessor(networkParams)  {
+class CrossChainMessageProcessorTestImpl(sidechainId: Array[Byte]) extends AbstractCrossChainMessageProcessor(sidechainId)  {
 
   override val contractAddress: Address = CrossChainMessageProcessorTestImpl.contractAddress
   override val contractCode: Array[Byte] =   CrossChainMessageProcessorTestImpl.contractCode

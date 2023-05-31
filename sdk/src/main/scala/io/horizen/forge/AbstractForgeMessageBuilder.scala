@@ -310,9 +310,9 @@ abstract class AbstractForgeMessageBuilder[
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-
     val transactions: Iterable[TX] = if (isWithdrawalEpochLastBlock) {
       Iterable.empty[TX] // no SC Txs allowed
+      //forcedTx
     } else if (parentBlockId != nodeView.history.bestBlockId) {
       // SC block extends the block behind the current tip (for example, in case of ommers).
       // We can't be sure that transactions in the Mempool are valid against the block in the past.

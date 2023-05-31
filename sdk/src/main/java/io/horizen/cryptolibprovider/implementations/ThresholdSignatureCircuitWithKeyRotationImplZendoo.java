@@ -32,18 +32,20 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     private static final int supportedSegmentSize = (1 << 18);
 
     @Override
-    public List<byte[]> getCertificateCustomFields(byte[] keysRootHash) {
+    public List<byte[]> getCertificateCustomFields(List<byte[]> elementsToInsert) {
         // Create an array with zero field elements. They are just a placeholders for future needs.
         ArrayList<byte[]> customFields = new ArrayList<>(Collections.nCopies(
                 CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION, new byte[FieldElementUtils.fieldElementLength()]));
         // Set genesis key root hash as a first item.
-        customFields.set(0, keysRootHash);
+        for (int index = 0; index < elementsToInsert.size(); index++)
+            customFields.set(index, elementsToInsert.get(index));
         return customFields;
     }
 
 
-    private List<FieldElement> prepareCustomFieldElements(byte[] keysRootHash) {
-        Iterator<byte[]> iterator = getCertificateCustomFields(keysRootHash).iterator();
+    private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
+        List<byte[]> certificateCustomFields = getCertificateCustomFields(customFields);
+        Iterator<byte[]> iterator = certificateCustomFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
             byte[] fieldBytes = iterator.next();
@@ -59,15 +61,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            byte[] keysRootHash) {
+                                            List<byte[]> customFields) {
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         List<FieldElement> customFieldElements;
         FieldElement messageToSign;
         byte[] messageAsBytes;
         try (FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId)) {
-            customFieldElements = prepareCustomFieldElements(keysRootHash);
-
+            customFieldElements = prepareCustomFieldElements(customFields);
             WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                     FieldElement.deserialize(sidechainId),
                     epochNumber,
@@ -108,6 +109,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
              int sidechainCreationVersionNumber,
              byte[] genesisKeysRootHash,
+             List<byte[]> customFields,
              String provingKeyPath,
              boolean checkProvingKey,
              boolean zk
@@ -116,7 +118,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFieldsElements = prepareCustomFieldElements(getSchnorrKeysHash(schnorrKeysSignatures));
+
+        customFields.set(0, getSchnorrKeysHash(schnorrKeysSignatures));
+        List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
                 .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.apply(sidechainCreationVersionNumber)));
@@ -174,16 +178,16 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               byte[] keysRootHash,
                                long quality,
                                Optional<WithdrawalCertificate> previousEpochCertificateOption, // todo: use WithdrawalEpochCertificate same as in createProof
                                byte[] genesisConstantBytes,
                                int sidechainCreationVersionNumber,
                                byte[] proof,
+                               List<byte[]> customFields,
                                String verificationKeyPath) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         boolean verificationResult = false;
-        List<FieldElement> customFieldsElements = prepareCustomFieldElements(keysRootHash);
+        List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
         FieldElement genesisConstant = FieldElement.deserialize(genesisConstantBytes);
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
 

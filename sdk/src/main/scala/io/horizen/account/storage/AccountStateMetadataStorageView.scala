@@ -2,7 +2,7 @@ package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
-import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import io.horizen.account.storage.AccountStateMetadataStorageView.{DEFAULT_ACCOUNT_STATE_ROOT}
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
 import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
@@ -152,12 +152,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
         WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-          case Success(certificate) => Option(certificate)
+          case Success(certificate) =>
+            Option(certificate)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate information parsing.", exception)
             Option.empty
         }
-      case _ => Option.empty
+      case _ =>
+        Option.empty
     }
   }
 
@@ -367,7 +369,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           case _ => false
         }
         if (isWithdrawalEpochSwitched) {
-          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+          val certEpochNumberToRemove: Int = epochInfo.epoch - 8
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1

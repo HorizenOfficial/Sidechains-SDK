@@ -72,6 +72,7 @@ class AccountForgeMessageBuilder(
   def computeBlockInfo(
       view: AccountStateView,
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
+      mainchainHeaders: Seq[MainchainHeader],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       blockContext: BlockContext,
       forgerAddress: AddressProposition,
@@ -82,13 +83,14 @@ class AccountForgeMessageBuilder(
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
 
     val (receiptList, appliedTransactions, cumBaseFee, cumForgerTips) =
-      tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, blockContext, blockSize).get
+      tryApplyAndGetBlockInfo(view, mainchainHeaders, mainchainBlockReferencesData, sidechainTransactions, blockContext, blockSize).get
 
     (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
   private def tryApplyAndGetBlockInfo(
       stateView: AccountStateView,
+      mainchainHeaders: Seq[MainchainHeader],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
       blockContext: BlockContext,
@@ -101,6 +103,8 @@ class AccountForgeMessageBuilder(
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
       stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
+
+    mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
@@ -244,6 +248,7 @@ class AccountForgeMessageBuilder(
               computeBlockInfo(
                 dummyView,
                 sidechainTransactions,
+                mainchainHeaders,
                 mainchainBlockReferencesData,
                 blockContext,
                 forgerAddress,

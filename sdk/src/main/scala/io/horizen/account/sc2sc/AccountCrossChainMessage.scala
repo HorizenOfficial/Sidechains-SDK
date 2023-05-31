@@ -1,10 +1,13 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import org.web3j.abi.datatypes.generated.Uint32
+import io.horizen.utils.BytesUtils
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes20, Bytes32, Bytes4, Uint32}
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
+
+import java.nio.ByteBuffer
 
 case class AccountCrossChainMessage
 (
@@ -19,14 +22,32 @@ case class AccountCrossChainMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
+  //todo: payload must be dynamic bytes
   private[horizen] def asABIType(): StaticStruct = {
     new StaticStruct(
       new Uint32(messageType),
-      new DynamicBytes(sender),
-      new DynamicBytes(receiverSidechain),
-      new DynamicBytes(receiver),
-      new DynamicBytes(payload)
+      new Bytes20(sender),
+      new Bytes32(receiverSidechain),
+      new Bytes20(receiver),
+      new Bytes4(payload)
     )
+  }
+
+  override def toString: String = {
+    val buffer = ByteBuffer.allocate(Integer.BYTES)
+    buffer.put(payload)
+    buffer.rewind()
+    "AccountCrossChainMessage(\"payload\": " + buffer.getInt() +")"
+  }
+
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: AccountCrossChainMessage => payload sameElements that.payload
+
+      case _ => false
+    }
   }
 }
 

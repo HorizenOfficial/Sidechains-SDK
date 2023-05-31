@@ -14,12 +14,14 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     private byte[] nextScCommitmentTreeRoot;
     private byte[] proof;
 
-    public CrossChainRedeemMessageImpl(CrossChainMessage message,
-             byte[] certificateDataHash,
-             byte[] nextCertificateDataHash,
-             byte[] scCommitmentTreeRoot,
-             byte[] nextScCommitmentTreeRoot,
-             byte[] proof){
+    public CrossChainRedeemMessageImpl(
+            CrossChainMessage message,
+            byte[] certificateDataHash,
+            byte[] nextCertificateDataHash,
+            byte[] scCommitmentTreeRoot,
+            byte[] nextScCommitmentTreeRoot,
+            byte[] proof
+    ) {
         this.message = message;
         this.certificateDataHash = certificateDataHash;
         this.nextCertificateDataHash = nextCertificateDataHash;
@@ -86,7 +88,7 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     public String toString() {
         return "CrossChainRedeemMessage{" +
                 "message=" + message.toString() +
-                ", certificateDataHash=" +  BytesUtils.toHexString(certificateDataHash) +
+                ", certificateDataHash=" + BytesUtils.toHexString(certificateDataHash) +
                 ", nextCertificateDataHash=" + BytesUtils.toHexString(nextCertificateDataHash) +
                 ", scCommitmentTreeRoot=" + BytesUtils.toHexString(scCommitmentTreeRoot) +
                 ", nextScCommitmentTreeRoot=" + BytesUtils.toHexString(nextScCommitmentTreeRoot) +

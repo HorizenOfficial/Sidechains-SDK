@@ -21,6 +21,7 @@ import sparkz.core.serialization.SparkzSerializer
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -105,7 +106,7 @@ abstract class TransactionBaseApiRoute[
 
     val barrier = Await.result(
       sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-      settings.timeout).asInstanceOf[Future[Unit]]
+      60.minutes).asInstanceOf[Future[Unit]]
     onComplete(barrier) {
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))

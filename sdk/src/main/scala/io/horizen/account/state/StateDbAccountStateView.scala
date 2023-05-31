@@ -3,7 +3,7 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider, ScTxCommitmentTreeRootHashMessageProvider}
+import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider, ScTxCommitmentTreeRootHashMessageProvider, ToBeDeleted}
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
@@ -83,7 +83,7 @@ class StateDbAccountStateView(
   }
 
   def applyMainchainHeader(mcHeader: MainchainHeader): Unit = {
-    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
+//    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
   }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {

@@ -5,14 +5,16 @@ import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, CustomFieldsReservedPositions}
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.Transaction
 import io.horizen.utils.WithdrawalEpochInfo
-import sparkz.util.ModifierId
 import sparkz.core.transaction.state.MinimalState
+import sparkz.util.ModifierId
 
 import java.util
 import scala.collection.JavaConverters._

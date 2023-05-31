@@ -11,12 +11,12 @@ object MessageProcessorUtil {
       case NaiveThresholdSignatureCircuit => None
       case NaiveThresholdSignatureCircuitWithKeyRotation => Some(CertificateKeyRotationMsgProcessor(params))
     }
-    val sc2ScMsgProcessors = if (Sc2ScUtils.isActive(params)) Seq(ScTxCommitmentTreeRootHashMessageProcessor())
-                             else Seq()
+    // val sc2ScMsgProcessors = if (Sc2ScUtils.isActive(params)) Seq(ScTxCommitmentTreeRootHashMessageProcessor())
+    //                          else Seq()
     Seq(
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
-    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ sc2ScMsgProcessors ++ customMessageProcessors
+    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ Seq(ScTxCommitmentTreeRootHashMessageProcessor()) ++ customMessageProcessors
   }
 }

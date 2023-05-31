@@ -13,6 +13,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -58,6 +59,7 @@ class WithKeyRotationCircuitStrategy[
       certificateData.previousCertificateOption.asJava,
       sidechainCreationVersion.id,
       certificateData.genesisKeysRootHash,
+      certificateData.getCustomFields.asJava,
       provingFileAbsolutePath,
       true,
       true
@@ -82,7 +84,6 @@ class WithKeyRotationCircuitStrategy[
         case true => Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
         case false => None
       }
-
 
     val signersPublicKeyWithSignatures = schnorrKeysSignatures.schnorrSigners.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -116,15 +117,32 @@ class WithKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
 
     val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
-    val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = sc2scConfig.canSendMessages match {
-      case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
-      case false => None
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  if (sc2scConfig.canSendMessages) {
+      Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
+    } else {
+      None
     }
 
-    val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId,
-      referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, keysRootHash)
+    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      .getSchnorrKeysHash(getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber))
+
+    val previousCertificateBytes: Array[Byte] = sc2ScDataForCertificate match {
+      case Some(sc2scData) => sc2scData.previousTopQualityCertificateHash match {
+        case Some(cert) => cert
+        case None => Array.emptyByteArray
+      }
+      case None => Array.emptyByteArray
+    }
+
+    val messageTreeRootHash = sc2ScDataForCertificate match {
+      case Some(sc2scData) => sc2scData.messagesTreeRoot
+      case None => Array.emptyByteArray
+    }
+
+    val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(keysRootHash, messageTreeRootHash, previousCertificateBytes).asJava)
 
     // For circuit with key rotation signing keys can be changed
     (message, keysAndSignatures.schnorrSigners)

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor;
 import io.horizen.account.secret.PrivateKeySecp256k1Creator;
 import io.horizen.account.utils.FeeUtils;
 import io.horizen.account.block.AccountBlock;
@@ -24,6 +25,9 @@ import io.horizen.account.utils.AccountFeePaymentsUtils;
 import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import io.horizen.block.*;
 import io.horizen.cryptolibprovider.CircuitTypes;
+import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
+import io.horizen.examples.messageprocessor.VoteMessageProcessor;
+import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.block.SidechainBlockHeader;
 import io.horizen.utxo.box.Box;
@@ -53,6 +57,8 @@ import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
+import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 import java.io.BufferedReader;
@@ -65,6 +71,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import scala.collection.JavaConverters.*;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
@@ -854,10 +861,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 byte[] stateRoot;
                 try {
-                    stateRoot = getGenesisStateRoot(mainchainBlockReferencesData, params);
+                    stateRoot = getGenesisStateRoot(mcRef, params);
                 }
                 catch (Exception e) {
-                    printer.print(String.format("Error: 'Could not get genesis state root: %s", e.getMessage()));
+                    printer.print(String.format("Err<or: 'Could not get genesis state root: %s", e.getMessage()));
                     return;
                 }
 
@@ -1004,13 +1011,18 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         return new AccountStateView(null, stateDb, mps);
     }
 
-    private byte[] getGenesisStateRoot(List<MainchainBlockReferenceData> mainchainBlockReferencesData, NetworkParams params) throws MessageProcessorInitializationException {
+    private byte[] getGenesisStateRoot(MainchainBlockReference mcRef, NetworkParams params) throws MessageProcessorInitializationException {
+        List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
+        MainchainHeader mcHeader = mcRef.header();
         // TODO customMessageProcessors - for the time being we do not handle them in the bootstrapping tool.
         // If needed they should be somehow passed as parameters and added here
-        Seq<MessageProcessor> customMessageProcessors = new ListBuffer<MessageProcessor>();
 
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
+        List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+        byte[] scId = BytesUtils.reverseBytes(params.sidechainId());
+        customMessageProcessors.add(new VoteMessageProcessor(scId));
+        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, "params.sc2ScVerificationKeyFilePath().get()", new Sc2scImplZendoo()));
 
+        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, JavaConverters.asScalaBuffer(customMessageProcessors));
         AccountStateView view = getStateView(messageProcessorSeq);
         try(view){
 
@@ -1019,11 +1031,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             while (iter.hasNext()) {
                 ((MessageProcessor)iter.next()).init(view);
             }
-
             // apply sc creation output, this will call forger stake msg processor
             for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
                 view.applyMainchainBlockReferenceData(mcBlockRefData);
             }
+
+            view.applyMainchainHeader(mcHeader);
 
             // get the state root after all state-changing operations
             return view.getIntermediateRoot();

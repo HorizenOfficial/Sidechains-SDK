@@ -150,7 +150,6 @@ abstract class AbstractForger[
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], forcedTx: Iterable[TX]): Unit = {
     val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, forcedTx)
-
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
         log.info(s"Got successfully forged block with id ${block.id}")

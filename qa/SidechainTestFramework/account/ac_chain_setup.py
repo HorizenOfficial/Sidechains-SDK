@@ -1,8 +1,7 @@
 import logging
 from decimal import Decimal
+import os
 
-from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -46,7 +45,9 @@ class AccountChainSetup(SidechainTestFramework):
                  cert_sig_threshold=5,
                  # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
                  # If no value for given Node N index is present then the default value is assigned later: range(7)
-                 submitters_private_keys_indexes=[]
+                 submitters_private_keys_indexes=[],
+                 sc2sc_proving_key_file_path="",
+                 sc2sc_verification_key_file_path=""
                  ):
 
         super().__init__()
@@ -63,7 +64,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.number_of_sidechain_nodes = number_of_sidechain_nodes
         self.withdrawalEpochLength = withdrawalEpochLength
         self.forward_amount = forward_amount
-        self.block_timestamp_rewind = block_timestamp_rewind
+        self.block_timestamp_rewind = 720*1200#block_timestamp_rewind
         self.forger_options = forger_options
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
@@ -84,6 +85,8 @@ class AccountChainSetup(SidechainTestFramework):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.submitters_private_keys_indexes = submitters_private_keys_indexes
+        self.sc2sc_proving_key_file_path = sc2sc_proving_key_file_path
+        self.sc2sc_verification_key_file_path = sc2sc_verification_key_file_path
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -128,7 +131,9 @@ class AccountChainSetup(SidechainTestFramework):
                     websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
                     websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
                     cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
-                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None,
+                    sc2sc_proving_key_file_path=os.path.join(self.options.tmpdir, "proving"),
+                    sc2sc_verification_key_file_path=os.path.join(self.options.tmpdir, "verification")
                 ))
 
             else:
@@ -140,7 +145,7 @@ class AccountChainSetup(SidechainTestFramework):
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                     allow_unprotected_txs=self.allow_unprotected_txs,
-                    remote_keys_server_address=self.remote_keys_server_addresses[x] if len(self.remote_keys_server_addresses) > x else "",
+                    remote_keys_server_address=self.remote_keys_server_address,
                     max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,
@@ -150,7 +155,9 @@ class AccountChainSetup(SidechainTestFramework):
                     websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
                     websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
                     cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
-                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None,
+                    sc2sc_proving_key_file_path=os.path.join(self.options.tmpdir, "proving"),
+                    sc2sc_verification_key_file_path=os.path.join(self.options.tmpdir, "verification")
                 ))
    
         if self.circuittype_override is not None:
@@ -163,10 +170,10 @@ class AccountChainSetup(SidechainTestFramework):
         else:
             sc_creation_version = SC_CREATION_VERSION_1
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength,
-                                                        sc_creation_version=sc_creation_version,
-                                                        is_non_ceasing=self.options.nonceasing,
-                                                        circuit_type=circuit_type,
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, 10,
+                                                        sc_creation_version=SC_CREATION_VERSION_2,
+                                                        is_non_ceasing=True,
+                                                        circuit_type=KEY_ROTATION_CIRCUIT,
                                                         cert_max_keys=self.cert_max_keys,
                                                         cert_sig_threshold=self.cert_sig_threshold),
                                          *sc_node_configuration)

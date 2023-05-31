@@ -9,6 +9,7 @@ import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCirc
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
+import io.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -79,8 +80,8 @@ trait Sc2ScUtils[
             val nextCertScCommitmentRoot = nextTopCertInfos.scCommitmentRoot
 
             Using.resources(
-              CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion),
-              CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion),
+              CommonCircuit.createWithdrawalCertificateBad(topCertInfos.certificate, params.sidechainCreationVersion),
+              CommonCircuit.createWithdrawalCertificateBad(nextTopCertInfos.certificate, params.sidechainCreationVersion),
               ScCommitmentCertPath.deserialize(topCertInfos.commitmentCertPath),
               ScCommitmentCertPath.deserialize(nextTopCertInfos.commitmentCertPath),
             ) { (currWithdrawalCertificate, nextWithdrawalCertificate, certCommitmentCertPath, nextCertCommitmentCertPath) =>
@@ -125,11 +126,17 @@ trait Sc2ScUtils[
                   if (calculateMerklePath) buildEntireMerklePath(networkParams, ele, topCert)
                   else Array.emptyByteArray
                 Some(TopQualityCertificateInfos(topCert, ele.header.hashScTxsCommitment, merklePath))
-              case None => Option.empty
+              case None =>
+                println("top quality certificate not exists")
+                Option.empty
             }
-          case None => Option.empty
+          case None =>
+            println("mainchainblock reference by hash not exists")
+            Option.empty
         }
-      case None => Option.empty
+      case None =>
+        println("mainchain header hash not exists")
+        Option.empty
     }
   }
 
@@ -141,11 +148,14 @@ trait Sc2ScUtils[
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
       Using.resource(
-        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      ) {
-        pathCert =>
+        CommonCircuit.createWithdrawalCertificateBad(topCert, networkParams.sidechainCreationVersion)
+      ) { withdrawalCertificate =>
+        Using.resource(
+          commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()
+        ) { pathCert =>
           pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
           pathCert.serialize()
+        }
       }
     }
   }

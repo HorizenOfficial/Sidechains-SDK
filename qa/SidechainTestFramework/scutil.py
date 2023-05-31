@@ -73,29 +73,40 @@ def set_sc_parallel_test(n):
     global parallel_test
     parallel_test = n
 
+PARALLEL_TEST_PORT_OFFSET = 20
+SC_PORT_OFFSET = 4
 
 def start_port_modifier():
     if parallel_test > 0:
         # Adjust this multiplier if port clashing due to many nodes
-        return (parallel_test - 1) * 20
+        return (parallel_test - 1) * PARALLEL_TEST_PORT_OFFSET
 
+def multi_sc_port_modifier(n, sc_num):
+    if sc_num > 0:
+        return n + sc_num * SC_PORT_OFFSET
+    else:
+        return n
 
-def sc_p2p_port(n):
+def sc_p2p_port(n, sc_num=0):
     start_port = 8300
     if parallel_test > 0:
         start_port = 8500 + start_port_modifier()
-        return start_port + n
+        assert multi_sc_port_modifier(n, sc_num) < PARALLEL_TEST_PORT_OFFSET, "P2P port may clash with other nodes ports"
+        print(f'##########\nPORT {start_port + multi_sc_port_modifier(n, sc_num)}\n##########')
+        return start_port + multi_sc_port_modifier(n, sc_num)
     else:
-        return start_port + n + os.getpid() % 999
+        print(f'###########\nPORT {start_port + multi_sc_port_modifier(n, sc_num) + os.getpid() % 999}\n##########')
+        return start_port + multi_sc_port_modifier(n, sc_num) + os.getpid() % 999
 
 
-def sc_rpc_port(n):
+def sc_rpc_port(n, sc_num=0):
     start_port = 8200
     if parallel_test > 0:
         start_port += start_port_modifier()
-        return start_port + n
+        assert multi_sc_port_modifier(n, sc_num) < PARALLEL_TEST_PORT_OFFSET, "RPC port may clash with other nodes ports"
+        return start_port + multi_sc_port_modifier(n, sc_num)
     else:
-        return start_port + n + os.getpid() % 999
+        return start_port + multi_sc_port_modifier(n, sc_num) + os.getpid() % 999
 
 
 # To be removed
@@ -113,12 +124,12 @@ def wait_for_next_sc_blocks(node, expected_height, wait_for=25):
         time.sleep(WAIT_CONST)
 
 
-def wait_for_sc_node_initialization(nodes):
+def wait_for_sc_node_initialization(nodes, sc_num=0):
     """
     Wait for SC Nodes to be fully initialized. This is done by pinging a node until its socket will be fully open
     """
     for i in range(len(nodes)):
-        rpc_port = sc_rpc_port(i)
+        rpc_port = sc_rpc_port(i, sc_num)
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
             while not sock.connect_ex(("127.0.0.1", rpc_port)) == 0:
                 time.sleep(WAIT_CONST)
@@ -388,10 +399,10 @@ Parameters:
 """
 
 
-def get_known_peers(known_peers_indexes):
+def get_known_peers(known_peers_indexes, sc_num=0):
     addresses = []
     for index in known_peers_indexes:
-        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index))) + "\"")
+        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index, sc_num))) + "\"")
     peers = "[" + ",".join(addresses) + "]"
     return peers
 
@@ -431,11 +442,11 @@ Parameters:
 
 
 def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
-                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, sc_num=0):
     apiAddress = "127.0.0.1"
     configsData = []
-    apiPort = sc_rpc_port(n)
-    bindPort = sc_p2p_port(n)
+    apiPort = sc_rpc_port(n, sc_num)
+    bindPort = sc_p2p_port(n, sc_num)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     mc0datadir = os.path.join(dirname, "node0")
     websocket_config = sc_node_config.mc_connection_info
@@ -533,6 +544,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
+        "SC2SC_PROVING_KEY_PATH": sc_node_config.sc2sc_proving_key_file_path if sc_node_config.sc2sc_proving_key_file_path is not None else "",
+        "SC2SC_VERIFICATION_KEY_PATH": sc_node_config.sc2sc_verification_key_file_path if sc_node_config.sc2sc_verification_key_file_path is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),
@@ -543,7 +556,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
-        'TX_LIFETIME': sc_node_config.tx_lifetime
+        'TX_LIFETIME': sc_node_config.tx_lifetime,
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -562,11 +575,11 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
 Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
-def initialize_default_sc_datadir(dirname, n, api_key):
+def initialize_default_sc_datadir(dirname, n, api_key, sc_num=0):
     apiAddress = "127.0.0.1"
     configsData = []
-    apiPort = sc_rpc_port(n)
-    bindPort = sc_p2p_port(n)
+    apiPort = sc_rpc_port(n,sc_num)
+    bindPort = sc_p2p_port(n, sc_num)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
@@ -621,13 +634,13 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     return configsData
 
 
-def initialize_default_sc_chain_clean(test_dir, num_nodes, api_key=""):
+def initialize_default_sc_chain_clean(test_dir, num_nodes, api_key="", sc_num=0):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_default_sc_datadir(test_dir, i, api_key)
+        initialize_default_sc_datadir(test_dir, i, api_key, sc_num=sc_num)
 
 
 def initialize_sc_chain_clean(test_dir, num_nodes, model, genesis_secrets, genesis_info, array_of_MCConnectionInfo=[]):
@@ -658,10 +671,8 @@ SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpl
 EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* io.horizen.examples.EvmApp"
 
 
-
-
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
-                  auth_api_key=None):
+                  auth_api_key=None, sc_num=0):
     """
     Start a SC node and returns API connection to it
     """
@@ -687,12 +698,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
 
+    sidechainclient_processes.setdefault(sc_num, {})
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
-            sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
+            sidechainclient_processes[sc_num][i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
-        sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+        sidechainclient_processes[sc_num][i] = subprocess.Popen(bashcmd.split())
+    url = "http://%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i, sc_num))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir
@@ -700,7 +712,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
 
 def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
-                   auth_api_key=DEFAULT_API_KEY):
+                   auth_api_key=DEFAULT_API_KEY, sc_num=0):
     """
     Start multiple SC clients, return connections to them
     """
@@ -708,33 +720,33 @@ def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=Non
     if binary is None: binary = [None for i in range(num_nodes)]
     nodes = [
         start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
-                      auth_api_key=auth_api_key)
+                      auth_api_key=auth_api_key, sc_num=sc_num)
         for i in range(num_nodes)]
-    wait_for_sc_node_initialization(nodes)
+    wait_for_sc_node_initialization(nodes, sc_num=sc_num)
     return nodes
 
 
-def check_sc_node(i):
+def check_sc_node(i, sc_num=0):
     '''
     Check subprocess return code.
     '''
-    sidechainclient_processes[i].poll()
-    return sidechainclient_processes[i].returncode
+    sidechainclient_processes[sc_num][i].poll()
+    return sidechainclient_processes[sc_num][i].returncode
 
 
-def stop_sc_node(node, i):
+def stop_sc_node(node, i, sc_num=0):
     node.node_stop()
-    if i in sidechainclient_processes:
-        sc_proc = sidechainclient_processes[i]
+    if i in sidechainclient_processes[sc_num]:
+        sc_proc = sidechainclient_processes[sc_num][i]
         sc_proc.wait()
-        del sidechainclient_processes[i]
+        del sidechainclient_processes[sc_num][i]
 
 
-def stop_sc_nodes(nodes):
+def stop_sc_nodes(nodes, sc_num=0):
     global sidechainclient_processes
     for idx in range(0, len(nodes)):
-        if idx in sidechainclient_processes:
-            stop_sc_node(nodes[idx], idx)
+        if idx in sidechainclient_processes[sc_num]:
+            stop_sc_node(nodes[idx], idx, sc_num)
     del nodes[:]
 
 
@@ -744,23 +756,25 @@ def set_sc_node_times(nodes, t):
 
 def wait_sidechainclients():
     # Wait for all the processes to cleanly exit
-    for sidechainclient in sidechainclient_processes.values():
-        sidechainclient.wait()
+    for sidechain in sidechainclient_processes.values():
+        for sidechainclient in sidechain.values():
+            sidechainclient.wait()
+        sidechain.clear()
     sidechainclient_processes.clear()
 
 
-def get_sc_node_pids():
-    return [process.pid for process in sidechainclient_processes.values()]
+def get_sc_node_pids(sc_num=0):
+    return [process.pid for process in sidechainclient_processes[sc_num].values()]
 
 
-def connect_sc_nodes(from_connection, node_num, wait_for=25):
+def connect_sc_nodes(from_connection, node_num, wait_for=25, sc_num=0):
     """
     Connect a SC node, from_connection, to another one, specifying its node_num. 
     Method will attempt to create the connection for maximum wait_for seconds.
     """
     j = {"host": "127.0.0.1", \
-         "port": str(sc_p2p_port(node_num))}
-    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num))
+         "port": str(sc_p2p_port(node_num, sc_num))}
+    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num, sc_num))
     logging.info("Connecting to '" + ip_port + "'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
@@ -773,13 +787,13 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
         time.sleep(WAIT_CONST)
 
 
-def disconnect_sc_nodes(from_connection, node_num):
+def disconnect_sc_nodes(from_connection, node_num, sc_num=0):
     """
     Disconnect a SC node, from_connection, to another one, specifying its node_num.
     """
     j = {"host": "127.0.0.1", \
-         "port": str(sc_p2p_port(node_num))}
-    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
+         "port": str(sc_p2p_port(node_num, sc_num))}
+    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num, sc_num)) + "\""
     logging.info("Disconnecting from " + ip_port)
     from_connection.node_disconnect(json.dumps(j))
 
@@ -788,15 +802,15 @@ def sc_connected_peers(node):
     return node.node_connectedPeers()["result"]["peers"]
 
 
-def disconnect_sc_nodes_bi(nodes, a, b):
-    disconnect_sc_nodes(nodes[a], b)
-    disconnect_sc_nodes(nodes[b], a)
+def disconnect_sc_nodes_bi(nodes, a, b, sc_num=0):
+    disconnect_sc_nodes(nodes[a], b, sc_num)
+    disconnect_sc_nodes(nodes[b], a, sc_num)
     time.sleep(WAIT_CONST)
 
 
-def connect_sc_nodes_bi(nodes, a, b):
-    connect_sc_nodes(nodes[a], b)
-    connect_sc_nodes(nodes[b], a)
+def connect_sc_nodes_bi(nodes, a, b, sc_num=0):
+    connect_sc_nodes(nodes[a], b, sc_num)
+    connect_sc_nodes(nodes[b], a, sc_num)
 
 
 def connect_to_mc_node(sc_node, mc_node, *kwargs):
@@ -995,7 +1009,8 @@ network: {
 
 
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind, model=DefaultModel):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, model=DefaultModel, tmpdir=None,
+                              sc_num=0):
 
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
@@ -1032,14 +1047,16 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             csw_keys_paths,
                                                             None,
                                                             sc_creation_info.circuit_type)
+    if not tmpdir:
+        tmpdir = options.tmpdir
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, model, log_info,
-                                     options.restapitimeout)
+            bootstrap_sidechain_node(tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, model, log_info,
+                                     options.restapitimeout, sc_num)
         else:
-            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, model, log_info,
-                                     options.restapitimeout)
+            bootstrap_sidechain_node(tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, model, log_info,
+                                     options.restapitimeout, sc_num)
     return sc_nodes_bootstrap_info
 
 
@@ -1155,8 +1172,8 @@ Parameters:
 
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration, model,
-                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
-    initialize_sc_datadir(dirname, n, model, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
+                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, sc_num=0):
+    initialize_sc_datadir(dirname, n, model, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout, sc_num)
 
 
 def generate_forging_request(epoch, slot, forced_tx):

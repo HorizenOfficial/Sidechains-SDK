@@ -21,6 +21,7 @@ import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainMessageImpl;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 import org.junit.Rule;
 import org.junit.Test;
