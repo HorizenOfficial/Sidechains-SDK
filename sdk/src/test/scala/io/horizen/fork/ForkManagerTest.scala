@@ -4,8 +4,6 @@ import org.junit.Assert.{assertEquals, assertNotNull, assertNull, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
-import scala.util.Try
-
 class ForkManagerTest extends JUnitSuite {
 
   @Before
@@ -14,20 +12,32 @@ class ForkManagerTest extends JUnitSuite {
   }
 
   @Test
-  def ForkManagerTest(): Unit = {
+  def ForkManagerInitialization(): Unit = {
     val forkConfigurator = new SimpleForkConfigurator
 
-    var res = Try.apply(ForkManager.init(forkConfigurator, "wrongname"))
-    assertTrue("Expected failure on ForkManager initialization", res.isFailure)
+    assertThrows[IllegalArgumentException](
+      "Expected failure with an invalid network name",
+      ForkManager.init(forkConfigurator, "wrongname")
+    )
 
-    res = Try.apply(ForkManager.init(new BadForkConfigurator, "regtest"))
-    assertTrue("Expected failure on ForkManager initialization", res.isFailure)
+    assertThrows[RuntimeException](
+      "Expected failure with a bad fork configuration",
+      ForkManager.init(new BadForkConfigurator, "regtest")
+    )
 
-    res = Try.apply(ForkManager.init(forkConfigurator, "regtest"))
-    assertTrue("Expected successed ForkManager initialization", res.isSuccess)
+    // this should not throw
+    ForkManager.init(forkConfigurator, "regtest")
 
-    res = Try.apply(ForkManager.init(forkConfigurator, "regtest"))
-    assertTrue("Expected failure on ForkManager initialization", res.isFailure)
+    assertThrows[RuntimeException](
+      "Expected failure with an already initialized ForkManager",
+      ForkManager.init(forkConfigurator, "regtest")
+    )
+  }
+
+  @Test
+  def ForkManagerMandatoryForks(): Unit = {
+    val forkConfigurator = new SimpleForkConfigurator
+    ForkManager.init(forkConfigurator, "regtest")
 
     val mainchainFork1 = ForkManager.getMainchainFork(419)
     assertNull("Expected not to get mainchain fork", mainchainFork1)

@@ -66,7 +66,7 @@ class GoodOptionalForkConfigurator extends ForkConfigurator {
   override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
     Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
       new Pair(SidechainForkConsensusEpoch(0, 0, 0), MustNotDecreaseFork(0, 0)),
-      // this fork should be ignore during validation of MustNotDecreaseFork, as it is of a different type
+      // this fork should be ignored during validation of MustNotDecreaseFork, as it is of a different type
       new Pair(SidechainForkConsensusEpoch(1, 1, 1), GasFeeFork()),
       new Pair(SidechainForkConsensusEpoch(1, 1, 1), MustNotDecreaseFork(0, 1)),
       new Pair(SidechainForkConsensusEpoch(2, 2, 2), MustNotDecreaseFork(0, 2)),
