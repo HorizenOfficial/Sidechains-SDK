@@ -3,6 +3,7 @@ package io.horizen;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.horizen.block.MainchainBlockReference;
 import io.horizen.block.SidechainBlockBase;
+import io.horizen.fork.ForkConfigurator;
 import io.horizen.params.NetworkParams;
 import io.horizen.proof.VrfProof;
 import io.horizen.secret.PrivateKey25519;
@@ -22,4 +23,5 @@ public interface SidechainModel<T extends SidechainBlockBase<?, ?>> {
             MerklePath mp,
             NetworkParams params
     );
+    ForkConfigurator getForkConfigurator();
 }

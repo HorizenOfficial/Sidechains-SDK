@@ -84,7 +84,7 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
 
         BigInteger gasUsed = BigInteger.ZERO;
 
-        BigInteger gasLimit = GasFeeFork.DefaultGasFeeFork().blockGasLimit();
+        BigInteger gasLimit = GasFeeFork.get(0).blockGasLimit();
 
         SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 

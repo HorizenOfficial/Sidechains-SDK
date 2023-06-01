@@ -62,7 +62,7 @@ object ForkManager {
     initialized = true
   }
 
-  private[horizen] def reset(): Unit = {
+  def reset(): Unit = {
     initialized = false
   }
 }
