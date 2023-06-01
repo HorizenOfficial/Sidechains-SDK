@@ -245,6 +245,7 @@ abstract class AbstractForgeMessageBuilder[
                            mcRefDataRetrievalTimeout: Timeout,
                            forcedTx: Iterable[TX],
                            isPending: Boolean = false): ForgeResult = {
+    log.info("Start forging the next block...")
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
