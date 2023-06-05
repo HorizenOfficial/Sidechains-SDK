@@ -30,7 +30,7 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes32>() {},
-                new TypeReference<Bytes32>() {}
+                new TypeReference<DynamicBytes>() {}
         ));
     }
 
@@ -46,7 +46,7 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
         byte[] nextCertificateDataHash = ((Bytes32) listOfParams.get(6)).getValue();
         byte[] scCommitmentTreeRoot = ((Bytes32) listOfParams.get(7)).getValue();
         byte[] nextScCommitmentTreeRoot = ((Bytes32) listOfParams.get(8)).getValue();
-        byte[] proof = ((Bytes32) listOfParams.get(9)).getValue();
+        byte[] proof = ((DynamicBytes) listOfParams.get(9)).getValue();
 
         return new AccountCrossChainRedeemMessage(
                 messageType, sender, receiverSidechain, receiver, payload,

@@ -165,22 +165,21 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
       if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()) {
-        //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes + allowedCrossChainMessageBoxes)
-      }
-      else {
+      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+        //TODO: what if (allowedWithdrawalRequestBoxes + allowedCrossChainMessageBoxes) > nodeView.pool.size
+        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+        nodeView.pool.take(allowedCrossChainMessageBoxes)
+      } else
         nodeView.pool.take(nodeView.pool.size)
-      }
 
-    val filtered = mempoolTx
+    (mempoolTx
       .filter(tx => {
         nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
           nodeView.state.validateWithWithdrawalEpoch(tx,
             WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferenceData.size, withdrawalEpochInfo, params).epoch
           ).isSuccess
       })
-
-    val filtered2 = (filtered ++ forcedTx)
+      ++ forcedTx)
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
@@ -191,9 +190,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           true // continue data collection
         }
       })
-
-    val mapped = filtered2.map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
-    mapped
+      .map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {

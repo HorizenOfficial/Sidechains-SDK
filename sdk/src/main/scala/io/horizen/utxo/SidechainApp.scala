@@ -38,6 +38,7 @@ import io.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import io.horizen.utxo.forge.ForgerRef
 import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
+import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -201,7 +202,7 @@ class SidechainApp @Inject()
       SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, sc2scConfigurator, params)
+  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, sc2scConfigurator, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = if (sidechainSettings.apiRateLimiter.enabled) {

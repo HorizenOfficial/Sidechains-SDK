@@ -11,7 +11,7 @@ import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvi
 import io.horizen.fork.ForkManager
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, Sc2ScConfigurator}
+import io.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage, Sc2ScConfigurator}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -679,7 +679,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
       } else if (box.isInstanceOf[CrossChainMessageBox]) {
         crossChainMessagesToAppend.append(SidechainState.buildCrosschainMessageFromUTXO(box.asInstanceOf[CrossChainMessageBox], params))
       } else if (box.isInstanceOf[CrossChainRedeemMessageBox]) {
-        val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(box.asInstanceOf[CrossChainRedeemMessageBox].getCrossChainMessage)
+        val ccMsg = box.asInstanceOf[CrossChainRedeemMessageBox].getCrossChainMessage
+        val messageHash = ccMsg.getCrossChainMessageHash
         crossChainMessageHashFromRedeemMessagesToAppend.append(messageHash)
       } else {
         otherBoxesToAppend.append(box)
@@ -965,7 +966,7 @@ object SidechainState {
   }
 
   private[horizen] def buildCrosschainMessageFromUTXO(box: CrossChainMessageBox, params: NetworkParams): CrossChainMessage = {
-    new CrossChainMessageImpl(
+    new CrossChainMessage(
       box.getProtocolVersion,
       box.getMessageType,
       BytesUtils.reverseBytes(params.sidechainId),

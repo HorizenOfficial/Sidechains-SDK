@@ -47,7 +47,7 @@ sealed class CrossChainMessageMerkleTree {
       FieldElementUtils.deserializeMany(currMsg.bytes)
     ) {fieldElementsContainer =>
       Using.resource(
-        HashUtils.fieldElementListHash(fieldElementsContainer.getFieldElementCollection)
+        HashUtils.fieldElementsListHash(fieldElementsContainer.getFieldElementCollection)
       ) { cumulatedFieldElement =>
         msgTree.append(cumulatedFieldElement)
       }

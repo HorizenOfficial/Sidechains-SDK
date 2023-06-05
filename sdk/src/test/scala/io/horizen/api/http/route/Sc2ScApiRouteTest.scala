@@ -14,7 +14,7 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.util.{Failure, Success}
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageImpl, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
 import io.horizen.utils.BytesUtils
 
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
@@ -29,12 +29,12 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
   var simulateEnError = false
 
   val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
-    "VERSION_1",
     1,
-    BytesUtils.toHexString(getRandomBytes(14)),
-    BytesUtils.toHexString(getRandomBytes(14)),
-    BytesUtils.toHexString(getRandomBytes(14)),
-    BytesUtils.toHexString(getRandomBytes(14)),
+    1,
+    BytesUtils.toHexString(getRandomBytes(32)),
+    BytesUtils.toHexString(getRandomBytes(32)),
+    BytesUtils.toHexString(getRandomBytes(32)),
+    BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString("testPayload".getBytes))
 
   "The Api should to" should {
@@ -118,14 +118,14 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
   var anErrorDetail = "Dummy error detail"
 
   var redeemMesssage = new CrossChainRedeemMessageImpl(
-    new CrossChainMessageImpl(
+    new CrossChainMessage(
       CrossChainProtocolVersion.VERSION_1,
       1,
-      getRandomBytes(14),
-      getRandomBytes(14),
-      getRandomBytes(14),
-      getRandomBytes(14),
-      getRandomBytes(14)
+      getRandomBytes(32),
+      getRandomBytes(32),
+      getRandomBytes(32),
+      getRandomBytes(32),
+      getRandomBytes(32)
     ),
     getRandomBytes(14), getRandomBytes(14), getRandomBytes(14), getRandomBytes(14), getRandomBytes(14)
   )

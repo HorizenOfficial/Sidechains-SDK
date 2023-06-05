@@ -7,7 +7,7 @@ import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}
 import io.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import io.horizen.utxo.backup.BoxIterator
@@ -504,7 +504,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
 
-    if (params.isNonCeasing) {
+    if (Sc2ScUtils.isActive(params)) {
       if (crossChainMessagesToAppendSeq.nonEmpty) {
         // Calculate the next counter for storing crosschain messages requests without duplication previously stored ones.
         val nextCrossChainMessageEpochCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpochInfo.epoch) + 1
@@ -518,7 +518,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           ccMessages.add(b)
 
           //store also every  single hash separately with its epoch
-          val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(b)
+          val singleMessageHash = b.getCrossChainMessageHash
           updateList.add(new JPair(getCrosschainMessageSingleKey(singleMessageHash),
             new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
         }

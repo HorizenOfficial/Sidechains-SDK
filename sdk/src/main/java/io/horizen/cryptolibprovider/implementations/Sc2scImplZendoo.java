@@ -3,27 +3,19 @@ package io.horizen.cryptolibprovider.implementations;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.commitmenttreenative.ScCommitmentCertPath;
 import com.horizen.librustsidechains.Constants;
-import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.MerklePath;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
-import io.horizen.cryptolibprovider.utils.HashUtils;
-import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
-import io.horizen.sc2sc.CrossChainMessageHashImpl;
 import io.horizen.utils.BytesUtils;
-import io.horizen.utils.FieldElementsContainer;
 
 import java.util.Optional;
 
 public class Sc2scImplZendoo implements Sc2scCircuit {
-
     private static final int SEGMENT_SIZE = 1 << 15;
     public static final int CUSTOM_FIELDS_NUM = 32;
-    private static final int DLOG_KEYS_SIZE = 1 << 18;
 
     @Override
     public boolean generateSc2ScKeys(String provingKeyPath, String verificationKeyPath) throws Exception {
@@ -82,15 +74,5 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                 proof,
                 verifyKeyPath
         );
-    }
-
-    @Override
-    public CrossChainMessageHash getCrossChainMessageHash(CrossChainMessage msg) throws Exception {
-        try (
-                FieldElementsContainer fieldElementsContainer = FieldElementUtils.deserializeMany(msg.bytes());
-                FieldElement fe = HashUtils.fieldElementListHash(fieldElementsContainer.getFieldElementCollection())
-        ) {
-            return new CrossChainMessageHashImpl(fe.serializeFieldElement());
-        }
     }
 }

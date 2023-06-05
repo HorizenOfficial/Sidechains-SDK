@@ -115,7 +115,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(true);
 
         // Act
@@ -148,7 +148,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -182,7 +182,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -218,7 +218,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -267,7 +267,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);

@@ -1,10 +1,10 @@
 package io.horizen
 
-import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
-import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus.ConsensusEpochInfo
@@ -17,7 +17,6 @@ import sparkz.core.transaction.state.MinimalState
 import sparkz.util.ModifierId
 
 import java.util
-import scala.collection.JavaConverters._
 import scala.util.Using
 
 abstract class AbstractState[

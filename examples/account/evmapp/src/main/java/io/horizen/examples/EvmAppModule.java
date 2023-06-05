@@ -7,8 +7,11 @@ import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
 import io.horizen.account.api.http.AccountApplicationApiGroup;
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor;
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
+import io.horizen.account.state.MessageProcessorUtil;
 import io.horizen.account.transaction.AccountTransaction;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
@@ -68,9 +71,10 @@ public class EvmAppModule extends AccountAppModule {
         Sc2scCircuit circuit = new Sc2scImplZendoo();
         // Here I can add my custom logic to manage EthereumTransaction content.
         // todo: ricordarsi dell'ordine
+        ScTxCommitmentTreeRootHashMessageProcessor$ scTxMsgProc = MessageProcessorUtil.getScTxMsgProc();
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new VoteMessageProcessor(scId));
-        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath(), circuit));
+        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath(), circuit, scTxMsgProc));
         customMessageProcessors.add(new EvmMessageProcessor());
 
         // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.

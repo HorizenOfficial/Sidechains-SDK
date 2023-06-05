@@ -1,24 +1,19 @@
 package io.horizen.account.sc2sc
 
 import com.google.common.primitives.{Bytes, Ints}
-import io.horizen.SidechainSettings
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData}
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import io.horizen.account.state._
 import io.horizen.account.state.events.AddCrossChainMessage
-import io.horizen.account.state.{AccountStateView, BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
-import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.evm.Address
-import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageImpl, CrossChainProtocolVersion}
-import io.horizen.utils.{BytesUtils, ZenCoinsUtils}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainProtocolVersion}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.{StaticStruct, Type}
 import org.web3j.abi.datatypes.generated.Uint32
+import org.web3j.abi.datatypes.{StaticStruct, Type}
 import sparkz.crypto.hash.Keccak256
 
-import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
@@ -28,8 +23,7 @@ trait CrossChainMessageProvider {
 }
 abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) extends NativeSmartContractMsgProcessor with CrossChainMessageProvider {
 
-  val MaxCrosschainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch
-  val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+  private val MaxCrossChainMessagesPerEpoch = CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch
 
   protected def execGetListOfCrosschainMessages(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     if (msg.getValue.signum() != 0) {
@@ -71,14 +65,16 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
                                      view: BaseAccountStateView,
                                      currentEpochNum: Int): Array[Byte] = {
     val numOfReqs = getMessageEpochCounter(view, currentEpochNum)
-    if (numOfReqs >= MaxCrosschainMessagesPerEpoch) {
-      throw new ExecutionRevertedException("Reached maximum number of CrosschainMessages per epoch: request is invalid")
+    if (numOfReqs >= MaxCrossChainMessagesPerEpoch) {
+      throw new ExecutionRevertedException("Reached maximum number of CrossChainMessages per epoch: request is invalid")
     }
 
-    val messageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, sidechainId))
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, sidechainId)
+    val messageHash = ccMsg.getCrossChainMessageHash
+
     //check for duplicates in this and other message processor, in any epoch
     if (view.getCrossChainMessageHashEpoch(messageHash).nonEmpty) {
-      throw new ExecutionRevertedException("Duplicate crosschain message")
+      throw new ExecutionRevertedException("Duplicate CrossChain message")
     }
 
     val nextNum: Int = numOfReqs + 1
@@ -140,7 +136,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
 
 object AbstractCrossChainMessageProcessor {
   private[horizen] def buildCrosschainMessageFromAccount(data: AccountCrossChainMessage, sidechainId: Array[Byte]): CrossChainMessage = {
-    new CrossChainMessageImpl(
+    new CrossChainMessage(
       CrossChainProtocolVersion.VERSION_1,
       data.messageType,
       sidechainId,

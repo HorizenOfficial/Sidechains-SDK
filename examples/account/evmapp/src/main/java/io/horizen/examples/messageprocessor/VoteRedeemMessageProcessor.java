@@ -26,8 +26,8 @@ public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageP
     private SidechainSettings sidechainSettings;
     private Sc2scCircuit sc2scCircuit;
 
-    public VoteRedeemMessageProcessor(byte[] scId, Option<String> path, Sc2scCircuit sc2scCircuit) {
-        super(scId, path, sc2scCircuit);
+    public VoteRedeemMessageProcessor(byte[] scId, Option<String> path, Sc2scCircuit sc2scCircuit, ScTxCommitmentTreeRootHashMessageProvider scTxMsgProc) {
+        super(scId, path, sc2scCircuit, scTxMsgProc);
     }
 
     @Override
@@ -40,12 +40,6 @@ public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageP
             if (result == null) {
                 throw new ExecutionRevertedException("Could not create redeem message");
             }
-        } else if (opCodeHex.equals(SHOW_ALL_REDEEMED_VOTES)) {
-            Set<AccountCrossChainMessage> allRedeemedMessages = getAllRedeemedMessages();
-            System.out.println("The redeemed messages:");
-            Iterator<AccountCrossChainMessage> iterator = allRedeemedMessages.iterator();
-            System.out.println(iterator.next());
-            result = ToBeDeleted.serialise(allRedeemedMessages);
         } else {
             throw new ExecutionRevertedException(String.format("op code not supported: %s", opCodeHex));
         }

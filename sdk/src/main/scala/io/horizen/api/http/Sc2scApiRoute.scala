@@ -14,7 +14,7 @@ import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.json.Views
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
-import io.horizen.sc2sc.{CrossChainMessageImpl, CrossChainProtocolVersion, CrossChainRedeemMessage}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -58,15 +58,15 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
       _ =>
         entity(as[ReqCreateRedeemMessage]) { body =>
 
-          val crossChainMessage = new CrossChainMessageImpl(
-            CrossChainProtocolVersion.valueOf(body.message.protocolVersion),
-            body.message.messageType,
-            BytesUtils.fromHexString(body.message.senderSidechain),
-            BytesUtils.fromHexString(body.message.sender),
-            BytesUtils.fromHexString(body.message.receiverSidechain),
-            BytesUtils.fromHexString(body.message.receiver),
-            BytesUtils.fromHexString(body.message.payload)
-          )
+        val crossChainMessage = new CrossChainMessage(
+          CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
+          body.message.messageType,
+          BytesUtils.fromHexString(body.message.senderSidechain),
+          BytesUtils.fromHexString(body.message.sender),
+          BytesUtils.fromHexString(body.message.receiverSidechain),
+          BytesUtils.fromHexString(body.message.receiver),
+          BytesUtils.fromHexString(body.message.payload)
+        )
 
           val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
           Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
@@ -113,7 +113,7 @@ object Sc2scApiRouteRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class CrossChainMessageEle(
-                                                protocolVersion: String,
+                                                protocolVersion: Short,
                                                 messageType: Int,
                                                 senderSidechain: String,
                                                 sender: String,

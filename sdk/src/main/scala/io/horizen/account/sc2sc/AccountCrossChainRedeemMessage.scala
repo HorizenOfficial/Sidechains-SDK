@@ -34,7 +34,7 @@ case class AccountCrossChainRedeemMessage
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
       new Bytes32(nextScCommitmentTreeRoot),
-      new Bytes32(proof)
+      new DynamicBytes(proof)
     )
 }
 

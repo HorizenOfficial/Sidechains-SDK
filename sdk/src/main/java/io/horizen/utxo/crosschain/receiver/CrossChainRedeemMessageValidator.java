@@ -10,10 +10,10 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
+import io.horizen.utxo.crosschain.CrossChainValidator;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
-import io.horizen.utxo.crosschain.CrossChainValidator;
 import scala.collection.JavaConverters;
 
 import java.util.Arrays;
@@ -71,7 +71,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     }
 
     private void validateMsgDoubleRedeem(CrossChainMessage ccMsg) throws Exception {
-        CrossChainMessageHash currentMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg);
+        CrossChainMessageHash currentMsgHash = ccMsg.getCrossChainMessageHash();
         boolean ccMsgFromRedeemAlreadyExists = scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(currentMsgHash);
         if (ccMsgFromRedeemAlreadyExists) {
             throw new IllegalArgumentException(String.format("The message `%s` has already been redeemed", ccMsg));
@@ -90,7 +90,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
 
     private void verifyProof(CrossChainRedeemMessageBoxData ccMsgBoxData) throws Exception {
         CrossChainMessage ccMsg = ccMsgBoxData.getMessage();
-        CrossChainMessageHash ccMsgHash = sc2scCircuit.getCrossChainMessageHash(ccMsg);
+        CrossChainMessageHash ccMsgHash = ccMsg.getCrossChainMessageHash();
         boolean isProofVerified = sc2scCircuit.verifyRedeemProof(
                 ccMsgHash,
                 ccMsgBoxData.getScCommitmentTreeRoot(),

@@ -66,8 +66,7 @@ class SidechainStateStorageTest
 
   val _temporaryFolder = new TemporaryFolder()
 
-  val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true)
-  val sidechainSettings: SidechainSettings = mock[SidechainSettings]
+  val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
 
   val crossChainMessages : Seq[CrossChainMessage] = Seq(
     SidechainState.buildCrosschainMessageFromUTXO(getRandomCrossMessageBox(System.currentTimeMillis()), params)
@@ -177,7 +176,6 @@ class SidechainStateStorageTest
     assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
   }
 
-
   @Test
   def testUpdateNonCeasing(): Unit = {
     val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion, nonCeasingParams)
@@ -219,7 +217,7 @@ class SidechainStateStorageTest
     val ccMessages = new JArrayList[CrossChainMessage]()
     ccMessages.add(crossChainMessages.last)
     //store also every  single hash separately with its epoch
-    val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(ccMessages.get(0))
+    val singleMessageHash = ccMessages.get(0).getCrossChainMessageHash
     toUpdate.add(new Pair(stateStorage.getCrosschainMessageSingleKey(singleMessageHash),
       new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
     toUpdate.add(new Pair(stateStorage.getCrosschainMessagesKey(withdrawalEpochInfo.epoch, 0),

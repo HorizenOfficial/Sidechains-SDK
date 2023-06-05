@@ -6,7 +6,7 @@ import sparkz.core.serialization.SparkzSerializer;
 
 public class CrossChainMessageHashSerializer<T extends CrossChainMessageHash> implements SparkzSerializer<T> {
 
-    private static CrossChainMessageHashSerializer serializer;
+    private static final CrossChainMessageHashSerializer serializer;
 
     static {
         serializer = new CrossChainMessageHashSerializer();
@@ -20,7 +20,7 @@ public class CrossChainMessageHashSerializer<T extends CrossChainMessageHash> im
 
     @Override
     public T parse(Reader reader) {
-        return (T)new CrossChainMessageHashImpl(reader.getBytes(reader.getInt()));
+        return (T)new CrossChainMessageHash(reader.getBytes(reader.getInt()));
     }
 
     public static CrossChainMessageHashSerializer<CrossChainMessageHash> getSerializer(){

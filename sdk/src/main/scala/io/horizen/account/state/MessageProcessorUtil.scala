@@ -6,6 +6,9 @@ import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.Sc2ScUtils
 
 object MessageProcessorUtil {
+  private val scTxMsgProc = ScTxCommitmentTreeRootHashMessageProcessor
+
+  def getScTxMsgProc: ScTxCommitmentTreeRootHashMessageProcessor.type = scTxMsgProc
   def getMessageProcessorSeq(params: NetworkParams, customMessageProcessors: Seq[MessageProcessor]): Seq[MessageProcessor] = {
     val maybeKeyRotationMsgProcessor = params.circuitType match {
       case NaiveThresholdSignatureCircuit => None
@@ -13,10 +16,11 @@ object MessageProcessorUtil {
     }
     // val sc2ScMsgProcessors = if (Sc2ScUtils.isActive(params)) Seq(ScTxCommitmentTreeRootHashMessageProcessor())
     //                          else Seq()
+
     Seq(
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
-    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ Seq(ScTxCommitmentTreeRootHashMessageProcessor()) ++ customMessageProcessors
+    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ Seq(scTxMsgProc) ++ customMessageProcessors
   }
 }
