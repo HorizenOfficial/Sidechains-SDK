@@ -50,9 +50,11 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
     scNodeViewHolderRef: ActorRef,
@@ -1067,15 +1069,41 @@ class EthService(
           if (start > end) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
           }
+
+          val timeout = networkParams.getLogsQueryTimeout
+          var resultCount = 0
           // get the logs from all blocks in the range into one flat list
-          (start to end).flatMap(blockNumber => {
-            nodeView.history
-              .blockIdByHeight(blockNumber)
-              .map(ModifierId(_))
-              .flatMap(nodeView.history.getStorageBlockById)
-              .map(RpcFilter.getBlockLogs(stateView, _, query))
-              .get
-          })
+          val result: Try[Seq[EthereumLogView]] = Try {
+            val future = Future {
+              (start to end).flatMap(blockNumber => {
+                val logs = nodeView.history
+                  .blockIdByHeight(blockNumber)
+                  .map(ModifierId(_))
+                  .flatMap(nodeView.history.getStorageBlockById)
+                  .map(RpcFilter.getBlockLogs(stateView, _, query))
+                  .get
+
+                resultCount += logs.length
+                if (resultCount > networkParams.getLogsSizeLimit)
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a " + networkParams.getLogsSizeLimit +  " response size. Limit some parameters and try again."))
+
+                logs
+              })
+            }
+
+            Await.result(future, timeout)
+          }
+
+          result match {
+            case Success(logs) => logs
+            case Failure(exception) =>
+              exception match {
+                case _: TimeoutException =>
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Query execution time exceeded. Query duration must not exceed 10 seconds. Limit some parameters and try again."))
+                case  _: RpcException =>
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a 10K response size. Limit some parameters and try again."))
+              }
+          }
         }
       }
     }
