@@ -1,16 +1,16 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.state.CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig
-import io.horizen.account.utils.FeeUtils
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
-import io.horizen.evm.{Address, Hash}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito.when
@@ -144,7 +144,7 @@ class CertificateKeyRotationMsgProcessorTest
       if (epoch == 0)
         defaultBlockContext
       else
-        new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epoch, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
+        new BlockContext(Address.ZERO, 0, 0, DefaultGasFeeFork.blockGasLimit, 0, 0, epoch, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
 
     val messageToSign = keyRotationProof.keyType match {
       case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation

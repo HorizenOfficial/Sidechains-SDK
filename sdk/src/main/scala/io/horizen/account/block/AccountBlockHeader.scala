@@ -3,22 +3,23 @@ package io.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import io.horizen.account.utils.{BigIntegerUInt256, Bloom, BloomSerializer, FeeUtils}
+import io.horizen.account.utils.{BigIntegerUInt256, Bloom, BloomSerializer}
 import io.horizen.block.SidechainBlockHeaderBase
 import io.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import io.horizen.history.validation.InvalidSidechainBlockHeaderException
+import io.horizen.json.Views
 import io.horizen.json.serializer.{MerklePathJsonSerializer, SparkzModifierIdSerializer}
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree}
+import io.horizen.utils.{BytesUtils, MerklePath, MerklePathSerializer, MerkleTree, TimeToEpochUtils}
 import io.horizen.vrf.{VrfOutput, VrfOutputSerializer}
-import sparkz.util.ModifierId
-import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.block.Block
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
@@ -117,7 +118,8 @@ case class AccountBlockHeader(
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is non positive and therefore invalid.")
 
         // check, that gas limit is valid
-        if(gasLimit.compareTo(FeeUtils.GAS_LIMIT) != 0)
+        val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+        if(gasLimit.compareTo(feeFork.blockGasLimit) != 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit=$gasLimit is invalid.")
         if(gasUsed.signum() < 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasUsed=$gasUsed is below zero and therefore invalid.")

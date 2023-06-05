@@ -1,83 +1,68 @@
 package io.horizen.fork
 
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
-
-class ForkManager {}
-
 object ForkManager {
-    var networkName: String = null
+  private var initialized = false
 
-    var mainchainForks: ListBuffer[BaseMainchainHeightFork] = ListBuffer[BaseMainchainHeightFork]()
-    var consensusEpochForks: ListBuffer[BaseConsensusEpochFork] = ListBuffer[BaseConsensusEpochFork]()
+  /**
+   * List of mainchain forks, hardcoded.
+   */
+  private var mainchainForks: Map[Int, MainchainFork] = _
 
-    def getMainchainFork(mainchainHeight:Int):BaseMainchainHeightFork = {
-        if (networkName == null) {
-            throw new RuntimeException("Forkmanager hasn't been initialized.")
-        }
+  /**
+   * List of mandatory sidechain forks, the activation points have to be configured by the sidechain.
+   */
+  private var sidechainForks: Map[Int, MandatorySidechainFork] = _
 
-        if (mainchainForks.isEmpty)
-            throw new RuntimeException("MainchainForks list is empty")
+  /**
+   * List of optional sidechain forks, these are configured by the sidechain.
+   */
+  private var optionalSidechainForks: Seq[(Int, OptionalSidechainFork)] = _
 
-        val mcForksIter = mainchainForks.iterator
-        var mcFork: BaseMainchainHeightFork = null
-
-        networkName match {
-            case "regtest" => mcForksIter.takeWhile(fork => fork.heights.regtestHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-            case "testnet" => mcForksIter.takeWhile(fork => fork.heights.testnetHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-            case "mainnet" => mcForksIter.takeWhile(fork => fork.heights.mainnetHeight <= mainchainHeight).foreach(fork => {mcFork = fork})
-        }
-
-        mcFork
+  /**
+   * Finds the latest fork in the given sequence of forks with an activation height less or equal than the given height.
+   */
+  private def findActiveFork[T](forks: Traversable[(Int, T)], height: Int): Option[T] = {
+    forks.foldLeft(Option.empty[T]) { case (active, (activation, fork)) =>
+      if (activation <= height) Some(fork)
+      else return active
     }
+  }
 
-    def getSidechainConsensusEpochFork(consensusEpoch:Int):BaseConsensusEpochFork = {
-        if (networkName == null) {
-            throw new RuntimeException("Forkmanager hasn't been initialized.")
-        }
+  private def assertInitialized(): Unit = {
+    if (!initialized) throw new RuntimeException("Forkmanager hasn't been initialized.")
+  }
 
-        if (consensusEpochForks.isEmpty)
-            throw new RuntimeException("ConsensusEpochForks list is empty")
+  def getMainchainFork(mainchainHeight: Int): MainchainFork = {
+    assertInitialized()
+    findActiveFork(mainchainForks, mainchainHeight).orNull
+  }
 
-        val consensusForksIter = consensusEpochForks.iterator
-        var consensusFork: BaseConsensusEpochFork = null
+  def getSidechainFork(consensusEpoch: Int): MandatorySidechainFork = {
+    assertInitialized()
+    findActiveFork(sidechainForks, consensusEpoch).orNull
+  }
 
-        networkName match {
-            case "regtest" => consensusForksIter.takeWhile(fork => fork.epochNumber.regtestEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-            case "testnet" => consensusForksIter.takeWhile(fork => fork.epochNumber.testnetEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-            case "mainnet" => consensusForksIter.takeWhile(fork => fork.epochNumber.mainnetEpochNumber <= consensusEpoch).foreach(fork => {consensusFork = fork})
-        }
+  def getOptionalSidechainFork[T <: OptionalSidechainFork : Manifest](consensusEpoch: Int): Option[T] = {
+    assertInitialized()
+    val forksOfTypeT = optionalSidechainForks.collect({ case (i, fork: T) => (i, fork) })
+    findActiveFork(forksOfTypeT, consensusEpoch)
+  }
 
-        consensusFork
-    }
+  def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
+    if (initialized) throw new IllegalStateException("ForkManager is already initialized.")
 
-    def init(forkConfigurator:ForkConfigurator, networkName:String): Try[Unit] = Try {
-        if (this.networkName != null) {
-            throw new IllegalStateException("ForkManager is already initialized.")
-        }
+    ForkUtil.validate(MainchainFork.forks)
+    forkConfigurator.check()
 
-        networkName match {
-            case "regtest" | "testnet" | "mainnet" => this.networkName = networkName
-            case _ => throw new IllegalArgumentException("Unknown network type.")
-        }
+    // preselect the network as it cannot change during runtime
+    mainchainForks = ForkUtil.selectNetwork(networkName, MainchainFork.forks).toMap
+    sidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.mandatorySidechainForks).toMap
+    optionalSidechainForks = ForkUtil.selectNetwork(networkName, forkConfigurator.optionalSidechainForks).toSeq
 
-        mainchainForks += new BaseMainchainHeightFork(BaseMainchainHeightFork.DEFAULT_MAINCHAIN_FORK_HEIGHTS)
+    initialized = true
+  }
 
-        forkConfigurator.check() match {
-            case Success(_) => {
-                consensusEpochForks += new BaseConsensusEpochFork(forkConfigurator.getBaseSidechainConsensusEpochNumbers())
-                consensusEpochForks += new SidechainFork1(forkConfigurator.getSidechainFork1())
-            }
-            case Failure(exception) => {
-                this.networkName = null
-                throw exception
-            }
-        }
-    }
-
-    private[horizen] def reset(): Unit = {
-        this.networkName = null
-        this.mainchainForks = ListBuffer[BaseMainchainHeightFork]()
-        this.consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()
-    }
+  def reset(): Unit = {
+    initialized = false
+  }
 }

@@ -264,10 +264,7 @@ abstract class AbstractSidechainApp
 
   // Init ForkManager
   // We need to have it initializes before the creation of the SidechainState
-  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
-    case Success(_) =>
-    case Failure(exception) => throw exception
-  }
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
