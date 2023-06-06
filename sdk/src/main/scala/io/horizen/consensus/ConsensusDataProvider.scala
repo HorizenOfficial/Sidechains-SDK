@@ -1,21 +1,19 @@
 package io.horizen.consensus
 
-import java.security.MessageDigest
 import com.google.common.primitives.{Ints, Longs}
 import io.horizen.block.SidechainBlockHeaderBase
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fork.ForkManager
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.storage.SidechainBlockInfoProvider
-import io.horizen.utils.{LruCache, TimeToEpochUtils, Utils}
+import io.horizen.utils.{ByteArrayWrapper, LruCache, TimeToEpochUtils, Utils}
 import io.horizen.vrf.VrfOutput
-import io.horizen.utils.ByteArrayWrapper
-import io.horizen.utxo.block.SidechainBlockHeader
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import scala.compat.java8.OptionConverters._
 
 trait ConsensusDataProvider {
@@ -108,8 +106,8 @@ trait ConsensusDataProvider {
     // Note: first epoch nonce is a timestamp of genesis block - 8 bytes.
     // And moreover `buildVrfMessage` expect for the concatenated value with the value that fits FieldElement.
     // TODO: think about the usage of VRF inside the circuit.
-    val nonceLength = ForkManager.getSidechainConsensusEpochFork(currentEpoch).nonceLength
-    val resultHash = nonceMessageDigest.digest();
+    val nonceLength = ForkManager.getSidechainFork(currentEpoch).nonceLength
+    val resultHash = nonceMessageDigest.digest()
     NonceConsensusEpochInfo(byteArrayToConsensusNonce(resultHash.slice(0, nonceLength)))
   }
 

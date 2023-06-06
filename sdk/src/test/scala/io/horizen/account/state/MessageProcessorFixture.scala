@@ -1,10 +1,10 @@
 package io.horizen.account.state
 
 import io.horizen.account.AccountFixture
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorageView
-import io.horizen.account.utils.FeeUtils
-import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import io.horizen.evm.{Address, Hash, MemoryDatabase, StateDB}
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
@@ -19,7 +19,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val origin: Address = randomAddress
   val defaultBlockContext =
-    new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
+    new BlockContext(Address.ZERO, 0, 0, DefaultGasFeeFork.blockGasLimit, 0, 0, 0, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
       val stateDb = new StateDB(db, Hash.ZERO)

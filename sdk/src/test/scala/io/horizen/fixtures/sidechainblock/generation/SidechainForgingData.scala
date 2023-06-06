@@ -1,16 +1,15 @@
 package io.horizen.fixtures.sidechainblock.generation
 
-import java.util.Random
 import io.horizen.consensus._
 import io.horizen.fork.ForkManager
 import io.horizen.proof.VrfProof
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
-import io.horizen.utxo.box.ForgerBox
 import io.horizen.utxo.box.data.ForgerBoxData
 import io.horizen.vrf.VrfOutput
 
 import java.nio.charset.StandardCharsets
+import java.util.Random
 
 
 case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingStakeInfo, vrfSecret: VrfSecretKey) {
@@ -27,7 +26,7 @@ case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingS
   }
 
   private def stakeCheck(vrfOutput: VrfOutput, totalStake: Long, nextEpochNumber: ConsensusEpochNumber): Boolean = {
-    val applied = ForkManager.getSidechainConsensusEpochFork(nextEpochNumber).stakePercentageForkApplied
+    val applied = ForkManager.getSidechainFork(nextEpochNumber).stakePercentageForkApplied
     vrfProofCheckAgainstStake(vrfOutput, forgingStakeInfo.stakeAmount, totalStake, stakePercentageFork = applied)
   }
 

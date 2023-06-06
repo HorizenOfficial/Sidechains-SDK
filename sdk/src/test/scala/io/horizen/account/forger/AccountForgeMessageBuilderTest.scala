@@ -1,6 +1,5 @@
 package io.horizen.account.forger
 
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.block.AccountBlockHeader
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.history.AccountHistory
@@ -16,18 +15,20 @@ import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncod
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
-import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.horizen.state.BaseStateReader
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
-import io.horizen.evm.{Address, Hash}
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
@@ -54,6 +55,11 @@ class AccountForgeMessageBuilderTest
       with CompanionsFixture
       with SecretFixture
       with SidechainRelatedMainchainOutputFixture {
+
+  @Before
+  def init(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+  }
 
   @Test
   def testConsistentStateAfterMissingMsgProcessorError(): Unit = {
@@ -270,6 +276,7 @@ class AccountForgeMessageBuilderTest
       sidechainGenesisBlockTimestamp = genesisTimestamp
     )
     Mockito.when(nodeView.history.params).thenReturn(params)
+    Mockito.when(nodeView.history.modifierById(any())).thenReturn(None)
 
     val epochInfoWE0 = WithdrawalEpochInfo(epoch = 0, lastEpochIndex = 1)
     Mockito.when(nodeView.history.blockInfoById(any())).thenAnswer(_ => {

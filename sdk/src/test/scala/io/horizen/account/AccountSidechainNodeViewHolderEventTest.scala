@@ -15,6 +15,7 @@ import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm.{Address, Database}
 import io.horizen.fixtures._
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
@@ -56,6 +57,7 @@ class AccountSidechainNodeViewHolderEventTest
 
   @Before
   def setUp(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     historyMock = mock[AccountHistory]
 
     stateViewMock = mock[AccountStateView]
@@ -179,6 +181,7 @@ class AccountSidechainNodeViewHolderEventTest
     val consensusDataStorage: ConsensusDataStorage = mock[ConsensusDataStorage]
     val stateMetadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
     Mockito.when(stateMetadataStorage.isEmpty).thenReturn(true)
+    Mockito.when(stateMetadataStorage.getConsensusEpochNumber).thenReturn(None)
     val stateDbStorage: Database = mock[Database]
     val customMessageProcessors: Seq[MessageProcessor] = Seq()
     val secretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
