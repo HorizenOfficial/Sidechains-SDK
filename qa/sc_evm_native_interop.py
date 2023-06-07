@@ -41,6 +41,9 @@ class SCEvmNativeInterop(AccountChainSetup):
         node = self.sc_nodes[0]
 
         # Compile and deploy the NativeInterop contract
+        # d9908c86: GetForgerStakes()
+        # 3ef7a7c9: GetForgerStakesCallCode()
+        # 585e290d: GetForgerStakesDelegateCall()
         _, contract_address = self.deploy("NativeInterop")
 
         # Fetch all forger stakes via the NativeInterop contract
@@ -61,6 +64,26 @@ class SCEvmNativeInterop(AccountChainSetup):
 
         # Verify identical results
         assert_equal(expected_value, actual_value, "results do not match")
+
+        # Verify DELEGATECALL to a native contract throws an error
+        delegate_call_result = node.rpc_eth_call(
+            {
+                "to": contract_address,
+                "input": "0x585e290d"
+            }, "latest"
+        )
+        assert_true("error" in delegate_call_result)
+        assert_true("unsupported call method" in delegate_call_result["error"]["message"])
+
+        # Verify CALLCODE to a native contract throws an error
+        call_code_result = node.rpc_eth_call(
+            {
+                "to": contract_address,
+                "input": "0x3ef7a7c9"
+            }, "latest"
+        )
+        assert_true("error" in call_code_result)
+        assert_true("unsupported call method" in call_code_result["error"]["message"])
 
         # Verify tracing gives reasonable result for the call from EVM contract to native contract
         trace_response = node.rpc_debug_traceCall(
