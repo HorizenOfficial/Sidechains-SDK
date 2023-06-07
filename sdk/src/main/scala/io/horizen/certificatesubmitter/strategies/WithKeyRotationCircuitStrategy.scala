@@ -117,15 +117,13 @@ class WithKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
 
     val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
+    val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
     val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  if (sc2scConfig.canSendMessages) {
       Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
     } else {
       None
     }
-
-    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getSchnorrKeysHash(getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber))
 
     val previousCertificateBytes: Array[Byte] = sc2ScDataForCertificate match {
       case Some(sc2scData) => sc2scData.previousTopQualityCertificateHash match {
@@ -140,8 +138,7 @@ class WithKeyRotationCircuitStrategy[
       case None => Array.emptyByteArray
     }
 
-    val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
+    val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(keysRootHash, messageTreeRootHash, previousCertificateBytes).asJava)
 
     // For circuit with key rotation signing keys can be changed

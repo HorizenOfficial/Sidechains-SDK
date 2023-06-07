@@ -2,9 +2,9 @@ package io.horizen.account.state.events
 
 import io.horizen.account.state.events.annotation.{Indexed, Parameter}
 import io.horizen.evm.Address
-import org.web3j.abi.datatypes.DynamicBytes
+import io.horizen.utils.BytesUtils
+import org.web3j.abi.datatypes.{DynamicBytes, Utf8String, Address => AbiAddress}
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
-import org.web3j.abi.datatypes.{Address => AbiAddress}
 
 import scala.annotation.meta.getter
 
@@ -17,8 +17,7 @@ case class AddCrossChainRedeemMessage(
                                        @(Parameter @getter)(6) certificateDataHash: Bytes32,
                                        @(Parameter @getter)(7) nextCertificateDataHash: Bytes32,
                                        @(Parameter @getter)(8) scCommitmentTreeRoot: Bytes32,
-                                       @(Parameter @getter)(9) nextScCommitmentTreeRoot: Bytes32,
-                                       @(Parameter @getter)(10) proof: DynamicBytes
+                                       @(Parameter @getter)(9) nextScCommitmentTreeRoot: Bytes32
                                      )
 
 object AddCrossChainRedeemMessage {
@@ -31,8 +30,7 @@ object AddCrossChainRedeemMessage {
              certificateDataHash: Array[Byte],
              nextCertificateDataHash: Array[Byte],
              scCommitmentTreeRoot: Array[Byte],
-             nextScCommitmentTreeRoot: Array[Byte],
-             proof: Array[Byte],
+             nextScCommitmentTreeRoot: Array[Byte]
            ): AddCrossChainRedeemMessage =
     new AddCrossChainRedeemMessage(
       new AbiAddress(sender.toString),
@@ -43,7 +41,6 @@ object AddCrossChainRedeemMessage {
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
-      new Bytes32(nextScCommitmentTreeRoot),
-      new DynamicBytes(proof)
+      new Bytes32(nextScCommitmentTreeRoot)
     )
 }

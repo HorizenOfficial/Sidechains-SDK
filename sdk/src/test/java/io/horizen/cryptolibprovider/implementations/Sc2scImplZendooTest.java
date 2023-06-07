@@ -61,7 +61,7 @@ public class Sc2scImplZendooTest {
 
         Sc2scImplZendoo circuit = new Sc2scImplZendoo();
 
-        ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, 1 << 18);
+        ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, Sc2scImplZendoo.SEGMENT_SIZE);
         assertTrue(circuit.generateSc2ScKeys(provingKeyPath, verificationKeyPath));
 
         try (
@@ -96,10 +96,10 @@ public class Sc2scImplZendooTest {
         CrossChainMessage msg1 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(),
-                "sender1".getBytes(),
-                "receiverSidechain1receiverSidech".getBytes(),
-                "receiver1".getBytes(),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
                 "payload1".getBytes()
         );
 
@@ -161,7 +161,6 @@ public class Sc2scImplZendooTest {
         public byte[] nextScTxCommitmentsRoot;
         public byte[] currentScTxCommitmentsRoot;
         public byte[] msgHash;
-
         public byte[] proof;
 
         public RandomProofData(byte[] nextScTxCommitmentsRoot, byte[] currentScTxCommitmentsRoot,

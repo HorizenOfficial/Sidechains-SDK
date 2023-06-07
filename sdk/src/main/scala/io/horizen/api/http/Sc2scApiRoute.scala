@@ -93,7 +93,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
             BytesUtils.fromHexString(body.message.payload)
           )
 
-          val bla = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(crossChainMessage, BytesUtils.fromHexString(body.scId))
+          val bla = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(crossChainMessage, BytesUtils.fromHexString(body.scId))
           val future = sc2scProver ? BuildRedeemMessage(bla)
           Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
             case Success(ret) => {

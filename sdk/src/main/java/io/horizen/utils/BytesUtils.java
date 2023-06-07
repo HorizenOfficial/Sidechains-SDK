@@ -12,6 +12,7 @@ import sparkz.util.encode.Base58;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 public final class BytesUtils {
     private BytesUtils() {}

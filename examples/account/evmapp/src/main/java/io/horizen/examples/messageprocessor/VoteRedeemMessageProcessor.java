@@ -52,7 +52,7 @@ public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageP
             byte[] arguments = getArgumentsFromData(msg.getData());
             RedeemSendVoteCmdInputDecoder decoder = new RedeemSendVoteCmdInputDecoder();
             return decoder.decode(arguments);
-        } catch (ExecutionRevertedException e) {
+        } catch (ExecutionRevertedException | ClassNotFoundException e) {
             return null;
         }
     }

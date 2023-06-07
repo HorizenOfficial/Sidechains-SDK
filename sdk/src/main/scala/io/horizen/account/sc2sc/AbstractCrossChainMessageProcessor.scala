@@ -38,7 +38,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
   }
 
   override def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
-    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(msg, sidechainId))
+    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(msg, sidechainId))
   }
 
   private[horizen] def getListOfCrossChainMessagesRecords(epochNum: Int, view: BaseAccountStateView): Seq[AccountCrossChainMessage] = {
@@ -69,7 +69,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
       throw new ExecutionRevertedException("Reached maximum number of CrossChainMessages per epoch: request is invalid")
     }
 
-    val ccMsg = AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(request, sidechainId)
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(request, sidechainId)
     val messageHash = ccMsg.getCrossChainMessageHash
 
     //check for duplicates in this and other message processor, in any epoch
@@ -135,7 +135,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
 }
 
 object AbstractCrossChainMessageProcessor {
-  private[horizen] def buildCrosschainMessageFromAccount(data: AccountCrossChainMessage, sidechainId: Array[Byte]): CrossChainMessage = {
+  private[horizen] def buildCrossChainMessageFromAccount(data: AccountCrossChainMessage, sidechainId: Array[Byte]): CrossChainMessage = {
     new CrossChainMessage(
       CrossChainProtocolVersion.VERSION_1,
       data.messageType,

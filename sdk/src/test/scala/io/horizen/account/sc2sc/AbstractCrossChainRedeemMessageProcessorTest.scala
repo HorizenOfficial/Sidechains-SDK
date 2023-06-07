@@ -28,11 +28,12 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
-    val badScId = "badSidechainId".getBytes
+    val badScId = BytesUtils.fromHexString("7a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb623")
     when(networkParamsMock.sidechainId).thenReturn(badScId)
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -47,12 +48,12 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenTryToRedeemTheSameMessageTwice_throwsAnIllegalArgumentException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
-
     when(mockStateView.doesCrossChainMessageHashFromRedeemMessageExist(any())).thenReturn(true)
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -67,14 +68,13 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenScTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
-
     when(mockStateView.getAccountStorage(ArgumentMatchers.eq(contractAddress), any())).thenReturn(Array.emptyByteArray)
-
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(scCommitmentTreeRoot, mockStateView)).thenReturn(false)
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -89,15 +89,14 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenScNextTxCommitmentTreeHashDoesNotExist_throwsAnIllegalArgumentException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
-
     when(mockStateView.getAccountStorage(ArgumentMatchers.eq(contractAddress), any())).thenReturn(Array.emptyByteArray)
-
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(scCommitmentTreeRoot, mockStateView)).thenReturn(true)
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(false)
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -112,19 +111,16 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenProofCannotBeVerified_throwsAnIllegalArgumentException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
-
     when(mockStateView.getAccountStorage(ArgumentMatchers.eq(contractAddress), any())).thenReturn(Array.emptyByteArray)
-
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(scCommitmentTreeRoot, mockStateView)).thenReturn(true)
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(true)
-
     when(sc2scCircuitMock.verifyRedeemProof(any(), any(), any(), any(), any())).thenReturn(false)
-
     when(networkParamsMock.sc2ScVerificationKeyFilePath).thenReturn(Some("sc2ScVerificationKeyFilePath"))
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act
     val exception = intercept[ExecutionRevertedException] {
@@ -139,19 +135,16 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
   @Test
   def whenAllValidationsPass_throwsNoException(): Unit = {
     // Arrange
-    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
     val msg = mock[Message]
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
-
     when(mockStateView.getAccountStorage(ArgumentMatchers.eq(contractAddress), any())).thenReturn(Array.emptyByteArray)
-
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(scCommitmentTreeRoot, mockStateView)).thenReturn(true)
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(true)
-
     when(sc2scCircuitMock.verifyRedeemProof(any(), any(), any(), any(), any())).thenReturn(true)
-
     when(networkParamsMock.sc2ScVerificationKeyFilePath).thenReturn(Some("sc2ScVerificationKeyFilePath"))
+
+    val ccRedeemMsgProcessor: AbstractCrossChainRedeemMessageProcessor = new CrossChainRedeemMessageProcessorImpl(networkParamsMock.sidechainId, networkParamsMock.sc2ScVerificationKeyFilePath, sc2scCircuitMock, scTxCommProvider)
 
     // Act & Assert
     try withGas(ccRedeemMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))

@@ -7,6 +7,7 @@ import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state._
 import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}

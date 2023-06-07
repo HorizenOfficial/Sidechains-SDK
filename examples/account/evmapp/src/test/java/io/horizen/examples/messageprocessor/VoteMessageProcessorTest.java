@@ -13,28 +13,22 @@ import static org.mockito.Mockito.mock;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Optional;
 
 import static org.junit.Assert.*;
 
 public class VoteMessageProcessorTest {
-    private final BaseAccountStateView view = mock(BaseAccountStateView.class);
-    private final GasPool gasPool = mock(GasPool.class);
-    private final BlockContext blockContext = mock(BlockContext.class);
     @Test
-    public void test() throws ExecutionFailedException {
+    public void sendVoteMessageFunctionBytesIsCorrectlyEncodedAndDecoded() throws ExecutionFailedException, ClassNotFoundException {
         AccountCrossChainMessage ccMsg = new AccountCrossChainMessage(
                 1,
                 BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"),
+                BytesUtils.fromHexString("7a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb623"),
                 BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"),
-                BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"),
-                "8".getBytes(StandardCharsets.UTF_8)
+                "1234".getBytes(StandardCharsets.UTF_8)
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteMessageProcessor.SEND_VOTE), ccMsg.encode());
-        String dataStringHes = BytesUtils.toHexString(data);
 
-        VoteMessageProcessor processor = new VoteMessageProcessor(BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"));
         Message msg = getMessage(
                 new Address(BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600")),
                 data,

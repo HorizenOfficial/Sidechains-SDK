@@ -24,14 +24,18 @@ public class VoteMessageProcessor extends AbstractCrossChainMessageProcessor {
         String opCodeHex = getFunctionSignature(msg.getData());
         byte[] result;
         if (opCodeHex.equals(SEND_VOTE)) {
-            result = sendVote(msg, view, blockContext.withdrawalEpochNumber);
+            try {
+                result = sendVote(msg, view, blockContext.withdrawalEpochNumber);
+            } catch (Exception e) {
+                throw new ExecutionRevertedException("Cannot process vote", e);
+            }
         } else {
             throw new ExecutionRevertedException(String.format("op code not supported: %s", opCodeHex));
         }
         return result;
     }
 
-    private byte[] sendVote(Message msg, BaseAccountStateView view, int withdrawalEpoch) throws ExecutionRevertedException {
+    private byte[] sendVote(Message msg, BaseAccountStateView view, int withdrawalEpoch) throws ExecutionRevertedException, ClassNotFoundException {
         byte[] argumentsByte = getArgumentsFromData(msg.getData());
         SendVoteCmdInputDecoder decoder = new SendVoteCmdInputDecoder();
         AccountCrossChainMessage accCCMsg = decoder.decode(argumentsByte);

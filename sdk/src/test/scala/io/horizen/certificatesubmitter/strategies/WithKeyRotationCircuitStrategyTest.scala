@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Optional
 import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
 import org.mockito.ArgumentMatchers.any
+import org.scalatest.Assertions.{assertResult, fail}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
@@ -46,7 +47,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
+class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
 
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = _
@@ -207,7 +208,7 @@ class WithKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
       assertEquals(32, args.getArgument(3).asInstanceOf[Array[Byte]].length)
       assertEquals(0L, args.getArgument(4).asInstanceOf[Long])
       assertEquals(54L, args.getArgument(5).asInstanceOf[Long])
-      assertArrayEquals(keysRootHash, args.getArgument(6).asInstanceOf[Array[Byte]])
+      assertEquals(java.util.List.of(keysRootHash, Array.emptyByteArray, Array.emptyByteArray), args.getArgument(6).asInstanceOf[java.util.List[Byte]])
       msg.clone()
     })
 

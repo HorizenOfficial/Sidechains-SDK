@@ -1,10 +1,13 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import io.horizen.utils.BytesUtils
+import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Utf8String}
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
-import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
+
+import java.util
 
 case class AccountCrossChainRedeemMessage
 (
@@ -18,13 +21,34 @@ case class AccountCrossChainRedeemMessage
   scCommitmentTreeRoot: Array[Byte],
   nextScCommitmentTreeRoot: Array[Byte],
   proof: Array[Byte]
-) extends BytesSerializable with ABIEncodable[StaticStruct] {
+) extends BytesSerializable with ABIEncodable[DynamicStruct] {
   override type M = AccountCrossChainRedeemMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainRedeemMessage] = AccountCrossChainRedeemMessageSerializer
 
-  override def asABIType(): StaticStruct =
-    new StaticStruct(
+  private def chunkProofIn32Bytes(bytes: Array[Byte]): java.util.List[Bytes32] = {
+    val result = new util.ArrayList[Bytes32]()
+    val chunkSize = 32
+    var start = 0
+    while (start < bytes.length) {
+      val end = Math.min(bytes.length, start + chunkSize)
+      val toBeInserted = Array.fill[Byte](32)(0)
+      val chunkCopy = util.Arrays.copyOfRange(bytes, start, end)
+
+      var index = 0
+      while (index < chunkCopy.length) {
+        toBeInserted(index) = chunkCopy(index)
+        index += 1
+      }
+
+      result.add(new Bytes32(toBeInserted))
+      start += chunkSize
+    }
+    result
+  }
+
+  override def asABIType(): DynamicStruct = {
+    new DynamicStruct(
       new Uint32(messageType),
       new Bytes20(sender),
       new Bytes32(receiverSidechain),
@@ -34,9 +58,11 @@ case class AccountCrossChainRedeemMessage
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
       new Bytes32(nextScCommitmentTreeRoot),
-      new DynamicBytes(proof)
+      new Utf8String(BytesUtils.toHexString(proof)),
     )
+  }
 }
+
 
 object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[AccountCrossChainRedeemMessage] {
   override def serialize(redeemMsg: AccountCrossChainRedeemMessage, w: Writer): Unit = {
