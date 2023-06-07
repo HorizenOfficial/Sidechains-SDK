@@ -199,7 +199,12 @@ class SidechainApp @Inject()
   val sidechainBlockForgerActorRef: ActorRef = forge.ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
-  val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+  val sidechainTransactionActorRef: ActorRef = if (sidechainSettings.apiRateLimiter.enabled) {
+    val rateLimiterActorRef: ActorRef = SidechainTransactionRateLimiterActorRef(nodeViewHolderRef, sidechainSettings.apiRateLimiter)
+    SidechainTransactionActorRef(rateLimiterActorRef)
+  } else {
+    SidechainTransactionActorRef(nodeViewHolderRef)
+  }
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, SidechainHistory]("SidechainBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
@@ -213,8 +218,6 @@ class SidechainApp @Inject()
   //Websocket server for the Explorer
   val websocketServerSettings: WebSocketServerSettings = sidechainSettings.websocketServer
   if(websocketServerSettings.wsServer) {
-    if (websocketServerSettings.wsServerAllowedOrigins.nonEmpty)
-      throw new IllegalArgumentException("wsServerAllowedOrigins property is not supported in the UTXO model websocket!")
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
@@ -226,7 +229,8 @@ class SidechainApp @Inject()
     MainchainBlockApiRoute[TX,
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
+    SidechainNodeApiRoute[TX,
+      SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),

@@ -57,7 +57,7 @@ There are two ways to interact with the node:
 The project has a Maven module structure and consists of 4 modules:
 1) SDK - The core of the sidechain SDK
 2) ScBootstrappingTool - A tool that supports the creation of a sidechain configuration file that allows the synchronization with the mainchain network
-3) [Simple App](examples/simpleapp/README.md) - An example application without any specific custom logic that runs a node. The node can be connected to the mainchain network or isolated from it
+3) [Simple App](examples/utxo/simpleapp/README.md) - An example application without any specific custom logic that runs a node. The node can be connected to the mainchain network or isolated from it
 4) Q/A - [Sidechain Test Framework](qa/README.md) for sidechain testing via RPC/REST commands
 
 **Configuration**

@@ -15,6 +15,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion}
 
@@ -225,6 +226,30 @@ abstract class AbstractSidechainNodeViewHolder[
       applyLocallyGeneratedTransactions(newTxs.txs)
   }
 
+  override protected def updateMemPool(blocksRemoved: Seq[PMOD], blocksApplied: Seq[PMOD], memPool: MP, state: MS): MP = {
+    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+    val appliedTxs = blocksApplied.flatMap(extractTransactions)
+
+    val txToMempool = rolledBackTxs.filter(tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    )
+
+    val filteredMempool = memPool.filter(tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[TX@unchecked] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    )
+
+    filteredMempool.putWithoutCheck(txToMempool)
+  }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
@@ -249,8 +274,8 @@ abstract class AbstractSidechainNodeViewHolder[
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
-                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
+                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully and node view updated!")
 
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool

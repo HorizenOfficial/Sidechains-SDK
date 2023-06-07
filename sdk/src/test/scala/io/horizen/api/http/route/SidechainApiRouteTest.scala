@@ -36,7 +36,7 @@ import io.horizen.utxo.csw.CswManager.Responses._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
-import io.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.{ForgerSettings, GenesisDataSettings, LogInfoSettings, SidechainSettings, SidechainTypes, WithdrawalEpochCertificateSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -48,9 +48,9 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.app.Version
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.network._
-import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
+import sparkz.core.settings.{NetworkSettings, RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, bytesToId}
@@ -134,12 +134,29 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
   Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
 
+  val mockedNetworkSettings: NetworkSettings = mock[NetworkSettings]
+  Mockito.when(mockedNetworkSettings.nodeName).thenAnswer(_ => "node0")
+  Mockito.when(mockedNetworkSettings.agentName).thenAnswer(_ => "2-Hop")
+  Mockito.when(mockedNetworkSettings.appVersion).thenAnswer(_ => "0.0.1")
+
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
     val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
     Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+    Mockito.when(mockedSparkzSettings.logDir).thenAnswer(_ => File.createTempFile("tmp", ""))
     mockedSparkzSettings
   })
+  Mockito.when(mockedSidechainSettings.logInfo).thenAnswer(_ => LogInfoSettings())
+  Mockito.when(mockedSidechainSettings.forger).thenAnswer(_ => ForgerSettings())
+  Mockito.when(mockedSidechainSettings.withdrawalEpochCertificateSettings).thenAnswer(_ => {
+    val mockWithdrawalEpochCertificateSettings = mock[WithdrawalEpochCertificateSettings]
+    Mockito.when(mockWithdrawalEpochCertificateSettings.submitterIsEnabled).thenReturn(true)
+    Mockito.when(mockWithdrawalEpochCertificateSettings.certificateSigningIsEnabled).thenReturn(true)
+    mockWithdrawalEpochCertificateSettings
+  })
+
+  val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
+  Mockito.when(mockedSparkzSettings.network).thenAnswer(_ => mockedNetworkSettings)
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
 
@@ -218,6 +235,14 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (sidechainApiMockConfiguration.getShould_peerManager_GetBlacklistedPeers_reply())
             sender ! Seq[InetAddress](inetAddrBlackListed_1.getAddress, inetAddrBlackListed_2.getAddress)
           else new Exception("No black listed peers.")
+        case GetPeer(addr) =>
+          if (sidechainApiMockConfiguration.getShould_peerManager_GetPeer_reply())
+            sender ! peers(addr)
+        case AddToBlacklist(_, _) =>
+
+        case RemoveFromBlacklist(_) =>
+        case RemovePeer(_) =>
+
       }
       TestActor.KeepRunning
     }
@@ -233,6 +258,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
             sender ! connectedPeers
           else sender ! Failure(new Exception("No connected peers."))
         case ConnectTo(_) =>
+        case DisconnectFromAddress(_) =>
       }
       TestActor.KeepRunning
     }
@@ -387,7 +413,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
     sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute[BoxTransaction[Proposition, Box[Proposition]],
+    SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
     SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo, NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
@@ -400,6 +427,14 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainSubmitterApiRouteWithKeyRotation: Route = SidechainSubmitterApiRoute(mockedRESTSettings, params, mockedCertSubmitterActorRef, mockedSidechainNodeViewHolderRef, CircuitTypes.NaiveThresholdSignatureCircuitWithKeyRotation).route
 
   val basePath: String
+
+  Mockito.when(mockedSidechainApp.settings).thenAnswer(_ => mockedSparkzSettings)
+  Mockito.when(mockedSidechainApp.sidechainSettings).thenAnswer(_ => mockedSidechainSettings)
+  Mockito.when(mockedSidechainApp.sidechainSettings.genesisData).thenAnswer(_ => {
+    val mockedGenesisData: GenesisDataSettings = mock[GenesisDataSettings]
+    Mockito.when(mockedGenesisData.mcNetwork).thenAnswer(_ => "unit test")
+    mockedGenesisData
+  })
 
   protected def assertsOnSidechainErrorResponseSchema(msg: String, errorCode: String): Unit = {
     mapper.readTree(msg).get("error") match {

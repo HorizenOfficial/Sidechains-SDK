@@ -25,6 +25,8 @@ class SidechainApiMockConfiguration {
 
   val blockActor_ForgingEpochAndSlot_reply: mutable.Map[ConsensusEpochAndSlot, Try[ModifierId]] = mutable.Map[ConsensusEpochAndSlot, Try[ModifierId]]()
   private var should_peerManager_GetAllPeers_reply: Boolean = true
+  private var should_peerManager_GetPeer_reply: Boolean = true
+  private var should_peerManager_AddToBlacklist_reply: Boolean = true
   private var should_networkController_GetConnectedPeers_reply = true
   private var should_peerManager_GetBlacklistedPeers_reply = true
   private var should_history_getBestMainchainBlockReferenceInfo_return_value = true
@@ -80,6 +82,14 @@ class SidechainApiMockConfiguration {
   def getSshould_peerManager_GetAllPeers_reply(): Boolean = should_peerManager_GetAllPeers_reply
 
   def setShould_peerManager_GetAllPeers_reply(value: Boolean): Unit = should_peerManager_GetAllPeers_reply = value
+
+  def setShould_peerManager_GetPeer_reply(value: Boolean): Unit = should_peerManager_GetPeer_reply = value
+
+  def getShould_peerManager_GetPeer_reply(): Boolean = should_peerManager_GetPeer_reply
+
+  def getShould_peerManager_AddToBlacklist_reply(): Boolean = should_peerManager_AddToBlacklist_reply
+
+  def setShould_peerManager_AddToBlacklist_reply(value: Boolean): Unit = should_peerManager_AddToBlacklist_reply = value
 
   def getShould_networkController_GetConnectedPeers_reply(): Boolean = should_networkController_GetConnectedPeers_reply
 

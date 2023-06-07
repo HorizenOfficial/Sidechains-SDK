@@ -6,64 +6,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.horizen.account.secret.PrivateKeySecp256k1Creator;
-import io.horizen.account.utils.FeeUtils;
-import io.horizen.account.block.AccountBlock;
-import io.horizen.account.block.AccountBlockHeader;
-import io.horizen.account.companion.SidechainAccountTransactionsCompanion;
-import io.horizen.account.proposition.AddressProposition;
-import io.horizen.account.utils.Bloom;
 import io.horizen.account.secret.PrivateKeySecp256k1;
-import io.horizen.account.state.AccountStateView;
-import io.horizen.account.state.MessageProcessor;
-import io.horizen.account.state.MessageProcessorInitializationException;
-import io.horizen.account.state.MessageProcessorUtil;
-import io.horizen.account.storage.AccountStateMetadataStorageView;
-import io.horizen.account.transaction.AccountTransaction;
-import io.horizen.account.utils.AccountFeePaymentsUtils;
-import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
-import io.horizen.block.*;
-import io.horizen.cryptolibprovider.CircuitTypes;
-import io.horizen.utxo.block.SidechainBlock;
-import io.horizen.utxo.block.SidechainBlockHeader;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.ForgerBox;
+import io.horizen.account.secret.PrivateKeySecp256k1Creator;
+import io.horizen.block.MainchainBlockReference;
+import io.horizen.block.SidechainBlockBase;
+import io.horizen.block.SidechainCreationVersions;
+import io.horizen.block.SidechainsVersionsManager;
 import io.horizen.companion.SidechainSecretsCompanion;
-import io.horizen.utxo.companion.SidechainTransactionsCompanion;
-import io.horizen.consensus.ForgingStakeInfo;
+import io.horizen.cryptolibprovider.CircuitTypes;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.CryptoLibProvider;
-import io.horizen.evm.Hash;
-import io.horizen.evm.MemoryDatabase;
-import io.horizen.evm.StateDB;
+import io.horizen.fork.ForkManager;
 import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
 import io.horizen.params.RegTestParams;
 import io.horizen.params.TestNetParams;
-import io.horizen.proof.Proof;
 import io.horizen.proof.VrfProof;
-import io.horizen.proposition.Proposition;
 import io.horizen.secret.*;
 import io.horizen.tools.utils.Command;
 import io.horizen.tools.utils.CommandProcessor;
 import io.horizen.tools.utils.MessagePrinter;
-import io.horizen.utxo.transaction.SidechainTransaction;
 import io.horizen.transaction.mainchain.SidechainCreation;
 import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
-import scala.collection.Seq;
-import scala.collection.mutable.ListBuffer;
+import scala.concurrent.duration.FiniteDuration;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
@@ -71,6 +49,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
     // used in both generateCertProofInfo and generateCswProofInfo cmds
     private static boolean dlogKeyInit = false;
+    private static final int maxSeedLength = 1000;
+    private static final int minSeedLength = 6;
+    private final SidechainModel<?> scModel;
 
     private static boolean initDlogKey() {
         if (dlogKeyInit) {
@@ -83,8 +64,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         return true;
     }
 
-    public ScBootstrappingToolCommandProcessor(MessagePrinter printer) {
+    public ScBootstrappingToolCommandProcessor(MessagePrinter printer, SidechainModel<?> scModel) {
         super(printer);
+        this.scModel = scModel;
     }
 
     @Override
@@ -182,6 +164,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 "\thelp\n" +
                 "\tgeneratekey <arguments>\n" +
                 "\tgenerateVrfKey <arguments>\n" +
+                "\tgenerateAccountKey <arguments>\n" +
                 "\tgenerateCertificateSignerKey <arguments>\n" +
                 "\tgenerateCertProofInfo <arguments>\n" +
                 "\tgenerateCswProofInfo <arguments>\n" +
@@ -193,7 +176,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgeneratekey {\"seed\":\"my seed\"}");
+                "\tgeneratekey {\"seed\":\"my seed\"}" +
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -202,7 +186,19 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             printGenerateKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
-        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+
+        String seed = json.get("seed").asText();
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
@@ -217,7 +213,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateVrfKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
+                "\tgenerateVrfKey {\"seed\":\"my seed\"}" +
+                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
@@ -228,7 +225,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+        String seed = json.get("seed").asText();
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("vrfSecret", BytesUtils.toHexString(secretsCompanion.toBytes(vrfSecretKey)));
@@ -241,7 +244,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateAccountKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+                "\tgenerateAccountKey {\"seed\":\"my seed\"}" +
+                " - seed can be any string from " + minSeedLength +" up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateAccountKey(JsonNode json) {
@@ -250,8 +254,20 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
+        String seed = json.get("seed").asText();
+
+        if (seed.length() < minSeedLength) {
+            printGenerateKeyUsageMsg("seed is too short.");
+            return;
+        }
+
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
-        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(json.get("seed").asText().getBytes(StandardCharsets.UTF_8));
+        PrivateKeySecp256k1 secret = PrivateKeySecp256k1Creator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
         resJson.put("accountSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secret)));
@@ -264,7 +280,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
+                "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}" +
+                " - seed can be empty string or any string up to " + maxSeedLength + " characters long");
     }
 
     private void processGenerateCertificateSignerKey(JsonNode json) {
@@ -273,8 +290,13 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        byte[] seed = json.get("seed").asText().getBytes(StandardCharsets.UTF_8);
-        SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed);
+        String seed = json.get("seed").asText();
+        if (seed.length() > maxSeedLength) {
+            printGenerateKeyUsageMsg("seed is too long.");
+            return;
+        }
+
+        SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed.getBytes(StandardCharsets.UTF_8));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         ObjectNode resJson = mapper.createObjectNode();
@@ -749,11 +771,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        // Undocumented optional argument, that is used in STF to decrease genesis block timestamps
-        // to be able to generate next sc blocks without delays.
-        // can be used only in Regtest network
-        int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
-
         // Parsing the info: scid, powdata vector, mc block height, mc block hex, mc initial BlockSCTxCommTreeCumulativeHash
         int offset = 0;
         try {
@@ -813,9 +830,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
-            List<MainchainHeader> mainchainHeadersData = Collections.singletonList(mcRef.header());
-
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
             if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
@@ -838,119 +852,26 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             VrfProof vrfProof = vrfSecretKey.prove(vrfMessage).getKey();
             VrfOutput vrfOutput = vrfProof.proofToVrfOutput(vrfSecretKey.publicImage(), vrfMessage).get();
             MerklePath mp = new MerklePath(new ArrayList<>());
-            // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
-            long currentTimeSeconds = System.currentTimeMillis() / 1000;
-            long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
+
+            // initialize ForkManager because genesis parameters might depend on forks activating at epoch 0
+            ForkManager.reset();
+            ForkManager.init(scModel.getForkConfigurator(), mcNetworkName);
 
             int withdrawalEpochLength;
             String sidechainBlockHex;
-            byte block_version;
 
             // are we building a utxo or account model based block?
-            if (model.equals("account")) {
-                block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
-                // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
-
-                byte[] stateRoot;
-                try {
-                    stateRoot = getGenesisStateRoot(mainchainBlockReferencesData, params);
-                }
-                catch (Exception e) {
-                    printer.print(String.format("Error: 'Could not get genesis state root: %s", e.getMessage()));
-                    return;
-                }
-
-                byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH.toBytes(); // empty root hash (no receipts)
-
-                // taken from the creation cc out
-                AddressProposition forgerAddress = new AddressProposition(
-                          MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
-                                  sidechainCreation.getScCrOutput().address()));
-
-                BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
-
-                BigInteger gasUsed = BigInteger.ZERO;
-
-                BigInteger gasLimit = FeeUtils.GAS_LIMIT();
-
-                SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
-
-                ForgingStakeInfo forgingStakeInfo = sidechainCreation.getAccountForgerStakeInfo();
-
-                Bloom logsBloom = new Bloom();
-
-                AccountBlock accountBlock = AccountBlock.create(
-                        params.sidechainGenesisBlockParentId(),
-                        block_version,
-                        timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<AccountTransaction<Proposition, Proof<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<AccountBlockHeader>>()).asScala().toSeq(),
-                        key,
-                        forgingStakeInfo,
-                        vrfProof,
-                        vrfOutput,
-                        mp,
-                        feePaymentsHash,
-                        stateRoot,
-                        receiptsRoot,
-                        forgerAddress,
-                        baseFee,
-                        gasUsed,
-                        gasLimit,
-                        sidechainTransactionsCompanion,
-                        logsBloom,
-                        scala.Option.empty()
-                ).get();
-
-                try {
-                    SidechainCreation creationOutput = (SidechainCreation) accountBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                }
-                catch (Exception e) {
-                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                    return;
-                }
-
-                sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
-            } else {
-                block_version = SidechainBlock.BLOCK_VERSION();
-                // no fee payments expected for the genesis block
-                byte[] feePaymentsHash = new byte[32];
-
-                ForgerBox forgerBox = sidechainCreation.getBox();
-                ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
-
-                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), CircuitTypes.NaiveThresholdSignatureCircuit());
-
-                SidechainBlock sidechainBlock = SidechainBlock.create(
-                        params.sidechainGenesisBlockParentId(),
-                        block_version,
-                        timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
-                        key,
-                        forgingStakeInfo,
-                        vrfProof,
-                        mp,
-                        feePaymentsHash,
-                        sidechainTransactionsCompanion,
-                        scala.Option.empty()
-                ).get();
-
-                try {
-                    SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-                } catch (Exception e) {
-                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                    return;
-                }
-                sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            SidechainBlockBase<?, ?> blockBase = scModel.buildScGenesisBlock(
+                    mcRef, sidechainCreation, json, key, vrfProof, vrfOutput, mp, params
+            );
+            try {
+                SidechainCreation creationOutput = (SidechainCreation) blockBase.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+            } catch (Exception e) {
+                printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                return;
             }
+            sidechainBlockHex = BytesUtils.toHexString(blockBase.bytes());
 
             boolean isNonCeasing = (withdrawalEpochLength == 0);
 
@@ -998,39 +919,6 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
     }
 
-    private AccountStateView getStateView(scala.collection.Seq<MessageProcessor> mps) {
-        var dbm = new MemoryDatabase();
-        StateDB stateDb = new StateDB(dbm, new Hash(AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT()));
-        return new AccountStateView(null, stateDb, mps);
-    }
-
-    private byte[] getGenesisStateRoot(List<MainchainBlockReferenceData> mainchainBlockReferencesData, NetworkParams params) throws MessageProcessorInitializationException {
-        // TODO customMessageProcessors - for the time being we do not handle them in the bootstrapping tool.
-        // If needed they should be somehow passed as parameters and added here
-        Seq<MessageProcessor> customMessageProcessors = new ListBuffer<MessageProcessor>();
-
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
-
-        AccountStateView view = getStateView(messageProcessorSeq);
-        try(view){
-
-            // init all the message processors
-            scala.collection.Iterator iter = messageProcessorSeq.iterator();
-            while (iter.hasNext()) {
-                ((MessageProcessor)iter.next()).init(view);
-            }
-
-            // apply sc creation output, this will call forger stake msg processor
-            for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-                view.applyMainchainBlockReferenceData(mcBlockRefData);
-            }
-
-            // get the state root after all state-changing operations
-            return view.getIntermediateRoot();
-
-        }
-    }
-
     private String getNetworkName(byte network) {
         switch(network) {
             case 0:
@@ -1050,11 +938,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false,10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10, FiniteDuration.apply(2, TimeUnit.SECONDS));
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

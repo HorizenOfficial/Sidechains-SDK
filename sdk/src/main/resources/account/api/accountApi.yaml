@@ -1832,6 +1832,177 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /node/info:
+    post:
+      tags:
+        - node
+      summary: get general node information
+      description: Returns the general node information.
+      operationId: nodeInfo
+      security:
+        - basicAuth: [ ]
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      nodeName:
+                        type: string
+                      nodeType:
+                        type: string
+                      protocolVersion:
+                        type: string
+                      agentName:
+                        type: string
+                      sdkVersion:
+                        type: string
+                      scId:
+                        type: string
+                      scType:
+                        type: string
+                      scModel:
+                        type: string
+                      scBlockHeight:
+                        type: integer
+                      scConsensusEpoch:
+                        type: integer
+                      epochForgersStake:
+                        type: integer
+                        format: int64
+                      nextBaseFee:
+                        type: integer
+                        format: int64
+                      scWithdrawalEpochLength:
+                        type: integer
+                      scWithdrawalEpochNum:
+                        type: integer
+                      scEnv:
+                        type: string
+                      lastMcBlockReferenceHash:
+                        type: string
+                      numberOfPeers:
+                        type: integer
+                      numberOfConnectedPeers:
+                        type: integer
+                      numberOfBlacklistedPeers:
+                        type: integer
+                      maxMemPoolSlots:
+                        type: integer
+                      numOfTxInMempool:
+                        type: integer
+                      executableTxSize:
+                        type: integer
+                      nonExecutableTxSize:
+                        type: integer
+                      lastCertEpoch:
+                        type: integer
+                      lastCertQuality:
+                        type: integer
+                        format: int64
+                      lastCertBtrFee:
+                        type: integer
+                        format: int64
+                      lastCertFtMinAmount:
+                        type: integer
+                        format: int64
+                      lastCertHash:
+                        type: string
+                      errors:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/peer:
+    post:
+      tags:
+        - node
+      summary: get the peer’s info by address
+      description: Returns the peer’s info by address if it exists.
+      operationId: peer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      peer:
+                        type: object
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/removePeer:
+    post:
+      tags:
+        - node
+      summary: removes the address from the internal peer database or the blacklist
+      description: Removes the address from the internal peer database or the blacklist if it exists, and returns OK if successful.
+      operationId: removePeer
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /node/connect:
     post:
       tags:
@@ -1927,6 +2098,82 @@ paths:
                 properties:
                   result:
                     $ref: '#/components/schemas/BlacklistedPeersNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/addToBlacklist:
+    post:
+      tags:
+        - node
+      summary: moves an existing address from the internal peer database to the blacklist
+      description: Moves an existing address from the internal peer database to the blacklist  for specified duration in minutes, and returns OK if successful.
+      operationId: addToBlacklist
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+                - durationInMinutes
+              properties:
+                address:
+                  type: string
+                durationInMinutes:
+                  type: number
+                  format: long
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/removeFromBlacklist:
+    post:
+      tags:
+        - node
+      summary: removes the address from the blacklist, if it exists, and adds it to the new buckets
+      description: Removes the address from the blacklist, if it exists, and adds it to the new buckets and returns OK if successful.
+      operationId: removeFromBlacklist
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:

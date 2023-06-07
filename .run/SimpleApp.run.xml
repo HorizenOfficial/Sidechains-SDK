@@ -10,7 +10,7 @@
     <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="io.horizen.examples.*" />
+        <option name="PATTERN" value="io.horizen.examples.EvmAppModule" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

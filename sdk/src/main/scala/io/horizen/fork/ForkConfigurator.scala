@@ -1,27 +1,41 @@
 package io.horizen.fork
 
-import scala.util.{Failure, Success, Try}
+import io.horizen.utils.Pair
+
+import java.util
+import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 abstract class ForkConfigurator {
-  final def getBaseSidechainConsensusEpochNumbers():ForkConsensusEpochNumber = {
-    ForkConsensusEpochNumber(0, 0, 0)
-  }
 
-  def getSidechainFork1():ForkConsensusEpochNumber
+  /**
+   * Mandatory for every sidechain to provide an epoch number here.
+   */
+  val fork1activation: SidechainForkConsensusEpoch
 
-  final def check(): Try[Unit] = {
-    val baseConsensusEpochNumbers = getBaseSidechainConsensusEpochNumbers()
-    val fork1EpochNumbers = getSidechainFork1()
+  /**
+   * Return the map of configured consensus epoch numbers to mandatory sidechain forks.
+   */
+  final lazy val mandatorySidechainForks: Map[SidechainForkConsensusEpoch, MandatorySidechainFork] =
+    MandatorySidechainFork.forks(fork1activation)
 
-    //Fork 1
-    if ((fork1EpochNumbers.regtestEpochNumber < baseConsensusEpochNumbers.regtestEpochNumber)
-      || (fork1EpochNumbers.testnetEpochNumber < baseConsensusEpochNumbers.testnetEpochNumber)
-      || (fork1EpochNumbers.mainnetEpochNumber < baseConsensusEpochNumbers.mainnetEpochNumber))
-      Failure(new RuntimeException("Inappropriate SidechainFork1 activation height."))
-    /*
-    * Put checks for each other implemented forks here, comparing corresponding epoch numbers with previous fork
-    */
-    else
-      Success()
+  /**
+   * Return the map of optional sidechain forks and their consensus epoch numbers.
+   */
+  final lazy val optionalSidechainForks: Seq[(SidechainForkConsensusEpoch, OptionalSidechainFork)] =
+    getOptionalSidechainForks.asScala.map(x => (x.getKey, x.getValue))
+
+  /**
+   * Return a list of optional forks with their consensus epoch numbers.
+   */
+  def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+    new util.ArrayList()
+
+  final def check(): Unit = {
+    // validate activations
+    ForkUtil.validate(mandatorySidechainForks)
+    ForkUtil.validate(optionalSidechainForks)
+    // allow each optional fork instance to validate against all other optional forks
+    val values = optionalSidechainForks.map(_._2)
+    optionalSidechainForks.foreach({ case (_, fork) => fork.validate(values) })
   }
 }

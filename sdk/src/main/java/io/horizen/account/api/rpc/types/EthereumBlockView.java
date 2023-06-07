@@ -41,9 +41,9 @@ public class EthereumBlockView {
     // no PoW, no nonce, but we explicity set it to all zeroes as some RPC clients are very strict here (e.g. GETH)
     public final String nonce = "0x0000000000000000";
     // we do not have uncles
-    public final String sha3Uncles = "0x";
+    public final String sha3Uncles = "0x0000000000000000000000000000000000000000000000000000000000000000";
     // we do not have extraData in the block
-    public final String extraData = "0x";
+    public final String extraData = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
     private EthereumBlockView(Long blockNumber, Hash blockHash, AccountBlock block, List<?> txs) {
         var header = block.header();

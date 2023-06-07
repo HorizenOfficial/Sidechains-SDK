@@ -22,7 +22,7 @@ import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfer
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.FeeUtils.calculateNextBaseFee
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.{BigIntegerUInt256, _}
+import io.horizen.account.utils._
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
@@ -35,7 +35,6 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
-import org.bouncycastle.crypto.digests.KeccakDigest
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
@@ -51,9 +50,11 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
     scNodeViewHolderRef: ActorRef,
@@ -220,7 +221,14 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
-  def call(params: TransactionArgs, tag: String): Array[Byte] = applyOnAccountView(doCall(_, params, tag))
+  def call(params: TransactionArgs, input: Object): Array[Byte] = {
+    applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
+      doCall(nodeView, params, tag)
+    }
+  }
+
+
 
   @RpcMethod("eth_sendTransaction")
   def sendTransaction(params: TransactionArgs): Hash = {
@@ -378,18 +386,48 @@ class EthService(
 
   @RpcMethod("eth_getBalance")
   @RpcOptionalParameters(1)
-  def getBalance(address: Address, tag: String): BigInteger = {
+  def getBalance(address: Address, input: Object): BigInteger = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         tagStateView.getBalance(address)
       }
     }
   }
 
+  // Retrieve block tag from an EIP-1898 rpc input
+  // if the input is a string-string map extract the tag from block number or block hash
+  // if the input is a string it return its value
+  // for the other inputs an exception is thrown
+  private def getBlockTagByEip1898Input(nodeView: NV, input: Object): String = input match {
+
+    // string-string map case
+    case inputMap: Map[String, String] =>
+      if (inputMap.contains("blockNumber") && inputMap.contains("blockHash")) {
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both block number and block hash can't be passed as input parameter"))
+      }
+      else if (inputMap.contains("blockNumber")) {
+        inputMap("blockNumber")
+      }
+      else if (inputMap.contains("blockHash")) {
+        Option(inputMap("blockHash")).filter(_ != null).map(_.substring(2)).map(getBlockTagById(nodeView, _)).orNull
+      }
+      else null
+
+    // legacy string input
+    case inputString: String => inputString
+    case null => null
+
+    // throw an invalid params exception in all the other cases
+    case _ => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "input parameters format is not correct"))
+  }
+
+
   @RpcMethod("eth_getTransactionCount")
   @RpcOptionalParameters(1)
-  def getTransactionCount(address: Address, tag: String): BigInteger = {
+  def getTransactionCount(address: Address, input: Object): BigInteger = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         tagStateView.getNonce(address)
       }
@@ -487,6 +525,15 @@ class EthService(
       case height => ModifierId(nodeView.history.blockIdByHeight(height).getOrElse(throw BlockNotFoundException()))
     }
     blockId
+  }
+
+  private def getBlockTagById(nodeView: NV, id: String): String = {
+    val blockNumberOptional = nodeView.history.getBlockHeightById(id)
+    if(blockNumberOptional.isEmpty)
+      throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash"))
+    val blockNumber = blockNumberOptional.get()
+    val blockTag = "0x" + blockNumber.longValue().toHexString
+    blockTag
   }
 
   private def getBlockIdByHash(tag: String): Option[ModifierId] = {
@@ -655,7 +702,7 @@ class EthService(
     pendingStateView.updateTransactionReceipts(receiptList)
 
     // update next base fee
-    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block))
+    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block, networkParams))
 
     pendingStateView
   }
@@ -717,8 +764,9 @@ class EthService(
 
   @RpcMethod("eth_getCode")
   @RpcOptionalParameters(1)
-  def getCode(address: Address, tag: String): Array[Byte] = {
+  def getCode(address: Address, input: Object): Array[Byte] = {
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         Option.apply(tagStateView.getCode(address)).getOrElse(Array.emptyByteArray)
       }
@@ -900,9 +948,10 @@ class EthService(
 
   @RpcMethod("eth_getStorageAt")
   @RpcOptionalParameters(1)
-  def getStorageAt(address: Address, key: BigInteger, tag: String): Hash = {
+  def getStorageAt(address: Address, key: BigInteger, input: Object): Hash = {
     val storageKey = BigIntegerUtil.toUint256Bytes(key)
     applyOnAccountView { nodeView =>
+      val tag = getBlockTagByEip1898Input(nodeView, input)
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         new Hash(stateView.getAccountStorage(address, storageKey))
       }
@@ -911,10 +960,11 @@ class EthService(
 
   @RpcMethod("eth_getProof")
   @RpcOptionalParameters(1)
-  def getProof(address: Address, keys: Array[BigInteger], tag: String): ProofAccountResult = {
+  def getProof(address: Address, keys: Array[BigInteger], input: Object): ProofAccountResult = {
     val storageKeys = keys.map(BigIntegerUtil.toUint256Bytes)
     applyOnAccountView { nodeView =>
       try {
+        val tag = getBlockTagByEip1898Input(nodeView, input)
         getStateViewAtTag(nodeView, tag) { (stateView, _) =>
           stateView.getProof(address, storageKeys)
         }
@@ -947,31 +997,34 @@ class EthService(
       // limit the range of blocks by the number of available blocks and cap at 1024
       val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
-      if (blocks < 1) return new EthereumFeeHistoryView()
-      // calculate block number of the "oldest" block in the range
-      val oldestBlock = requestedBlockInfo.height + 1 - blocks
+      if (blocks < 1) {
+        new EthereumFeeHistoryView()
+      } else {
+        // calculate block number of the "oldest" block in the range
+        val oldestBlock = requestedBlockInfo.height + 1 - blocks
 
-      // include the calculated base fee of the next block after the requested range
-      val baseFeePerGas = new Array[BigInteger](blocks + 1)
-      val gasUsedRatio = new Array[Double](blocks)
-      val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
+        // include the calculated base fee of the next block after the requested range
+        val baseFeePerGas = new Array[BigInteger](blocks + 1)
+        val gasUsedRatio = new Array[Double](blocks)
+        val reward = if (percentiles.nonEmpty) new Array[Array[BigInteger]](blocks) else null
 
-      using(nodeView.state.getView) { stateView =>
-        for (i <- 0 until blocks) {
-          val block = nodeView.history
-            .blockIdByHeight(oldestBlock + i)
-            .map(ModifierId(_))
-            .flatMap(nodeView.history.getStorageBlockById)
-            .get
-          baseFeePerGas(i) = block.header.baseFee
-          gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
-          if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
+        using(nodeView.state.getView) { stateView =>
+          for (i <- 0 until blocks) {
+            val block = nodeView.history
+              .blockIdByHeight(oldestBlock + i)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .get
+            baseFeePerGas(i) = block.header.baseFee
+            gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
+            if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
+          }
         }
-      }
-      // calculate baseFee for the next block after the requested range
-      baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+        // calculate baseFee for the next block after the requested range
+        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock, networkParams)
 
-      new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
+        new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
+      }
     }
   }
 
@@ -1010,15 +1063,41 @@ class EthService(
           if (start > end) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
           }
+
+          val timeout = networkParams.getLogsQueryTimeout
+          var resultCount = 0
           // get the logs from all blocks in the range into one flat list
-          (start to end).flatMap(blockNumber => {
-            nodeView.history
-              .blockIdByHeight(blockNumber)
-              .map(ModifierId(_))
-              .flatMap(nodeView.history.getStorageBlockById)
-              .map(RpcFilter.getBlockLogs(stateView, _, query))
-              .get
-          })
+          val result: Try[Seq[EthereumLogView]] = Try {
+            val future = Future {
+              (start to end).flatMap(blockNumber => {
+                val logs = nodeView.history
+                  .blockIdByHeight(blockNumber)
+                  .map(ModifierId(_))
+                  .flatMap(nodeView.history.getStorageBlockById)
+                  .map(RpcFilter.getBlockLogs(stateView, _, query))
+                  .get
+
+                resultCount += logs.length
+                if (resultCount > networkParams.getLogsSizeLimit)
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a " + networkParams.getLogsSizeLimit +  " response size. Limit some parameters and try again."))
+
+                logs
+              })
+            }
+
+            Await.result(future, timeout)
+          }
+
+          result match {
+            case Success(logs) => logs
+            case Failure(exception) =>
+              exception match {
+                case _: TimeoutException =>
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Query execution time exceeded. Query duration must not exceed 10 seconds. Limit some parameters and try again."))
+                case  _: RpcException =>
+                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a 10K response size. Limit some parameters and try again."))
+              }
+          }
         }
       }
     }

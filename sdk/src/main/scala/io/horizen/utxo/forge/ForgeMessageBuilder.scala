@@ -157,7 +157,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
-      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+      if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled)
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
         nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
       else
