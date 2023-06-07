@@ -33,7 +33,7 @@ public interface MessageProcessor {
      * @return return data on successful execution
      * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
      * @throws ExecutionFailedException   revert-and-consume-all-gas, also mark the message as "failed"
-     * @throws RuntimeException           any other exceptions are consideres as "invalid message"
+     * @throws RuntimeException           any other exceptions are considered as "invalid message"
      */
     byte[] process(Invocation invocation, BaseAccountStateView view, ExecutionContext context)
         throws ExecutionFailedException;

@@ -106,6 +106,18 @@ public class EvmMessageProcessor implements MessageProcessor {
             this.context = context;
         }
 
+        /**
+         * Returns exception.toString(), but makes sure the return value is non-null and non-empty. If e.g. toString()
+         * is overriden in a custom exception and returns null this will return the exceptions class name instead.
+         */
+        private String nonEmptyErrorMessage(Exception exception) {
+            var msg = exception.toString();
+            if (msg == null || msg.isEmpty()) {
+                msg = exception.getClass().getName();
+            }
+            return msg;
+        }
+
         @Override
         protected InvocationResult execute(io.horizen.evm.Invocation invocation) {
             var gasPool = new GasPool(invocation.gas);
@@ -124,9 +136,9 @@ public class EvmMessageProcessor implements MessageProcessor {
                 return new InvocationResult(returnData, gasPool.getGas(), "", false, null);
             } catch (ExecutionRevertedException e) {
                 // forward the revert reason if any
-                return new InvocationResult(e.returnData, gasPool.getGas(), e.getMessage(), true, null);
+                return new InvocationResult(e.returnData, gasPool.getGas(), nonEmptyErrorMessage(e), true, null);
             } catch (Exception e) {
-                return new InvocationResult(new byte[0], gasPool.getGas(), e.getMessage(), false, null);
+                return new InvocationResult(new byte[0], gasPool.getGas(), nonEmptyErrorMessage(e), false, null);
             }
         }
     }
