@@ -46,7 +46,7 @@ case class SidechainSubmitterApiRoute[
   override val route: Route = pathPrefix("submitter") {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
       isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner ~ getKeyRotationProof ~
-      getSigningKeyRotationMessageToSign ~ getMasterKeyRotationMessageToSign ~ getCertifiersKeys ~ getWithdrawalEpochInfo
+      getSigningKeyRotationMessageToSign ~ getMasterKeyRotationMessageToSign ~ getCertifiersKeys
   }
 
   def isCertGenerationActive: Route = (post & path("isCertGenerationActive")) {
@@ -168,15 +168,6 @@ case class SidechainSubmitterApiRoute[
     }
   }
 
-  def getWithdrawalEpochInfo: Route = (post & path("getWithdrawalEpochInfo")) {
-    withView { sidechainNodeView =>
-      sidechainNodeView.state.getTopCertificateMainchainHash(1) match {
-        case Some(_) => ApiResponseUtil.toResponse(WithdrawalEpochResponse(sidechainNodeView.state.getWithdrawalEpochInfo.epoch))
-        case None => ApiResponseUtil.toResponse(WithdrawalEpochResponse(0))
-      }
-    }
-  }
-
   def getKeyRotationProof: Route = (post & path("getKeyRotationProof")) {
     try {
       entity(as[ReqKeyRotationProof]) { body =>
@@ -233,9 +224,6 @@ object SidechainDebugRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespGetKeyRotationProof(keyRotationProof: Option[KeyRotationProof]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class WithdrawalEpochResponse(epoch: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespKeyRotationMessageToSign(keyRotationMessageToSign: Array[Byte]) extends SuccessResponse
