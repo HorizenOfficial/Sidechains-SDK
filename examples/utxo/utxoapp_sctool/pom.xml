@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.horizen</groupId>
     <artifactId>sidechains-sdk-utxoapp_sctool</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.8.0-SNAPSHOT</version>
     <inceptionYear>2018</inceptionYear>
 
     <properties>
@@ -18,13 +18,13 @@
         <dependency>
             <groupId>io.horizen</groupId>
             <artifactId>sidechains-sdk-scbootstrappingtools</artifactId>
-            <version>0.7.0-SNAPSHOT</version>
+            <version>0.8.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.horizen</groupId>
             <artifactId>sidechains-sdk-simpleapp</artifactId>
-            <version>0.7.0-SNAPSHOT</version>
+            <version>0.8.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
