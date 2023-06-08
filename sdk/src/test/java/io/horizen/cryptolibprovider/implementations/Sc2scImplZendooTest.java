@@ -18,6 +18,7 @@ import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
+import io.horizen.utils.BytesUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -143,8 +144,8 @@ public class Sc2scImplZendooTest {
         ) {
             byte[] proof = circuit.createRedeemProof(
                     msgHash,
-                    currentScTxCommitmentsRoot,
-                    nextScTxCommitmentsRoot,
+                    BytesUtils.reverseBytes(currentScTxCommitmentsRoot),
+                    BytesUtils.reverseBytes(nextScTxCommitmentsRoot),
                     currWithdrawalCertificate,
                     nextWithdrawalCertificate,
                     currentPath,

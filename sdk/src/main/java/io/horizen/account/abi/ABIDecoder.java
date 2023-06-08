@@ -10,7 +10,7 @@ public interface ABIDecoder<T> {
 
     List<TypeReference<Type>> getListOfABIParamTypes();
 
-    default int getABIDataParamsLengthInBytes() throws ClassNotFoundException {
+    default int getABIDataParamsLengthInBytes() {
         return Type.MAX_BYTE_LENGTH * getListOfABIParamTypes().size();
     }
 

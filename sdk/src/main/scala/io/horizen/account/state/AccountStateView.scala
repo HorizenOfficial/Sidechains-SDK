@@ -76,12 +76,7 @@ class AccountStateView(
   }
 
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    val res = metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
-    res match {
-      case Some(value) => println(s"The result is ${BytesUtils.toHexString(value.hash)}")
-      case _ => println(s"NOTHING FOUND FOR EPOCH $referencedWithdrawalEpoch")
-    }
-    res
+    metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
   }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo

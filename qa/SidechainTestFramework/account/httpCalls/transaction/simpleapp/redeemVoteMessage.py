@@ -17,7 +17,5 @@ def redeemVoteMessage(sidechain_node, message_type, sender, receiver_sidechain, 
         "proof": proof
     }
     request = json.dumps(j)
-    print(f'this is the body: {request}')
     response = sidechain_node.vote_redeem(request)
-    print(f'THIS IS THE RESPONSE OF REDEEM SEND VOTE MESSAGE: {response}')
     return response['result']['transactionBytes']

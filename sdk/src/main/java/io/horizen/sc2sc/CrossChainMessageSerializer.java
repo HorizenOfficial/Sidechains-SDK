@@ -6,10 +6,10 @@ import sparkz.core.serialization.SparkzSerializer;
 
 public class CrossChainMessageSerializer<T extends CrossChainMessage> implements SparkzSerializer<T> {
 
-    private static CrossChainMessageSerializer serializer;
+    private static final CrossChainMessageSerializer serializer;
 
     static {
-        serializer = new CrossChainMessageSerializer<CrossChainMessage>();
+        serializer = new CrossChainMessageSerializer<>();
     }
 
     @Override

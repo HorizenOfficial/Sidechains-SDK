@@ -71,7 +71,7 @@ public class  CommonCircuit {
         );
     }
 
-    public static WithdrawalCertificate createWithdrawalCertificateBad(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+    public static WithdrawalCertificate createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
         return new WithdrawalCertificate(
                 FieldElement.deserialize(cert.sidechainId()),
                 cert.epochNumber(),
@@ -86,7 +86,7 @@ public class  CommonCircuit {
     }
 
     public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
-        try(WithdrawalCertificate wc = createWithdrawalCertificateBad(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
+        try(WithdrawalCertificate wc = createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
             return hashFe.serializeFieldElement();
         }
     }
