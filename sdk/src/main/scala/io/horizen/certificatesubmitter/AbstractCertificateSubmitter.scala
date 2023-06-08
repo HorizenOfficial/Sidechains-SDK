@@ -264,7 +264,7 @@ abstract class AbstractCertificateSubmitter[
   }
 
   private[horizen] def getFtMinAmount(consensusEpochNumber: Int): Long = {
-    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+    ForkManager.getSidechainFork(consensusEpochNumber).ftMinAmount
   }
 
   protected def calculateSignatures(messageToSign: Array[Byte], signersPublicKeys: Seq[SchnorrProposition]): Try[Seq[CertificateSignatureInfo]] = Try {

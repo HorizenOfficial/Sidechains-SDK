@@ -296,7 +296,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
       })
     }
 
-    if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+    if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled)
       checkWithdrawalBoxesAllowed(mod)
   }
 
@@ -334,7 +334,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   def openStakeTransactionEnabled(consensusEpochNumber: Option[ConsensusEpochNumber]): Boolean = {
     consensusEpochNumber match {
       case Some(consensusEpochNumber) =>
-        ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).openStakeTransactionEnabled()
+        ForkManager.getSidechainFork(consensusEpochNumber).openStakeTransactionEnabled
       case None =>
         false
     }
@@ -404,7 +404,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     val newCoinBoxes = newBoxes
       .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
 
-    val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+    val coinBoxMinAmount = ForkManager.getSidechainFork(consensusEpochNumber).coinBoxMinAmount
     newCoinBoxes.foreach { coinBox =>
       if (coinBox.value() < coinBoxMinAmount)
         throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +

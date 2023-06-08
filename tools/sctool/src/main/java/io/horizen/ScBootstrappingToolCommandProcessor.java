@@ -6,64 +6,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.horizen.account.secret.PrivateKeySecp256k1Creator;
-import io.horizen.account.utils.FeeUtils;
-import io.horizen.account.block.AccountBlock;
-import io.horizen.account.block.AccountBlockHeader;
-import io.horizen.account.companion.SidechainAccountTransactionsCompanion;
-import io.horizen.account.proposition.AddressProposition;
-import io.horizen.account.utils.Bloom;
 import io.horizen.account.secret.PrivateKeySecp256k1;
-import io.horizen.account.state.AccountStateView;
-import io.horizen.account.state.MessageProcessor;
-import io.horizen.account.state.MessageProcessorInitializationException;
-import io.horizen.account.state.MessageProcessorUtil;
-import io.horizen.account.storage.AccountStateMetadataStorageView;
-import io.horizen.account.transaction.AccountTransaction;
-import io.horizen.account.utils.AccountFeePaymentsUtils;
-import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
-import io.horizen.block.*;
-import io.horizen.cryptolibprovider.CircuitTypes;
-import io.horizen.utxo.block.SidechainBlock;
-import io.horizen.utxo.block.SidechainBlockHeader;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.ForgerBox;
+import io.horizen.account.secret.PrivateKeySecp256k1Creator;
+import io.horizen.block.MainchainBlockReference;
+import io.horizen.block.SidechainBlockBase;
+import io.horizen.block.SidechainCreationVersions;
+import io.horizen.block.SidechainsVersionsManager;
 import io.horizen.companion.SidechainSecretsCompanion;
-import io.horizen.utxo.companion.SidechainTransactionsCompanion;
-import io.horizen.consensus.ForgingStakeInfo;
+import io.horizen.cryptolibprovider.CircuitTypes;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.CryptoLibProvider;
-import io.horizen.evm.Hash;
-import io.horizen.evm.MemoryDatabase;
-import io.horizen.evm.StateDB;
+import io.horizen.fork.ForkManager;
 import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
 import io.horizen.params.RegTestParams;
 import io.horizen.params.TestNetParams;
-import io.horizen.proof.Proof;
 import io.horizen.proof.VrfProof;
-import io.horizen.proposition.Proposition;
 import io.horizen.secret.*;
 import io.horizen.tools.utils.Command;
 import io.horizen.tools.utils.CommandProcessor;
 import io.horizen.tools.utils.MessagePrinter;
-import io.horizen.utxo.transaction.SidechainTransaction;
 import io.horizen.transaction.mainchain.SidechainCreation;
 import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
-import scala.collection.Seq;
-import scala.collection.mutable.ListBuffer;
+import scala.concurrent.duration.FiniteDuration;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
@@ -875,6 +853,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             VrfOutput vrfOutput = vrfProof.proofToVrfOutput(vrfSecretKey.publicImage(), vrfMessage).get();
             MerklePath mp = new MerklePath(new ArrayList<>());
 
+            // initialize ForkManager because genesis parameters might depend on forks activating at epoch 0
+            ForkManager.reset();
+            ForkManager.init(scModel.getForkConfigurator(), mcNetworkName);
+
             int withdrawalEpochLength;
             String sidechainBlockHex;
 
@@ -956,11 +938,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10, FiniteDuration.apply(2, TimeUnit.SECONDS));
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

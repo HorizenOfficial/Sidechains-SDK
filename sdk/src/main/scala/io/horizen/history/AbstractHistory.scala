@@ -175,6 +175,7 @@ abstract class AbstractHistory[
       val rollbackPoint = newChainSuffix.headOption
       val toRemove = currentChainSuffix.tail.map(id => getStorageBlockById(id).get)
       val toApply = newChainSuffix.tail.map(id => getStorageBlockById(id).get) ++ Seq(block)
+      log.info(s"${toRemove.size} blocks are to be removed, ${toApply.size} to be applied")
 
       require(toApply.nonEmpty)
       if(toRemove.isEmpty) {

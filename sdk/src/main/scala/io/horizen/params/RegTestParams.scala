@@ -11,6 +11,7 @@ import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, Vr
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
+import scala.concurrent.duration._
 
 case class RegTestParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
@@ -41,7 +42,9 @@ case class RegTestParams(
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
                           override val chainId: Long = 1111111,
                           override val isCSWEnabled: Boolean = true,
-                          override val isNonCeasing: Boolean = false
+                          override val isNonCeasing: Boolean = false,
+                          override val getLogsSizeLimit: Int = 10,
+                          override val getLogsQueryTimeout: FiniteDuration = 2.seconds,
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
