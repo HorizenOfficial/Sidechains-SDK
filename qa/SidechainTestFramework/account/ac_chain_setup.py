@@ -1,8 +1,6 @@
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
