@@ -36,7 +36,7 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
   def listPublicKeys(): Future[Seq[SchnorrProposition]] = {
     http.singleRequest(
       Post(settings.address + "/api/v1/listKeys")
-        .withEntity(HttpEntity(ContentTypes.`application/json`, ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
+        .withEntity(HttpEntity(ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
         .withHeaders(headers)
     )
       .flatMap {
@@ -90,7 +90,6 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
     Post(settings.address + "/api/v1/createSignature")
       .withEntity(
         HttpEntity(
-          ContentTypes.`application/json`,
           CreateSignatureRequest(BytesUtils.toHexString(message), serializePublicKey(publicKey), SCHNORR).asJson.noSpaces
         )
       )
