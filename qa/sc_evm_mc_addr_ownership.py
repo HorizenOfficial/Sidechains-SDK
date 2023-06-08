@@ -4,7 +4,7 @@ import pprint
 from decimal import Decimal
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_topic, encode_hex, \
-    function_signature_to_4byte_selector
+    function_signature_to_4byte_selector, to_checksum_address
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import format_evm
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
@@ -98,17 +98,17 @@ def check_get_key_ownership(abiReturnValue, exp_dict):
     sc_associations_dict = {}
     for i in range(list_len):
         (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'], hex_str_to_bytes(abiReturnValue[offset:offset+192]))
-        address = remove_0x_prefix(address_pref)
-        print("sc addr=" + address)
-        if sc_associations_dict.get(address) is not None:
-            mc_addr_list = sc_associations_dict.get(address)
+        sc_address_checksum_fmt = to_checksum_address(address_pref)
+        print("sc addr=" + sc_address_checksum_fmt)
+        if sc_associations_dict.get(sc_address_checksum_fmt) is not None:
+            mc_addr_list = sc_associations_dict.get(sc_address_checksum_fmt)
         else:
-            sc_associations_dict[address] = []
+            sc_associations_dict[sc_address_checksum_fmt] = []
             mc_addr_list = []
         mc_addr = (mca3 + mca32).decode('utf-8')
         mc_addr_list.append(mc_addr)
         print("mc addr=" + mc_addr)
-        sc_associations_dict[address] = mc_addr_list
+        sc_associations_dict[sc_address_checksum_fmt] = mc_addr_list
 
         offset = offset + 192
 
@@ -145,15 +145,15 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         self.sc_sync_all()
 
         sc_address = remove_0x_prefix(self.evm_address)
-        sc_address_prefix = add_0x_prefix(self.evm_address)
+        sc_address_checksum_fmt = to_checksum_address(self.evm_address)
 
         lag_list = mc_node.listaddressgroupings()
         taddr1, val = get_address_with_balance(lag_list)
 
         assert_true(taddr1 is not None)
 
-        mc_signature1 = mc_node.signmessage(taddr1, sc_address_prefix)
-        print("scAddr: " + sc_address)
+        mc_signature1 = mc_node.signmessage(taddr1, sc_address_checksum_fmt)
+        print("scAddr: " + sc_address_checksum_fmt)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature1)
 
@@ -174,7 +174,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             if taddr2 != taddr1:
                 break
 
-        mc_signature2 = mc_node.signmessage(taddr2, sc_address_prefix)
+        mc_signature2 = mc_node.signmessage(taddr2, sc_address_checksum_fmt)
+        print("scAddr: " + sc_address_checksum_fmt)
         print("mcAddr: " + taddr2)
         print("mcSignature: " + mc_signature2)
 
@@ -193,10 +194,10 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check we have just one sc address association
         assert_true(len(ret['keysOwnership']) == 1)
         # check we have two mc address associated to sc address
-        assert_true(len(ret['keysOwnership'][sc_address]) == 2)
+        assert_true(len(ret['keysOwnership'][sc_address_checksum_fmt]) == 2)
         # check we have exactly those mc address
-        assert_true(taddr1 in ret['keysOwnership'][sc_address])
-        assert_true(taddr2 in ret['keysOwnership'][sc_address])
+        assert_true(taddr1 in ret['keysOwnership'][sc_address_checksum_fmt])
+        assert_true(taddr2 in ret['keysOwnership'][sc_address_checksum_fmt])
 
         ret = removeKeysOwnership(sc_node,
                                  sc_address=sc_address,
@@ -211,10 +212,10 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check we have just one sc address association
         assert_true(len(ret['keysOwnership']) == 1)
         # check we have only one mc address associated to sc address
-        assert_true(len(ret['keysOwnership'][sc_address]) == 1)
+        assert_true(len(ret['keysOwnership'][sc_address_checksum_fmt]) == 1)
         # check we have exactly that mc address
-        assert_true(taddr1 in ret['keysOwnership'][sc_address])
-        assert_true(taddr2 not in ret['keysOwnership'][sc_address])
+        assert_true(taddr1 in ret['keysOwnership'][sc_address_checksum_fmt])
+        assert_true(taddr2 not in ret['keysOwnership'][sc_address_checksum_fmt])
 
         # get association for a sc address not yet associated to any mc address
         ret = getKeysOwnership(sc_node, sc_address=sc_address2)
@@ -323,7 +324,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         for i in range(10):
             taddr = mc_node.getnewaddress()
             taddr_list.append(taddr)
-            mc_signature = mc_node.signmessage(taddr, sc_address_prefix)
+            mc_signature = mc_node.signmessage(taddr, sc_address_checksum_fmt)
+            print("scAddr: " + sc_address_checksum_fmt)
             print("mcAddr: " + taddr)
             print("mcSignature: " + mc_signature)
 
@@ -345,9 +347,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check we have just one sc address association
         assert_true(len(list_associations_sc_address['keysOwnership']) == 1)
         # check we have the previous 2 mc addresses plus 10 just associated
-        assert_true(len(list_associations_sc_address['keysOwnership'][sc_address]) == 12)
+        assert_true(len(list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt]) == 12)
         for taddr in taddr_list:
-            assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address])
+            assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt])
 
 
         # remove an mc addr and check we have 11 of them
@@ -369,28 +371,30 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check we have just one sc address association
         assert_true(len(list_associations_sc_address['keysOwnership']) == 1)
         # check we have the expected number
-        assert_true(len(list_associations_sc_address['keysOwnership'][sc_address]) == 11)
+        assert_true(len(list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt]) == 11)
         for taddr in taddr_list:
-            assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address])
+            assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt])
 
         # add an association for a different sc address
-        taddr_sc2 = mc_node.getnewaddress()
-        sc_address2_prefix = add_0x_prefix(sc_address2)
-        mc_signature_sc2 = mc_node.signmessage(taddr_sc2, sc_address2_prefix)
-        print("scAddr: " + sc_address2)
-        print("mcAddr: " + taddr_sc2)
+        taddr_sc2_1 = mc_node.getnewaddress()
+        sc_address2_checksum_fmt = to_checksum_address(sc_address2)
+        mc_signature_sc2 = mc_node.signmessage(taddr_sc2_1, sc_address2_checksum_fmt)
+        print("scAddr: " + sc_address2_checksum_fmt)
+        print("mcAddr: " + taddr_sc2_1)
         print("mcSignature: " + mc_signature_sc2)
 
         ret = sendKeysOwnership(sc_node2,
                 sc_address=sc_address2,
-                mc_addr=taddr_sc2,
+                mc_addr=taddr_sc2_1,
                 mc_signature=mc_signature_sc2)
         self.sc_sync_all()
         tx_hash = ret['transactionId']
-        forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address2, mc_addr=taddr_sc2)
+        forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address2, mc_addr=taddr_sc2_1)
 
         # associate to sc address 2 a mc addr already associated to sc address 1, the tx is rejected
-        mc_signature_sc2 = mc_node.signmessage(taddr1, sc_address2_prefix)
+        mc_signature_sc2 = mc_node.signmessage(taddr1, sc_address2_checksum_fmt)
+        print("### associate to sc address 2 a mc addr already associated to sc address 1")
+        print("scAddr: " + sc_address2_checksum_fmt)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature_sc2)
 
@@ -409,9 +413,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # check we have two sc address associations
         assert_true(len(list_all_associations['keysOwnership']) == 2)
         # check we have the expected numbers
-        assert_true(len(list_all_associations['keysOwnership'][sc_address]) == 11)
-        assert_true(len(list_all_associations['keysOwnership'][sc_address2]) == 1)
-        assert_true(taddr_sc2 in list_all_associations['keysOwnership'][sc_address2])
+        assert_true(len(list_all_associations['keysOwnership'][sc_address_checksum_fmt]) == 11)
+        assert_true(len(list_all_associations['keysOwnership'][sc_address2_checksum_fmt]) == 1)
+        assert_true(taddr_sc2_1 in list_all_associations['keysOwnership'][sc_address2_checksum_fmt])
 
         # execute native smart contract for getting all associations
         method = 'getAllKeyOwnerships()'

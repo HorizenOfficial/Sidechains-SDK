@@ -39,20 +39,20 @@ class McAddrOwnershipMsgProcessorTest
   val messageProcessor: McAddrOwnershipMsgProcessor = McAddrOwnershipMsgProcessor(mockNetworkParams)
   val contractAddress: Address = messageProcessor.contractAddress
 
-  val scAddrStr1: String = "00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"
+  val scAddrStr1: String = "00C8F107a09cd4f463AFc2f1E6E5bF6022Ad4600"
   val scAddressObj1 = new Address("0x"+scAddrStr1)
 
   // signature 'i' is obtained signing the same scAddrStr1 string using the priv key corresponding to mc addr 'i'
-  val mcAddrStr1: String = "ztUQUpuQeTbsC1jANUZESrCxftp8HGWQPhT"
-  val mcSignatureStr1: String = "IJkRaIwH2mUNU9dOQrZnyTv4yDKMjm18VSZe0XDGmKmuLCuiNFPzScA4VxjzvCaRHulF42gdkNbZOhTmrNJRDYw="
-  val mcAddrStr2: String = "ztm27jNrMbrRoHaCM1grjnSkqAs6ZKRbzhy"
-  val mcSignatureStr2: String = "IJF3Lpl9+a53u+BfHDbH+cQsb/nH/v01/j1yUYR215VxApmrdf7OffesVlX+eGU77w6eC+MjTo+R/xn/MKXTM8E="
-  val mcAddrStr3: String = "ztnmbLeuV9DjtEnBBLDgqVc71yGXPiFr1Ek"
-  val mcSignatureStr3: String = "IBbjUMb/Qz0AndZsGBtKWopunreR6AMO93L9y3EDxGFfFlGxabiTvNth/UNNSVMpDUOk61eOkoDPuqYgba9+JZ4="
-  val mcAddrStr4: String = "ztaLF4tF7LizLdtvbUxxRgxZCthtmDPGwEv"
-  val mcSignatureStr4: String = "H5p8z9TH+qPISIXBXiWse0PLOFGoelAfX9liR53kDbZ1QAE3zYhMsydpzPbVgXTrs7bCRUCowqeklnMyHRAh2vA="
-  val mcAddrStr5: String = "ztkKP9iKjwS1UsKGYuh6yxRNLmmfDeqkQeQ"
-  val mcSignatureStr5: String = "INSe5Ij25p1/GQxqPXgeRX02NYawknOKVA3AHjHkrLIrQJpOOC5Ap1WmhUiaA6c4F+ID2Wg3hhbCYOl2uazfBxQ="
+  val mcAddrStr1: String = "ztZzTK8meAb3Be1XXN36Zu9NEAMCkYdiXXi"
+  val mcSignatureStr1: String = "H3YWXUJbpgP1cwT4QuyAr9JSVehVPWpV841W0Zv/GTrffa1JfwHq34CjM1Y5TWWz82vtUyfdPh6K9jjJI2DKY8E="
+  val mcAddrStr2: String = "ztfK1cpQtKmpwA9ELCZuE4ufQjS5rNx33D6"
+  val mcSignatureStr2: String = "ILCkShV1GxwNeOr1p153T2ds38LtJVWtjEf5usCvfvEwWULUgpGbuikFoU/fC0wobG+2xVAHniQuxaxGjHn65cg="
+  val mcAddrStr3: String = "ztes7TG8zHm2C1GzkMstmd8c6j6Q3pr8y5M"
+  val mcSignatureStr3: String = "IKlZeexpu0l1uaa4y/Jv9okn93MsDZQQUcy97iuYZQN2f8vzgEV08SdfEcMUtoukERX72WSoDCBOSrp7d9fjQ68="
+  val mcAddrStr4: String = "ztpXBsnFD9Ni1jvBPhfwswRSCoKG7irodXt"
+  val mcSignatureStr4: String = "IG/74ayOEYDBsQLEFibVb1CbFFtWWKjCpwAFiVaaYb4wbPmimGytxJo0jf7d8UDQUf0TTdM+J5Qn1Mzm+k6WRNw="
+  val mcAddrStr5: String = "ztVQPCqt17N3MQD9w8s736t2m26LHmzsJqG"
+  val mcSignatureStr5: String = "IISbzxfiUUSDbp+KvQBrburAeF1QM4hEwJ0HLckL42QXTvEYLG0w3WnquyAiiNSUgv8kc+RAcShif+qbM8tXZ3g="
 
   val listOfMcAddrSign1 = new util.ArrayList[(String, String)]()
   listOfMcAddrSign1.add((mcAddrStr1, mcSignatureStr1))
@@ -62,19 +62,19 @@ class McAddrOwnershipMsgProcessorTest
   listOfMcAddrSign1.add((mcAddrStr5, mcSignatureStr5))
 
   // a second sc address and its data
-  val scAddrStr2: String = "ca12fcb886cbf73a39d87aac9610f8a303536642"
+  val scAddrStr2: String = "cA12fcB886CBF73a39D87aAC9610f8a303536642"
   val scAddressObj2 = new Address("0x"+scAddrStr2)
-  val mcAddrStr1_2: String = "ztgqkxyxr2d1oumBvjWpwcfKVwZLZ1kaWm2"
-  val mcSignatureStr1_2: String = "HwQ18kELDbdyon5v+K81MEo7QCfWko+y0vhJUKPP/+q9OynDfgQVLyv7vsODIB+3oIvVYqqReZm3zUjES2FfsKE="
-  val mcAddrStr2_2: String = "ztVMKff4ZTNxYsUqWyrABWnwUHa37tyNpt7"
-  val mcSignatureStr2_2: String = "HxXS6mMVPyaU+2jBBHNz6+ndWr3CFiOChFhOEr5pZHpFFgDXKTSG4fLEGSh3brpvaR7A686FhZzO84LQ/LOMF5k="
+  val mcAddrStr1_2: String = "ztkPjQddjaskk68LVvQTMxB6U5gGgsFCUzf"
+  val mcSignatureStr1_2: String = "IKZJhxQtYGVTondsX0FHU+N1QjlxResb6md/HaEpGUirTqXUR8N4Bmi7p9szHTwpDKftq7QBRep8LUN4J8N3hz0="
+  val mcAddrStr2_2: String = "ztVUwVnqCnWFANk9X6najvM1VBEJQcF4j8Y"
+  val mcSignatureStr2_2: String = "H4IqujR8Wdh/3h5Wuf9GAb6dchn/8EjsDGPvIVtQD4XSLjNkwOGLLGKnCR896ZmH6t0nlQP2U/mksQOJaAMEH3g="
 
   val listOfMcAddrSign2 = new util.ArrayList[(String, String)]()
   listOfMcAddrSign2.add((mcAddrStr1_2, mcSignatureStr1_2))
   listOfMcAddrSign2.add((mcAddrStr2_2, mcSignatureStr2_2))
 
   // and here is the signature of the mcAddrStr1 made using the second sc address as msg. It is useful for negative tests
-  val mcSignatureStr3_2 ="IMxoNXyPUh797yJMJNyArnzSAZ8AitGaPlXQlUMDO6mxA5o1VYWLgAmdJv8OLTRARKNesrUFOhkxA8XSK8fj9Ug="
+  val mcSignatureStr3_2: String = "IPkgJQzjSBdOKrlfOhihEm682GB8i+UmDTBMdLGaTCEkEK2cS1zOcPN+p9pdsTqSoiVXuprd+1kcuKHB2zvOlMI="
 
   val AddNewEventSig: Array[Byte] = getEventSignature("AddMcAddrOwnership(address,bytes3,bytes32)")
   val NumOfIndexedAddNewEvtParams = 1
@@ -338,8 +338,8 @@ class McAddrOwnershipMsgProcessorTest
         val msg = getMessage(contractAddress, BigInteger.ZERO,
           BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj1)
 
-        listOfAllExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
-        listOfScAddress1ExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+        listOfAllExpectedData.add(McAddrOwnershipData(scAddrStr1.toLowerCase(), mcAddr))
+        listOfScAddress1ExpectedData.add(McAddrOwnershipData(scAddrStr1.toLowerCase(), mcAddr))
 
         val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
         assertNotNull(returnData)
@@ -358,16 +358,16 @@ class McAddrOwnershipMsgProcessorTest
         val msg = getMessage(contractAddress, BigInteger.ZERO,
           BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj2)
 
-        listOfAllExpectedData.add(McAddrOwnershipData(scAddrStr2, mcAddr))
-        listOfScAddress2ExpectedData.add(McAddrOwnershipData(scAddrStr2, mcAddr))
+        listOfAllExpectedData.add(McAddrOwnershipData(scAddrStr2.toLowerCase(), mcAddr))
+        listOfScAddress2ExpectedData.add(McAddrOwnershipData(scAddrStr2.toLowerCase(), mcAddr))
 
         val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
         assertNotNull(returnData)
       }
 
       // get associations of each sc address
-      val data1List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr1))
-      val data2List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr2))
+      val data1List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr1.toLowerCase()))
+      val data2List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr2.toLowerCase()))
 
       // get all associations
       val dataAllList = messageProcessor.getListOfMcAddrOwnerships(view)
@@ -586,7 +586,7 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msg2, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains(s"already associated to sc address $scAddrStr1"))
+      assertTrue(ex.getMessage.contains(s"already associated to sc address ${scAddrStr1.toLowerCase()}"))
     }
   }
 
