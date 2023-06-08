@@ -997,9 +997,9 @@ class EthService(
       newestBlock: String,
       rewardPercentiles: Array[Double]
   ): EthereumFeeHistoryView = {
-    val percentiles = sanitizePercentiles(rewardPercentiles)
     if (newestBlock == "pending")
       return new EthereumFeeHistoryView()
+    val percentiles = sanitizePercentiles(rewardPercentiles)
     applyOnAccountView { nodeView =>
       val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
       // limit the range of blocks by the number of available blocks and cap at 1024
