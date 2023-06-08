@@ -23,6 +23,7 @@ import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionA
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
@@ -312,6 +313,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Before
   def setUp(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
     val genesisBlockId = bytesToId(
       Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000123")
@@ -1345,6 +1347,12 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "latest",
         null,
         """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
+      ),
+      (
+        "0x0",
+        "pending",
+        null,
+        """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
       )
     )
 

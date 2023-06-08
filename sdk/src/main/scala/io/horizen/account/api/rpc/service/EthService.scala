@@ -998,12 +998,14 @@ class EthService(
       rewardPercentiles: Array[Double]
   ): EthereumFeeHistoryView = {
     val percentiles = sanitizePercentiles(rewardPercentiles)
+    if (newestBlock == "pending")
+      return new EthereumFeeHistoryView()
     applyOnAccountView { nodeView =>
       val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
       // limit the range of blocks by the number of available blocks and cap at 1024
       val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
-      if (blocks < 1 || newestBlock == "pending") {
+      if (blocks < 1) {
         new EthereumFeeHistoryView()
       } else {
         // calculate block number of the "oldest" block in the range
