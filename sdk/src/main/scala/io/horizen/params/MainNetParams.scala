@@ -11,6 +11,8 @@ import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
 
+import scala.concurrent.duration._
+
 case class MainNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
                           override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)),
@@ -42,6 +44,8 @@ case class MainNetParams(
                           override val chainId: Long = 33333333,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
+                          override val getLogsSizeLimit: Int = 10000,
+                          override val getLogsQueryTimeout: FiniteDuration = 10.seconds,
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

@@ -1,18 +1,19 @@
 package io.horizen.account.performance
 
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.forger.AccountForgeMessageBuilder
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
+import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.block.MainchainBlockReferenceData
-import io.horizen.utils.WithdrawalEpochInfo
 import io.horizen.evm.{Address, Hash}
+import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -62,7 +63,7 @@ class AccountForgeMessageBuilderPerfTest extends MockitoSugar with EthereumTrans
     Address.ZERO,
     1000,
     BigInteger.ZERO,
-    FeeUtils.GAS_LIMIT,
+    DefaultGasFeeFork.blockGasLimit,
     11,
     2,
     3,

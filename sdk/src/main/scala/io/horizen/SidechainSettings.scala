@@ -151,6 +151,6 @@ case class SidechainSettings(
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
-    sc2sc: Sc2ScSettings,
-    apiRateLimiter: ApiRateLimiterSettings
+    apiRateLimiter: ApiRateLimiterSettings,
+    sc2sc: Sc2ScSettings
 )

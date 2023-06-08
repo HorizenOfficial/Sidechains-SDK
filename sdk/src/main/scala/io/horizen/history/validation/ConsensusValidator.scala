@@ -71,7 +71,7 @@ class ConsensusValidator[
     }
     
     val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params, verifiedBlock.timestamp)
-    val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(consensusEpoch).stakePercentageForkApplied
+    val stakePercentageForkApplied = ForkManager.getSidechainFork(consensusEpoch).stakePercentageForkApplied
     verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
@@ -160,7 +160,7 @@ class ConsensusValidator[
       val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
         .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
 
-      val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(ommersContainerEpochNumber).stakePercentageForkApplied
+      val stakePercentageForkApplied = ForkManager.getSidechainFork(ommersContainerEpochNumber).stakePercentageForkApplied
       verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput, stakePercentageForkApplied)
 
       verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,

@@ -52,7 +52,7 @@ object SidechainSettingsReader
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
-      ethServiceSettings, accountMempoolSettings, sc2ScSettings, apiRateLimiterSettings)
+      ethServiceSettings, accountMempoolSettings, apiRateLimiterSettings, sc2ScSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

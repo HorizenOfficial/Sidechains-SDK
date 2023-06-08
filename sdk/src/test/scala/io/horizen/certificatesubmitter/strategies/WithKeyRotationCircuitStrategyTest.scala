@@ -69,8 +69,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
       signersThreshold = signersThreshold
     )
 
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test

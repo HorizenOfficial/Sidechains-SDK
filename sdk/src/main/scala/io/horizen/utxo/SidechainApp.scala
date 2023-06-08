@@ -191,7 +191,7 @@ class SidechainApp @Inject()
     applicationWallet,
     applicationState,
     genesisBlock
-  ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlockBase.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),

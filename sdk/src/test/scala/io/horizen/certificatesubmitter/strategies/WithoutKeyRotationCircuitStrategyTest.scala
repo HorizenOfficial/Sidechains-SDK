@@ -1,22 +1,21 @@
 package io.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
+import com.horizen.certnative.BackwardTransfer
+import com.horizen.librustsidechains.FieldElement
+import com.horizen.schnorrnative.SchnorrKeyPair
 import io.horizen._
 import io.horizen.block.SidechainCreationVersions
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
+import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
-import io.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo
+import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
-import com.horizen.librustsidechains.FieldElement
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrKeyPair
-import io.horizen.fixtures.FieldElementFixture
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
@@ -30,9 +29,9 @@ import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
+import sparkz.util.ModifierId
 
 import java.lang
 import java.nio.charset.StandardCharsets
@@ -65,8 +64,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       signersThreshold = signersThreshold
     )
 
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test

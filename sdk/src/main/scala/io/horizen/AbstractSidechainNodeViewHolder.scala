@@ -274,8 +274,8 @@ abstract class AbstractSidechainNodeViewHolder[
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
-                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
+                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully and node view updated!")
 
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool

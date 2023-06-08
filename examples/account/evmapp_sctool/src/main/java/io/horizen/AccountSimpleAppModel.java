@@ -2,6 +2,8 @@ package io.horizen;
 
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
 import io.horizen.account.state.MessageProcessor;
+import io.horizen.examples.AppForkConfigurator;
+import io.horizen.fork.ForkConfigurator;
 import io.horizen.account.state.MessageProcessorUtil;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
@@ -23,5 +25,10 @@ public class AccountSimpleAppModel extends AbstractAccountModel {
         customMessageProcessors.add(new VoteMessageProcessor(scId));
         customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, params.sc2ScVerificationKeyFilePath(), circuit, scTxMsgProc));
         return customMessageProcessors;
+    }
+
+    @Override
+    public ForkConfigurator getForkConfigurator() {
+        return new AppForkConfigurator();
     }
 }
