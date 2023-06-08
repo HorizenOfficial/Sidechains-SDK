@@ -1003,7 +1003,7 @@ class EthService(
       // limit the range of blocks by the number of available blocks and cap at 1024
       val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
-      if (blocks < 1) {
+      if (blocks < 1 || newestBlock == "pending") {
         new EthereumFeeHistoryView()
       } else {
         // calculate block number of the "oldest" block in the range
@@ -1017,20 +1017,13 @@ class EthService(
         using(nodeView.state.getView) { stateView =>
           for (i <- 0 until blocks) {
             val block = nodeView.history
-              .blockIdByHeight(oldestBlock + i) // returns none if height > currentHeight
+              .blockIdByHeight(oldestBlock + i)
               .map(ModifierId(_))
               .flatMap(nodeView.history.getStorageBlockById)
-              .orNull
-            if (block != null) {
-              baseFeePerGas(i) = block.header.baseFee
-              gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
-              if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
-            }
-            else if (block == null && (oldestBlock + i > nodeView.history.getCurrentHeight)) { // for pending block tag
-              baseFeePerGas(i) = requestedBlock.header.baseFee
-              gasUsedRatio(i) = requestedBlock.header.gasUsed.doubleValue() / requestedBlock.header.gasLimit.doubleValue()
-              if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(requestedBlock, stateView, percentiles)
-            }
+              .get
+            baseFeePerGas(i) = block.header.baseFee
+            gasUsedRatio(i) = block.header.gasUsed.doubleValue() / block.header.gasLimit.doubleValue()
+            if (percentiles.nonEmpty) reward(i) = Backend.getRewardsForBlock(block, stateView, percentiles)
           }
         }
         // calculate baseFee for the next block after the requested range
