@@ -1353,7 +1353,19 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "pending",
         null,
         """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
-      )
+      ),
+      (
+        "0x20",
+        "pending",
+        null,
+        """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
+      ),
+      (
+        "0x1",
+        "pending",
+        Array(20, 50, 70),
+        """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":[["0x1","0x1","0x1"]]}"""
+      ),
     )
 
     forAll(validCases) { (nrOfBlocks, tag, rewardPercentiles, expectedOutput) =>
