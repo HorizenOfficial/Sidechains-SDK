@@ -125,21 +125,24 @@ class SCEvmFeeHistory(AccountChainSetup):
         self.sc_sync_all()
 
         sc_height = sc_node_1.block_best()["result"]['height']
+        block_count = 16
+        expected_result_length = min(block_count, sc_height)
+        oldest_block = sc_height - block_count + 1 if sc_height > block_count else 1
 
-        history_pending_sc_node_1 = sc_node_1.rpc_eth_feeHistory("0x10", "pending", [25.0, 75.0])
-        history_pending_sc_node_2 = sc_node_2.rpc_eth_feeHistory("0x10", "pending", [25.0, 75.0])
+        history_pending_sc_node_1 = sc_node_1.rpc_eth_feeHistory(hex(block_count), "pending", [25.0, 75.0])
+        history_pending_sc_node_2 = sc_node_2.rpc_eth_feeHistory(hex(block_count), "pending", [25.0, 75.0])
 
-        history_latest_sc_node_1 = sc_node_1.rpc_eth_feeHistory("0x10", "latest", [25.0, 75.0])
-        history_latest_sc_node_2 = sc_node_2.rpc_eth_feeHistory("0x10", "latest", [25.0, 75.0])
+        history_latest_sc_node_1 = sc_node_1.rpc_eth_feeHistory(hex(block_count), "latest", [25.0, 75.0])
+        history_latest_sc_node_2 = sc_node_2.rpc_eth_feeHistory(hex(block_count), "latest", [25.0, 75.0])
 
         assert_equal(history_pending_sc_node_1['result'], history_pending_sc_node_2['result'], "fee history should be equal among connected nodes")
         assert_equal(history_latest_sc_node_1['result'], history_latest_sc_node_2['result'], "fee history should be equal among connected nodes")
         assert_equal(history_pending_sc_node_1['result'], history_latest_sc_node_1['result'], "fee history should be equal for pending and latest block tag")
 
-        assert_equal('0x1', history_pending_sc_node_1['result']['oldestBlock'])
-        assert_equal(sc_height + 1, len(history_pending_sc_node_1['result']['baseFeePerGas']))  # +1 because baseFeePerGas is calculated for the next block after the requested range
-        assert_equal(sc_height, len(history_pending_sc_node_1['result']['gasUsedRatio']))
-        assert_equal(sc_height, len(history_pending_sc_node_1['result']['reward']))
+        assert_equal(hex(oldest_block), history_pending_sc_node_1['result']['oldestBlock'])
+        assert_equal(expected_result_length + 1, len(history_pending_sc_node_1['result']['baseFeePerGas']))  # +1 because baseFeePerGas is calculated for the next block after the requested range
+        assert_equal(expected_result_length, len(history_pending_sc_node_1['result']['gasUsedRatio']))
+        assert_equal(expected_result_length, len(history_pending_sc_node_1['result']['reward']))
 
 
 if __name__ == "__main__":
