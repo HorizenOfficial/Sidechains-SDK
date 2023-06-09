@@ -105,7 +105,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
         val wr = AccountCrossChainMessage(
           1,
           Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte),
+          Array.fill(32)(Random.nextInt().toByte),
           Array.fill(20)(Random.nextInt().toByte),
           Array.fill(20)(Random.nextInt().toByte)
         )
