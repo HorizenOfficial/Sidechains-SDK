@@ -22,8 +22,8 @@ public class CrossChainMessageSerializer<T extends CrossChainMessage> implements
         w.putBytes(s.getReceiverSidechain());
         w.putInt(s.getReceiver().length);
         w.putBytes(s.getReceiver());
-        w.putInt(s.getPayload().length);
-        w.putBytes(s.getPayload());
+        w.putInt(s.getPayloadHash().length);
+        w.putBytes(s.getPayloadHash());
     }
 
     @Override

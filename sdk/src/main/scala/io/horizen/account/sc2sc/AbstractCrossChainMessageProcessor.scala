@@ -138,7 +138,7 @@ object AbstractCrossChainMessageProcessor {
       data.sender,
       data.receiverSidechain,
       data.receiver,
-      data.payload
+      data.payloadHash
     )
   }
 }

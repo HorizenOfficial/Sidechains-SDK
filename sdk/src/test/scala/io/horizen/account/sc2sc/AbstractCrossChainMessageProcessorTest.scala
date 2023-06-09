@@ -10,6 +10,7 @@ import org.junit.Assert.{assertArrayEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
@@ -17,8 +18,7 @@ import java.math.BigInteger
 import java.util
 import scala.util.Random
 
-class AbstractCrossChainMessageProcessorTest extends JUnitSuite
-  with MockitoSugar
+class AbstractCrossChainMessageProcessorTest extends MockitoSugar
   with MessageProcessorFixture
   with StoreFixture
   with CrossChainMessageProcessorFixture {
@@ -107,8 +107,9 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
           Array.fill(20)(Random.nextInt().toByte),
           Array.fill(32)(Random.nextInt().toByte),
           Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte)
+          Array.fill(32)(Random.nextInt().toByte)
         )
+        wr.encode()
         expectedListOfWR.add(wr)
         val key = proc.getMessageKey(epochNum, index)
         mockMessageRequestsList.put(new ByteArrayWrapper(key), wr.bytes)

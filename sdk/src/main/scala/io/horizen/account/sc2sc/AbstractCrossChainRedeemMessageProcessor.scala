@@ -59,8 +59,6 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
   private def validateRedeemMsg(ccRedeemMgs: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Unit = {
     try {
       val accountCcMsg = ccRedeemMgs.accountCrossChainMessage
-      // validate arguments' semantics
-      validateSemantics(accountCcMsg)
 
       // Validate the receiving sidechain matches with this scId
       validateScId(networkParams.sidechainId, accountCcMsg.receiverSidechain)
@@ -78,17 +76,6 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       case exception: IllegalArgumentException =>
         throw new ExecutionRevertedException("Error while validating redeem message", exception)
     }
-  }
-
-  private def validateSemantics(msg: AccountCrossChainMessage): Unit = {
-    if (msg.receiverSidechain.isEmpty || msg.receiverSidechain.length > Constants.SIDECHAIN_ID_SIZE)
-      throw new IllegalArgumentException(s"Receiver sidechain size in CrossChain message is semantically wrong")
-
-    if (msg.receiver.isEmpty || msg.receiver.length > Constants.ABI_ADDRESS_SIZE)
-      throw new IllegalArgumentException(s"Receiver address size in CrossChain message is semantically wrong")
-
-    if (msg.sender.isEmpty || msg.sender.length > Constants.ABI_ADDRESS_SIZE)
-      throw new IllegalArgumentException(s"Sender size in CrossChain message is semantically wrong")
   }
 
   private def validateScId(scId: Array[Byte], receivingScId: Array[Byte]): Unit = {

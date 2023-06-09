@@ -96,11 +96,11 @@ public class Sc2scImplZendooTest {
         CrossChainMessage msg1 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(),
-                "sender1".getBytes(),
-                "receiverSidechain1receiverSidech".getBytes(),
-                "receiver1".getBytes(),
-                "payload1".getBytes()
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32),
+                generateRandomBytes(r, 32)
         );
 
         CrossChainMessageMerkleTree ccMsgMerkleTree = new CrossChainMessageMerkleTree();

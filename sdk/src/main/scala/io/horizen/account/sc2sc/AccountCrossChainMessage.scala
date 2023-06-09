@@ -2,8 +2,9 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.sc2sc.CrossChainMessageValidator
-import org.web3j.abi.datatypes.generated.Uint32
-import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
+import io.horizen.utils.Constants
+import org.web3j.abi.datatypes.StaticStruct
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -13,7 +14,7 @@ case class AccountCrossChainMessage
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
-  payload: Array[Byte]
+  payloadHash: Array[Byte]
 ) extends BytesSerializable with ABIEncodable[StaticStruct] {
 
   override type M = AccountCrossChainMessage
@@ -23,12 +24,16 @@ case class AccountCrossChainMessage
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
   private[horizen] def asABIType(): StaticStruct = {
+    val senderAddressABI = if (sender.length == Constants.ABI_ADDRESS_SIZE) new Bytes20(sender)
+                           else new Bytes32(sender)
+    val receiverAddressABI = if (receiver.length == Constants.ABI_ADDRESS_SIZE) new Bytes20(receiver)
+                             else new Bytes32(receiver)
     new StaticStruct(
       new Uint32(messageType),
-      new DynamicBytes(sender),
-      new DynamicBytes(receiverSidechain),
-      new DynamicBytes(receiver),
-      new DynamicBytes(payload)
+      senderAddressABI,
+      new Bytes32(receiverSidechain),
+      receiverAddressABI,
+      new Bytes32(payloadHash)
     )
   }
 }
@@ -39,7 +44,7 @@ object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossC
     writeBytes(writer, obj.sender)
     writeBytes(writer, obj.receiverSidechain)
     writeBytes(writer, obj.receiver)
-    writeBytes(writer, obj.payload)
+    writeBytes(writer, obj.payloadHash)
   }
 
   override def parse(reader: Reader): AccountCrossChainMessage = {

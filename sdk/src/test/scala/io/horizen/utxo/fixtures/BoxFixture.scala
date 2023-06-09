@@ -62,15 +62,17 @@ trait BoxFixture
     val random: Random = new Random(seed)
     val receiverSidechain = new Array[Byte](32)
     random.nextBytes(receiverSidechain)
-    val receiverAddress = new Array[Byte](16)
+    val receiverAddress = new Array[Byte](32)
     random.nextBytes(receiverAddress)
+    val payloadHash = new Array[Byte](32)
+    random.nextBytes(payloadHash)
     getCrossMessageBox(
       getPrivateKey25519(Longs.toByteArray(random.nextLong())).publicImage(),
       CrossChainProtocolVersion.VERSION_1,
       1,
       receiverSidechain,
       receiverAddress,
-      "my payload".getBytes,
+      payloadHash,
       random.nextLong()
     )
   }

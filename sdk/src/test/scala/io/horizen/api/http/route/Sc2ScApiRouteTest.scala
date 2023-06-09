@@ -35,7 +35,8 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
-    BytesUtils.toHexString("testPayload".getBytes))
+    BytesUtils.toHexString(getRandomBytes(32))
+  )
 
   "The Api should to" should {
 

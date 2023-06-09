@@ -120,6 +120,32 @@ public class CrossChainMessageValidatorTest {
     }
 
     @Test
+    public void whenPayloadHashIsNotCorrectSize_IllegalArgumentExceptionIsThrown() {
+        // Arrange
+        CrossChainMessage ccMsg = mock(CrossChainMessage.class);
+        when(ccMsg.getMessageType()).thenReturn(1);
+        when(ccMsg.getSenderSidechain()).thenReturn(BytesUtils.fromHexString("f0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02b"));
+        when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
+        when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
+        when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
+        when(ccMsg.getPayloadHash())
+                .thenReturn(Array.emptyByteArray())
+                .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
+                .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
+
+        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+
+        // Act
+        for (int i = 0; i < 3; i++) {
+            Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
+
+            // Assert
+            String expectedMsg = "Payload hash must be 32 bytes long";
+            assertEquals(expectedMsg, exception.getMessage());
+        }
+    }
+
+    @Test
     public void whenAllCCMsgParamsAreSyntacticallyCorrect_nothingIsThrown() {
         // Arrange
         CrossChainMessage ccMsg = mock(CrossChainMessage.class);
@@ -128,6 +154,28 @@ public class CrossChainMessageValidatorTest {
         when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
         when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
+        when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
+
+        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+
+        // Act & Assert
+        try {
+            validator.validateMessage(ccMsg);
+        } catch (Exception e) {
+            fail("Validator not expected to throw exception");
+        }
+    }
+
+    @Test
+    public void whenMessageHashMixedAddresses_nothingIsThrown() {
+        // Arrange
+        CrossChainMessage ccMsg = mock(CrossChainMessage.class);
+        when(ccMsg.getMessageType()).thenReturn(1);
+        when(ccMsg.getSenderSidechain()).thenReturn(BytesUtils.fromHexString("f0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02b"));
+        when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
+        when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
+        when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e"));
+        when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
 
         CrossChainMessageValidator validator = new CrossChainMessageValidator();
 

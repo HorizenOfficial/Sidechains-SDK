@@ -8,12 +8,14 @@ public final class CrossChainMessageValidator {
     private final static String RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE = "Receiver sidechain id must be 32 bytes long";
     private final static String SENDER_ADDRESS_ERROR_MESSAGE = "Sender address length is not correct";
     private final static String RECEIVER_ADDRESS_ERROR_MESSAGE = "Receiver address length is not correct";
+
     public void validateMessage(CrossChainMessage msg) {
         validateMsgType(msg.getMessageType());
         validateSidechainId(msg.getSenderSidechain(), SENDER_SIDECHAIN_ID_ERROR_MESSAGE);
         validateSidechainId(msg.getReceiverSidechain(), RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE);
         validateAddress(msg.getSender(), SENDER_ADDRESS_ERROR_MESSAGE);
         validateAddress(msg.getReceiver(), RECEIVER_ADDRESS_ERROR_MESSAGE);
+        validatePayloadHash(msg.getPayloadHash());
     }
 
     public void validateMessage(AccountCrossChainMessage accMsg) {
@@ -36,8 +38,14 @@ public final class CrossChainMessageValidator {
     }
 
     private void validateAddress(byte[] address, String exceptionMsg) {
-        if (address.length == 0 || address.length > Constants.SIDECHAIN_ADDRESS_SIZE()) {
+        if (address.length != Constants.SIDECHAIN_ADDRESS_SIZE() && address.length != Constants.ABI_ADDRESS_SIZE()) {
             throw new IllegalArgumentException(exceptionMsg);
+        }
+    }
+
+    private void validatePayloadHash(byte[] payload) {
+        if (payload.length != Constants.Sc2Sc$.MODULE$.PAYLOAD_HASH()) {
+            throw new IllegalArgumentException("Payload hash must be 32 bytes long");
         }
     }
 }
