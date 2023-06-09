@@ -17,7 +17,7 @@ import io.horizen.utils.BytesUtils.{padWithZeroBytes, toHorizenPublicKeyAddress}
 import io.horizen.utils.Utils.{Ripemd160Sha256Hash, doubleSHA256Hash}
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.asn1.x9.X9ECParameters
-import org.web3j.crypto.Sign
+import org.web3j.crypto.{Keys, Sign}
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
 import sparkz.util.encode.Base64
@@ -88,7 +88,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
 
-    val hashedMsg = getMcHashedMsg(scAddress.toString)
+    // the sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
+    val hashedMsg = getMcHashedMsg(Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)

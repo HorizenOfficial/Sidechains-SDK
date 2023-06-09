@@ -36,6 +36,7 @@ import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
+import org.web3j.crypto.Keys
 import sparkz.core.settings.RESTApiSettings
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -866,7 +867,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(body.scAddressOpt)
 
             val resultMap = listOfMcAddrOwnerships.groupBy(_.scAddress).map {
-              case (k,v) => (k,v.map(_.mcTransparentAddress))
+              case (k,v) => (Keys.toChecksumAddress(k),v.map(_.mcTransparentAddress))
             }
 
             ApiResponseUtil.toResponse(RespMcAddrOwnership(resultMap))

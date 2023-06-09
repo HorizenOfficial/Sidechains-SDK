@@ -5,6 +5,8 @@ import subprocess
 
 from flask import Flask, request, json
 
+from SidechainTestFramework.scutil import SNAPSHOT_VERSION_TAG
+
 
 class SecureEnclaveApiServer(object):
 
@@ -83,7 +85,7 @@ def launch_signing_tool(json_parameters):
 
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK", "..")
-                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.8.0-SNAPSHOT.jar",
+                                + "/tools/signingtool/target/sidechains-sdk-signingtools-"+SNAPSHOT_VERSION_TAG+".jar",
                                 "createSignature", json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
