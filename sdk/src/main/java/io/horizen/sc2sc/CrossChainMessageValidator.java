@@ -36,7 +36,7 @@ public final class CrossChainMessageValidator {
     }
 
     private void validateAddress(byte[] address, String exceptionMsg) {
-        if (address.length == 0 || address.length > Constants.SIDECHAIN_ADDRESS_SIZE()) {
+        if (address.length != Constants.SIDECHAIN_ADDRESS_SIZE() && address.length != Constants.ABI_ADDRESS_SIZE()) {
             throw new IllegalArgumentException(exceptionMsg);
         }
     }
