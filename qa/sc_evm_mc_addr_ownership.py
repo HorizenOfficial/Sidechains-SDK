@@ -92,12 +92,19 @@ def check_receipt(sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_
 
 
 def check_get_key_ownership(abiReturnValue, exp_dict):
-    qqq = decode(['uint32'], hex_str_to_bytes(abiReturnValue[0:64]))
-    list_len = decode(['uint32'], hex_str_to_bytes(abiReturnValue[64:128]))[0]
-    offset = 128
+    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes from the start
+    # of the return data block. In this case 32 (0x20)
+    start_data_offset = decode(['uint32'], hex_str_to_bytes(abiReturnValue[0:64]))[0]*2
+    assert_equal(start_data_offset, 64)
+
+    end_offset = start_data_offset + 64 # read 32 bytes
+    list_size = decode(['uint32'], hex_str_to_bytes(abiReturnValue[start_data_offset:end_offset]))[0]
+
     sc_associations_dict = {}
-    for i in range(list_len):
-        (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'], hex_str_to_bytes(abiReturnValue[offset:offset+192]))
+    for i in range(list_size):
+        start_offset = end_offset
+        end_offset = start_offset + 192 # read (32 + 32 + 32) bytes
+        (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'], hex_str_to_bytes(abiReturnValue[start_offset:end_offset]))
         sc_address_checksum_fmt = to_checksum_address(address_pref)
         print("sc addr=" + sc_address_checksum_fmt)
         if sc_associations_dict.get(sc_address_checksum_fmt) is not None:
@@ -109,8 +116,6 @@ def check_get_key_ownership(abiReturnValue, exp_dict):
         mc_addr_list.append(mc_addr)
         print("mc addr=" + mc_addr)
         sc_associations_dict[sc_address_checksum_fmt] = mc_addr_list
-
-        offset = offset + 192
 
     pprint.pprint(sc_associations_dict)
     res = json.dumps(sc_associations_dict)
