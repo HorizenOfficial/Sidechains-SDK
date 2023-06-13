@@ -68,6 +68,7 @@ abstract class AbstractSidechainApp
   private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
   protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
   protected val terminationTimeout: FiniteDuration = Duration(30, TimeUnit.SECONDS)
+  protected val maxMcBlockRefDelay = 10
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
@@ -257,7 +258,7 @@ abstract class AbstractSidechainApp
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
   } else {
-    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params))
+    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params) - 1 || params.mcBlockRefDelay > maxMcBlockRefDelay)
       throw new IllegalArgumentException("Mainchain Block reference delay is equal or more certificate submission window length. Certificate cannot be submitted.")
 
     log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")

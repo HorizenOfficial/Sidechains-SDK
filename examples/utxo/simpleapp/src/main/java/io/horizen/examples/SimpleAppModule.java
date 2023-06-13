@@ -31,8 +31,14 @@ public class SimpleAppModule extends SidechainAppModule
 {
     private final SettingsReader settingsReader;
 
-    public SimpleAppModule(String userSettingsFileName) {
+    // It's integer parameter that defines Mainchain Block Reference delay.
+    // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+    // WARNING. It must be constant and should not be changed inside Sidechain network
+    private final int mcBlockRefDelay;
+
+    public SimpleAppModule(String userSettingsFileName, int mcBlockDelayReference) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.mcBlockRefDelay = mcBlockDelayReference;
     }
 
     @Override
@@ -75,10 +81,6 @@ public class SimpleAppModule extends SidechainAppModule
         File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
 
         String appVersion = "";
-
-        // It's integer parameter that defines Mainchain Block Reference delay.
-        // 1 or 2 should be enough to avoid SC block reverting in the most cases.
-        int mcBlockReferenceDelay = 1;
 
         // Here I can add my custom rest api and/or override existing one
         List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
@@ -170,6 +172,6 @@ public class SimpleAppModule extends SidechainAppModule
                 .toInstance(appVersion);
         bind(Integer.class)
                 .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
-                .toInstance(mcBlockReferenceDelay);
+                .toInstance(mcBlockRefDelay);
     }
 }
