@@ -128,6 +128,6 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
       getRandomBytes(32),
       getRandomBytes(32)
     ),
-    getRandomBytes(14), getRandomBytes(14), getRandomBytes(14), getRandomBytes(14), getRandomBytes(14)
+    getRandomBytes(32), getRandomBytes(32), getRandomBytes(32), getRandomBytes(32), getRandomBytes(14)
   )
 }

@@ -11,7 +11,7 @@ import sparkz.core.serialization.BytesSerializable;
 
 @JsonView(Views.Default.class)
 public final class CrossChainMessage implements BytesSerializable {
-    private final static CrossChainMessageValidator ccMsgValidator = new CrossChainMessageValidator();
+    private final static CrossChainMessageSemanticValidator ccMsgValidator = new CrossChainMessageSemanticValidator();
     private final CrossChainProtocolVersion version;
     private final int messageType;
     private final byte[] senderSidechain;

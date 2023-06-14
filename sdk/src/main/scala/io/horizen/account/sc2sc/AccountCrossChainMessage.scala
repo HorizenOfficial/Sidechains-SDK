@@ -1,7 +1,7 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import io.horizen.sc2sc.CrossChainMessageValidator
+import io.horizen.sc2sc.CrossChainMessageSemanticValidator
 import io.horizen.utils.Constants
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
@@ -68,5 +68,5 @@ object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossC
 }
 
 object AccountCrossChainMessageValidator {
-  val ccMsgValidator = new CrossChainMessageValidator()
+  val ccMsgValidator = new CrossChainMessageSemanticValidator()
 }

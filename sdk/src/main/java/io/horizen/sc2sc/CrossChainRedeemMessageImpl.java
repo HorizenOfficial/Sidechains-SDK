@@ -6,6 +6,7 @@ import io.horizen.utils.BytesUtils;
 
 @JsonView(Views.Default.class)
 public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
+    private final static CrossChainRedeemMessageSemanticValidator ccMsgValidator = new CrossChainRedeemMessageSemanticValidator();
 
     private CrossChainMessage message;
     private byte[] certificateDataHash;
@@ -26,6 +27,8 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
         this.scCommitmentTreeRoot = scCommitmentTreeRoot;
         this.nextScCommitmentTreeRoot = nextScCommitmentTreeRoot;
         this.proof = proof;
+
+        ccMsgValidator.validateMessage(this);
     }
 
     @Override

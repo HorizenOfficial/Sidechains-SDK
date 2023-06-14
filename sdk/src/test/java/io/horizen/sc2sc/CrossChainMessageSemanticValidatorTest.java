@@ -10,14 +10,14 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class CrossChainMessageValidatorTest {
+public class CrossChainMessageSemanticValidatorTest {
     @Test
     public void whenMessageTypeIsNotCorrect_IllegalArgumentExceptionIsThrown() {
         // Arrange
         CrossChainMessage ccMsg = mock(CrossChainMessage.class);
         when(ccMsg.getMessageType()).thenReturn(-1);
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
@@ -37,7 +37,7 @@ public class CrossChainMessageValidatorTest {
                 .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         for (int i = 0; i < 3; i++) {
@@ -60,7 +60,7 @@ public class CrossChainMessageValidatorTest {
                 .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         for (int i = 0; i < 3; i++) {
@@ -83,7 +83,7 @@ public class CrossChainMessageValidatorTest {
                 .thenReturn(Array.emptyByteArray())
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         for (int i = 0; i < 3; i++) {
@@ -107,7 +107,7 @@ public class CrossChainMessageValidatorTest {
                 .thenReturn(Array.emptyByteArray())
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         for (int i = 0; i < 3; i++) {
@@ -133,7 +133,7 @@ public class CrossChainMessageValidatorTest {
                 .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
         for (int i = 0; i < 3; i++) {
@@ -156,7 +156,7 @@ public class CrossChainMessageValidatorTest {
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
         when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act & Assert
         try {
@@ -177,7 +177,7 @@ public class CrossChainMessageValidatorTest {
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e"));
         when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
 
-        CrossChainMessageValidator validator = new CrossChainMessageValidator();
+        CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act & Assert
         try {

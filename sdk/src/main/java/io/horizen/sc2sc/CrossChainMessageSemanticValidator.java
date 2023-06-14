@@ -3,7 +3,7 @@ package io.horizen.sc2sc;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
 import io.horizen.utils.Constants;
 
-public final class CrossChainMessageValidator {
+public final class CrossChainMessageSemanticValidator {
     private final static String SENDER_SIDECHAIN_ID_ERROR_MESSAGE = "Sender sidechain id must be 32 bytes long";
     private final static String RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE = "Receiver sidechain id must be 32 bytes long";
     private final static String SENDER_ADDRESS_ERROR_MESSAGE = "Sender address length is not correct";
