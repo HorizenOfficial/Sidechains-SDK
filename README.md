@@ -8,15 +8,16 @@ Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zend
 
 * The Cross-Chain Transfer Protocol (CCTP) implementation to support sidechain declaration, forward transfers, backward transfer requests, withdrawal certificates and ceased sidechain withdrawals
 * Basic zk-SNARK threshold signature verification circuit to authenticate withdrawal certificates. See [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
-* Full implementation of the [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)
+* Implementation based on the [Latus Sidechain Model](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf) with signers for certificate submission, and [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) proof of stake protocol
 * Built-in transactions enabling transfers of coins within the sidechain
 * Forging right delegation mechanism
 * HTTP API for basic node operations
-* Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+* Two model supported:
+    * UTXO Model, with extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+    * Account Model, offering an Ethereum Virtual Machine compatible environment
 * Extensible node API interface
 * Command-line tool to interact with the sidechain node
 * Sidechain Bootstrapping Tool to create and configure a new sidechain network
-* Graphical Wallet allowing easy sidechain creations, forward transfers to sidechain, list of existing sidechains and more: [Sphere by Horizen](https://github.com/HorizenOfficial/Sphere_by_Horizen_Sidechain_Testnet/releases/tag/desktop-v2.0.0-beta-sidechain-testnet).
 
 **Supported platforms**
 
