@@ -5,11 +5,10 @@ import io.horizen.block._
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.Proposition
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.PrivateKey25519
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -35,7 +34,6 @@ import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
-                          sc2ScConfigurator: Sc2ScConfigurator,
                           params: NetworkParams,
                           allowNoWebsocketConnectionInRegtest: Boolean)
   extends AbstractForgeMessageBuilder[
@@ -157,12 +155,13 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     var txsCounter: Int = 0
     val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
+    val sc2ScFork = Sc2ScFork.get(consensusEpochNumber)
     val allowedCrossChainMessageBoxes =
-      if (sc2ScConfigurator.canSendMessages) {
+      if (sc2ScFork.sc2ScCanSend) {
         nodeView.state.getAllowedCrossChainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch) - nodeView.state.getAlreadyMinedCrossChainMessagesInCurrentEpoch
       } else 0
 
-    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
       if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled) {
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.

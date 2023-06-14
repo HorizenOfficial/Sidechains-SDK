@@ -15,14 +15,14 @@ import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm.{Address, Database}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
 import io.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -39,8 +39,7 @@ import scala.concurrent.duration.DurationInt
  */
 
 class AccountSidechainNodeViewHolderEventTest
-  extends JUnitSuite
-    with EthereumTransactionFixture
+  extends EthereumTransactionFixture
     with StoreFixture
     with SparkzEncoding {
   var historyMock: AccountHistory = _
@@ -55,7 +54,6 @@ class AccountSidechainNodeViewHolderEventTest
   var mockedNodeViewHolderRef: ActorRef = _
 
   val mockStateDbNonces: TrieMap[Address, BigInteger] = TrieMap[Address, BigInteger]()
-  val sc2ScConfig: Sc2ScConfigurator = mock[Sc2ScConfigurator]
 
   @Before
   def setUp(): Unit = {
@@ -76,6 +74,8 @@ class AccountSidechainNodeViewHolderEventTest
 
     wallet = mock[AccountWallet]
     Mockito.when(wallet.scanOffchain(ArgumentMatchers.any[SidechainTypes#SCAT])).thenReturn(wallet)
+
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
   }
 
   @Test
@@ -136,7 +136,6 @@ class AccountSidechainNodeViewHolderEventTest
                                             ) extends AccountSidechainNodeViewHolder(
     sidechainSettings,
     params,
-    sc2ScConfig,
     timeProvider,
     historyStorage,
     consensusDataStorage,
@@ -179,7 +178,11 @@ class AccountSidechainNodeViewHolderEventTest
     Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
     Mockito.when(params.sc2ScProvingKeyFilePath).thenReturn(None)
     Mockito.when(params.sc2ScVerificationKeyFilePath).thenReturn(None)
+
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
+    when(timeProvider.time()).thenReturn(System.currentTimeMillis())
+    when(params.consensusSlotsInEpoch).thenReturn(10)
+    when(params.consensusSecondsInSlot).thenReturn(5)
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
     val consensusDataStorage: ConsensusDataStorage = mock[ConsensusDataStorage]
@@ -195,7 +198,6 @@ class AccountSidechainNodeViewHolderEventTest
 
     state = new AccountState(
       params,
-      sc2ScConfig,
       timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,

@@ -6,7 +6,7 @@ import io.horizen.block.{Ommer, SidechainBlockHeaderBase}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus._
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
-import io.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManager, ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
@@ -40,7 +40,7 @@ class ConsensusValidatorOmmersTest
 
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator(), "regtest")
   }
 
   @Test

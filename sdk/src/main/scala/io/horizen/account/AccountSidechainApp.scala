@@ -29,7 +29,6 @@ import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -56,7 +55,6 @@ class AccountSidechainApp @Inject()
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
-   @Named("Sc2ScConfiguration") override val sc2scConfigurator : Sc2ScConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
    @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
@@ -66,7 +64,6 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    sc2scConfigurator,
     chainInfo,
     secondsInSlot
   )
@@ -129,7 +126,6 @@ class AccountSidechainApp @Inject()
     customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,
-    sc2scConfigurator,
     timeProvider,
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
@@ -156,7 +152,7 @@ class AccountSidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, sc2scConfigurator, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, timeProvider, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init Sync Status actor

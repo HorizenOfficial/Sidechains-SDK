@@ -14,16 +14,16 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
 import io.horizen.proposition._
-import io.horizen.sc2sc.Sc2ScConfigurator
+import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -54,7 +54,6 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val sc2scConfigurator : Sc2ScConfigurator,
    val chainInfo : ChainInfo,
    val consensusSecondsInSlot: Int
   )
@@ -136,8 +135,8 @@ abstract class AbstractSidechainApp
   }
 
   if (!isCSWEnabled) {
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    if (sc2scIsActive) {
+    val epoch = TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time())
+    if (Sc2ScUtils.isActive(params, ForkManager.getOptionalSidechainFork[Sc2ScFork](epoch))) {
       val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
         throw new IllegalArgumentException("You must define a sc2sc proving key file path")
       )

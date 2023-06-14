@@ -5,7 +5,6 @@ import io.horizen._
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.history.SidechainHistory
@@ -38,9 +37,8 @@ object ForgerRef {
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
-            sc2ScConfigurator: Sc2ScConfigurator,
             params: NetworkParams): Props = {
-    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, sc2ScConfigurator, params, settings.websocketClient.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocketClient.allowNoConnectionInRegtest)
 
     Props(new Forger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
   }
@@ -50,10 +48,9 @@ object ForgerRef {
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
-            sc2ScConfigurator: Sc2ScConfigurator,
             params: NetworkParams)
            (implicit system: ActorSystem): ActorRef = {
-    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, sc2ScConfigurator, params))
+    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
     system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
     ref
   }
@@ -64,10 +61,9 @@ object ForgerRef {
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
-            sc2ScConfigurator: Sc2ScConfigurator,
             params: NetworkParams)
            (implicit system: ActorSystem): ActorRef = {
-    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, sc2ScConfigurator, params), name)
+    val ref = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)
     system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
     ref
   }

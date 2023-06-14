@@ -10,7 +10,6 @@ import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFi
 import io.horizen.params.MainNetParams
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Database
-import io.horizen.sc2sc.Sc2ScConfigurator
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -31,7 +30,6 @@ class AccountStateTest
       with SidechainTypesTestsExtension {
 
   val params: MainNetParams = MainNetParams()
-  val sc2ScConfigurator: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -45,7 +43,6 @@ class AccountStateTest
 
     state = new AccountState(
       params,
-      sc2ScConfigurator,
       mockedTimeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,

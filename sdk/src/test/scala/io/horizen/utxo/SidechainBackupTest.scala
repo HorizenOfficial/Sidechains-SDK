@@ -1,8 +1,10 @@
 package io.horizen.utxo
 
 import io.horizen.SidechainTypes
+import io.horizen.consensus.TimeProviderFixture
 import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.fork.{ForkManager, ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -15,7 +17,9 @@ import io.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder
 import org.junit.{Before, Rule, Test}
+import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
+import sparkz.core.utils.TimeProvider
 import sparkz.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}
@@ -24,10 +28,10 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 class SidechainBackupTest
-  extends JUnitSuite
-  with StoreFixture
+  extends StoreFixture
   with SecretFixture
   with TransactionFixture
+  with TimeProviderFixture
   {
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
@@ -65,7 +69,6 @@ class SidechainBackupTest
 
   val _temporaryFolder = new TemporaryFolder()
   @Rule  def temporaryFolder = _temporaryFolder
-
   @Before
   def setup(): Unit = {
     boxListFirstModifier ++= getZenBoxList(5).asScala.toList
@@ -89,6 +92,8 @@ class SidechainBackupTest
         new JPair(key, value)
       })
     }
+
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
   }
 
   @Test
@@ -108,7 +113,7 @@ class SidechainBackupTest
     stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup with no Copy option
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params);
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params, timeProvider)
     sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), false)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)
@@ -138,15 +143,15 @@ class SidechainBackupTest
     val backupStorage = new VersionedLevelDbStorageAdapter(backupStorageFile)
 
     //Update a first time the SidechainStateStorage with some custom and zen boxes
-    val firstModifier = getVersion;
+    val firstModifier = getVersion
     stateStorage.update(firstModifier, storedBoxListFirstModifier.asJava, new JArrayList[ByteArrayWrapper]())
     //Update a second time the SidechainStateStorage with some custom and zen boxes
-    val secondModifier = getVersion;
+    val secondModifier = getVersion
     stateStorage.update(secondModifier, storedBoxListSecondModifier.asJava, new JArrayList[ByteArrayWrapper]())
     stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params);
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper, params = params, timeProvider)
     sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), true)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)

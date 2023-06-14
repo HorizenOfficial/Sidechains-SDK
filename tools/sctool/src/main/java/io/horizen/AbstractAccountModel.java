@@ -133,7 +133,12 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
 
         List<MessageProcessor> customMessageProcessors = getCustomMessageProcessors(params);
 
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, JavaConverters.asScalaBuffer(customMessageProcessors));
+        long currentTimeSeconds = System.currentTimeMillis() / 1000;
+        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(
+                params,
+                JavaConverters.asScalaBuffer(customMessageProcessors),
+                () -> currentTimeSeconds
+        );
 
         AccountStateView view = getStateView(messageProcessorSeq);
         try (view) {

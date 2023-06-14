@@ -6,6 +6,7 @@ import io.horizen.AbstractState
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
+import io.horizen.fork.Sc2ScFork
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
@@ -150,9 +151,16 @@ trait Sc2ScUtils[
     }
   }
 }
+
 object Sc2ScUtils {
-  def isActive(networkParams: NetworkParams): Boolean = {
-    networkParams.sc2ScProvingKeyFilePath.nonEmpty || networkParams.sc2ScVerificationKeyFilePath.nonEmpty
+  def isActive(networkParams: NetworkParams, sc2ScForkOption: Option[Sc2ScFork]): Boolean = {
+    sc2ScForkOption match {
+      case Some(sc2ScFork) =>
+        val keysFilesAreDefined = networkParams.sc2ScProvingKeyFilePath.nonEmpty || networkParams.sc2ScVerificationKeyFilePath.nonEmpty
+        val canEitherSendOrReceive = sc2ScFork.sc2ScCanSend || sc2ScFork.sc2ScCanReceive
+        keysFilesAreDefined && canEitherSendOrReceive
+      case _ => false
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, Withdr
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}
@@ -503,7 +504,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
 
-    if (Sc2ScUtils.isActive(params)) {
+    if (Sc2ScUtils.isActive(params, ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpoch))) {
       if (crossChainMessagesToAppendSeq.nonEmpty) {
         // Calculate the next counter for storing crosschain messages requests without duplication previously stored ones.
         val nextCrossChainMessageEpochCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpochInfo.epoch) + 1

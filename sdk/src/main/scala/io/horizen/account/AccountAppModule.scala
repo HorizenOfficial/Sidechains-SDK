@@ -8,7 +8,6 @@ import io.horizen.account.helper.{AccountNodeViewHelper, AccountNodeViewHelperIm
 import io.horizen.account.state.MessageProcessor
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.Pair
@@ -52,7 +51,6 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
            @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("Sc2ScConfiguration") sc2ScConfigurator: Sc2ScConfigurator,
            @Named("ConsensusSecondsInSlot") secondsInSlot: Int
          ): AccountSidechainApp = {
     synchronized {
@@ -66,7 +64,6 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customMessageProcessors,
           applicationStopper,
           forkConfigurator,
-          sc2ScConfigurator,
           chainInfo,
           secondsInSlot
         )

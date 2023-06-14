@@ -7,6 +7,7 @@ import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageSerializer}
@@ -35,8 +36,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class SidechainStateStorageTest
-  extends JUnitSuite
-    with SecretFixture
+    extends SecretFixture
     with TransactionFixture
     with StoreFixture
     with MockitoSugar
@@ -153,13 +153,11 @@ class SidechainStateStorageTest
       // For Test 2:
       .thenAnswer(answer => throw expectedException)
 
-
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
       Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
-
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
@@ -252,6 +250,8 @@ class SidechainStateStorageTest
       })
       // For Test 2:
       .thenAnswer(_ => throw expectedException)
+
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(),

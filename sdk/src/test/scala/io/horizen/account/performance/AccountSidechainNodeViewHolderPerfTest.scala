@@ -17,7 +17,6 @@ import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm.{Address, Database}
 import io.horizen.fixtures._
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
 import io.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
@@ -915,7 +914,6 @@ class AccountSidechainNodeViewHolderPerfTest
   class MockedAccountSidechainNodeViewHolder(
       sidechainSettings: SidechainSettings,
       params: NetworkParams,
-      sc2ScConfig: Sc2ScConfigurator,
       timeProvider: NetworkTimeProvider,
       historyStorage: AccountHistoryStorage,
       consensusDataStorage: ConsensusDataStorage,
@@ -927,7 +925,6 @@ class AccountSidechainNodeViewHolderPerfTest
   ) extends AccountSidechainNodeViewHolder(
         sidechainSettings,
         params,
-        sc2ScConfig,
         timeProvider,
         historyStorage,
         consensusDataStorage,
@@ -968,7 +965,6 @@ class AccountSidechainNodeViewHolderPerfTest
     val params: NetworkParams = mock[NetworkParams]
     Mockito.when(params.chainId).thenReturn(1997)
     Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
-    val sc2scConfig : Sc2ScConfigurator = Sc2ScConfigurator(false, false)
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
@@ -984,7 +980,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
     state = new AccountState(
       params,
-      Sc2ScConfigurator(false, false),
       timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
@@ -1004,7 +999,6 @@ class AccountSidechainNodeViewHolderPerfTest
         new MockedAccountSidechainNodeViewHolder(
           sidechainSettings,
           params,
-          sc2scConfig,
           timeProvider,
           historyStorage,
           consensusDataStorage,
