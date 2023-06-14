@@ -1,5 +1,7 @@
 package io.horizen.sc2sc;
 
+import io.horizen.account.proposition.AddressProposition;
+import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.Constants;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,9 +28,9 @@ public class CrossChainMessageTest {
         version = CrossChainProtocolVersion.VERSION_1;
         messageType = 1;
         senderSidechain = getRandomBytes(Constants.SIDECHAIN_ID_SIZE());
-        sender = getRandomBytes(Constants.ABI_ADDRESS_SIZE());
+        sender = getRandomBytes(PublicKey25519Proposition.getLength());
         receiverSidechain = getRandomBytes(Constants.SIDECHAIN_ID_SIZE());
-        receiver = getRandomBytes(Constants.SIDECHAIN_ADDRESS_SIZE());
+        receiver = getRandomBytes(AddressProposition.LENGTH);
         payloadHash = getRandomBytes(Constants.Sc2Sc$.MODULE$.PAYLOAD_HASH());
 
         randomHash = getRandomBytes(32);

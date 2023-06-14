@@ -12,7 +12,7 @@ trait AccountCrossChainMessageFixture extends SecretFixture{
     val random: Random = new Random(seed)
     val receiverSidechain = new Array[Byte](32)
     random.nextBytes(receiverSidechain)
-    val receiverAddress = new Array[Byte](32)
+    val receiverAddress = new Array[Byte](20)
     random.nextBytes(receiverAddress)
     val payloadHash = new Array[Byte](32)
     random.nextBytes(payloadHash)
