@@ -1,16 +1,17 @@
 package io.horizen.sc2sc;
+
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.librustsidechains.FieldElement;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.cryptolibprovider.utils.HashUtils;
 import io.horizen.json.Views;
 import io.horizen.utils.BytesUtils;
-import io.horizen.utils.Constants;
 import io.horizen.utils.FieldElementsContainer;
 import sparkz.core.serialization.BytesSerializable;
 
 @JsonView(Views.Default.class)
 public final class CrossChainMessage implements BytesSerializable {
+    private final static CrossChainMessageValidator ccMsgValidator = new CrossChainMessageValidator();
     private final CrossChainProtocolVersion version;
     private final int messageType;
     private final byte[] senderSidechain;
@@ -20,7 +21,6 @@ public final class CrossChainMessage implements BytesSerializable {
     private final byte[] payload;
 
     public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
-        validateArguments(msgType, senderSidechain, receiverSidechain, sender, receiver);
         this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
@@ -28,28 +28,8 @@ public final class CrossChainMessage implements BytesSerializable {
         this.receiverSidechain = receiverSidechain;
         this.receiver = receiver;
         this.payload = payload;
-    }
 
-    private void validateArguments(int msgType, byte[] senderSidechain, byte[] receiverSidechain, byte[] sender, byte[] receiver) {
-        if (msgType < 0) {
-            throw new IllegalArgumentException("CrossChain message type cannot be negative");
-        }
-
-        if (senderSidechain.length != Constants.SIDECHAIN_ID_SIZE()) {
-            throw new IllegalArgumentException("Sender sidechain id must be 32 bytes long");
-        }
-
-        if (receiverSidechain.length != Constants.SIDECHAIN_ID_SIZE()) {
-            throw new IllegalArgumentException("Receiver sidechain id must be 32 bytes long");
-        }
-
-        if (sender.length == 0 || sender.length > Constants.SIDECHAIN_ADDRESS_SIZE()) {
-            throw new IllegalArgumentException("Sender address length is not correct");
-        }
-
-        if (receiver.length == 0 || receiver.length > Constants.SIDECHAIN_ADDRESS_SIZE()) {
-            throw new IllegalArgumentException("Receiver address length is not correct");
-        }
+        ccMsgValidator.validateMessage(this);
     }
 
     public CrossChainProtocolVersion getProtocolVersion() {

@@ -25,6 +25,7 @@ import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -96,10 +97,10 @@ public class Sc2scImplZendooTest {
         CrossChainMessage msg1 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(),
-                "sender1".getBytes(),
-                "receiverSidechain1receiverSidech".getBytes(),
-                "receiver1".getBytes(),
+                "senderSidechain1senderSidechain1".getBytes(StandardCharsets.UTF_8),
+                "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
+                "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
+                "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
                 "payload1".getBytes()
         );
 
