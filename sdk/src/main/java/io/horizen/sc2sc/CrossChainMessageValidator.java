@@ -1,6 +1,8 @@
 package io.horizen.sc2sc;
 
+import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
+import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.Constants;
 
 public final class CrossChainMessageValidator {
@@ -36,7 +38,7 @@ public final class CrossChainMessageValidator {
     }
 
     private void validateAddress(byte[] address, String exceptionMsg) {
-        if (address.length != Constants.SIDECHAIN_ADDRESS_SIZE() && address.length != Constants.ABI_ADDRESS_SIZE()) {
+        if (address.length != PublicKey25519Proposition.getLength() && address.length != AddressProposition.LENGTH) {
             throw new IllegalArgumentException(exceptionMsg);
         }
     }
