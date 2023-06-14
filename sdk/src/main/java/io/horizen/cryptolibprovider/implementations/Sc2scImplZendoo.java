@@ -6,7 +6,6 @@ import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.InMemoryAppendOnlyMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
-import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
 import io.horizen.cryptolibprovider.CommonCircuit;

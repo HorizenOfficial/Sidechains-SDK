@@ -11,6 +11,7 @@ def send_vote_message_to_sidechain(sidechainNode, proposition, vote, receivingSi
     }
     request = json.dumps(j)
     response = sidechainNode.vote_sendToSidechain(request)
+    print(f'THIS IS THE RESPONSE {response}')
     if "result" in response:
         return response["result"]
 

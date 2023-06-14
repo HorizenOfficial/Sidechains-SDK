@@ -155,8 +155,8 @@ class SCNodeConfiguration(object):
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
                  max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
                  tx_lifetime=DEFAULT_TX_LIFETIME,
-                 sc2sc_proving_key_file_path="",
-                 sc2sc_verification_key_file_path=""
+                 sc2sc_proving_key_file_path=None,
+                 sc2sc_verification_key_file_path=None
                  ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))

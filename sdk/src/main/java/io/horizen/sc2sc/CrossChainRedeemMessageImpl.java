@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonView;
 import io.horizen.json.Views;
 import io.horizen.utils.BytesUtils;
 
+import java.util.Arrays;
+
 @JsonView(Views.Default.class)
 public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
 
@@ -92,6 +94,8 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
                 ", nextCertificateDataHash=" + BytesUtils.toHexString(nextCertificateDataHash) +
                 ", scCommitmentTreeRoot=" + BytesUtils.toHexString(scCommitmentTreeRoot) +
                 ", nextScCommitmentTreeRoot=" + BytesUtils.toHexString(nextScCommitmentTreeRoot) +
+                ", proof=" + BytesUtils.toHexString(Arrays.copyOfRange(proof, 0, 16)) +
+                " ... " + BytesUtils.toHexString(Arrays.copyOfRange(proof, proof.length - 16, proof.length)) +
                 '}';
     }
 }

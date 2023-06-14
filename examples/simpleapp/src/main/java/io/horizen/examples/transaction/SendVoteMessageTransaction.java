@@ -4,7 +4,6 @@ import io.horizen.proof.Signature25519;
 import io.horizen.proposition.Proposition;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
-import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.data.BoxData;
 import io.horizen.utxo.box.data.CrossChainMessageBoxData;

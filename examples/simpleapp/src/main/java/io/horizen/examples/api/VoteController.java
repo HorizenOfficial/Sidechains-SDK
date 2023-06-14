@@ -47,7 +47,6 @@ public class VoteController extends SidechainApplicationApiGroup {
         List<Route> routes = new ArrayList<>();
         routes.add(bindPostRequest("sendToSidechain", this::sendVoteToSidechain, SendVoteMessageToSidechainRequest.class));
         routes.add(bindPostRequest("redeem", this::redeem, RedeemVoteMessageRequest.class));
-        routes.add(bindPostRequest("getByAddress", this::getByAddress, GetVotesFromAddressRequest.class));
         return routes;
     }
 
@@ -244,46 +243,6 @@ public class VoteController extends SidechainApplicationApiGroup {
                     Constants.REDEEM_ERROR_RESPONSE_CODE, "Error while creating redeem message", Optional.of(e)
             );
         }
-    }
-
-    private ApiResponse getByAddress(SidechainNodeView view, GetVotesFromAddressRequest request) {
-        try {
-            List<Box<Proposition>> allCrossChainMessageBoxes = view.getNodeWallet().boxesOfType(CrossChainMessageBox.class);
-            PublicKey25519Proposition propositionAddress = PublicKey25519PropositionSerializer.getSerializer()
-                    .parseBytes(BytesUtils.fromHexString(request.getAddress()));
-            List<Box<Proposition>> ccMsgBoxesOfAddress = allCrossChainMessageBoxes
-                    .stream()
-                    .filter(box -> box.proposition().equals(propositionAddress))
-                    .collect(Collectors.toList());
-
-            // Make sure we just consider boxes with votes
-            List<CrossChainMessageBox> msgBoxes = new ArrayList<>();
-            for (Box<?> box : ccMsgBoxesOfAddress) {
-                CrossChainMessageBox msgBox = (CrossChainMessageBox) box;
-                if (msgBox.getMessageType() == VOTING_MESSAGE_TYPE) {
-                    msgBoxes.add(msgBox);
-                }
-            }
-
-            int total = msgBoxes.size();
-            double avg = computeAvgVotes(msgBoxes, total);
-
-            String responseString = String.format("{\"total\": %s, \"average: %s\"}", total, avg);
-
-            return new SuccessResponseTx(responseString);
-        } catch (Exception e) {
-            return new ErrorResponseTx(
-                    Constants.GET_BY_ADDRESS_ERROR_RESPONSE_CODE, "Error while getting votes by address", Optional.of(e)
-            );
-        }
-    }
-
-    private double computeAvgVotes(List<CrossChainMessageBox> boxes, int total) {
-        double voteSum = 0;
-        for (CrossChainMessageBox box : boxes) {
-            voteSum += Integer.parseInt(new String(box.getPayload()));
-        }
-        return voteSum / total;
     }
 
     // Utility functions to get from the current mempool the list of all boxes to be opened.
