@@ -12,11 +12,12 @@ Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zend
 * Built-in transactions enabling transfers of coins within the sidechain
 * Forging right delegation mechanism
 * HTTP API for basic node operations
-* Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+* Two model supported:
+    * UTXO Model, with extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+    * Account Model, offering an Ethereum Virtual Machine compatible environment
 * Extensible node API interface
 * Command-line tool to interact with the sidechain node
 * Sidechain Bootstrapping Tool to create and configure a new sidechain network
-* Graphical Wallet allowing easy sidechain creations, forward transfers to sidechain, list of existing sidechains and more: [Sphere by Horizen](https://github.com/HorizenOfficial/Sphere_by_Horizen_Sidechain_Testnet/releases/tag/desktop-v2.0.0-beta-sidechain-testnet).
 
 **Supported platforms**
 
