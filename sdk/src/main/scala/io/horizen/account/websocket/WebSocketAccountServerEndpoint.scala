@@ -1,6 +1,6 @@
 package io.horizen.account.websocket
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.horizen.account.api.rpc.request.{RpcId, RpcRequest}
 import io.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
 import io.horizen.account.api.rpc.service.RpcFilter
@@ -9,7 +9,7 @@ import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent, WebSocketSyncStatus}
+import io.horizen.account.websocket.data._
 import io.horizen.evm.Address
 import io.horizen.network.SyncStatus
 import jakarta.websocket._
@@ -20,6 +20,7 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.io.{PrintWriter, StringWriter}
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
+import scala.util.{Failure, Success}
 
 abstract class WebSocketAccountRequest(val request: String)
 case object SUBSCRIBE_REQUEST extends WebSocketAccountRequest("eth_subscribe")
@@ -31,7 +32,7 @@ case object NEW_PENDING_TRANSACTIONS_SUBSCRIPTION extends WebSocketAccountSubscr
 case object LOGS_SUBSCRIPTION extends WebSocketAccountSubscription("logs")
 case object SYNCING_SUBSCRIPTION extends WebSocketAccountSubscription("syncing")
 
-@ServerEndpoint("/")
+@ServerEndpoint(value = "/")
 class WebSocketAccountServerEndpoint() extends SparkzLogging {
 
   @OnClose
@@ -50,23 +51,25 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
   def onMessageReceived(session: Session, message: String): Unit = {
     try {
       val rpcRequest = new RpcRequest(EthJsonMapper.getMapper.readTree(message))
-      if (badRpcRequestParams(rpcRequest.params)) {
-        log.debug("Missing or empty field params.")
-        WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-          new RpcError(RpcCode.InvalidParams, "Missing or empty field params.", "")),
-          session)
-      } else {
-        rpcRequest.method match {
-          case SUBSCRIBE_REQUEST.request =>
-            subscribe(session, rpcRequest)
-          case UNSUBSCRIBE_REQUEST.request =>
-            unsubscribe(session, rpcRequest)
-          case unknownMethod =>
+
+      rpcRequest.method match {
+        case SUBSCRIBE_REQUEST.request | UNSUBSCRIBE_REQUEST.request=>
+          if (badRpcRequestParams(rpcRequest.params)) {
+            log.debug("Missing or empty field params.")
             WebSocketAccountServerEndpoint.send(new RpcResponseError(rpcRequest.id,
-              new RpcError(RpcCode.MethodNotFound, s"Method $unknownMethod not supported.", "")),
+              new RpcError(RpcCode.InvalidParams, "Missing or empty field params.", "")),
               session)
-            log.debug(s"Method $unknownMethod not supported.")
-        }
+          } else {
+            rpcRequest.method match {
+              case SUBSCRIBE_REQUEST.request =>
+                subscribe(session, rpcRequest)
+              case UNSUBSCRIBE_REQUEST.request =>
+                unsubscribe(session, rpcRequest)
+            }
+          }
+        case _ =>
+          val response = WebSocketAccountServerRef.rpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
+          WebSocketAccountServerEndpoint.sendRpcResponse(response, session)
       }
     } catch {
       case ex: Throwable =>
@@ -168,29 +171,33 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   var syncingSubscriptions: List[Subscription] = List()
 
   val webSocketAccountChannelImpl = new WebSocketAccountChannelImpl()
-  private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses
+  private var walletAddresses: Set[Address] = webSocketAccountChannelImpl.getWalletAddresses.getOrElse(Set())
   private var cachedBlocksReceipts: List[(ModifierId, Set[EthereumLogView])] = List[(ModifierId, Set[EthereumLogView])]()
   private val maxCachedBlockReceipts = 100
 
   def notifySemanticallySuccessfulModifier(block: AccountBlock): Unit = {
     log.debug("Websocket received new block: "+block.toString)
 
-    val blockJson = webSocketAccountChannelImpl.accountBlockToWebsocketJson(block)
+    webSocketAccountChannelImpl.accountBlockToWebsocketJson(block) match {
+      case Success(blockJson) =>
+        for(subscription <- newHeadsSubscriptions) {
+          send(new WebSocketAccountEvent(params = new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
+        }
 
-    for(subscription <- newHeadsSubscriptions) {
-        send(new WebSocketAccountEvent(params = new WebSocketAccountEventParams(subscription.subscriptionId, blockJson)), subscription.session)
+        while (cachedBlocksReceipts.nonEmpty && !cachedBlocksReceipts.head._1.equals(block.parentId)) {
+          //We have a chain reorganization
+          val oldTip: (ModifierId, Set[EthereumLogView]) = cachedBlocksReceipts.head
+          for (subscription <- logsSubscriptions) {
+            val logsToSend = oldTip._2.filter(RpcFilter.testLog(subscription.filter.address, subscription.filter.topics))
+            sendTransactionLog(logsToSend.toSeq, subscription)
+          }
+          cachedBlocksReceipts = cachedBlocksReceipts.drop(1)
+        }
+        processBlockReceipt(block)
+      case Failure(exception) =>
+        log.debug("Websocket failed to get block info "+exception.getMessage)
     }
 
-    while (cachedBlocksReceipts.nonEmpty && !cachedBlocksReceipts.head._1.equals(block.parentId)) {
-      //We have a chain reorganization
-      val oldTip: (ModifierId, Set[EthereumLogView]) = cachedBlocksReceipts.head
-      for (subscription <- logsSubscriptions) {
-        val logsToSend = oldTip._2.filter(RpcFilter.testLog(subscription.filter.address, subscription.filter.topics))
-        sendTransactionLog(logsToSend.toSeq, subscription)
-      }
-      cachedBlocksReceipts = cachedBlocksReceipts.drop(1)
-    }
-    processBlockReceipt(block)
   }
 
   def notifyNewPendingTransaction(tx: EthereumTransaction): Unit = {
@@ -228,9 +235,13 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   private def processBlockReceipt(block: AccountBlock): Unit = {
     var relevantBlockReceipt: Seq[EthereumLogView] = Seq()
     for (subscription <- logsSubscriptions) {
-      val logs = webSocketAccountChannelImpl.getEthereumLogsFromBlock(block, subscription)
-      sendTransactionLog(logs, subscription)
-      relevantBlockReceipt = logs ++: relevantBlockReceipt
+      webSocketAccountChannelImpl.getEthereumLogsFromBlock(block, subscription) match {
+        case Success(logs) =>
+          sendTransactionLog(logs, subscription)
+          relevantBlockReceipt = logs ++: relevantBlockReceipt
+        case Failure(exception) =>
+          log.debug("Websocket failed to get transaction logs "+exception.getMessage)
+      }
     }
     cachedBlocksReceipts = (block.id, relevantBlockReceipt.toSet.map((log: EthereumLogView) => {
       log.updateRemoved(true)
@@ -247,7 +258,10 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def onVaultChanged(): Unit = {
-    walletAddresses = webSocketAccountChannelImpl.getWalletAddresses
+    webSocketAccountChannelImpl.getWalletAddresses match {
+      case Success(addresses) => walletAddresses = addresses
+      case Failure(exception) => log.debug("Websocket failed to update walletAddresses "+exception.getMessage)
+    }
   }
 
   def addNewHeadsSubscription(subscription: Subscription): Unit = {
@@ -298,13 +312,31 @@ private object WebSocketAccountServerEndpoint extends SparkzLogging {
   }
 
   def send(websocketResponse: Object, session: Session): Unit = {
-    session.getAsyncRemote.sendText(EthJsonMapper.serialize(websocketResponse), new SendHandler {
-      override def onResult(sendResult: SendResult): Unit = {
-        if (!sendResult.isOK) {
-          log.debug("Websocket send message failed. "+session.getId)
+    try {
+      session.getAsyncRemote.sendText(EthJsonMapper.serialize(websocketResponse), new SendHandler {
+        override def onResult(sendResult: SendResult): Unit = {
+          if (!sendResult.isOK) {
+            log.debug("Websocket send message failed. "+session.getId)
+          }
         }
-      }
-    })
+      })
+    } catch {
+      case _: Throwable => log.debug("Websocket send message error. "+session.getId)
+    }
+
   }
 
+  def sendRpcResponse(rpcResponse: Object, session: Session): Unit = {
+    try {
+      session.getAsyncRemote.sendObject(rpcResponse, new SendHandler {
+        override def onResult(sendResult: SendResult): Unit = {
+          if (!sendResult.isOK) {
+            log.debug("Websocket send message failed. "+session.getId)
+          }
+        }
+      })
+    } catch {
+      case _: Throwable => log.debug("Websocket send message error. "+session.getId)
+    }
+  }
 }

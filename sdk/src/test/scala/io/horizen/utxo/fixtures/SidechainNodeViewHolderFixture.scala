@@ -1,7 +1,5 @@
 package io.horizen.utxo.fixtures
 
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
@@ -27,10 +25,12 @@ import io.horizen.utxo.customtypes.{DefaultApplicationState, DefaultApplicationW
 import io.horizen.utxo.state.{ApplicationState, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
-import io.horizen.{SidechainSettings, SidechainSettingsReader, SidechainTypes, utxo}
+import io.horizen.{SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import sparkz.core.api.http.ApiRejectionHandler
 import sparkz.core.utils.NetworkTimeProvider
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
@@ -42,8 +42,7 @@ trait SidechainNodeViewHolderFixture
   val sidechainSettings: SidechainSettings = SidechainSettingsReader.read(classLoader.getResource("sc_node_holder_fixter_settings.conf").getFile, None)
 
   val simpleForkConfigurator = new SimpleForkConfigurator
-  val forkManagerUtil = new ForkManagerUtil()
-  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
+  ForkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 

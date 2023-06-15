@@ -1,7 +1,5 @@
 package io.horizen.utils;
 
-import java.util.Comparator;
-
 // Wraps byte array without copying it and provides proper hashCode and compare methods implementation.
 public class ByteArrayWrapper implements java.io.Serializable, Comparable<ByteArrayWrapper> {
 

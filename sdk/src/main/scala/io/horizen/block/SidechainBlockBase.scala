@@ -4,15 +4,15 @@ package io.horizen.block
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.horizen.history.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import io.horizen.params.NetworkParams
-import io.horizen.utils.{MerkleTree, Utils}
 import io.horizen.transaction.Transaction
-import sparkz.util.ModifierId
+import io.horizen.utils.{MerkleTree, Utils}
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block
 import sparkz.core.block.Block.Timestamp
+import sparkz.util.ModifierId
 
-import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 
 abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBase] (override val header: H,
@@ -227,7 +227,10 @@ object SidechainBlockBase {
       Utils.ZEROS_HASH
   }
 
-  def getTopQualityCertsWithMainChainHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate,Array[Byte])] = {
-    mainchainBlockReferencesData.filter(_.topQualityCertificate.nonEmpty).map( brefData =>  (brefData.topQualityCertificate.get, brefData.headerHash))
+  def getTopQualityCertsWithMainChainHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]): Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)] = {
+    mainchainBlockReferencesData.flatMap(data => data.topQualityCertificate match {
+      case Some(cert) => Some(cert, MainchainHeaderHash(data.headerHash))
+      case None => None
+    })
   }
 }

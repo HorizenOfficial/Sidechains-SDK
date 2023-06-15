@@ -1,12 +1,11 @@
 package io.horizen.consensus
 
-import java.util.{ArrayList => JArrayList}
 import io.horizen.storage.{SidechainStorageInfo, Storage}
-import io.horizen.utils.{ByteArrayWrapper, Pair => JPair}
-import io.horizen.utils.Utils
+import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.SparkzLogging
 
+import java.util.{ArrayList => JArrayList}
 import scala.compat.java8.OptionConverters._
 
 class ConsensusDataStorage(consensusEpochInfoStorage: Storage)

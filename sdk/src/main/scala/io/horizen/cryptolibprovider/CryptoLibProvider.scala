@@ -1,6 +1,6 @@
 package io.horizen.cryptolibprovider
 
-import io.horizen.cryptolibprovider.implementations.{CswCircuitImplZendoo, Sc2scImplZendoo, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo, VrfFunctionsImplZendoo}
+import io.horizen.cryptolibprovider.implementations._
 
 object CryptoLibProvider {
   val vrfFunctions: VrfFunctions = new VrfFunctionsImplZendoo()

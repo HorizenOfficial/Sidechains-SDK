@@ -6,7 +6,7 @@ import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 
 import static io.horizen.utxo.box.CoreBoxesIdsEnum.CrossChainRedeemMessageBoxId;
 
-public class CrossChainRedeemMessageBox
+public final class CrossChainRedeemMessageBox
         extends AbstractBox<PublicKey25519Proposition, CrossChainRedeemMessageBoxData, CrossChainRedeemMessageBox> {
     public CrossChainRedeemMessageBox(CrossChainRedeemMessageBoxData boxData, long nonce) {
         super(boxData, nonce);

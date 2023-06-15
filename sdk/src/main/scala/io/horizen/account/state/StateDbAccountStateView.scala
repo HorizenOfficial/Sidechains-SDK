@@ -3,28 +3,27 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.sc2sc.CrossChainMessageProvider
-import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider, ScTxCommitmentTreeRootHashMessageProvider}
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
-import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 import java.util.Optional
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
-
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
@@ -43,6 +42,10 @@ class StateDbAccountStateView(
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
   lazy val crossChainMessageProviders: Seq[CrossChainMessageProvider] = messageProcessors.filter(_.isInstanceOf[CrossChainMessageProvider]).map(_.asInstanceOf[CrossChainMessageProvider])
+  lazy val crossChainRedeemMessageProviders: Seq[CrossChainRedeemMessageProvider] =
+    messageProcessors.filter(_.isInstanceOf[CrossChainRedeemMessageProvider]).map(_.asInstanceOf[CrossChainRedeemMessageProvider])
+  lazy val scTxCommTreeRootProvider: ScTxCommitmentTreeRootHashMessageProvider =
+    messageProcessors.find(_.isInstanceOf[ScTxCommitmentTreeRootHashMessageProvider]).get.asInstanceOf[ScTxCommitmentTreeRootHashMessageProvider]
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -76,6 +79,10 @@ class StateDbAccountStateView(
       case Some(x) => x.getCrossChainMessageHashEpoch(msgHash, this)
       case None => Option.empty
     }
+  }
+
+  def applyMainchainHeader(mcHeader: MainchainHeader): Unit = {
+    scTxCommTreeRootProvider.addScTxCommitmentTreeRootHash(mcHeader.hashScTxsCommitment, this)
   }
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
@@ -219,7 +226,7 @@ class StateDbAccountStateView(
       } catch {
         // any other exception will bubble up and invalidate the block
         case err: ExecutionFailedException =>
-          log.error(s"applying message failed, tx.id=${ethTx.id}", err)
+          log.debug(s"applying message failed, tx id: ${ethTx.id}, reason: ${err.getMessage}")
           ReceiptStatus.FAILED
       } finally {
         // finalize pending changes, clear the journal and reset refund counter
@@ -371,4 +378,7 @@ class StateDbAccountStateView(
 
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
     new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
+    crossChainRedeemMessageProviders.exists(_.doesCrossChainMessageHashFromRedeemMessageExist(hash, this))
 }

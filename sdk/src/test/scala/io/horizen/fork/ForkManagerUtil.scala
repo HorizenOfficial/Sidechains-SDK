@@ -1,8 +1,7 @@
 package io.horizen.fork
-import scala.util.Try
 
-class ForkManagerUtil {
-  def initializeForkManager(forkConfigurator:ForkConfigurator, networkName:String): Try[Unit] = Try {
+object ForkManagerUtil {
+  def initializeForkManager(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
     ForkManager.reset()
     ForkManager.init(forkConfigurator, networkName)
   }

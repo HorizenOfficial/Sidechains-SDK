@@ -1,12 +1,13 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
+import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.evm.{Address, Hash}
+import io.horizen.fixtures.StoreFixture
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import io.horizen.evm.{Address, Hash}
-import io.horizen.fixtures.StoreFixture
 import org.junit.Assert._
 import org.junit._
 import org.mockito.ArgumentMatchers.any
@@ -170,7 +171,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     // Withdrawal request processing when max number of wt was already reached should result in ExecutionFailed
     val epochNum = 102
     val testEpochBlockContext =
-      new BlockContext(Address.ZERO, 0, 0, FeeUtils.GAS_LIMIT, 0, 0, epochNum, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
+      new BlockContext(Address.ZERO, 0, 0, DefaultGasFeeFork.blockGasLimit, 0, 0, epochNum, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(
       new Array[Byte](32 - Ints.BYTES),

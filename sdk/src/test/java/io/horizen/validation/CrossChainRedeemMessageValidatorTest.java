@@ -1,7 +1,5 @@
 package io.horizen.validation;
 
-import io.horizen.GenesisDataSettings;
-import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.params.NetworkParams;
 import io.horizen.proof.Signature25519;
@@ -11,16 +9,15 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.crosschain.receiver.CrossChainRedeemMessageValidator;
 import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
-import io.horizen.validation.crosschain.receiver.CrossChainRedeemMessageValidator;
 import org.junit.Test;
 import scala.Option;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -118,7 +115,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(true);
 
         // Act
@@ -151,7 +148,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -185,7 +182,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -221,7 +218,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);
@@ -270,7 +267,7 @@ public class CrossChainRedeemMessageValidatorTest {
         when(crossChainMessage.getReceiverSidechain()).thenReturn(scId);
         when(networkParams.sidechainId()).thenReturn(BytesUtils.reverseBytes(scId));
 
-        when(sc2scCircuit.getCrossChainMessageHash(crossChainMessage)).thenReturn(crossChainMsgHash);
+        when(crossChainMessage.getCrossChainMessageHash()).thenReturn(crossChainMsgHash);
         when(scStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(crossChainMsgHash)).thenReturn(false);
 
         when(redeemMessageBox.getScCommitmentTreeRoot()).thenReturn(scTxCommitmentTreeHash);

@@ -78,8 +78,8 @@ class Demo(SidechainTestFramework):
         creation_amount = 100  # Zen
         withdrawal_epoch_length = 10
         sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length)
-        accounts = generate_secrets("seed", 1)
-        vrf_keys = generate_vrf_secrets("seed", 1)
+        accounts = generate_secrets("seed", 1, self.model)
+        vrf_keys = generate_vrf_secrets("seed", 1, self.model)
         genesis_account = accounts[0]
         vrf_key = vrf_keys[0]
         ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -89,10 +89,10 @@ class Demo(SidechainTestFramework):
         cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
 
         certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, True,
-                                                                 NO_KEY_ROTATION_CIRCUIT)
+                                                                 NO_KEY_ROTATION_CIRCUIT, self.model)
 
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
-        csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
+        csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths, self.model)
 
         custom_data = vrf_key.publicKey
         fe_certificate_field_configs = [255, 255]
@@ -149,7 +149,7 @@ class Demo(SidechainTestFramework):
             "info": genesis_info[0],
             "regtestBlockTimestampRewind": 720 * 120 * 5
         }
-        jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
+        jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters, self.model)
         logging.info("\nCalculating Sidechain network genesis data using ScBootstrappingTool command:\n" +
                      "genesisinfo {}\n".format(json.dumps(jsonParameters, indent=4, sort_keys=True)) +
                      "where arguments are:\ninfo - genesis info retrieved from MC on previous step\nsecret and vrfSecret - private part the corresponds first FT data in sc_create RPC call.\n")

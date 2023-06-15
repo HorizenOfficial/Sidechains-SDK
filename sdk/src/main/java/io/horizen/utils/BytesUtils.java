@@ -7,7 +7,6 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
-
 import sparkz.util.encode.Base58;
 
 import java.util.Arrays;

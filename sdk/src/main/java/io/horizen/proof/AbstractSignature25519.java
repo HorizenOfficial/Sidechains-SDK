@@ -2,9 +2,9 @@ package io.horizen.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import io.horizen.json.Views;
 import io.horizen.proposition.ProofOfKnowledgeProposition;
 import io.horizen.secret.PrivateKey25519;
-import io.horizen.json.Views;
 import io.horizen.utils.Ed25519;
 
 import java.util.Arrays;

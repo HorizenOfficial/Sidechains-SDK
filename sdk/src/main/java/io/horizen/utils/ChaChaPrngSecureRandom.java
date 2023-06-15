@@ -1,6 +1,8 @@
 package io.horizen.utils;
 
+import org.jetbrains.annotations.NotNull;
 import sparkz.crypto.hash.Blake2b256;
+
 import java.security.*;
 import java.util.Arrays;
 
@@ -18,6 +20,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         ChaChaPrngSecureRandomProvider.init();
     }
 
+    @NotNull
     public static SecureRandom getInstance(byte[] seed) throws SecurityException {
         SecureRandom rng;
         try {
@@ -33,89 +36,21 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     }
 
     private void block() {
-        int x0 = mState[0];
-        int x1 = mState[1];
-        int x2 = mState[2];
-        int x3 = mState[3];
-        int x4 = mState[4];
-        int x5 = mState[5];
-        int x6 = mState[6];
-        int x7 = mState[7];
-        int x8 = mState[8];
-        int x9 = mState[9];
-        int x10 = mState[10];
-        int x11 = mState[11];
-        int x12 = mState[12];
-        int x13 = mState[13];
-        int x14 = mState[14];
-        int x15 = mState[15];
+        int[] x = new int[16];
+        System.arraycopy(mState, 0, x, 0, 16);
 
         for (int i = 0; i < ROUNDS; i += 2) {
-            int[] tmp = quarterRound(x0, x4, x8, x12);
-            x0 = tmp[0];
-            x4 = tmp[1];
-            x8 = tmp[2];
-            x12 = tmp[3];
-
-            tmp = quarterRound(x1, x5, x9, x13);
-            x1 = tmp[0];
-            x5 = tmp[1];
-            x9 = tmp[2];
-            x13 = tmp[3];
-
-            tmp = quarterRound(x2, x6, x10, x14);
-            x2 = tmp[0];
-            x6 = tmp[1];
-            x10 = tmp[2];
-            x14 = tmp[3];
-
-            tmp = quarterRound(x3, x7, x11, x15);
-            x3 = tmp[0];
-            x7 = tmp[1];
-            x11 = tmp[2];
-            x15 = tmp[3];
-
-            tmp = quarterRound(x0, x5, x10, x15);
-            x0 = tmp[0];
-            x5 = tmp[1];
-            x10 = tmp[2];
-            x15 = tmp[3];
-
-            tmp = quarterRound(x1, x6, x11, x12);
-            x1 = tmp[0];
-            x6 = tmp[1];
-            x11 = tmp[2];
-            x12 = tmp[3];
-
-            tmp = quarterRound(x2, x7, x8, x13);
-            x2 = tmp[0];
-            x7 = tmp[1];
-            x8 = tmp[2];
-            x13 = tmp[3];
-
-            tmp = quarterRound(x3, x4, x9, x14);
-            x3 = tmp[0];
-            x4 = tmp[1];
-            x9 = tmp[2];
-            x14 = tmp[3];
+            quarterRound(x, 0, 4, 8, 12);
+            quarterRound(x, 1, 5, 9, 13);
+            quarterRound(x, 2, 6, 10, 14);
+            quarterRound(x, 3, 7, 11, 15);
+            quarterRound(x, 0, 5, 10, 15);
+            quarterRound(x, 1, 6, 11, 12);
+            quarterRound(x, 2, 7, 8, 13);
+            quarterRound(x, 3, 4, 9, 14);
         }
 
-        mWorkingState[0] = x0 + mState[0];
-        mWorkingState[1] = x1 + mState[1];
-        mWorkingState[2] = x2 + mState[2];
-        mWorkingState[3] = x3 + mState[3];
-        mWorkingState[4] = x4 + mState[4];
-        mWorkingState[5] = x5 + mState[5];
-        mWorkingState[6] = x6 + mState[6];
-        mWorkingState[7] = x7 + mState[7];
-        mWorkingState[8] = x8 + mState[8];
-        mWorkingState[9] = x9 + mState[9];
-        mWorkingState[10] = x10 + mState[10];
-        mWorkingState[11] = x11 + mState[11];
-        mWorkingState[12] = x12 + mState[12];
-        mWorkingState[13] = x13 + mState[13];
-        mWorkingState[14] = x14 + mState[14];
-        mWorkingState[15] = x15 + mState[15];
+        for (int i = 0; i < 16; i++) mWorkingState[i] = x[i] + mState[i];
     }
 
     private void incrementCounter() {
@@ -128,25 +63,24 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
                     repackState();
                 } else {
                     mState[14] = (int)mStream;
-                    mState[15] = (int)(mStream >> 32);
+                    mState[15] = (int)(mStream >>> 32);
                 }
             }
         }
     }
 
-    private static int[] quarterRound(int a, int b, int c, int d) {
-        a += b;
-        d = rotateLeft32(d ^ a, 16);
+    private static void quarterRound(@NotNull int[] x, int a, int b, int c, int d) {
+        x[a] += x[b];
+        x[d] = rotateLeft32(x[d] ^ x[a], 16);
 
-        c += d;
-        b = rotateLeft32(b ^ c, 12);
+        x[c] += x[d];
+        x[b] = rotateLeft32(x[b] ^ x[c], 12);
 
-        a += b;
-        d = rotateLeft32(d ^ a, 8);
+        x[a] += x[b];
+        x[d] = rotateLeft32(x[d] ^ x[a], 8);
 
-        c += d;
-        b = rotateLeft32(b ^ c, 7);
-        return new int[]{a, b, c, d};
+        x[c] += x[d];
+        x[b] = rotateLeft32(x[b] ^ x[c], 7);
     }
 
     /**
@@ -154,10 +88,7 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
      * @param k The number of bits to rotate left
      */
     private static int rotateLeft32(int x, int k) {
-        final int n = 32;
-
-        int s = k & (n - 1);
-        return x << s | x >>(n - s);
+        return (x << k) | (x >>> (32 - k));
     }
 
     private static int[] defaultState(int[] seed, long stream) {
@@ -177,19 +108,19 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
                 0,
                 0,
                 (int)stream,
-                (int)(stream >> 32),
+                (int)(stream >>> 32),
         };
     }
 
     private void repackState() {
         byte[] seed = new byte[32];
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
-            seed[i] = (byte)(mState[j + 4] >> 24);
-            seed[i + 1] = (byte)(mState[j + 4] >> 16);
-            seed[i + 2] = (byte)(mState[j + 4] >> 8);
-            seed[i + 3] = (byte)mState[j + 4];
+            seed[i] = (byte)mState[j + 4];
+            seed[i + 1] = (byte)(mState[j + 4] >> 8);
+            seed[i + 2] = (byte)(mState[j + 4] >> 16);
+            seed[i + 3] = (byte)(mState[j + 4] >>> 24);
         }
-        seed = (byte[]) Blake2b256.hash(seed);
+        seed = Blake2b256.hash(seed);
         engineSetSeed(seed);
     }
 
@@ -207,16 +138,18 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
     @Override
     protected void engineSetSeed(byte[] seed) {
         int[] intSeed = new int[]{0, 0, 0, 0, 0, 0, 0, 0};
-        byte[] toHash = new byte[32 + seed.length];
-        // Add a prefix for domain separation
-        Arrays.fill(toHash, 0, 32, (byte)0xff);
-        System.arraycopy(seed, 0, toHash, 32, seed.length);
-        seed = (byte[]) Blake2b256.hash(toHash);
+        if (seed.length != 32) {
+            byte[] toHash = new byte[32 + seed.length];
+            // Add a prefix for domain separation
+            Arrays.fill(toHash, 0, 32, (byte)0xff);
+            System.arraycopy(seed, 0, toHash, 32, seed.length);
+            seed = Blake2b256.hash(toHash);
+        }
         for (int i = 0, j = 0; i < 32; i += 4, j++) {
-            intSeed[j] = seed[i] << 24;
-            intSeed[j] |= seed[i + 1] << 16;
-            intSeed[j] |= seed[i + 2] << 8;
-            intSeed[j] |= seed[i + 3];
+            intSeed[j] = (seed[i] & 0xff);
+            intSeed[j] |= (seed[i + 1] & 0xff) << 8;
+            intSeed[j] |= (seed[i + 2] & 0xff) << 16;
+            intSeed[j] |= (seed[i + 3] & 0xff) << 24;
         }
         mStream = 0;
         mState = defaultState(intSeed, mStream);
@@ -228,18 +161,20 @@ public class ChaChaPrngSecureRandom extends SecureRandomSpi implements SecureRan
         int count = bytes.length;
         int tail = count % 4;
 
+        // NOTE: Java expects big endian format to be used
+        // But all test cases are little endian format
         for (int i = 0; i < (count - tail); i += 4) {
             int word = getInt();
             bytes[i] = (byte) word;
-            bytes[i + 1] = (byte)(word >> 8);
-            bytes[i + 2] = (byte)(word >> 16);
-            bytes[i + 3] = (byte)(word >> 24);
+            bytes[i + 1] = (byte)(word >>> 8);
+            bytes[i + 2] = (byte)(word >>> 16);
+            bytes[i + 3] = (byte)(word >>> 24);
         }
         if (tail > 0) {
             int word = getInt();
             for (int i = tail; i > 0; i--) {
                 bytes[count - i] = (byte)word;
-                word >>= 8;
+                word >>>= 8;
             }
         }
     }

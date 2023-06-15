@@ -1,11 +1,12 @@
 package io.horizen.sc2sc;
 
-import io.horizen.sc2sc.*;
 import org.junit.Before;
 import org.junit.Test;
+
 import java.util.Random;
-import static org.junit.Assert.assertEquals;
+
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class CrossChainMessageTest {
 
@@ -24,9 +25,9 @@ public class CrossChainMessageTest {
         version = CrossChainProtocolVersion.VERSION_1;
         messageType = 1;
         senderSidechain = getRandomBytes(32);
-        sender = getRandomBytes(12);
+        sender = getRandomBytes(20);
         receiverSidechain = getRandomBytes(32);
-        receiver = getRandomBytes(15);
+        receiver = getRandomBytes(32);
         payload = "TestPayLoad".getBytes();
 
         randomHash = getRandomBytes(32);
@@ -35,7 +36,7 @@ public class CrossChainMessageTest {
 
     @Test
     public void serializeTest(){
-        CrossChainMessage cm = new CrossChainMessageImpl(
+        CrossChainMessage cm = new CrossChainMessage(
                 version,
                 messageType,
                 senderSidechain,
@@ -57,7 +58,7 @@ public class CrossChainMessageTest {
 
     @Test
     public void serializeHashTest(){
-        CrossChainMessageHash cm = new CrossChainMessageHashImpl(randomHash);
+        CrossChainMessageHash cm = new CrossChainMessageHash(randomHash);
         byte[] val = cm.bytes();
         CrossChainMessageHash cm2 =  CrossChainMessageHashSerializer.getSerializer().parseBytes(val);
         assertArrayEquals(cm.bytes(), cm2.bytes());

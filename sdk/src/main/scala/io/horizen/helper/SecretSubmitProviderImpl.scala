@@ -5,10 +5,10 @@ import akka.util.Timeout
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import io.horizen.secret.Secret
 
+import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 class SecretSubmitProviderImpl(sidechainNodeViewHolderRef: ActorRef) extends SecretSubmitProvider {
 

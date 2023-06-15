@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import io.horizen.utils.BytesUtils;
 
-
 import java.io.IOException;
 
 public class BytesSerializer extends JsonSerializer<byte[]> {

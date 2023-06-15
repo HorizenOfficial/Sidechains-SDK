@@ -4,6 +4,7 @@ import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.rlp.RlpType;
 import sparkz.util.serialization.Writer;
+
 import java.util.Arrays;
 import java.util.List;
 

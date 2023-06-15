@@ -9,12 +9,11 @@ import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.fork.ForkManager
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScUtils}
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
-import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.transaction.MemoryPool
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.Try
@@ -25,20 +24,20 @@ abstract class CircuitStrategy[
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS],
-  T <: CertificateData](settings: SidechainSettings, sc2scConfig: Sc2ScConfigurator, params: NetworkParams) extends SparkzLogging with Sc2ScUtils[TX, H, PM, MS, HIS] {
+  T <: CertificateData](settings: SidechainSettings, sc2scConfig: Sc2ScConfigurator, params: NetworkParams) extends SparkzLogging {
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   def buildCertificateData(history: HIS, state: MS, status: SignaturesStatus): T
 
-  def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
+  def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])]
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
   def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
   // Every positive value FT is allowed.
   protected [certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
-    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+    ForkManager.getSidechainFork(consensusEpochNumber).ftMinAmount
   }
 
   protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: HIS, state: MS, withdrawalEpochNumber: Int): Array[Byte] = {

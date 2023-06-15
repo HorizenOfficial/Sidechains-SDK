@@ -1,11 +1,14 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
 import com.horizen.librustsidechains.FieldElement;
+import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -157,5 +160,38 @@ public class InMemorySparseMerkleTreeWrapperTest {
         try {
             merkleTreeWrapper.close();
         } catch (Exception ignored) {}
+    }
+
+    @Test
+    public void heightCheck() {
+        boolean illegarArgumentExceptionOccured = false;
+        // Negative height check
+        try {
+            new InMemorySparseMerkleTreeWrapper(-1);
+        } catch (IllegalArgumentException ex) {
+            illegarArgumentExceptionOccured = true;
+        }
+
+        assertTrue("IllegalArgumentException expected to be occured ", illegarArgumentExceptionOccured);
+
+        illegarArgumentExceptionOccured = false;
+        // Too large height check
+        try {
+            new InMemorySparseMerkleTreeWrapper(InMemorySparseMerkleTreeWrapper.MAX_TREE_HEIGHT + 1);
+        } catch (IllegalArgumentException ex) {
+            illegarArgumentExceptionOccured = true;
+        }
+
+        assertTrue("IllegalArgumentException expected to be occured ", illegarArgumentExceptionOccured);
+
+        // Successful case
+        try {
+            new InMemorySparseMerkleTreeWrapper(InMemorySparseMerkleTreeWrapper.MAX_TREE_HEIGHT);
+            illegarArgumentExceptionOccured = false;
+        } catch (IllegalArgumentException ex) {
+            illegarArgumentExceptionOccured = true;
+        }
+
+        assertFalse("IllegalArgumentException not expected to be occured ", illegarArgumentExceptionOccured);
     }
 }

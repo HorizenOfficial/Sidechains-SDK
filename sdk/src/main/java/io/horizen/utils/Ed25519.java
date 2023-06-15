@@ -2,8 +2,8 @@ package io.horizen.utils;
 
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import java.security.SecureRandom;
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 public final class Ed25519 {

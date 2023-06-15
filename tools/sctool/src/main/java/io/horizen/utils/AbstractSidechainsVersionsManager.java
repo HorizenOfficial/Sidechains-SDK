@@ -1,6 +1,5 @@
 package io.horizen.utils;
 
-import io.horizen.block.SidechainCreationVersions;
 import io.horizen.block.SidechainsVersionsManager;
 import scala.Enumeration;
 import scala.Predef;

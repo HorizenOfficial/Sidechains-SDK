@@ -2,8 +2,8 @@ package io.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.certnative.BackwardTransfer
-import io.horizen.params.NetworkParams
 import io.horizen.json.Views
+import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
 
 import java.math.BigDecimal

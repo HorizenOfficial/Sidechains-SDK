@@ -1,17 +1,17 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.transaction.TransactionSerializer;
-import io.horizen.utxo.box.data.ZenBoxData;
-import io.horizen.utxo.box.data.ZenBoxDataSerializer;
 import io.horizen.certificatesubmitter.keys.KeyRotationProof;
 import io.horizen.certificatesubmitter.keys.KeyRotationProofSerializer;
 import io.horizen.proof.SchnorrProof;
 import io.horizen.proof.SchnorrSignatureSerializer;
 import io.horizen.proof.Signature25519;
 import io.horizen.proof.Signature25519Serializer;
+import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.box.data.ZenBoxDataSerializer;
+import sparkz.core.NodeViewModifier$;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
-import sparkz.core.NodeViewModifier$;
 
 import java.util.Optional;
 

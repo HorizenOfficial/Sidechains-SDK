@@ -1,7 +1,9 @@
 package io.horizen.account.state
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.history.validation.InvalidTransactionChainIdException
 import io.horizen.account.node.NodeAccountState
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
@@ -9,16 +11,15 @@ import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
-import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
+import io.horizen.evm._
 import io.horizen.params.NetworkParams
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import io.horizen.evm._
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
@@ -98,6 +99,9 @@ class AccountState(
         // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
         // then the whole block is invalid.
         mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
+
+        // Save the scTxCommitmentTreeRootHash of every mainchain header in a block
+        mod.mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
       } else {
         // For ceasing sidechains submission window concept is used.
         // If SC block has reached the certificate submission window end -> check the top quality certificate
@@ -223,7 +227,7 @@ class AccountState(
       stateView.updateTransactionReceipts(receiptList)
 
       // update next base fee
-      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
+      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod, params))
 
       stateView.commit(idToVersion(mod.id))
 
@@ -365,9 +369,8 @@ class AccountState(
   override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] =
     if (sc2scConfig.canSendMessages) using(getView)(_.getCrossChainMessageHashEpoch(messageHash)) else None
 
-  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]] =
+  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] =
     using(getView)(_.getTopCertificateMainchainHash(withdrawalEpoch))
-
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     using(getView)(_.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType))
@@ -483,8 +486,9 @@ class AccountState(
 
     ethTx.semanticValidity()
 
-    if (FeeUtils.GAS_LIMIT.compareTo(ethTx.getGasLimit) < 0)
-      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
+    val feeFork = GasFeeFork.get(stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
+    if (feeFork.blockGasLimit.compareTo(ethTx.getGasLimit) < 0)
+      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${feeFork.blockGasLimit}")
 
     using(getView) { stateView =>
       //Check the nonce
@@ -528,6 +532,9 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
+    if (sc2scConfig.canSendMessages) using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash)) else false
 }
 
 object AccountState extends SparkzLogging {

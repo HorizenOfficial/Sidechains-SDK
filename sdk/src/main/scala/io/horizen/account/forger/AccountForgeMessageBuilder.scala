@@ -6,6 +6,7 @@ import io.horizen.account.block.AccountBlock.calculateReceiptRoot
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proposition.AddressProposition
@@ -26,18 +27,7 @@ import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -209,7 +199,8 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val gasLimit: BigInteger = FeeUtils.GAS_LIMIT
+    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+    val gasLimit: BigInteger = feeFork.blockGasLimit
 
     // 4. create a context for the new block
     // this will throw if parent block was not found

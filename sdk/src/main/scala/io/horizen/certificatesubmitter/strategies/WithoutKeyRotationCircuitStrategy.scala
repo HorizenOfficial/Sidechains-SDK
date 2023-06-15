@@ -1,14 +1,15 @@
 package io.horizen.certificatesubmitter.strategies
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate}
+import io.horizen.proposition.SchnorrProposition
+import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.transaction.Transaction
 
 import java.util.Optional
@@ -24,7 +25,7 @@ class WithoutKeyRotationCircuitStrategy[
   MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
                                       sc2scConfig: Sc2ScConfigurator,
                                       params: NetworkParams,
-                                      cryptolibCircuit: ThresholdSignatureCircuit)
+                                      circuit: ThresholdSignatureCircuit)
   extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, sc2scConfig, params) {
 
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
@@ -42,7 +43,7 @@ class WithoutKeyRotationCircuitStrategy[
       s"It can take a while.")
 
     //create and return proof with quality
-    cryptolibCircuit.createProof(
+    circuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -68,13 +69,7 @@ class WithoutKeyRotationCircuitStrategy[
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =
-      sc2scConfig.canSendMessages match {
-        case true => Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
-        case false => None
-      }
-
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
+    val signersPublicKeyWithSignatures = status.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
@@ -84,14 +79,13 @@ class WithoutKeyRotationCircuitStrategy[
       sidechainId,
       backwardTransfers,
       endEpochCumCommTreeHash,
-      sc2ScDataForCertificate,
       btrFee,
       ftMinAmount,
       signersPublicKeyWithSignatures,
       utxoMerkleTreeRoot)
   }
 
-  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -105,7 +99,7 @@ class WithoutKeyRotationCircuitStrategy[
       Try {
         getUtxoMerkleTreeRoot(state, referencedWithdrawalEpochNumber)
       } match {
-        case Failure(e: IllegalStateException) =>
+        case Failure(_: IllegalStateException) =>
           throw new Exception("CertificateSubmitter is too late against the State. " +
             s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
             s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
@@ -115,7 +109,7 @@ class WithoutKeyRotationCircuitStrategy[
       }
     }
 
-    cryptolibCircuit.generateMessageToBeSigned(
+    val messageToSign = circuit.generateMessageToBeSigned(
       backwardTransfers.asJava,
       sidechainId,
       referencedWithdrawalEpochNumber,
@@ -124,6 +118,9 @@ class WithoutKeyRotationCircuitStrategy[
       ftMinAmount,
       Optional.ofNullable(utxoMerkleTreeRoot.orNull)
     )
+
+    // For circuit without key rotation, signing keys are always the same
+    (messageToSign, params.signersPublicKeys)
   }
 
   private def getUtxoMerkleTreeRoot(state: MS, referencedWithdrawalEpochNumber: Int): Option[Array[Byte]] = {

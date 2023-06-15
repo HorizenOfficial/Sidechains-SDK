@@ -1,20 +1,20 @@
 package io.horizen
 
-import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
-import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
+import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus.ConsensusEpochInfo
+import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, CustomFieldsReservedPositions}
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.Transaction
 import io.horizen.utils.WithdrawalEpochInfo
-import sparkz.util.ModifierId
 import sparkz.core.transaction.state.MinimalState
+import sparkz.util.ModifierId
 
 import java.util
-import scala.collection.JavaConverters._
 import scala.util.Using
 
 abstract class AbstractState[
@@ -52,7 +52,7 @@ abstract class AbstractState[
   def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int]
 
   //hash of mainchain block that published the top quality cert of this epoch
-  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[Array[Byte]];
+  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash]
 
   protected def validateTopQualityCertificateForSc2Sc(topQualityCertificate: WithdrawalEpochCertificate,
                                                       certReferencedEpochNumber: Int,
@@ -62,8 +62,8 @@ abstract class AbstractState[
     if (certificateCustomFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION) {
       throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION} custom fields when sidechain2sidechain messaging is enabled.")
     }
-    val messageTreeRoot = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_message_tree_root.position()).rawData
-    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.Sc2sc_previous_certificate_hash.position()).rawData
+    val messageTreeRoot = certificateCustomFields(CustomFieldsReservedPositions.SC2SC_MESSAGE_TREE_ROOT.position()).rawData
+    val previousCertificateHash = certificateCustomFields(CustomFieldsReservedPositions.SC2SC_PREVIOUS_CERTIFICATE_HASH.position()).rawData
 
     val expectedPreviousCertificateHash: Array[Byte] = certificate(topQualityCertificate.epochNumber - 1) match {
       case None => FieldElement.createFromLong(0).serializeFieldElement()
@@ -73,12 +73,13 @@ abstract class AbstractState[
       throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect previousCertificateHash field")
     }
     val expectedCrosschainMessages = getCrossChainMessages(certReferencedEpochNumber)
+    val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
     Using.resource(
-      CryptoLibProvider.sc2scCircuitFunctions.initMerkleTree()
+      ccMsgMerkleTree.initMerkleTree
     ) { tree => {
-      CryptoLibProvider.sc2scCircuitFunctions.insertMessagesInMerkleTree(tree, expectedCrosschainMessages.asJava)
-      val expectedMessageTreeRoot = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageTreeRoot(tree)
+      ccMsgMerkleTree.appendMessagesToMerkleTree(tree, expectedCrosschainMessages)
+      val expectedMessageTreeRoot = ccMsgMerkleTree.getCrossChainMessageTreeRoot(tree)
 
       if (!util.Arrays.equals(messageTreeRoot, expectedMessageTreeRoot)) {
         throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate has incorrect crosschain message tree root field")

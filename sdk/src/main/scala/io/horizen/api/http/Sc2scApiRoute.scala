@@ -12,7 +12,7 @@ import io.horizen.api.http.Sc2scApiRouteRestScheme.{ReqCreateRedeemMessage, Resp
 import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.json.Views
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
-import io.horizen.sc2sc.{CrossChainMessageImpl, CrossChainProtocolVersion, CrossChainRedeemMessage}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -28,7 +28,7 @@ import scala.util.{Failure, Success, Try}
 case class Sc2scApiRoute(override val settings: RESTApiSettings,
                          sidechainNodeViewHolderRef: ActorRef,
                          sc2scProver: ActorRef
-                        )
+                         )
                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
     SidechainTypes#SCBT,
@@ -49,14 +49,14 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Return a redeem message from  a previously posted CrossChainMessage
-   */
+    * Return a redeem message from  a previously posted CrossChainMessage
+    */
   def createRedeemMessage: Route = (post & path("createRedeemMessage")) {
     withBasicAuth {
       _ =>
-        entity(as[ReqCreateRedeemMessage]) { body =>
+      entity(as[ReqCreateRedeemMessage]) { body =>
 
-          val crossChainMessage = new CrossChainMessageImpl(
+          val crossChainMessage = new CrossChainMessage(
             CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
             body.message.messageType,
             BytesUtils.fromHexString(body.message.senderSidechain),

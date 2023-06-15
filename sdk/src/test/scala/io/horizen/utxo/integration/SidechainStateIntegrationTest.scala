@@ -2,7 +2,6 @@ package io.horizen.utxo.integration
 
 import io.horizen._
 import io.horizen.block.MainchainBlockReferenceData
-import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.consensus._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -14,12 +13,12 @@ import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.utxo.customtypes.DefaultApplicationState
 import io.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import io.horizen.utxo.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import io.horizen.utxo.state.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -60,8 +59,7 @@ class SidechainStateIntegrationTest
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
 
   val simpleForkConfigurator = new SimpleForkConfigurator
-  val forkManagerUtil = new ForkManagerUtil()
-  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "mainnet")
+  ForkManagerUtil.initializeForkManager(simpleForkConfigurator, "mainnet")
 
   def getRegularTransaction(zenOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = zenOutputsCount + forgerOutputsCount

@@ -3,12 +3,14 @@ package io.horizen.storage;
 import io.horizen.fixtures.StoreFixtureClass;
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import io.horizen.utils.ByteArrayWrapper;
+import io.horizen.utils.Pair;
+import org.junit.Test;
 
 import java.io.File;
-import java.util.*;
-import io.horizen.utils.Pair;
-
-import org.junit.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.*;
 

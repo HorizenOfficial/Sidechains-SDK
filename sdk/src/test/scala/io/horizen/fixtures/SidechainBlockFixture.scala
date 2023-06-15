@@ -202,12 +202,13 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                  companion: SidechainTransactionsCompanion,
                                  params: NetworkParams,
                                  basicSeed: Long = 123177L,
-                                 timestampDelta: Long = blockGenerationDelta): SidechainBlock = {
+                                 timestampDelta: Long = blockGenerationDelta,
+                                 sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq()): SidechainBlock = {
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + blockGenerationDelta,
       mainchainBlocksReferencesData = Seq(),
-      sidechainTransactions = Seq(),
+      sidechainTransactions = sidechainTransactions,
       mainchainHeaders = Seq(),
       companion = companion,
       params = params,

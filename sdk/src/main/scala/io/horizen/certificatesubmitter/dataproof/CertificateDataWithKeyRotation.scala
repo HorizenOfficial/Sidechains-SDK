@@ -3,7 +3,7 @@ package io.horizen.certificatesubmitter.dataproof
 import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import io.horizen.cryptolibprovider.{CryptoLibProvider, CustomFieldsReservedPositions}
+import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.Sc2ScDataForCertificate
@@ -16,7 +16,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
                                           override val sidechainId: Array[Byte],
                                           override val backwardTransfers: Seq[BackwardTransfer],
                                           override val endEpochCumCommTreeHash: Array[Byte],
-                                          override val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate],
+                                          sc2ScDataForCertificate: Option[Sc2ScDataForCertificate],
                                           override val btrFee: Long,
                                           override val ftMinAmount: Long,
                                           override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
@@ -24,7 +24,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
                                           previousCertificateOption: Option[WithdrawalEpochCertificate],
                                           genesisKeysRootHash: Array[Byte]
                                          )
-  extends CertificateData(referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, sc2ScDataForCertificate, btrFee, ftMinAmount, schnorrKeyPairs) {
+  extends CertificateData(referencedEpochNumber, sidechainId, backwardTransfers, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
 
   override def getCustomFields: Seq[Array[Byte]] = {
     val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getSchnorrKeysHash(schnorrKeysSignatures)

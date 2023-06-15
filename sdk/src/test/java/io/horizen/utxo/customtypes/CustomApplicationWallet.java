@@ -1,9 +1,9 @@
 package io.horizen.utxo.customtypes;
 
-import io.horizen.utxo.backup.BoxIterator;
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.Secret;
+import io.horizen.utxo.backup.BoxIterator;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.wallet.ApplicationWallet;
 
 import java.util.List;

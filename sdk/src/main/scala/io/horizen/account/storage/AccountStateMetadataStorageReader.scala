@@ -2,7 +2,7 @@ package io.horizen.account.storage
 
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.utils.AccountBlockFeeInfo
-import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.utils.WithdrawalEpochInfo
 import sparkz.util.ModifierId
@@ -16,7 +16,7 @@ trait AccountStateMetadataStorageReader {
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
 
-  def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]]
+  def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash]
 
   def lastCertificateReferencedEpoch: Option[Int]
 

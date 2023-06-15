@@ -1,26 +1,27 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import io.horizen.block.SidechainCreationVersions;
-import io.horizen.block.WithdrawalEpochCertificate;
-import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
 import com.horizen.certnative.WithdrawalCertificate;
-import io.horizen.cryptolibprovider.CommonCircuit;
-import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import com.horizen.librustsidechains.FieldElement;
-import io.horizen.proof.SchnorrProof;
-import io.horizen.proposition.SchnorrProposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.schnorrnative.ValidatorKeysUpdatesList;
+import io.horizen.block.SidechainCreationVersions;
+import io.horizen.block.WithdrawalEpochCertificate;
+import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures;
+import io.horizen.cryptolibprovider.CommonCircuit;
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
+import io.horizen.cryptolibprovider.utils.FieldElementUtils;
+import io.horizen.proof.SchnorrProof;
+import io.horizen.proposition.SchnorrProposition;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
 import scala.Option;
 import scala.collection.Seq;
+
 import java.util.*;
 import java.util.stream.Collectors;
 

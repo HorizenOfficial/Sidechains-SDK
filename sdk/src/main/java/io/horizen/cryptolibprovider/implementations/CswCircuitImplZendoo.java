@@ -1,10 +1,6 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import io.horizen.block.WithdrawalEpochCertificate;
-import io.horizen.utxo.box.Box;
 import com.horizen.certnative.WithdrawalCertificate;
-import io.horizen.cryptolibprovider.CommonCircuit;
-import io.horizen.cryptolibprovider.CswCircuit;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
 import com.horizen.cswnative.CswSysData;
@@ -13,14 +9,18 @@ import com.horizen.fwtnative.ForwardTransferOutput;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.MerklePath;
-import io.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.scutxonative.ScUtxoOutput;
+import io.horizen.block.WithdrawalEpochCertificate;
+import io.horizen.cryptolibprovider.CommonCircuit;
+import io.horizen.cryptolibprovider.CswCircuit;
+import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utils.WithdrawalEpochUtils;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.utils.ForwardTransferCswData;
 import io.horizen.utxo.utils.UtxoCswData;
-import io.horizen.utils.WithdrawalEpochUtils;
 import scala.Enumeration;
 
 import java.security.MessageDigest;

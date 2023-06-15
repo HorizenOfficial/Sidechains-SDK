@@ -7,8 +7,8 @@ import io.horizen.account.node.NodeAccountHistory
 import io.horizen.account.storage.AccountHistoryStorage
 import io.horizen.consensus._
 import io.horizen.history.AbstractHistory
-import io.horizen.params.NetworkParams
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import io.horizen.params.NetworkParams
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import scala.util.Try

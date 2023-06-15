@@ -1,8 +1,8 @@
 package io.horizen.utxo.node;
 
 import io.horizen.node.NodeWalletBase;
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
 
 import java.util.List;
 

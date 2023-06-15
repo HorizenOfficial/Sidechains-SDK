@@ -27,5 +27,5 @@ trait WithdrawalEpochCertificateFixture {
       Seq())
   }
 
-  def generateRandomMainchainHash(): Array[Byte] = getBytes()
+  def generateRandomMainchainHash(): MainchainHeaderHash = MainchainHeaderHash(getBytes())
 }

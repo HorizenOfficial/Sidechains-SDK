@@ -6,7 +6,9 @@ import io.horizen.proposition.PropositionSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
+
 import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.assertTrue;
 
 public class AddressPropositionSerializerTest {

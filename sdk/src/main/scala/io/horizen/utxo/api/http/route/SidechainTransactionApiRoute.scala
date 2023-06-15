@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.TransactionBaseApiRoute
-import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorBadCircuit
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
@@ -17,7 +17,6 @@ import io.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import io.horizen.proposition._
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
@@ -27,6 +26,7 @@ import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainCoreTransaction}
 import sparkz.core.settings.RESTApiSettings
+
 import java.util.{Collections, ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer

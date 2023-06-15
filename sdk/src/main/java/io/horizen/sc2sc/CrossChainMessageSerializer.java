@@ -1,15 +1,15 @@
 package io.horizen.sc2sc;
 
+import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
-import sparkz.core.serialization.SparkzSerializer;
 
 public class CrossChainMessageSerializer<T extends CrossChainMessage> implements SparkzSerializer<T> {
 
     private static CrossChainMessageSerializer serializer;
 
     static {
-        serializer = new CrossChainMessageSerializer<CrossChainMessageImpl>();
+        serializer = new CrossChainMessageSerializer<CrossChainMessage>();
     }
 
     @Override
@@ -35,7 +35,7 @@ public class CrossChainMessageSerializer<T extends CrossChainMessage> implements
         byte[] receiverSidechain = reader.getBytes(32);
         byte[] receiver = reader.getBytes(reader.getInt());
         byte[] payload = reader.getBytes(reader.getInt());
-        return (T)new CrossChainMessageImpl(
+        return (T)new CrossChainMessage(
             CrossChainProtocolVersion.fromShort(protocolVersion),
             messageType,
             senderSidechain,

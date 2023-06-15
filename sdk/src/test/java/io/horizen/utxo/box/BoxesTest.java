@@ -1,15 +1,15 @@
 package io.horizen.utxo.box;
 
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.MCPublicKeyHashProposition;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.Ed25519;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotEquals;
 
 public class BoxesTest extends BoxFixtureClass {
 

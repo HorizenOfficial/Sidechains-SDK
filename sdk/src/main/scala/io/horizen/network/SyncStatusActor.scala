@@ -9,7 +9,7 @@ import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlocksDensity
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
-import io.horizen.network.SyncStatusActor.{CLOSE_ENOUGH_SLOTS_TO_IGNORE, HIGHEST_BLOCK_CHECK_FREQUENCY, NotifySyncStart, NotifySyncStop, NotifySyncUpdate, SYNC_UPDATE_EVENT_FREQUENCY}
+import io.horizen.network.SyncStatusActor._
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
@@ -22,7 +22,7 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{DurationInt, FiniteDuration, pairIntToDuration}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -130,11 +130,27 @@ class SyncStatusActor[
         } else {
           // Fork branch applied
           val revertedBlocks: Int = lastAppliedBlockIds.indexOf(sidechainBlock.parentId)
+
           if (revertedBlocks == -1) {
-            // Must never happen
-            // Crash the actor and start from scratch
-            throw new IllegalStateException(s"SyncStatusActor: unexpected new tip appeared ${sidechainBlock.id}")
+            // Crash the actor throwing an exception and start from scratch
+            val stoppingMessage = s"SyncStatusActor: unexpected new tip ${sidechainBlock.id} appeared"
+            val noMatchingBlocksException = new IllegalStateException(stoppingMessage)
+            // We can encounter two cases:
+            // - If the internal applied block IDs list has less then 100 elements we thrown an exception without stack trace
+            //   and log the actor restart at Warn level. This can happen in this case:
+            //   forger node recently restarted that has created some blocks on its own and then receive valid blocks from
+            //   the peers that are applied due to the longest chain rule
+            if (lastAppliedBlockIds.length < 100) {
+              log.warn(stoppingMessage + " due to recent node restart")
+              noMatchingBlocksException.setStackTrace(Array.empty)  // remove the stack trace
+              throw noMatchingBlocksException
+            }
+            // - Otherwise log the entire stack trace and and log the actor at Error level
+            else {
+              log.error(stoppingMessage); throw noMatchingBlocksException
+            }
           }
+
           currentBlock = currentBlock - revertedBlocks + 1
           lastAppliedBlockIds.drop(revertedBlocks)
           // We must not consider fork blocks of the same height as "syncing"

@@ -7,11 +7,14 @@ import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class PublicKey25519PropositionSerializerTest {
 

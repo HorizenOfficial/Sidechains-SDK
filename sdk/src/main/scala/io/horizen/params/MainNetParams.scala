@@ -1,15 +1,15 @@
 package io.horizen.params
 
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-
-import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
-import sparkz.util.ModifierId
-import sparkz.util.bytesToId
+import sparkz.util.{ModifierId, bytesToId}
+
+import java.math.BigInteger
+import scala.concurrent.duration._
 
 case class MainNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
@@ -42,6 +42,8 @@ case class MainNetParams(
                           override val chainId: Long = 33333333,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
+                          override val getLogsSizeLimit: Int = 10000,
+                          override val getLogsQueryTimeout: FiniteDuration = 10.seconds,
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

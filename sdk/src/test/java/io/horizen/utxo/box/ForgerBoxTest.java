@@ -1,15 +1,18 @@
 package io.horizen.utxo.box;
 
 import io.horizen.fixtures.ForgerBoxFixture;
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.VrfPublicKey;
+import io.horizen.secret.VrfKeyGenerator;
 import io.horizen.utils.Ed25519;
 import io.horizen.utils.Pair;
-import io.horizen.secret.VrfKeyGenerator;
-import io.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Test;
+
 import java.util.Random;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class ForgerBoxTest extends BoxFixtureClass {
 

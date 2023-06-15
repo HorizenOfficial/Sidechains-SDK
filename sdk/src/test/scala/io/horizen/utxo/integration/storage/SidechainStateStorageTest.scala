@@ -2,13 +2,13 @@ package io.horizen.utxo.integration.storage
 
 import io.horizen._
 import io.horizen.block.WithdrawalEpochCertificateFixture
-import io.horizen.utxo.companion._
 import io.horizen.consensus._
 import io.horizen.fixtures._
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.sc2sc.CrossChainMessageHashImpl
+import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
+import io.horizen.utxo.companion._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.storage.SidechainStateStorage
@@ -19,7 +19,6 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
-import java.util
 import java.util.{Random, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 
@@ -427,7 +426,7 @@ class SidechainStateStorageTest
 
   @Test
   def nonCeasingScTxCommitmentHashesFlow(): Unit = {
-    val nonCeasingParams = MainNetParams(isNonCeasing = true)
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
     val hashScTxsCommitment1 = "fdea8365827f86c8af84"
@@ -446,11 +445,11 @@ class SidechainStateStorageTest
 
   @Test
   def nonCeasingCrossChainMessageHashesFlow(): Unit = {
-    val nonCeasingParams = MainNetParams(isNonCeasing = true)
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
 
-    val ccMsgHash1 = new CrossChainMessageHashImpl("ccMessage1".getBytes)
-    val ccMsgHash2 = new CrossChainMessageHashImpl("ccMessage2".getBytes)
+    val ccMsgHash1 = new CrossChainMessageHash(BytesUtils.fromHexString("3a0ac71d16d9cbbf3973b8cb41e43b653a0ac71d16d9cbbf3973b8cb41e43b65"))
+    val ccMsgHash2 = new CrossChainMessageHash(BytesUtils.fromHexString("0f8da0549b2fd8b580e8664e98e4030d3a0ac71d16d9cbbf3973b8cb41e43b65"))
     val crossChainMsgHashes = Seq(ccMsgHash1, ccMsgHash2)
 
     assertTrue("Update(insert) must be successful.",

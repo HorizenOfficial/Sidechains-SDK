@@ -2,8 +2,8 @@ package io.horizen.consensus
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.{Bytes, Longs}
-import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import io.horizen.json.Views
+import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import io.horizen.utils.{ByteArrayWrapper, Utils}
 import io.horizen.utxo.box.ForgerBox
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

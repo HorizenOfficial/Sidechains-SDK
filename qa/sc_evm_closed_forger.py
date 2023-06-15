@@ -4,20 +4,21 @@ import logging
 import pprint
 import time
 from decimal import Decimal
-
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, disconnect_sc_nodes_bi, \
+    AccountModel
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, event_signature_to_log_topic, to_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.openForgerList import open_forger_list
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import convertZenToWei
+from SidechainTestFramework.account.utils import convertZenToWei, convertZenToZennies
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
 from SidechainTestFramework.scutil import (generate_next_block, generate_secrets, generate_vrf_secrets,
                                            SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
                                            )
 from test_framework.util import (
-    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, hex_str_to_bytes, )
+    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, hex_str_to_bytes, fail, )
 
 """
 Check the open forger list feature.
@@ -25,6 +26,7 @@ Check the open forger list feature.
 Configuration: 
     - 2 SC nodes configured with a closed list of forger, connected with each other
     - 1 MC node
+    - 3 Allowed Forgers (2 SC Nodes + 1 genesis key)
 
 Test:
     - Try to stake money with invalid forger info and verify that we are not allowed to stake
@@ -54,14 +56,13 @@ def check_open_forger_list_event(event, forgerIndex):
 
 class SCEvmClosedForgerList(AccountChainSetup):
 
-    number_of_sidechain_nodes = 2
+    number_of_sidechain_nodes = 3
 
     # the genesis keys are added to the list of allowed forgers, therefore we have a total of 3 allowed forgers
     number_of_allowed_forgers = 2
 
-    allowed_forger_propositions = generate_secrets("seed_2", number_of_allowed_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed_2", number_of_allowed_forgers)
-
+    allowed_forger_propositions = generate_secrets("seed_2", number_of_allowed_forgers, AccountModel)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed_2", number_of_allowed_forgers, AccountModel)
 
     def __init__(self):
         allowedForgers = []
@@ -114,9 +115,9 @@ class SCEvmClosedForgerList(AccountChainSetup):
                 raise Exception(e)
 
         if api_error_expected:
-          assert_true("error" in jsonRes)
-          logging.info("Api failed as expected")
-          return False
+            assert_true("error" in jsonRes)
+            logging.info("Api failed as expected")
+            return False
 
         if forger_node is None:
             generate_next_block(sc_node, "first node")
@@ -149,6 +150,7 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
+        sc_node_3 = self.sc_nodes[2]
         mc_node = self.nodes[0]
 
         evm_address_sc_node_1 = remove_0x_prefix(self.evm_address)
@@ -179,6 +181,19 @@ class SCEvmClosedForgerList(AccountChainSetup):
 
         time.sleep(2)  # MC needs this
 
+        # Create evm wallet for sc_node_3 to be used at the end of test once forger stake is opened.
+        evm_address_sc_node_3 = sc_node_3.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+        ft_amount_in_zen_3 = Decimal('100.0')
+
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      evm_address_sc_node_3,
+                                      ft_amount_in_zen_3,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=True)
+
+        time.sleep(2)  # MC needs this
+
         # Generate SC block and check that FT appears in SCs node wallet
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
@@ -189,8 +204,16 @@ class SCEvmClosedForgerList(AccountChainSetup):
         initial_balance2 = http_wallet_balance(sc_node_2, evm_address_sc_node_2)
         pprint.pprint(initial_balance2)
 
+        initial_balance3 = http_wallet_balance(sc_node_3, evm_address_sc_node_3)
+        pprint.pprint(initial_balance3)
 
-        # generate publick keys not contained in the closed forger list
+        # generate some blocks on sc_node_1 allowed forger and confirm best block matches when synced
+
+        generate_next_blocks(sc_node_1, "first node", 3)
+        self.sc_sync_all()
+        assert_equal(sc_node_1.block_best()["result"], sc_node_2.block_best()["result"])
+
+        # generate public keys not contained in the closed forger list
         outlaw_blockSignPubKey = sc_node_1.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         outlaw_vrfPubKey = sc_node_1.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
@@ -221,6 +244,12 @@ class SCEvmClosedForgerList(AccountChainSetup):
             sc_node_1, evm_address_sc_node_1, self.allowed_forger_propositions[0].publicKey,
             self.allowed_forger_vrf_public_keys[0].publicKey, amount=33)
         assert_true(result)
+
+        # generate some blocks on sc_node_1 and confirm best block matches
+
+        generate_next_blocks(sc_node_1, "first node", 3)
+        self.sc_sync_all()
+        assert_equal(sc_node_1.block_best()["result"], sc_node_2.block_best()["result"])
 
         #Forger 0 opens the stake
         logging.info("Forger 0 opens the stake")
@@ -292,7 +321,62 @@ class SCEvmClosedForgerList(AccountChainSetup):
         assert_equal(1, allowedForgerList['allowedForgers'][1]['openForgersVote'])
         assert_equal(0, allowedForgerList['allowedForgers'][2]['openForgersVote'])
 
+        # sc_node_3 make forger stake now stake is opened
 
+        sc_node_3_blockSignPubKey = sc_node_3.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        sc_node_3_vrfPubKey = sc_node_3.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
+
+        #
+        forgerStake_sc_node_3_amount = 50
+
+        result = ac_makeForgerStake(sc_node_1, evm_address_sc_node_3, sc_node_3_blockSignPubKey, sc_node_3_vrfPubKey,
+                                    convertZenToZennies(forgerStake_sc_node_3_amount))
+        if "result" not in result:
+            fail("make forger stake failed: " + json.dumps(result))
+        else:
+            logging.info("Forger stake created: " + json.dumps(result))
+        self.sc_sync_all()
+
+        # Generate SC block on SC node (keep epoch)
+        generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=False)
+        self.sc_sync_all()
+        assert_equal(sc_node_1.block_best()["result"], sc_node_2.block_best()["result"])
+
+        # sc_node_1 switch to first epoch following make forger stake
+
+        generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
+
+        # Verify sc_node_3 cannot forge yet in this epoch (requires 2 epochs)
+        try:
+            logging.info("Trying to generate a block on sc_node_3: should fail...")
+            generate_next_block(sc_node_3, "third node", force_switch_to_next_epoch=False)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        else:
+            fail("No forging stakes expected for SC node 3.")
+        self.sc_sync_all()
+
+        # sc_node_1 switch to next epoch, 2nd epoch after making forger stake
+
+        generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
+
+        # sc_node_3 - Forge 3 blocks, confirm sync best block match across nodes
+
+        generate_next_blocks(sc_node_3, "third node", 3)
+        self.sc_sync_all()
+        sc_node_3_block_best = sc_node_3.block_best()["result"]
+        assert_equal(sc_node_3_block_best, sc_node_1.block_best()["result"])
+        assert_equal(sc_node_3_block_best, sc_node_2.block_best()["result"])
+
+        # Generate some blocks on sc_node_1 and confirm sync block best
+
+        generate_next_blocks(sc_node_1, "first node", 3)
+        self.sc_sync_all()
+        sc_node_1_block_best = sc_node_1.block_best()["result"]
+        assert_equal(sc_node_1_block_best, sc_node_2.block_best()["result"])
+        assert_equal(sc_node_1_block_best, sc_node_3.block_best()["result"])
 
 if __name__ == "__main__":
     SCEvmClosedForgerList().main()

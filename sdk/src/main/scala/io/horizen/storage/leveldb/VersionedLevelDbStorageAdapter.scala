@@ -1,13 +1,13 @@
 package io.horizen.storage.leveldb
 
+import io.horizen.storage.leveldb.LDBFactory.factory
+import io.horizen.storage.{Storage, StorageIterator}
+import io.horizen.utils.{Pair => JPair, _}
+import org.iq80.leveldb.Options
+
 import java.io.File
 import java.util
 import java.util.{Optional, List => JList}
-import io.horizen.storage.{Storage, StorageIterator}
-import io.horizen.storage.leveldb.LDBFactory.factory
-import io.horizen.utils.{Pair => JPair, _}
-import org.iq80.leveldb.{Options}
-
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 

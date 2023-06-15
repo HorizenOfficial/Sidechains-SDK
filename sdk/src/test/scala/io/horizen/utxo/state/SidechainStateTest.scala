@@ -1,7 +1,7 @@
 package io.horizen.utxo.state
 
 import io.horizen.{SidechainSettings, SidechainTypes}
-import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -65,8 +65,7 @@ class SidechainStateTest
 
   @Before
   def init(): Unit = {
-    val forkManagerUtil = new ForkManagerUtil()
-    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   def buildRegularTransaction(regularOutputsCount: Int,
@@ -365,7 +364,7 @@ class SidechainStateTest
       ArgumentMatchers.any[Seq[CrossChainMessageHash]](),
       ArgumentMatchers.eq(Set(hashScTxsCommitment1, hashScTxsCommitment2)),
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Seq[(WithdrawalEpochCertificate, Array[Byte])]](),
+      ArgumentMatchers.any[Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
       ArgumentMatchers.any[Boolean](),

@@ -1,13 +1,10 @@
 package io.horizen.node;
 
-import io.horizen.block.MainchainBlockReference;
-import io.horizen.block.MainchainHeader;
-import io.horizen.block.SidechainBlockBase;
-import io.horizen.block.SidechainBlockHeaderBase;
+import io.horizen.block.*;
 import io.horizen.chain.AbstractFeePaymentsInfo;
+import io.horizen.chain.MainchainBlockReferenceInfo;
 import io.horizen.chain.MainchainHeaderInfo;
 import io.horizen.chain.SidechainBlockInfo;
-import io.horizen.chain.MainchainBlockReferenceInfo;
 import io.horizen.transaction.Transaction;
 
 import java.util.List;
@@ -45,9 +42,9 @@ public interface NodeHistoryBase<
 
     Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByMainchainBlockHeight(int height);
 
-    Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
+    Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(MainchainHeaderHash mainchainBlockReferenceHash);
 
-    Optional<MainchainHeader> getMainchainHeaderByHash(byte[] mainchainHeaderHash);
+    Optional<MainchainHeader> getMainchainHeaderByHash(MainchainHeaderHash mainchainHeaderHash);
 
     Optional<MainchainHeaderInfo> getMainchainHeaderInfoByHash(byte[] mainchainHeaderHash);
 

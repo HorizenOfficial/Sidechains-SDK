@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonView;
 import io.horizen.api.http.ApiResponse;
 import io.horizen.api.http.ErrorResponse;
 import io.horizen.api.http.SuccessResponse;
-import io.horizen.utxo.node.SidechainNodeView;
-import io.horizen.secret.Secret;
 import io.horizen.json.Views;
+import io.horizen.secret.Secret;
+import io.horizen.utxo.node.SidechainNodeView;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,9 +1,11 @@
 package io.horizen.account.state
 
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, FeeUtils}
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.consensus.intToConsensusEpochNumber
+import io.horizen.evm.Database
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import io.horizen.params.MainNetParams
 import io.horizen.utils.BytesUtils
@@ -165,7 +167,7 @@ class AccountStateTest
     val tx = mock[EthereumTransaction]
 
     Mockito.when(tx.semanticValidity()).thenAnswer(_ => true)
-    Mockito.when(tx.getGasLimit).thenReturn(FeeUtils.GAS_LIMIT.add(BigInteger.ONE))
+    Mockito.when(tx.getGasLimit).thenReturn(DefaultGasFeeFork.blockGasLimit.add(BigInteger.ONE))
 
     state.validate(tx) match {
       case Failure(_) =>

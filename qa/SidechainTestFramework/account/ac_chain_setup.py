@@ -1,8 +1,6 @@
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -19,17 +17,38 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CRE
 
 class AccountChainSetup(SidechainTestFramework):
 
-    def __init__(self, API_KEY='Horizen', number_of_mc_nodes=1, number_of_sidechain_nodes=1,
-                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH, forward_amount=100,
-                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, forger_options=None,
-                 initial_private_keys=None, circuittype_override=None, remote_keys_manager_enabled=False,
-                 allow_unprotected_txs=True, remote_keys_server_address=None, max_incoming_connections=100,
-                 connect_nodes=True, max_nonce_gap=DEFAULT_MAX_NONCE_GAP, max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
-                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS, max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
-                 tx_lifetime=DEFAULT_TX_LIFETIME, websocket_server_port = []):
+    def __init__(self,
+                 API_KEY='Horizen',
+                 number_of_mc_nodes=1,
+                 number_of_sidechain_nodes=1,
+                 withdrawalEpochLength=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 forward_amount=100,
+                 block_timestamp_rewind=DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND,
+                 forger_options=None,
+                 initial_private_keys=None,
+                 circuittype_override=None,
+                 remote_keys_manager_enabled=False,
+                 remote_keys_server_addresses=[],
+                 max_incoming_connections=100,
+                 connect_nodes=True,
+                 allow_unprotected_txs=True,
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
+                 max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
+                 max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME,
+                 # Array of websocket ports. Node N will establish the connection to port N, if defined.
+                 # Otherwise, websocket connection is skipped. For example, [5100, None, 5101]
+                 websocket_server_ports=[],
+                 cert_max_keys=7,
+                 cert_sig_threshold=5,
+                 # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
+                 # If no value for given Node N index is present then the default value is assigned later: range(7)
+                 submitters_private_keys_indexes=[]
+                 ):
 
         super().__init__()
-
+        self.model = AccountModel
 
         self.evm_address = None
         self.sc_nodes = None
@@ -47,7 +66,7 @@ class AccountChainSetup(SidechainTestFramework):
         self.initial_private_keys = initial_private_keys
         self.circuittype_override = circuittype_override
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
-        self.remote_keys_server_address = remote_keys_server_address
+        self.remote_keys_server_addresses = remote_keys_server_addresses
         self.allow_unprotected_txs = allow_unprotected_txs
         self.max_incoming_connections = max_incoming_connections
         self.connect_nodes = connect_nodes
@@ -56,10 +75,13 @@ class AccountChainSetup(SidechainTestFramework):
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
-        if len(websocket_server_port) == 0:
-            websocket_server_port = [None] * number_of_sidechain_nodes
-        assert(len(websocket_server_port) == number_of_sidechain_nodes)
-        self.websocket_server_port = websocket_server_port
+        if len(websocket_server_ports) == 0:
+            websocket_server_ports = [None] * number_of_sidechain_nodes
+        assert(len(websocket_server_ports) == number_of_sidechain_nodes)
+        self.websocket_server_ports = websocket_server_ports
+        self.cert_max_keys = cert_max_keys
+        self.cert_sig_threshold = cert_sig_threshold
+        self.submitters_private_keys_indexes = submitters_private_keys_indexes
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -80,6 +102,12 @@ class AccountChainSetup(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = []
 
+        if len(self.submitters_private_keys_indexes) > self.number_of_sidechain_nodes:
+            raise ValueError("Number of submitters_private_keys_indexes configs must be <= number_of_sidechain_nodes")
+        for node_indexes in self.submitters_private_keys_indexes:
+            if len(node_indexes) > self.cert_max_keys:
+                raise ValueError("node_indexes must be <= cert_max_keys")
+
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
                sc_node_configuration.append(SCNodeConfiguration(
@@ -87,16 +115,18 @@ class AccountChainSetup(SidechainTestFramework):
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
-                    remote_keys_server_address=self.remote_keys_server_address,
+                    remote_keys_server_address=self.remote_keys_server_addresses[x] if len(self.remote_keys_server_addresses) > x else "",
                     allow_unprotected_txs=self.allow_unprotected_txs,
                     max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime =  self.tx_lifetime,
-                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port = self.websocket_server_port[x] if self.websocket_server_port[x] != None else 0
+                    tx_lifetime=self.tx_lifetime,
+                    websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
+                    websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
+                    cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
                 ))
 
             else:
@@ -108,15 +138,17 @@ class AccountChainSetup(SidechainTestFramework):
                     initial_private_keys=self.initial_private_keys,
                     remote_keys_manager_enabled=self.remote_keys_manager_enabled,
                     allow_unprotected_txs=self.allow_unprotected_txs,
-                    remote_keys_server_address=self.remote_keys_server_address,
+                    remote_keys_server_address=self.remote_keys_server_addresses[x] if len(self.remote_keys_server_addresses) > x else "",
                     max_incoming_connections=self.max_incoming_connections,
                     max_nonce_gap=self.max_nonce_gap,
                     max_account_slots=self.max_account_slots,
                     max_mempool_slots=self.max_mempool_slots,
                     max_nonexec_pool_slots=self.max_nonexec_pool_slots,
-                    tx_lifetime = self.tx_lifetime,
-                    websocket_server_enabled = True if self.websocket_server_port[x] != None else False,
-                    websocket_server_port = self.websocket_server_port[x]
+                    tx_lifetime=self.tx_lifetime,
+                    websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
+                    websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
+                    cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
                 ))
    
         if self.circuittype_override is not None:
@@ -132,8 +164,11 @@ class AccountChainSetup(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, self.forward_amount, self.withdrawalEpochLength,
                                                         sc_creation_version=sc_creation_version,
                                                         is_non_ceasing=self.options.nonceasing,
-                                                        circuit_type=circuit_type),
+                                                        circuit_type=circuit_type,
+                                                        cert_max_keys=self.cert_max_keys,
+                                                        cert_sig_threshold=self.cert_sig_threshold),
                                          *sc_node_configuration)
+
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,
                                                                  block_timestamp_rewind=self.block_timestamp_rewind,
                                                                  model=AccountModel)

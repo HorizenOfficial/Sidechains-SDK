@@ -5,7 +5,6 @@ import io.horizen.account.fixtures.EthereumTransactionFixture;
 import io.horizen.account.utils.EthereumTransactionDecoder;
 import io.horizen.account.utils.RlpStreamDecoder;
 import io.horizen.account.utils.RlpStreamEncoder;
-import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Arrays;
 import org.junit.Test;
@@ -15,6 +14,7 @@ import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.VLQByteBufferReader;
 import sparkz.util.serialization.VLQByteBufferWriter;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;

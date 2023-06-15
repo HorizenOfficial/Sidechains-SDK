@@ -4,11 +4,11 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.MainchainErrorResponse._
 import io.horizen.api.http.route.MainchainRestSchema._
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import io.horizen.api.http.JacksonSupport._
-import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, MainchainHeaderHash => McHeaderHash}
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainBlockReferenceInfo, MainchainHeaderInfo}
 import io.horizen.json.Views
 import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
@@ -111,7 +111,8 @@ case class MainchainBlockApiRoute[
   def blockReferenceByHash: Route = (post & path("blockReferenceByHash")) {
     entity(as[ReqBlockBy]) { body =>
       withNodeView { sidechainNodeView =>
-        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(BytesUtils.fromHexString(body.hash)).asScala match {
+        val mcHeaderHashValue = BytesUtils.fromHexString(body.hash)
+        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(McHeaderHash(mcHeaderHashValue)).asScala match {
           case Some(mcBlockRef) =>
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))

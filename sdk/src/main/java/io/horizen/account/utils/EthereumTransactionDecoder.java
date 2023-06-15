@@ -9,11 +9,14 @@ import org.web3j.rlp.RlpString;
 import org.web3j.utils.Numeric;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.VLQByteBufferReader;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Optional;
+
 import static io.horizen.account.utils.EthereumTransactionUtils.getRealV;
-import static io.horizen.account.utils.Secp256k1.*;
+import static io.horizen.account.utils.Secp256k1.CHAIN_ID_INC;
+import static io.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 
 public class EthereumTransactionDecoder {

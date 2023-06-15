@@ -102,12 +102,17 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
       val mockMessageRequestsList = new util.HashMap[ByteArrayWrapper, Array[Byte]](numOfMessages)
 
       for (index <- 1 to numOfMessages) {
+        val sender = Array.fill(20)(Random.nextInt().toByte)
+        val receiverSidechain = Array.fill(32)(Random.nextInt().toByte)
+        val receiver = Array.fill(20)(Random.nextInt().toByte)
+        val payload = Array.fill(20)(Random.nextInt().toByte)
+
         val wr = AccountCrossChainMessage(
           1,
-          Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte),
-          Array.fill(20)(Random.nextInt().toByte)
+          sender,
+          receiverSidechain,
+          receiver,
+          payload
         )
         expectedListOfWR.add(wr)
         val key = proc.getMessageKey(epochNum, index)

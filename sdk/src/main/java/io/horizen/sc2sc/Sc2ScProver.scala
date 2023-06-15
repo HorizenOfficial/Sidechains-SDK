@@ -1,11 +1,9 @@
 package io.horizen.sc2sc
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import io.horizen.{AbstractState, SidechainAppEvents, SidechainSettings, SidechainTypes}
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import io.horizen.certificatesubmitter.dataproof.CertificateData
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -13,6 +11,7 @@ import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import io.horizen.wallet.Wallet
+import io.horizen.{AbstractState, SidechainAppEvents, SidechainSettings, SidechainTypes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.transaction.MemoryPool
@@ -32,13 +31,12 @@ class Sc2ScProver [
   HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS],
   MS <: AbstractState[TX, H, PM, MS],
   VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL],
-  MP <: MemoryPool[TX, MP],
-  T <: CertificateData](settings: SidechainSettings,
+  MP <: MemoryPool[TX, MP]
+](settings: SidechainSettings,
                         sidechainNodeViewHolderRef: ActorRef,
                         params: NetworkParams,
                         )
                        (implicit ec: ExecutionContext) extends Actor
-  with Timers
   with SparkzLogging
   with Sc2ScUtils[TX, H, PM, MS, HIS]
 {

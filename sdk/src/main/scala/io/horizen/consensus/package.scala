@@ -1,9 +1,9 @@
 package io.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.poseidonnative.PoseidonHash
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
-import com.horizen.poseidonnative.PoseidonHash
 import io.horizen.vrf.VrfOutput
 import sparkz.util.ModifierId
 import supertagged.TaggedType

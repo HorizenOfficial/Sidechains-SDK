@@ -6,6 +6,7 @@ import io.horizen.account.transaction.EthereumTransaction;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 import io.horizen.utils.BytesUtils;
+
 import java.math.BigInteger;
 import java.util.Objects;
 

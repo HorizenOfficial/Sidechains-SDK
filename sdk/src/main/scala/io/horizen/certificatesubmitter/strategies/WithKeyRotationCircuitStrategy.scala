@@ -1,19 +1,18 @@
 package io.horizen.certificatesubmitter.strategies
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen._
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate}
+import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
 
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -28,8 +27,8 @@ class WithKeyRotationCircuitStrategy[
   MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
                                       sc2scConfig: Sc2ScConfigurator,
                                       params: NetworkParams,
-                                      cryptolibCircuit: ThresholdSignatureCircuitWithKeyRotation
-                                     ) extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, sc2scConfig, params) {
+                                      circuit: ThresholdSignatureCircuitWithKeyRotation)
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, sc2scConfig, params) with Sc2ScUtils[TX, H, PM, MS, HIS] {
 
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
@@ -46,7 +45,7 @@ class WithKeyRotationCircuitStrategy[
 
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    cryptolibCircuit.createProof(
+    circuit.createProof(
       certificateData.backwardTransfers.asJava,
       certificateData.sidechainId,
       certificateData.referencedEpochNumber,
@@ -77,7 +76,7 @@ class WithKeyRotationCircuitStrategy[
 
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
-    val schnorrKeysSignatures = getSchnorrKeysSignaturesListBytes(state, status.referencedEpoch)
+    val schnorrKeysSignatures = getSchnorrKeysSignatures(state, status.referencedEpoch)
 
     val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =
       sc2scConfig.canSendMessages match {
@@ -101,13 +100,13 @@ class WithKeyRotationCircuitStrategy[
       signersPublicKeyWithSignatures,
       schnorrKeysSignatures,
       previousCertificateOption,
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+      circuit.generateKeysRootHash(
         params.signersPublicKeys.map(_.pubKeyBytes()).toList.asJava,
         params.mastersPublicKeys.map(_.pubKeyBytes()).toList.asJava)
     )
   }
 
-  override def getMessageToSign(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSignAndPublicKeys(history: HIS, state: MS, referencedWithdrawalEpochNumber: Int): Try[(Array[Byte], Seq[SchnorrProposition])] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = state.backwardTransfers(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
@@ -116,13 +115,13 @@ class WithKeyRotationCircuitStrategy[
     val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, state, referencedWithdrawalEpochNumber)
     val sidechainId = params.sidechainId
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  sc2scConfig.canSendMessages match {
+    val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
+    val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
+
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = sc2scConfig.canSendMessages match {
       case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
       case false => None
     }
-
-    val keysRootHash: Array[Byte] = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .getSchnorrKeysHash(getSchnorrKeysSignaturesListBytes(state, referencedWithdrawalEpochNumber))
 
     val (previousCertificateBytes, messageTreeRootHash): (Array[Byte], Array[Byte]) = sc2ScDataForCertificate match {
       case Some(sc2scData) => sc2scData.previousTopQualityCertificateHash match {
@@ -132,14 +131,14 @@ class WithKeyRotationCircuitStrategy[
       case None => (Array.emptyByteArray, Array.emptyByteArray)
     }
 
-    val message = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-      .generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
+    val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(keysRootHash, messageTreeRootHash, previousCertificateBytes).asJava)
 
-    message
+    // For circuit with key rotation signing keys can be changed
+    (message, keysAndSignatures.schnorrSigners)
   }
 
-  private def getSchnorrKeysSignaturesListBytes(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
+  private def getSchnorrKeysSignatures(state: MS, referencedWithdrawalEpochNumber: Int): SchnorrKeysSignatures = {
     val prevCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber - 1)
       .getOrElse(throw new RuntimeException(s"Certifiers keys for previous withdrawal epoch are not present"))
     val newCertifierKeys: CertifiersKeys = state.certifiersKeys(referencedWithdrawalEpochNumber)

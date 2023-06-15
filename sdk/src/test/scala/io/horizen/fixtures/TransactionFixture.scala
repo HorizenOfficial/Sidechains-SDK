@@ -116,6 +116,20 @@ trait TransactionFixture extends BoxFixture {
     RegularTransaction.create(from, to, 5L)
   }
 
+  def getCompatibleTransaction(fee: Long, numberoOfOutputs: Int): RegularTransaction = {
+    val from: JList[JPair[ZenBox, PrivateKey25519]] = new JArrayList[JPair[ZenBox, PrivateKey25519]]()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+
+    from.add(new JPair(getZenBox(pk3.publicImage(), 1, 10), pk3))
+    from.add(new JPair(getZenBox(pk4.publicImage(), 1, 10), pk4))
+
+    for (i <- 1 to numberoOfOutputs) {
+      to.add(new ZenBoxData(pk7.publicImage(), 15L))
+    }
+
+    RegularTransaction.create(from, to, fee)
+  }
+
   def getIncompatibleTransaction: RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
@@ -128,6 +142,19 @@ trait TransactionFixture extends BoxFixture {
     RegularTransaction.create(from, to, 5L)
   }
 
+  def getIncompatibleTransaction(fee: Long, numberoOfOutputs: Int): RegularTransaction = {
+    val from: JList[JPair[ZenBox, PrivateKey25519]] = new JArrayList[JPair[ZenBox, PrivateKey25519]]()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+
+    from.add(new JPair(getZenBox(pk3.publicImage(), 1, 10), pk5))
+    from.add(new JPair(getZenBox(pk6.publicImage(), 1, 10), pk6))
+
+    for (i <- 1 to numberoOfOutputs) {
+      to.add(new ZenBoxData(pk7.publicImage(), 20L))
+    }
+
+    RegularTransaction.create(from, to, fee)
+  }
 
   def getRegularTransactionList(count: Int): JList[RegularTransaction] = {
     val transactionList : JList[RegularTransaction] = new JArrayList[RegularTransaction]()

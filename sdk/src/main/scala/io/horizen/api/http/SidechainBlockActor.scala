@@ -6,9 +6,10 @@ import akka.util.Timeout
 import io.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import io.horizen.{SidechainSettings, SidechainSyncInfo}
 import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.consensus.HistoryReader
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import sparkz.util.{ModifierId, SparkzLogging}
-import sparkz.core.consensus.HistoryReader
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}

@@ -1,11 +1,5 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.utxo.box.*;
-import io.horizen.utxo.box.data.BoxData;
-import io.horizen.utxo.box.data.ForgerBoxData;
-import io.horizen.utxo.box.data.ZenBoxData;
-import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import io.horizen.utxo.customtypes.CustomBoxData;
 import io.horizen.proposition.MCPublicKeyHashProposition;
 import io.horizen.proposition.Proposition;
 import io.horizen.proposition.PublicKey25519Proposition;
@@ -13,6 +7,12 @@ import io.horizen.secret.PrivateKey25519;
 import io.horizen.secret.PrivateKey25519Creator;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.box.*;
+import io.horizen.utxo.box.data.BoxData;
+import io.horizen.utxo.box.data.ForgerBoxData;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.customtypes.CustomBoxData;
 import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,9 +55,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ZenBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                7516983935722354239L,
-                -2870959594289512209L,
-                -9075355275709095846L)
+                -7822846273881816367L,
+                -5235634819496802269L,
+                7365764246270700690L)
         );
     }
 

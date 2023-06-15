@@ -3,7 +3,7 @@ package io.horizen.account.api.http.route
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import io.horizen.account.api.http.route.AccountTransactionRestScheme._
-import io.horizen.account.utils.FeeUtils
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorByteTransactionParsing
 import io.horizen.api.http.route.TransactionBaseRestScheme.{ReqAllTransactions, ReqSendTransaction}
 import io.horizen.json.SerializationUtil
@@ -153,7 +153,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         .addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
-          BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
+          DefaultGasFeeFork.blockGasLimit, BigInteger.ONE, Option.apply(BigInteger.ONE),
           ""))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -313,7 +313,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
       Post(basePath + "createLegacyTransaction").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(ReqLegacyTransaction(Option.apply("1234567890123456789012345678901234567890"),
           Option.apply("2234567890123456789012345678901234567890"), Some(BigInteger.ONE),
-          BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, Option.apply(BigInteger.ONE),
+          DefaultGasFeeFork.blockGasLimit, BigInteger.ONE, Option.apply(BigInteger.ONE),
           ""))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -387,7 +387,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         .withEntity(SerializationUtil.serialize(ReqCreateKeyRotationTransaction(1, 0, "123",
           "123", "123", "123",
           Option.apply(BigInteger.ONE), Option.apply(EIP1559GasInfo(
-            BigInteger.valueOf(FeeUtils.GAS_LIMIT.longValue()), BigInteger.ONE, BigInteger.ONE)
+            DefaultGasFeeFork.blockGasLimit, BigInteger.ONE, BigInteger.ONE)
           )))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

@@ -28,6 +28,11 @@ trait AccountFixture {
 
   def randomAddress: Address = new Address(randomBytes(Address.LENGTH))
 
+  /**
+   * Assert that the JSON representation of actual is identical to the expected JSON string.
+   * @param expected expected JSON representation
+   * @param actual object to compare against
+   */
   def assertJsonEquals(expected: String, actual: Object): Unit = {
     val mapper = new ObjectMapper()
     val actualJson = EthJsonMapper.serialize(actual)

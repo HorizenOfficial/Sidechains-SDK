@@ -17,7 +17,7 @@ public final class CrossChainMessageBox
         return boxData.getProtocolVersion();
     }
 
-    public Integer getMessageType() {
+    public int getMessageType() {
         return boxData.getMessageType();
     }
 

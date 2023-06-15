@@ -8,17 +8,21 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
-		<scala.version>2.12.10</scala.version>
+		<scala.version>2.12.12</scala.version>
 	</properties>
 
 	<packaging>pom</packaging>
 
 	<modules>
 		<module>sdk</module>
-		<module>examples/simpleapp</module>
-		<module>examples/evmapp</module>
+		<module>examples/utxo/simpleapp</module>
+		<module>examples/account/evmapp</module>
+		<module>examples/utxo/utxoapp_sctool</module>
+		<module>examples/account/evmapp_sctool</module>
 		<module>tools/sctool</module>
 		<module>tools/dbtool</module>
 		<module>tools/signingtool</module>
+		<module>tools/sidechains-sdk-account_sctools</module>
+		<module>tools/sidechains-sdk-utxo_sctools</module>
 	</modules>
 </project>

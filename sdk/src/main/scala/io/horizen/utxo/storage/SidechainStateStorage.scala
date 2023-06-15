@@ -2,12 +2,12 @@ package io.horizen.utxo.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.SidechainTypes
-import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
-import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}
 import io.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import io.horizen.utxo.backup.BoxIterator
@@ -275,9 +275,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getTopQualityCertificateMainchainHeaderHash(referencedWithdrawalEpoch: Int): Option[Array[Byte]] = {
+  def getTopQualityCertificateMainchainHeaderHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = {
     storage.get(getTopQualityCertificateMainchainHeaderKey(referencedWithdrawalEpoch)).asScala match {
-      case Some(baw) => Some(baw.data())
+      case Some(baw) => Some(MainchainHeaderHash(baw.data()))
       case _ => Option.empty
     }
   }
@@ -363,7 +363,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              crossChainMessageHashesToAppend: Seq[CrossChainMessageHash],
              hashScTxsCommitment: Set[String],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCerts: Seq[(WithdrawalEpochCertificate, Array[Byte])],
+             topQualityCerts: Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
              scHasCeased: Boolean,
@@ -504,7 +504,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
 
-    if (params.isNonCeasing) {
+    if (Sc2ScUtils.isActive(params)) {
       if (crossChainMessagesToAppendSeq.nonEmpty) {
         // Calculate the next counter for storing crosschain messages requests without duplication previously stored ones.
         val nextCrossChainMessageEpochCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpochInfo.epoch) + 1
@@ -518,7 +518,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           ccMessages.add(b)
 
           //store also every  single hash separately with its epoch
-          val singleMessageHash = CryptoLibProvider.sc2scCircuitFunctions.getCrossChainMessageHash(b)
+          val singleMessageHash = b.getCrossChainMessageHash
           updateList.add(new JPair(getCrosschainMessageSingleKey(singleMessageHash),
             new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
         }
@@ -540,7 +540,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
       topQualityCerts.foreach(ele =>
         updateList.add(new JPair(getTopQualityCertificateMainchainHeaderKey(ele._1.epochNumber),
-          new ByteArrayWrapper(ele._2)))
+          new ByteArrayWrapper(ele._2.value)))
       )
     }
 

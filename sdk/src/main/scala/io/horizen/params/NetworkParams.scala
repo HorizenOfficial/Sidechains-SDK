@@ -1,15 +1,16 @@
 package io.horizen.params
 
 
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-
-import java.math.BigInteger
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
+
+import java.math.BigInteger
+import scala.concurrent.duration.FiniteDuration
 
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
@@ -66,6 +67,8 @@ trait NetworkParams {
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
+  val getLogsSizeLimit: Int
+  val getLogsQueryTimeout: FiniteDuration
 
   val minVirtualWithdrawalEpochLength: Int
 

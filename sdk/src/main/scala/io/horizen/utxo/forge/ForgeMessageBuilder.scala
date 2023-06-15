@@ -52,25 +52,26 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MP = SidechainMemoryPool
 
   override def createNewBlock(
-                               nodeView: View,
-                               branchPointInfo: BranchPointInfo,
-                               isWithdrawalEpochLastBlock: Boolean,
-                               parentId: BlockId,
-                               timestamp: Block.Timestamp,
-                               mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                               sidechainTransactions: Iterable[SidechainTypes#SCBT],
-                               mainchainHeaders: Seq[MainchainHeader],
-                               ommers: Seq[Ommer[SidechainBlockHeader]],
-                               ownerPrivateKey: PrivateKey25519,
-                               forgingStakeInfo: ForgingStakeInfo,
-                               vrfProof: VrfProof,
-                               vrfOutput: VrfOutput,
-                               forgingStakeInfoMerklePath: MerklePath,
-                               companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
-                               inputBlockSize: Int,
-                               signatureOption: Option[Signature25519],
-                               isPending: Boolean = false): Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] = {
-    val feePayments = if (isWithdrawalEpochLastBlock) {
+                 nodeView: View,
+                 branchPointInfo: BranchPointInfo,
+                 isWithdrawalEpochLastBlock: Boolean,
+                 parentId: BlockId,
+                 timestamp: Block.Timestamp,
+                 mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                 sidechainTransactions: Iterable[SidechainTypes#SCBT],
+                 mainchainHeaders: Seq[MainchainHeader],
+                 ommers: Seq[Ommer[SidechainBlockHeader]],
+                 ownerPrivateKey: PrivateKey25519,
+                 forgingStakeInfo: ForgingStakeInfo,
+                 vrfProof: VrfProof,
+                 vrfOutput: VrfOutput,
+                 forgingStakeInfoMerklePath: MerklePath,
+                 companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+                 inputBlockSize: Int,
+                 signatureOption: Option[Signature25519],
+                 isPending: Boolean = false) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
+  {
+    val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
       require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
@@ -145,29 +146,29 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   override def collectTransactionsFromMemPool(
-                                               nodeView: View,
-                                               blockSizeIn: Int,
-                                               mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
-                                               withdrawalEpochInfo: WithdrawalEpochInfo,
-                                               timestamp: Long,
-                                               forcedTx: Iterable[SidechainTypes#SCBT]
-                                             ): Iterable[SidechainTypes#SCBT] = {
+       nodeView: View,
+       blockSizeIn: Int,
+       mainchainBlockReferenceData: Seq[MainchainBlockReferenceData],
+       withdrawalEpochInfo: WithdrawalEpochInfo,
+       timestamp: Long,
+       forcedTx: Iterable[SidechainTypes#SCBT]
+  ): Iterable[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
-
     val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val allowedCrossChainMessageBoxes =
       if (sc2ScConfigurator.canSendMessages) {
-        nodeView.state.getAllowedCrosschainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxMessagesPerCertificate) - nodeView.state.getAlreadyMinedCrosschainMessagesInCurrentEpoch
+        nodeView.state.getAllowedCrossChainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch) - nodeView.state.getAlreadyMinedCrossChainMessagesInCurrentEpoch
       } else 0
 
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
-      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+      if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled) {
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes + allowedCrossChainMessageBoxes)
-      else
+        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+        nodeView.pool.take(allowedCrossChainMessageBoxes)
+      } else
         nodeView.pool.take(nodeView.pool.size)
 
     (mempoolTx
@@ -197,11 +198,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] =
-    wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+     wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
 
   // in UTXO model we have the same limit for both sizes, no special partition reserved for transactions
   override def getMaxBlockOverheadSize(): Int = SidechainBlock.MAX_BLOCK_SIZE
-
   override def getMaxBlockSize(): Int = getMaxBlockOverheadSize()
 }
 

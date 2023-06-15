@@ -2,16 +2,16 @@ package io.horizen.utils;
 
 import com.horizen.librustsidechains.FieldElement;
 
-import java.util.Collection;
+import java.util.List;
 
 public final class FieldElementsContainer implements AutoCloseable {
-    private final Collection<FieldElement> fieldElementCollection;
+    private final List<FieldElement> fieldElementCollection;
 
-    public FieldElementsContainer(Collection<FieldElement> fieldElementCollection) {
+    public FieldElementsContainer(List<FieldElement> fieldElementCollection) {
         this.fieldElementCollection = fieldElementCollection;
     }
 
-    public Collection<FieldElement> getFieldElementCollection() {
+    public List<FieldElement> getFieldElementCollection() {
         return fieldElementCollection;
     }
 

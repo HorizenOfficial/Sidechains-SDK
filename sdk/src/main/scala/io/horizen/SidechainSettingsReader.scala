@@ -4,8 +4,7 @@ import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import net.ceedubs.ficus.readers.ValueReader
-import net.ceedubs.ficus.readers.EnumerationReader._
+import net.ceedubs.ficus.readers.{EnumerationReader, ValueReader}
 import sparkz.core.settings.{SettingsReaders, SparkzSettings}
 
 import java.io.File
@@ -14,10 +13,10 @@ import java.net.URL
 import java.util.{Optional => JOptional}
 import scala.compat.java8.OptionConverters.toScala
 
-
 object SidechainSettingsReader
   extends LazyLogging
     with SettingsReaders
+    with EnumerationReader
 {
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 
@@ -47,11 +46,12 @@ object SidechainSettingsReader
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("sparkz.csw")
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
     val ethServiceSettings = config.as[EthServiceSettings]("sparkz.ethService")
+    val apiRateLimiterSettings = config.as[ApiRateLimiterSettings]("sparkz.apiRateLimiter")
     val sc2ScSettings = config.as[Sc2ScSettings]("sparkz.sc2sc")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
-      ethServiceSettings, accountMempoolSettings, sc2ScSettings)
+      ethServiceSettings, accountMempoolSettings, apiRateLimiterSettings, sc2ScSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

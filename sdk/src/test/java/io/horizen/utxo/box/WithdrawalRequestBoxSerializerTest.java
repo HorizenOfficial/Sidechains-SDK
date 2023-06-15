@@ -1,19 +1,18 @@
 package io.horizen.utxo.box;
 
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.MCPublicKeyHashProposition;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
 {
