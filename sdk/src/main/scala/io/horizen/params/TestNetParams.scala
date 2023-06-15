@@ -39,9 +39,7 @@ case class TestNetParams(
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
                           override val chainId: Long = 22222222,
                           override val isCSWEnabled: Boolean = true,
-                          override val isNonCeasing: Boolean = false,
-                          override val getLogsSizeLimit: Int = 10000,
-                          override val getLogsQueryTimeout: FiniteDuration = 10.seconds,
+                          override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

@@ -66,8 +66,6 @@ trait NetworkParams {
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
-  val getLogsSizeLimit: Int
-  val getLogsQueryTimeout: FiniteDuration
 
   val minVirtualWithdrawalEpochLength: Int
 
