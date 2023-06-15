@@ -111,6 +111,9 @@ object Sc2scApiRouteRestScheme {
   private[api] case class ReqCreateRedeemMessage(message: CrossChainMessageEle)
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class CrossChainMessageEle(
                                                 protocolVersion: Short,
                                                 messageType: Int,
@@ -119,7 +122,7 @@ object Sc2scApiRouteRestScheme {
                                                 receiverSidechain: String,
                                                 receiver: String,
                                                 payload: String
-                                              ){
+  ){
     require(senderSidechain != null, "Empty sender Sidechain")
     require(sender != null, "Empty sender address")
     require(receiverSidechain != null, "Empty receiver Sidechain")
@@ -143,9 +146,6 @@ object Sc2scApiRouteRestScheme {
     require(receiver != null, "Empty receiver address")
     require(payload != null, "Empty payload ")
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
 }
 
 object Sc2scApiErrorResponse {

@@ -3,6 +3,9 @@ package io.horizen.account.sc2sc
 import io.horizen.account.abi.ABIEncodable
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
+import io.horizen.sc2sc.CrossChainMessageValidator
+import org.web3j.abi.datatypes.generated.Uint32
+import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -18,6 +21,8 @@ case class AccountCrossChainMessage
 ) extends BytesSerializable with ABIEncodable[StaticStruct] {
 
   override type M = AccountCrossChainMessage
+
+  AccountCrossChainMessageValidator.ccMsgValidator.validateMessage(this)
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
@@ -79,4 +84,8 @@ object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossC
     val valueByteArrayLength = reader.getUInt().toInt
     reader.getBytes(valueByteArrayLength)
   }
+}
+
+object AccountCrossChainMessageValidator {
+  val ccMsgValidator = new CrossChainMessageValidator()
 }

@@ -1,7 +1,7 @@
 import json
 
 
-def sendVoteMessageToSidechain(sidechainNode, proposition, vote, receivingSidechain, receivingAddress, fee):
+def send_vote_message_to_sidechain(sidechainNode, proposition, vote, receivingSidechain, receivingAddress, fee):
     j = {
         "proposition": proposition,
         "vote": vote,
@@ -11,6 +11,7 @@ def sendVoteMessageToSidechain(sidechainNode, proposition, vote, receivingSidech
     }
     request = json.dumps(j)
     response = sidechainNode.vote_sendToSidechain(request)
+    print(f'THIS IS THE RESPONSE {response}')
     if "result" in response:
         return response["result"]
 

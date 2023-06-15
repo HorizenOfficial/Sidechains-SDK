@@ -157,7 +157,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 CswFtProverData ftProverData = new CswFtProverData(
                         new ForwardTransferOutput(
                                 ft.amount(),
-                                BytesUtils.reverseBytes(ft.receiverPubKeyReversed()), // Set receiver bytes in a PubKey255199 bytes original order
+                                BytesUtils.toMainchainFormat(ft.receiverPubKeyReversed()), // Set receiver bytes in a PubKey255199 bytes original order
                                 ft.paybackAddrDataHash(),
                                 ft.txHash(),
                                 ft.outIdx()),

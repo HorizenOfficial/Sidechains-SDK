@@ -4,6 +4,8 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
+import io.horizen.examples.api.VoteController;
+import io.horizen.examples.transaction.SendVoteMessageTransactionSerializer;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proposition.Proposition;
 import io.horizen.sc2sc.Sc2ScConfigurator;
@@ -29,6 +31,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import static io.horizen.examples.transaction.TransactionIdsEnum.RedeemVoteTransactionId;
+import static io.horizen.examples.transaction.TransactionIdsEnum.SendVoteToSidechainTransactionId;
+
 public class SimpleAppModule extends SidechainAppModule
 {
     private final SettingsReader settingsReader;
@@ -45,6 +50,8 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
+        customTransactionSerializers.put(SendVoteToSidechainTransactionId.id(), (TransactionSerializer) SendVoteMessageTransactionSerializer.getSerializer());
+        customTransactionSerializers.put(RedeemVoteTransactionId.id(), (TransactionSerializer) RedeemVoteMessageTransactionSerializer.getSerializer());
 
         String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
@@ -80,6 +87,7 @@ public class SimpleAppModule extends SidechainAppModule
 
         // Here I can add my custom rest api and/or override existing one
         List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
+        customApiGroups.add(new VoteController(transactionsCompanion));
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"

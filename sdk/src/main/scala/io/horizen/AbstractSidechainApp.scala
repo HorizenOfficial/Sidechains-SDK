@@ -138,7 +138,7 @@ abstract class AbstractSidechainApp
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+      sidechainId = BytesUtils.toMainchainFormat(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -243,7 +243,7 @@ abstract class AbstractSidechainApp
 
   // Generate Coboundary Marlin Proving System dlog keys
   log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
-  if(!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+  if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
@@ -322,9 +322,6 @@ abstract class AbstractSidechainApp
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-
-//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
-//  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
   lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))

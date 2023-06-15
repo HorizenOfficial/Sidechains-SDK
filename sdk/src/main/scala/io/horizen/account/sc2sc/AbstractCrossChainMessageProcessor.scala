@@ -6,6 +6,8 @@ import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.account.state.events.AddCrossChainMessage
+import io.horizen.account.state._
+import io.horizen.account.state.events.AddCrossChainMessage
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.evm.Address
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainProtocolVersion}

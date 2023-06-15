@@ -120,7 +120,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
 
-        customFields.set(0, getSchnorrKeysHash(schnorrKeysSignatures));
         List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption

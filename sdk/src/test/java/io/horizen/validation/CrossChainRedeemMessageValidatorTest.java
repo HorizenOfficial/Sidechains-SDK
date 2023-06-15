@@ -74,7 +74,7 @@ public class CrossChainRedeemMessageValidatorTest {
     public void whenReceivingScIdIsDifferentThenTheScIdInSettings_throwsAnIllegalArgumentException() {
         // Arrange
         byte[] badScIdHex = BytesUtils.fromHexString("0b3c8f3c570f058a37a3adf0f98d14bd");
-        String revBadScId = BytesUtils.toHexString(BytesUtils.reverseBytes(badScIdHex));
+        String revBadScId = BytesUtils.toHexString(BytesUtils.toMainchainFormat(badScIdHex));
         CrossChainRedeemMessageValidator validator = new CrossChainRedeemMessageValidator(
                 scStateStorage, sc2scCircuit, networkParams
         );

@@ -50,7 +50,7 @@ object CertificateRequestCreator {
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
       // Note: we should send uint256 types in BE.
-      BytesUtils.reverseBytes(sidechainId),
+      BytesUtils.toMainchainFormat(sidechainId),
       epochNumber,
       endEpochCumCommTreeHash,
       proofBytes,

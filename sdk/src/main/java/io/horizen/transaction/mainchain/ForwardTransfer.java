@@ -53,7 +53,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
         return new ZenBox(
                 new ZenBoxData(
                         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
-                        new PublicKey25519Proposition(BytesUtils.reverseBytes(output.propositionBytes())),
+                        new PublicKey25519Proposition(BytesUtils.toMainchainFormat(output.propositionBytes())),
                         output.amount()),
                 nonce);
     }

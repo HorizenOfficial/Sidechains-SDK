@@ -58,7 +58,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     private void validateCorrectSidechain(CrossChainMessage msg) {
         byte[] receivingSidechain = msg.getReceiverSidechain();
         String receivingSidechainAsString = BytesUtils.toHexString(receivingSidechain);
-        String sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(networkParams.sidechainId()));
+        String sidechainId = BytesUtils.toHexString(BytesUtils.toMainchainFormat(networkParams.sidechainId()));
 
         if (!receivingSidechainAsString.equals(sidechainId)) {
             throw new IllegalArgumentException(

@@ -8,6 +8,7 @@ import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesSt
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
+import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
@@ -118,10 +119,9 @@ class WithKeyRotationCircuitStrategy[
     val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
     val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =  if (sc2scConfig.canSendMessages) {
-      Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
-    } else {
-      None
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = sc2scConfig.canSendMessages match {
+      case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
+      case false => None
     }
 
     val previousCertificateBytes: Array[Byte] = sc2ScDataForCertificate match {
