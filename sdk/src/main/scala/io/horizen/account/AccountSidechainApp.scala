@@ -5,6 +5,8 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen._
 import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.rpc.handler.RpcHandler
+import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.rpc.handler.RpcHandler
 import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
@@ -43,6 +45,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.io.{Codec, Source}
 
@@ -179,7 +182,7 @@ class AccountSidechainApp @Inject()
   )
   //Initialize RpcProcessor object with the rpcHandler
   val rpcProcessor = RpcProcessor(rpcHandler)
-  
+
   if(sidechainSettings.websocketServer.wsServer) {
     val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }

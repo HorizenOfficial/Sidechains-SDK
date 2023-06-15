@@ -3,6 +3,7 @@ package io.horizen.cryptolibprovider.implementations;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.commitmenttreenative.ScCommitmentCertPath;
 import com.horizen.librustsidechains.Constants;
+import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.MerklePath;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
@@ -10,6 +11,7 @@ import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utils.FieldElementsContainer;
 
 import java.util.Optional;
 

@@ -15,6 +15,8 @@ import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
 import scala.collection.JavaConverters;
 
+import java.util.Arrays;
+
 public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;

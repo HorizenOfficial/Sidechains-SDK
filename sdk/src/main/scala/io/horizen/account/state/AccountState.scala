@@ -13,6 +13,8 @@ import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
+import com.horizen.certnative.BackwardTransfer
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm._

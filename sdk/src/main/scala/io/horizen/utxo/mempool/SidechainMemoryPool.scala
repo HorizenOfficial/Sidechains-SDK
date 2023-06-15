@@ -170,7 +170,6 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     true
   }
 
-
   // TO DO: check usage in Sparkz core
   // Probably, we need to do a Global check inside for both new and existing transactions.
   override def putWithoutCheck(txs: Iterable[SidechainTypes#SCBT]): SidechainMemoryPool = {

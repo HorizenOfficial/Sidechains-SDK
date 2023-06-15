@@ -10,6 +10,7 @@ import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 
+import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
 

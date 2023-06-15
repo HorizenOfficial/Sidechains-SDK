@@ -36,6 +36,9 @@ import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
 import io.horizen._
+import io.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
+import io.horizen.utxo.forge.ForgerRef
+import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction

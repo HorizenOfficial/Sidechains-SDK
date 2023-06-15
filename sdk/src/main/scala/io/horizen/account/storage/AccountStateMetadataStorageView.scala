@@ -12,6 +12,7 @@ import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochI
 import sparkz.core.{VersionTag, versionToBytes}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
+import sparkz.core.{VersionTag, versionToBytes}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
