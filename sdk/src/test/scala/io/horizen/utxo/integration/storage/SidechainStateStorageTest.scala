@@ -4,9 +4,9 @@ import io.horizen._
 import io.horizen.block.WithdrawalEpochCertificateFixture
 import io.horizen.consensus._
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, Sc2ScFork, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.sc2sc.{CrossChainMessageHash, Sc2ScHelper, Sc2ScUtils}
+import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
 import io.horizen.utxo.companion._
@@ -16,10 +16,6 @@ import io.horizen.utxo.storage.SidechainStateStorage
 import io.horizen.utxo.utils.BlockFeeInfo
 import org.junit.Assert._
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
-import org.scalatestplus.mockito.MockitoSugar
-import org.scalatestplus.mockito.MockitoSugar.mock
 
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
