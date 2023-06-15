@@ -74,7 +74,6 @@ class EthService(
   implicit val timeout: Timeout = new Timeout(nvtimeout)
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R,  fTimeout: FiniteDuration = nvtimeout): R  = {
-    System.out.println("ApplyOnAccountView timeout "+fTimeout)
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
