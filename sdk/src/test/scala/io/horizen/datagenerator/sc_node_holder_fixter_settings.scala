@@ -1,14 +1,12 @@
 package io.horizen.datagenerator
 
 import io.horizen.block._
-import io.horizen.params.{NetworkParams, RegTestParams}
-import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
-
-import java.time.Instant
-import io.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
-import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.consensus._
+import io.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.secret.VrfKeyGenerator
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.ForgerBox
 import org.junit.Test
@@ -16,6 +14,7 @@ import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 
 
 class sc_node_holder_fixter_settings extends CompanionsFixture {

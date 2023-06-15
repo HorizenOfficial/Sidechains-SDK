@@ -2,16 +2,16 @@ package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
-import io.horizen.account.storage.AccountStateMetadataStorageView.{DEFAULT_ACCOUNT_STATE_ROOT}
+import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
 import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.storage.Storage
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import sparkz.core.{VersionTag, versionToBytes}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
-import sparkz.core.{VersionTag, versionToBytes}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets

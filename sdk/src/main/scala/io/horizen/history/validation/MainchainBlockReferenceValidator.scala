@@ -8,8 +8,8 @@ import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import sparkz.util.ModifierId
 
-import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
+import scala.util.{Failure, Success, Try}
 
 class MainchainBlockReferenceValidator[
   TX <: Transaction,

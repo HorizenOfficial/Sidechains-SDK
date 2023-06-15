@@ -106,7 +106,7 @@ abstract class TransactionBaseApiRoute[
 
     val barrier = Await.result(
       sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-      60.minutes).asInstanceOf[Future[Unit]]
+      settings.timeout).asInstanceOf[Future[Unit]]
     onComplete(barrier) {
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))

@@ -1,9 +1,5 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.transaction.TransactionSerializer;
-import io.horizen.utxo.box.BoxUnlocker;
-import io.horizen.utxo.box.ZenBox;
-import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.certificatesubmitter.keys.KeyRotationProof;
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes;
 import io.horizen.proof.Proof;
@@ -13,8 +9,12 @@ import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.proposition.SchnorrProposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.secret.Secret;
+import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.ZenBoxData;
 import org.bouncycastle.util.Arrays;
 import scala.Array;
 import scala.Enumeration;

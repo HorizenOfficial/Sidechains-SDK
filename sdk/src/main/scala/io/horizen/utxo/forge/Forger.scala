@@ -2,12 +2,12 @@ package io.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import io.horizen._
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState

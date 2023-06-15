@@ -3,30 +3,30 @@ package io.horizen.certificatesubmitter.network
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
+import io.horizen.SidechainAppEvents
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.SidechainAppEvents
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.secret.SchnorrKeyGenerator
-import org.junit.{Assert, Test}
 import org.junit.Assert._
+import org.junit.{Assert, Test}
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, ConnectionDirection, ConnectionId, SendToPeer, SendToRandom}
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import sparkz.core.network.message.{Message, MessageSerializer}
 import sparkz.core.network.peer.PenaltyType
+import sparkz.core.network._
 import sparkz.core.settings.NetworkSettings
 
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
-import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {

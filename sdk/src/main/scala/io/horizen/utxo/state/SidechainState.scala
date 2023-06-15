@@ -1,17 +1,17 @@
 package io.horizen.utxo.state
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.fork.ForkManager
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import io.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage, Sc2ScConfigurator}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -27,7 +27,7 @@ import io.horizen.utxo.node.NodeState
 import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
+import io.horizen.{AbstractState, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._
 import sparkz.crypto.hash.Blake2b256

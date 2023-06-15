@@ -1,29 +1,14 @@
 package io.horizen.examples.messageprocessor.decoder;
 
 import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
-import io.horizen.account.sc2sc.CrossChainMessageProcessorConstants;
-import io.horizen.evm.Address;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
-import sparkz.crypto.hash.Keccak256;
 
 import static org.junit.Assert.*;
 
 public class RedeemSendVoteCmdInputDecoderTest {
-    static class CrossChainRedeemMessageProcessorImpl extends CrossChainMessageProcessorConstants {
-
-        @Override
-        public Address contractAddress() {
-            return new Address("0x35fdd51e73221f467b40946c97791a3e19799bea");
-        }
-
-        @Override
-        public byte[] contractCode() {
-            return Keccak256.hash("CrossChainRedeemMessageProcessorImplCode");
-        }
-    }
     @Test
-    public void test() throws ClassNotFoundException {
+    public void encodingAndDecodingAnAccountCriossChainRedeemMessageProducesAnEqualMessage() {
         // Arrange
         int messageType = 1;
         byte[] sender = "d504dbfde192182c68d2".getBytes();
@@ -44,12 +29,21 @@ public class RedeemSendVoteCmdInputDecoderTest {
         // Act
         byte[] encoded = accCcRedeemMsg.encode();
         try {
-            decoder.decode(encoded);
+            AccountCrossChainRedeemMessage decoded = decoder.decode(encoded);
+
+            // Assert
+            assertEquals(accCcRedeemMsg.messageType(), decoded.messageType());
+            assertArrayEquals(accCcRedeemMsg.sender(), decoded.sender());
+            assertArrayEquals(accCcRedeemMsg.receiver(), decoded.receiver());
+            assertArrayEquals(accCcRedeemMsg.payload(), decoded.payload());
+            assertArrayEquals(accCcRedeemMsg.receiverSidechain(), decoded.receiverSidechain());
+            assertArrayEquals(accCcRedeemMsg.certificateDataHash(), decoded.certificateDataHash());
+            assertArrayEquals(accCcRedeemMsg.nextCertificateDataHash(), decoded.nextCertificateDataHash());
+            assertArrayEquals(accCcRedeemMsg.scCommitmentTreeRoot(), decoded.scCommitmentTreeRoot());
+            assertArrayEquals(accCcRedeemMsg.nextScCommitmentTreeRoot(), decoded.nextScCommitmentTreeRoot());
+            assertArrayEquals(accCcRedeemMsg.proof(), decoded.proof());
         } catch (Exception e) {
             fail("Message should be decoded correctly");
         }
-
-        // Assert
-        assertTrue(encoded.length != 0);
     }
 }

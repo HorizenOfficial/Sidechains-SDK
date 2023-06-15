@@ -1,13 +1,13 @@
 package io.horizen
 
-import java.io._
 import io.horizen.fixtures.SidechainBlockInfoFixture
 import io.horizen.utils.BytesUtils
-import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.ModifierId
 
+import java.io._
 import java.nio.charset.StandardCharsets
 
 

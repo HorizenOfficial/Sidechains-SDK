@@ -17,8 +17,8 @@ import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.wallet.SidechainWallet
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar

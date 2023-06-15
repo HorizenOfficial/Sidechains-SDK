@@ -1,12 +1,10 @@
 package io.horizen.history.validation
 
-import java.util.{Optional => JOptional}
 import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import io.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import io.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import io.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.poseidonnative.PoseidonHash
 import io.horizen.utils.WithdrawalEpochInfo
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -20,6 +18,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId}
 
+import java.util.{Optional => JOptional}
 import scala.util.{Failure, Success}
 
 

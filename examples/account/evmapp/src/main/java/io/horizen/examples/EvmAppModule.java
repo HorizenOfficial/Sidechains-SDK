@@ -7,7 +7,6 @@ import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
 import io.horizen.account.api.http.AccountApplicationApiGroup;
-import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor;
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
@@ -70,7 +69,7 @@ public class EvmAppModule extends AccountAppModule {
         byte[] scId = BytesUtils.fromHexString(sidechainSettings.genesisData().scId());
         Sc2scCircuit circuit = new Sc2scImplZendoo();
         // Here I can add my custom logic to manage EthereumTransaction content.
-        // todo: ricordarsi dell'ordine
+        // NOTE: the ordering is important, since we want the EvmMessageProcessor to be the last one
         ScTxCommitmentTreeRootHashMessageProcessor$ scTxMsgProc = MessageProcessorUtil.getScTxMsgProc();
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new VoteMessageProcessor(scId));

@@ -1,12 +1,10 @@
 package io.horizen.account.sc2sc
 
 import com.google.common.primitives.Bytes
-import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.account.utils.WellKnownAddresses.SC_TX_COMMITMENT_TREE_ROOT_HASH_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import sparkz.crypto.hash.Keccak256
-import sparkz.utils.ByteArray
 
 trait ScTxCommitmentTreeRootHashMessageProvider {
   def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit
@@ -14,7 +12,7 @@ trait ScTxCommitmentTreeRootHashMessageProvider {
 }
 
 /**
- * This fake smart contract is responsible to save and retrieve the scTxCommitmentTreeRootHash and cannot be called
+ * This native smart contract is responsible to save and retrieve the scTxCommitmentTreeRootHash and cannot be called
  */
 object ScTxCommitmentTreeRootHashMessageProcessor
   extends NativeSmartContractMsgProcessor with ScTxCommitmentTreeRootHashMessageProvider {

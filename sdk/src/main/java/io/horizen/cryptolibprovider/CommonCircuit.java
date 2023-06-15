@@ -1,15 +1,15 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.block.MainchainBackwardTransferCertificateOutput;
-import io.horizen.block.WithdrawalEpochCertificate;
-import io.horizen.utxo.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.block.MainchainBackwardTransferCertificateOutput;
+import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utxo.box.WithdrawalRequestBox;
 import scala.Enumeration;
 import scala.collection.Seq;
 
@@ -71,6 +71,8 @@ public class  CommonCircuit {
         );
     }
 
+    // NOTE: this method refers to the mainchain issue reported here https://github.com/HorizenOfficial/Sidechains-SDK/blob/dev/sdk/src/main/scala/io/horizen/block/SidechainCommitmentTree.scala#L74
+    // when we need to create a WithdrawalCertificate from a WithdrawalEpochCertificate created in mainchain, use this function to not double swap the two parameters
     public static WithdrawalCertificate createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
         return new WithdrawalCertificate(
                 FieldElement.deserialize(cert.sidechainId()),
@@ -85,7 +87,7 @@ public class  CommonCircuit {
         );
     }
 
-    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
         try(WithdrawalCertificate wc = createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
             return hashFe.serializeFieldElement();
         }

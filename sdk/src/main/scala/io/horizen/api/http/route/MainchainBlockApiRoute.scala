@@ -4,11 +4,11 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.MainchainErrorResponse._
 import io.horizen.api.http.route.MainchainRestSchema._
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import io.horizen.api.http.JacksonSupport._
-import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, MainchainHeaderHash => McHeaderHash}
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainBlockReferenceInfo, MainchainHeaderInfo}
 import io.horizen.json.Views
 import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
@@ -16,7 +16,6 @@ import io.horizen.transaction.Transaction
 import io.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
-import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.{Optional => JOptional}
 import scala.compat.java8.OptionConverters._

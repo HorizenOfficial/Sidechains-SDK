@@ -2,20 +2,19 @@ package io.horizen.examples.messageprocessor;
 
 import com.google.common.primitives.Bytes;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
-import io.horizen.account.state.*;
+import io.horizen.account.state.ExecutionFailedException;
+import io.horizen.account.state.Message;
 import io.horizen.evm.Address;
 import io.horizen.examples.messageprocessor.decoder.SendVoteCmdInputDecoder;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 
-import static io.horizen.account.abi.ABIUtil.getArgumentsFromData;
-import static org.mockito.Mockito.mock;
-
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static io.horizen.account.abi.ABIUtil.getArgumentsFromData;
+import static org.junit.Assert.assertEquals;
 
 public class VoteMessageProcessorTest {
     @Test

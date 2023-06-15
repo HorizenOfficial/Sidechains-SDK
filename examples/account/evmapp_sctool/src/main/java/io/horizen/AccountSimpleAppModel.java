@@ -2,13 +2,13 @@ package io.horizen;
 
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
 import io.horizen.account.state.MessageProcessor;
-import io.horizen.examples.AppForkConfigurator;
-import io.horizen.fork.ForkConfigurator;
 import io.horizen.account.state.MessageProcessorUtil;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
+import io.horizen.examples.AppForkConfigurator;
 import io.horizen.examples.messageprocessor.VoteMessageProcessor;
 import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
+import io.horizen.fork.ForkConfigurator;
 import io.horizen.params.NetworkParams;
 import io.horizen.utils.BytesUtils;
 

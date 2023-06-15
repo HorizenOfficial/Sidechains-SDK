@@ -13,7 +13,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, Ed25519}
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotNull, assertTrue}
+import org.junit.Assert._
 import org.junit._
 import org.mockito._
 import org.scalatest.Assertions.{assertThrows, intercept}

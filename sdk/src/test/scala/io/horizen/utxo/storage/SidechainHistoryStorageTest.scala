@@ -1,8 +1,8 @@
 package io.horizen.utxo.storage
 
 import io.horizen.SidechainTypes
-import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
+import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -11,6 +11,7 @@ import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{Pair, _}
 import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._
@@ -19,7 +20,6 @@ import org.scalatestplus.mockito._
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
-import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}

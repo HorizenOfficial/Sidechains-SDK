@@ -22,23 +22,14 @@ import io.horizen.block._
 import io.horizen.consensus._
 import io.horizen.evm.{Address, Hash}
 import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
+import io.horizen.fork.ForkManager
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -105,7 +96,9 @@ class AccountForgeMessageBuilder(
       stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
-    mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
+    if (Sc2ScUtils.isActive(params)) {
+      mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
+    }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()

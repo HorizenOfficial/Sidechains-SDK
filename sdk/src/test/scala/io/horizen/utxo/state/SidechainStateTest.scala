@@ -1,6 +1,6 @@
 package io.horizen.utxo.state
 
-import io.horizen.{SidechainSettings, SidechainTypes}
+import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}

@@ -1,8 +1,8 @@
 package io.horizen.account.state.receipt
 
 import io.horizen.account.AccountFixture
-import io.horizen.utils.BytesUtils
 import io.horizen.evm.{Address, Hash}
+import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger

@@ -6,8 +6,8 @@ import io.horizen.account.transaction.EthereumTransactionSerializer
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{CheckedCompanion, DynamicTypedSerializer}
 
-import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 
 case class SidechainAccountTransactionsCompanion(customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]])
   extends DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]](

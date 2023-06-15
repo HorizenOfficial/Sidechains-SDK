@@ -7,12 +7,10 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
-
 import sparkz.util.encode.Base58;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 
 public final class BytesUtils {
     private BytesUtils() {}

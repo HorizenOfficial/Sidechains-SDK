@@ -1,6 +1,5 @@
 package io.horizen.utxo.crosschain.receiver;
 
-import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.params.NetworkParams;
 import io.horizen.proposition.Proposition;
@@ -15,8 +14,6 @@ import io.horizen.utxo.storage.SidechainStateStorage;
 import io.horizen.utxo.transaction.AbstractCrossChainRedeemTransaction;
 import io.horizen.utxo.transaction.BoxTransaction;
 import scala.collection.JavaConverters;
-
-import java.util.Arrays;
 
 public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
     private final SidechainStateStorage scStateStorage;

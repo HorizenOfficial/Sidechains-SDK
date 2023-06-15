@@ -2,9 +2,8 @@ package io.horizen.utxo.block
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.block._
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures._
-import io.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
+import io.horizen.history.validation._
 import io.horizen.json.serializer.ApplicationJsonSerializer
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -12,6 +11,7 @@ import io.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublic
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import io.horizen.utxo.box.Box
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import io.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}

@@ -25,10 +25,10 @@ import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.{bytesToId, bytesToVersion}
+
 import java.io.{File => JFile}
 import java.nio.charset.StandardCharsets
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
-
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 

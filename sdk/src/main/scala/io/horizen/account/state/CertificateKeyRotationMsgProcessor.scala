@@ -9,16 +9,16 @@ import io.horizen.account.utils.WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMAR
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofSerializer, KeyRotationProofTypes}
 import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.{Digest32, Keccak256}
 import sparkz.util.serialization.{Reader, Writer}
-import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import java.nio.charset.StandardCharsets
 import java.util

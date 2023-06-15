@@ -14,8 +14,8 @@ import org.scalatestplus.mockito.MockitoSugar
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 class SecretSubmitProviderImplTest extends JUnitSuite with MockitoSugar with SecretFixture with SidechainTypesTestsExtension {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")

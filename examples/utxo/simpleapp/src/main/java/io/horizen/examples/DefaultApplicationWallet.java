@@ -1,13 +1,13 @@
 package io.horizen.examples;
 
-import io.horizen.utxo.backup.BoxIterator;
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.Secret;
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import io.horizen.utils.ByteArrayWrapper;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.backup.BoxIterator;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.wallet.ApplicationWallet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

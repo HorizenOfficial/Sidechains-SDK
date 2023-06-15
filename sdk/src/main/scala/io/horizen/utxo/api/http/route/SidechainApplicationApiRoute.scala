@@ -1,12 +1,12 @@
 package io.horizen.utxo.api.http.route
 
 import akka.actor.{ActorRef, ActorRefFactory}
+import io.horizen.SidechainTypes
 import io.horizen.api.http.route.ApplicationBaseApiRoute
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node._
-import io.horizen.SidechainTypes
 import sparkz.core.settings.RESTApiSettings
 
 

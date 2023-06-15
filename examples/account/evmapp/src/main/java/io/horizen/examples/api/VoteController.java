@@ -7,15 +7,15 @@ import io.horizen.account.node.AccountNodeView;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
 import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
 import io.horizen.api.http.ApiResponse;
-import io.horizen.examples.api.model.*;
+import io.horizen.examples.api.model.RedeemVoteMessageRequest;
+import io.horizen.examples.api.model.SendVoteMessageRequest;
+import io.horizen.examples.api.model.SuccessResponseTx;
 import io.horizen.examples.messageprocessor.VoteMessageProcessor;
 import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
-import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.utils.BytesUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class VoteController extends AccountApplicationApiGroup {
@@ -30,7 +30,6 @@ public class VoteController extends AccountApplicationApiGroup {
         List<Route> routes = new ArrayList<>();
         routes.add(bindPostRequest("sendVoteMessage", this::sendVoteMessage, SendVoteMessageRequest.class));
         routes.add(bindPostRequest("redeem", this::redeemVoteMessage, RedeemVoteMessageRequest.class));
-        routes.add(bindPostRequest("showAllVotes", this::showAllVotes, ShowAllVotesRequest.class));
         return routes;
     }
 
@@ -64,11 +63,6 @@ public class VoteController extends AccountApplicationApiGroup {
                 BytesUtils.fromHexString(request.getProof())
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteRedeemMessageProcessor.REDEEM_SEND_VOTE), redeemMsg.encode());
-        return new SuccessResponseTx(BytesUtils.toHexString(data));
-    }
-
-    private ApiResponse showAllVotes(AccountNodeView accountNodeView, ShowAllVotesRequest request) {
-        byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteRedeemMessageProcessor.SHOW_ALL_REDEEMED_VOTES));
         return new SuccessResponseTx(BytesUtils.toHexString(data));
     }
 }

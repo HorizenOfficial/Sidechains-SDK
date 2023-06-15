@@ -1,16 +1,15 @@
 package io.horizen.params
 
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-
-import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
-import sparkz.util.ModifierId
-import sparkz.util.bytesToId
+import sparkz.util.{ModifierId, bytesToId}
+
+import java.math.BigInteger
 import scala.concurrent.duration._
 
 case class RegTestParams(

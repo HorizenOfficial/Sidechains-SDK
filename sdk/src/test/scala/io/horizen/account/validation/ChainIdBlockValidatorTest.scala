@@ -8,7 +8,6 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.AccountMockDataHelper
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertNotEquals, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

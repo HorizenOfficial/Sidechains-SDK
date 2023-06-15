@@ -1,9 +1,5 @@
 package io.horizen.account.fixtures
 
-import java.lang.{Byte => JByte}
-import java.time.Instant
-import java.util.{HashMap => JHashMap}
-import io.horizen.{SidechainTypes, utils}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.proposition.AddressProposition
@@ -18,12 +14,16 @@ import io.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils._
 import io.horizen.vrf.VrfOutput
+import io.horizen.{SidechainTypes, utils}
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
 
+import java.lang.{Byte => JByte}
 import java.math.BigInteger
-import scala.util.{Failure, Random, Try}
 import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.util.{HashMap => JHashMap}
+import scala.util.{Failure, Random, Try}
 
 
 class SemanticallyInvalidAccountBlock(block: AccountBlock, companion: SidechainAccountTransactionsCompanion)

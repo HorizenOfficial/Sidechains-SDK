@@ -6,8 +6,8 @@ import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.transaction.Transaction
 import io.horizen.utils.WithdrawalEpochInfo
-import sparkz.util.ModifierId
 import sparkz.core.VersionTag
+import sparkz.util.ModifierId
 
 import java.math.BigInteger
 

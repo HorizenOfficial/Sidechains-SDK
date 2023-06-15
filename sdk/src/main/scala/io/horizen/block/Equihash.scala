@@ -1,10 +1,10 @@
 package io.horizen.block
 
-import java.math.BigInteger
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
 
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 

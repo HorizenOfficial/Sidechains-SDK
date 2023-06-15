@@ -1,8 +1,8 @@
 package io.horizen.state
 
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import io.horizen.{AbstractState, SidechainTypes}
 import io.horizen.transaction.Transaction
+import io.horizen.{AbstractState, SidechainTypes}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.state.StateReader
 

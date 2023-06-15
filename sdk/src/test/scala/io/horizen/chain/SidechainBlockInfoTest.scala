@@ -1,6 +1,5 @@
 package io.horizen.chain
 
-import java.io._
 import io.horizen.fixtures.SidechainBlockInfoFixture
 import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
@@ -12,6 +11,7 @@ import sparkz.core.block.Block
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
+import java.io._
 import java.nio.charset.StandardCharsets
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {

@@ -3,15 +3,15 @@ package io.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0}
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.json.Views
 import io.horizen.json.serializer.ReverseBytesSerializer
-import io.horizen.utils.{BytesUtils, Utils, CompactSize}
+import io.horizen.utils.{BytesUtils, CompactSize, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import sparkz.util.serialization.{Reader, Writer}
-import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import sparkz.util.SparkzLogging
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 

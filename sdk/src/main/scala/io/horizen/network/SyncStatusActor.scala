@@ -9,7 +9,7 @@ import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlocksDensity
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
-import io.horizen.network.SyncStatusActor.{CLOSE_ENOUGH_SLOTS_TO_IGNORE, HIGHEST_BLOCK_CHECK_FREQUENCY, NotifySyncStart, NotifySyncStop, NotifySyncUpdate, SYNC_UPDATE_EVENT_FREQUENCY}
+import io.horizen.network.SyncStatusActor._
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
@@ -22,7 +22,7 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{DurationInt, FiniteDuration, pairIntToDuration}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}

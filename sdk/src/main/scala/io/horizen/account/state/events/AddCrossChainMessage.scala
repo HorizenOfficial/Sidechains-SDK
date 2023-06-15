@@ -2,7 +2,7 @@ package io.horizen.account.state.events
 
 import io.horizen.account.state.events.annotation.{Indexed, Parameter}
 import io.horizen.evm.Address
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes20, Bytes32, Bytes4, Uint32}
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
 import org.web3j.abi.datatypes.{Address => AbiAddress}
 
 import scala.annotation.meta.getter

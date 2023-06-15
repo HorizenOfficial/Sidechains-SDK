@@ -13,8 +13,8 @@ import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import sparkz.util.ModifierId
 import sparkz.core.block.Block.Timestamp
+import sparkz.util.ModifierId
 
 import java.math.BigInteger
 import scala.collection.mutable.ListBuffer

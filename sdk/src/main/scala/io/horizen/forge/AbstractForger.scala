@@ -14,11 +14,11 @@ import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.wallet.Wallet
-import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}
 import sparkz.core.transaction.MemoryPool
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.SparkzLogging
 
 import java.util.{Timer, TimerTask}
 import scala.concurrent.ExecutionContext.Implicits.global

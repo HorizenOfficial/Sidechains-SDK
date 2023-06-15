@@ -1,12 +1,9 @@
 package io.horizen.proof
 
-import java.io.File
-import java.util
-import java.util.Optional
 import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -15,6 +12,10 @@ import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.fail
 import org.junit.{Ignore, Test}
+
+import java.io.File
+import java.util
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.util.Random
 

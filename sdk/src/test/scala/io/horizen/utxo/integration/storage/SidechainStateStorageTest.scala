@@ -2,14 +2,13 @@ package io.horizen.utxo.integration.storage
 
 import io.horizen._
 import io.horizen.block.WithdrawalEpochCertificateFixture
-import io.horizen.utxo.companion._
 import io.horizen.consensus._
 import io.horizen.fixtures._
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
+import io.horizen.utxo.companion._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.storage.SidechainStateStorage
@@ -20,7 +19,6 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
-import java.util
 import java.util.{Random, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 

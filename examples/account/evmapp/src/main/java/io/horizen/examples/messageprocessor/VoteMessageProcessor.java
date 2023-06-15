@@ -1,12 +1,10 @@
 package io.horizen.examples.messageprocessor;
 
-import io.horizen.SidechainSettings;
 import io.horizen.account.sc2sc.AbstractCrossChainMessageProcessor;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
 import io.horizen.account.state.*;
 import io.horizen.evm.Address;
 import io.horizen.examples.messageprocessor.decoder.SendVoteCmdInputDecoder;
-import io.horizen.params.NetworkParams;
 import sparkz.crypto.hash.Keccak256;
 
 import static io.horizen.account.abi.ABIUtil.*;

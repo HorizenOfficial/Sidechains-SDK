@@ -4,7 +4,6 @@ import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.Sc2ScDataForCertificate
 import io.horizen.utils.BytesUtils
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`

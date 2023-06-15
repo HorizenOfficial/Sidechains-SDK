@@ -1,14 +1,14 @@
 package io.horizen.forger
 
-import java.util.Random
 import com.google.common.primitives.Longs
-import io.horizen.consensus.{ConsensusNonce, NonceConsensusEpochInfo, buildVrfMessage, intToConsensusSlotNumber, vrfProofCheckAgainstStake}
+import io.horizen.consensus._
 import io.horizen.secret.VrfKeyGenerator
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
 import org.scalatestplus.junit.JUnitSuite
 
 import java.nio.charset.StandardCharsets
+import java.util.Random
 import scala.collection.mutable
 
 class ForgerGenerationRateTest extends JUnitSuite {

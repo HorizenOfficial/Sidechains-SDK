@@ -1,9 +1,8 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import io.horizen.utils.BytesUtils
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes20, Bytes32, Bytes4, Uint32}
-import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
+import org.web3j.abi.datatypes.StaticStruct
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -22,7 +21,6 @@ case class AccountCrossChainMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
-  //todo: payload must be dynamic bytes
   private[horizen] def asABIType(): StaticStruct = {
     new StaticStruct(
       new Uint32(messageType),
@@ -44,7 +42,10 @@ case class AccountCrossChainMessage
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case that: AccountCrossChainMessage => payload sameElements that.payload
+      case that: AccountCrossChainMessage =>
+        messageType == that.messageType && sender.sameElements(that.sender) &&
+          receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
+          payload.sameElements(that.payload)
 
       case _ => false
     }

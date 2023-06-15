@@ -1,28 +1,20 @@
 package io.horizen.examples.messageprocessor;
 
 import io.horizen.SidechainSettings;
-import io.horizen.account.sc2sc.*;
+import io.horizen.account.sc2sc.AbstractCrossChainRedeemMessageProcessor;
+import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProvider;
 import io.horizen.account.state.*;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.evm.Address;
 import io.horizen.examples.messageprocessor.decoder.RedeemSendVoteCmdInputDecoder;
-import io.horizen.params.NetworkParams;
-import io.horizen.sc2sc.CrossChainMessage;
-import io.horizen.utils.BytesUtils;
 import scala.Option;
 import sparkz.crypto.hash.Keccak256;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
 import static io.horizen.account.abi.ABIUtil.*;
 
 public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageProcessor {
     public final static String REDEEM_SEND_VOTE = getABIMethodId("redeemSendVote(uint32,bytes20,bytes20,bytes20,bytes1,bytes20,bytes20,bytes20,bytes20,bytes)");
-    public final static String SHOW_ALL_REDEEMED_VOTES = getABIMethodId("showAllVotes(address)");
-
     private SidechainSettings sidechainSettings;
     private Sc2scCircuit sc2scCircuit;
 

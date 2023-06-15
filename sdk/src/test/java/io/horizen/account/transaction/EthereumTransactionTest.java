@@ -4,16 +4,18 @@ import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.utils.EthereumTransactionDecoder;
 import io.horizen.account.utils.EthereumTransactionUtils;
-import io.horizen.evm.TrieHasher;
 import io.horizen.evm.Address;
+import io.horizen.evm.TrieHasher;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
+
 import java.math.BigInteger;
 import java.util.*;
+
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 

@@ -1,10 +1,11 @@
 package io.horizen.account.fixtures
 
 
-import scala.util.Random
 import com.google.common.primitives.Longs
 import io.horizen.account.sc2sc.AccountCrossChainMessage
 import io.horizen.fixtures.SecretFixture
+
+import scala.util.Random
 
 trait AccountCrossChainMessageFixture extends SecretFixture{
 

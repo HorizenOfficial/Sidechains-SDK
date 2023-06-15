@@ -16,6 +16,7 @@ import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
+import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
@@ -36,8 +37,6 @@ import sparkz.util.ModifierId
 import java.lang
 import java.nio.charset.StandardCharsets
 import java.util.{Optional => JOptional}
-import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator, Sc2ScDataForCertificate}
-
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.language.postfixOps

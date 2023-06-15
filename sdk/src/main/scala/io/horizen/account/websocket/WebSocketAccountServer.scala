@@ -1,13 +1,13 @@
 package io.horizen.account.websocket
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import io.horizen.{SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.service.RpcProcessor
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
+import io.horizen.{SidechainTypes, WebSocketServerSettings}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedVault, SemanticallySuccessfulModifier}
 import sparkz.util.SparkzLogging
 

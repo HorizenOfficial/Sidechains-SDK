@@ -1,22 +1,17 @@
 package io.horizen.examples.messageprocessor.decoder;
 
 import io.horizen.account.abi.ABIDecoder;
-import io.horizen.account.sc2sc.AccountCrossChainMessage;
 import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
 import io.horizen.utils.BytesUtils;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.Utils;
-import org.web3j.abi.datatypes.DynamicArray;
-import org.web3j.abi.datatypes.DynamicBytes;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.abi.datatypes.generated.Bytes20;
 import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Bytes4;
 import org.web3j.abi.datatypes.generated.Uint32;
-import org.web3j.utils.Numeric;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 

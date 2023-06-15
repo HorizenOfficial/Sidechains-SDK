@@ -3,13 +3,13 @@ package io.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import io.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import io.horizen.utxo.box.ForgerBox;
-import io.horizen.utxo.box.data.ForgerBoxData;
 import io.horizen.consensus.ForgingStakeInfo;
 import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.VrfPublicKey;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Utils;
-import io.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.box.ForgerBox;
+import io.horizen.utxo.box.data.ForgerBoxData;
 import scala.compat.java8.OptionConverters;
 import sparkz.crypto.hash.Blake2b256;
 

@@ -1,7 +1,6 @@
 package io.horizen.utxo
 
 import io.horizen.SidechainTypes
-import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
@@ -9,6 +8,7 @@ import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
 import io.horizen.utxo.backup.{BackupBox, BoxIterator}
 import io.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.state.SidechainBackup
 import io.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}

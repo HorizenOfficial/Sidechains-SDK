@@ -3,11 +3,11 @@ package io.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import io.horizen.block.MainchainTxForwardTransferCrosschainOutput;
-import io.horizen.utxo.box.ZenBox;
-import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Utils;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.ZenBoxData;
 import sparkz.crypto.hash.Blake2b256;
 
 

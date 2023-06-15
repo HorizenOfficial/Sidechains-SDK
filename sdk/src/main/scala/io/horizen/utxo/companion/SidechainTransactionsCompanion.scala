@@ -1,15 +1,15 @@
 package io.horizen.utxo.companion
 
-import io.horizen.utxo.transaction._
-import io.horizen.utxo.transaction.CoreTransactionsIdsEnum._
-
-import java.util.{HashMap => JHashMap}
-import java.lang.{Byte => JByte}
 import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CircuitTypes
-import CircuitTypes.CircuitTypes
+import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.transaction.{MC2SCAggregatedTransactionSerializer, TransactionSerializer}
 import io.horizen.utils.{CheckedCompanion, DynamicTypedSerializer}
+import io.horizen.utxo.transaction.CoreTransactionsIdsEnum._
+import io.horizen.utxo.transaction._
+
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 
 case class SidechainTransactionsCompanion(customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]], circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit)
   extends DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]](

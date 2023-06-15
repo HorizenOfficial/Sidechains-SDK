@@ -8,6 +8,7 @@ import io.horizen.proposition.VrfPublicKey;
 import io.horizen.secret.VrfKeyGenerator;
 import io.horizen.secret.VrfSecretKey;
 import io.horizen.utils.BytesUtils;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;

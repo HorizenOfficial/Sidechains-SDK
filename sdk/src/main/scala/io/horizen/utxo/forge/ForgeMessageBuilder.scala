@@ -12,7 +12,7 @@ import io.horizen.proposition.Proposition
 import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.PrivateKey25519
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo

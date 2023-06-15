@@ -6,7 +6,6 @@ import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state._
 import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
@@ -76,6 +75,10 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
 
     usingView { stateView =>
       val transaction = createLegacyTransaction(
@@ -85,7 +88,7 @@ class AccountForgeMessageBuilderTest
       val fromAddress = transaction.getFrom.address()
       stateView.addBalance(fromAddress, BigInteger.valueOf(100000000010L))
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
       val initialStateRoot = stateView.getIntermediateRoot
       val listOfTxs = setupTransactionsByPriceAndNonce(
         Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
@@ -123,7 +126,10 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
-
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
@@ -132,7 +138,7 @@ class AccountForgeMessageBuilderTest
         BigInteger.valueOf(100000000010L)
       )
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
       val initialStateRoot = stateView.getIntermediateRoot
       val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](
@@ -173,7 +179,10 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
-
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
@@ -186,7 +195,7 @@ class AccountForgeMessageBuilderTest
         BigInteger.valueOf(1000000000)
       )
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
 
       val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](

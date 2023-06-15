@@ -1,15 +1,19 @@
 package io.horizen.account.utils;
 
 import io.horizen.account.proof.SignatureSecp256k1;
-import io.horizen.account.transaction.EthereumTransaction;
 import io.horizen.account.proposition.AddressProposition;
+import io.horizen.account.transaction.EthereumTransaction;
 import org.bouncycastle.util.BigIntegers;
-import org.web3j.rlp.*;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
 import scala.Array;
 import sparkz.util.serialization.Writer;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+
 import static io.horizen.account.utils.Secp256k1.*;
 
 public class EthereumTransactionEncoder {

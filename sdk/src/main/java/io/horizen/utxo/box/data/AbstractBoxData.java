@@ -1,8 +1,8 @@
 package io.horizen.utxo.box.data;
 
-import io.horizen.utxo.box.AbstractBox;
 import io.horizen.proposition.Proposition;
 import io.horizen.utils.Utils;
+import io.horizen.utxo.box.AbstractBox;
 
 import java.util.Arrays;
 import java.util.Objects;

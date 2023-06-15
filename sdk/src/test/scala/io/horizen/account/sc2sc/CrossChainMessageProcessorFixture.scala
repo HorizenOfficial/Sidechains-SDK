@@ -2,9 +2,8 @@ package io.horizen.account.sc2sc
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.getFunctionSignature
-import io.horizen.account.state.{BaseAccountStateView, BlockContext, ExecutionFailedException, ExecutionRevertedException, GasPool, Message, MessageProcessorFixture}
+import io.horizen.account.state._
 import io.horizen.evm.Address
-import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256

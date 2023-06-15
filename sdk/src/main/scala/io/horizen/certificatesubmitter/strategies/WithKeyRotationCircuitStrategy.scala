@@ -1,19 +1,18 @@
 package io.horizen.certificatesubmitter.strategies
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen._
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
-import com.horizen.certnative.BackwardTransfer
-import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
 
 import java.util.Optional
 import scala.collection.JavaConverters._

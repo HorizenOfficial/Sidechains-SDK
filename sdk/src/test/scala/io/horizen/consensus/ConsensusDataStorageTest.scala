@@ -3,9 +3,9 @@ package io.horizen.consensus
 import io.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.storage.InMemoryStorageAdapter
 import io.horizen.utils._
+import org.junit.Assert._
 import org.junit.{Before, Test}
 import sparkz.util._
-import org.junit.Assert._
 
 import java.nio.charset.StandardCharsets
 import scala.util.Random

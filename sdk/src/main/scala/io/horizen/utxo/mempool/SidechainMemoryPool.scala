@@ -9,7 +9,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 

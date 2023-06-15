@@ -6,7 +6,6 @@ import io.horizen.account.state._
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.Test

@@ -11,7 +11,6 @@ import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.Sc2scApiErrorResponse.GenericSc2ScApiError
 import io.horizen.api.http.Sc2scApiRouteRestScheme.{ReqCreateAccountRedeemMessage, ReqCreateRedeemMessage, RespCreateRedeemMessage}
 import io.horizen.api.http.route.SidechainApiRoute
-import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.json.Views
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage}

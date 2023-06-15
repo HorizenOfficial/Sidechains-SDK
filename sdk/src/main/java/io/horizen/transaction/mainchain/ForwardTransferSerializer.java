@@ -1,7 +1,7 @@
 package io.horizen.transaction.mainchain;
 
-import io.horizen.params.CommonParams;
 import io.horizen.block.MainchainTxForwardTransferCrosschainOutput;
+import io.horizen.params.CommonParams;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 

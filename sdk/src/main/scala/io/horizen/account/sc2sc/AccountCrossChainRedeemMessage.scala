@@ -2,8 +2,8 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.utils.BytesUtils
-import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Utf8String}
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
+import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -25,27 +25,6 @@ case class AccountCrossChainRedeemMessage
   override type M = AccountCrossChainRedeemMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainRedeemMessage] = AccountCrossChainRedeemMessageSerializer
-
-  private def chunkProofIn32Bytes(bytes: Array[Byte]): java.util.List[Bytes32] = {
-    val result = new util.ArrayList[Bytes32]()
-    val chunkSize = 32
-    var start = 0
-    while (start < bytes.length) {
-      val end = Math.min(bytes.length, start + chunkSize)
-      val toBeInserted = Array.fill[Byte](32)(0)
-      val chunkCopy = util.Arrays.copyOfRange(bytes, start, end)
-
-      var index = 0
-      while (index < chunkCopy.length) {
-        toBeInserted(index) = chunkCopy(index)
-        index += 1
-      }
-
-      result.add(new Bytes32(toBeInserted))
-      start += chunkSize
-    }
-    result
-  }
 
   override def asABIType(): DynamicStruct = {
     new DynamicStruct(

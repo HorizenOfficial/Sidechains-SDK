@@ -1,7 +1,5 @@
 package io.horizen.fixtures
 
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
 import io.horizen.SidechainTypes
 import io.horizen.account.companion
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -10,6 +8,9 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.transaction.RegularTransactionSerializer
+
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 
 trait CompanionsFixture
 {

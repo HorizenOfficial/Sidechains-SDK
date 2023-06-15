@@ -5,7 +5,7 @@ import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
-import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}

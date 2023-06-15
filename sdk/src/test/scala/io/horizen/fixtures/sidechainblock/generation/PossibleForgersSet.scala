@@ -1,12 +1,11 @@
 package io.horizen.fixtures.sidechainblock.generation
-import java.math.BigInteger
-import java.util.{Random, ArrayList => JArrayList}
-
-import io.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, StakeConsensusEpochInfo, _}
+import io.horizen.consensus._
 import io.horizen.proof.VrfProof
 import io.horizen.utils._
 import io.horizen.vrf.VrfOutput
 
+import java.math.BigInteger
+import java.util.{Random, ArrayList => JArrayList}
 import scala.collection.immutable.TreeMap
 
 
