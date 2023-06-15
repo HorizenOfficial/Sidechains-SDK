@@ -1,6 +1,6 @@
 package io.horizen.account.chain
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.utils.{AccountPayment, AccountPaymentSerializer}
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.json.Views

@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.ClassTag
 import scala.language.postfixOps
+import scala.reflect.ClassTag
 
 object JacksonSupport {
 

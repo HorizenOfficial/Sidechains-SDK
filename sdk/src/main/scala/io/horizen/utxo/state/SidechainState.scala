@@ -1,16 +1,18 @@
 package io.horizen.utxo.state
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.certnative.BackwardTransfer
+import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.fork.ForkManager
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
 import io.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage, Sc2ScConfigurator}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.exception.TransactionSemanticValidityException
@@ -27,6 +29,7 @@ import io.horizen.utxo.node.NodeState
 import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
+import io.horizen.{AbstractState, SidechainTypes}
 import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._
@@ -46,7 +49,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                       val params: NetworkParams,
                                       val sc2scConfig: Sc2ScConfigurator,
-                                      sidechainSettings: SidechainSettings,
                                       override val version: VersionTag,
                                       val applicationState: ApplicationState)
   extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
@@ -61,7 +63,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
     new CrossChainMessageValidator(sc2scConfig, this, params),
-    new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
+    new CrossChainRedeemMessageValidator(stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
   lazy val verificationKeyFullFilePath: String = {
@@ -571,7 +573,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
           getKeyRotationProofsToAdd(mod.sidechainTransactions),
-          mod.mainchainHeaders.map(mcHeader => mcHeader.hashScTxsCommitment)
+          mod.mainchainHeaders.map(mcHeader => BytesUtils.toHexString(mcHeader.hashScTxsCommitment)).toSet
         )
       })
     }
@@ -620,7 +622,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
                    keyRotationProofsToAdd: Seq[KeyRotationProof],
-                   hashScTxsCommitment: Seq[Array[Byte]]
+                   hashScTxsCommitment: Set[String]
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
@@ -711,7 +713,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           updatedUtxoMerkleTreeProvider,
           params,
           sc2scConfig,
-          sidechainSettings,
           newVersion,
           appState
         )
@@ -748,7 +749,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           utxoMerkleTreeProviderNew,
           params,
           sc2scConfig,
-          sidechainSettings,
           to,
           appState)
       }
@@ -932,12 +932,11 @@ object SidechainState {
                                     utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
                                     sc2scConfig: Sc2ScConfigurator,
-                                    sidechainSettings: SidechainSettings,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty) {
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
-        params, sc2scConfig, sidechainSettings, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState)
+        params, sc2scConfig, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState)
       )
     } else
       None
@@ -949,13 +948,12 @@ object SidechainState {
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
                                           sc2scConfig: Sc2ScConfigurator,
-                                          sidechainSettings: SidechainSettings,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
       var state = new SidechainState(
-        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, sc2scConfig, sidechainSettings, idToVersion(genesisBlock.parentId), applicationState
+        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, sc2scConfig, idToVersion(genesisBlock.parentId), applicationState
       )
       if (!backupStorage.isEmpty) {
         state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
@@ -974,7 +972,7 @@ object SidechainState {
     new CrossChainMessage(
       box.getProtocolVersion,
       box.getMessageType,
-      params.sidechainId,
+      BytesUtils.toMainchainFormat(params.sidechainId),
       box.proposition().pubKeyBytes(),
       box.getReceiverSidechain,
       box.getReceiverAddress,

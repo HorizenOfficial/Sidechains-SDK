@@ -1,17 +1,20 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.transaction.TransactionSerializer;
 import io.horizen.proof.Proof;
 import io.horizen.proposition.Proposition;
+import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.BoxUnlocker;
 import io.horizen.utxo.box.data.BoxData;
 import scala.Array;
 
-import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
-import java.util.*;
+import static io.horizen.utxo.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
 
 
 public final class SidechainCoreTransaction

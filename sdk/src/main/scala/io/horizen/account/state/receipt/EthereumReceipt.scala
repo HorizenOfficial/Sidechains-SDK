@@ -1,7 +1,7 @@
 package io.horizen.account.state.receipt
 
-import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
+import io.horizen.utils.BytesUtils
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

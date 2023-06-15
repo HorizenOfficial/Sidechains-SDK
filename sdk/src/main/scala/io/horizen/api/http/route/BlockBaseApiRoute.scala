@@ -5,10 +5,10 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainNodeViewBase
+import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.BlockBaseErrorResponse._
 import io.horizen.api.http.route.BlockBaseRestSchema._
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
-import io.horizen.api.http.JacksonSupport._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}

@@ -1,11 +1,11 @@
 
 package io.horizen.account.wallet
 
+import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
 import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.node.NodeWalletBase
 import io.horizen.storage.SidechainSecretStorage
-import io.horizen.SidechainTypes
 import io.horizen.wallet.AbstractWallet
 import sparkz.core.VersionTag
 import sparkz.util.SparkzLogging

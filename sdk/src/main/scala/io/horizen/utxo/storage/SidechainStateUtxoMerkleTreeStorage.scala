@@ -1,9 +1,9 @@
 package io.horizen.utxo.storage
 
+import com.horizen.librustsidechains.FieldElement
 import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper
-import com.horizen.librustsidechains.FieldElement
 import io.horizen.storage.{SidechainStorageInfo, Storage}
 import io.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import io.horizen.utxo.utils.{UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}

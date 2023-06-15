@@ -4,15 +4,16 @@ import io.horizen.account.proposition.AddressProposition;
 import io.horizen.evm.Address;
 import io.horizen.utils.ChaChaPrngSecureRandom;
 import io.horizen.utils.Pair;
-import org.web3j.crypto.*;
+import org.web3j.crypto.ContractUtils;
+import org.web3j.crypto.ECKeyPair;
+import org.web3j.crypto.Keys;
+import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 import sparkz.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.security.SignatureException;
-import java.util.Arrays;
 import java.security.*;
+import java.util.Arrays;
 
 import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;

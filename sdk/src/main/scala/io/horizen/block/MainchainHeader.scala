@@ -1,15 +1,14 @@
 package io.horizen.block
 
-import java.time.Instant
-
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import io.horizen.history.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
-import io.horizen.params.NetworkParams
 import io.horizen.json.Views
+import io.horizen.params.NetworkParams
 import io.horizen.utils.{BytesUtils, Utils}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
+import java.time.Instant
 import scala.util.Try
 
 // Representation of MC header

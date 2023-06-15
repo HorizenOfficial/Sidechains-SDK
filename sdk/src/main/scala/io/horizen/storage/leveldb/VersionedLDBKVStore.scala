@@ -2,7 +2,6 @@ package io.horizen.storage.leveldb
 
 import io.horizen.storage.StorageIterator
 import io.horizen.utils.ByteArrayWrapper
-import org.fusesource.leveldbjni.internal.JniDBIterator
 import org.iq80.leveldb.{DB, ReadOptions}
 
 import scala.collection.mutable

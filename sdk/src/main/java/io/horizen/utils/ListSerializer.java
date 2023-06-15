@@ -4,7 +4,9 @@ import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ListSerializer<T extends BytesSerializable> implements SparkzSerializer<List<T>> {
     private SparkzSerializer<T> serializer;

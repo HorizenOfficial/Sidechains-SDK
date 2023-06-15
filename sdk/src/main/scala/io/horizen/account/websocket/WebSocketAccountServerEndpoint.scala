@@ -9,7 +9,7 @@ import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent, WebSocketSyncStatus}
+import io.horizen.account.websocket.data._
 import io.horizen.evm.Address
 import io.horizen.network.SyncStatus
 import jakarta.websocket._

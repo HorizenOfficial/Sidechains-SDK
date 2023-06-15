@@ -2,11 +2,11 @@ package io.horizen.utxo.transaction.mainchain;
 
 import io.horizen.block.MainchainTransaction;
 import io.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import io.horizen.transaction.mainchain.SidechainCreation;
-import io.horizen.utxo.box.ForgerBox;
 import io.horizen.consensus.ForgingStakeInfo;
 import io.horizen.proposition.VrfPublicKey;
+import io.horizen.transaction.mainchain.SidechainCreation;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utxo.box.ForgerBox;
 import org.junit.Test;
 
 import java.io.BufferedReader;

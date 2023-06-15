@@ -1,9 +1,9 @@
 package io.horizen.utxo.box;
 
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.Ed25519;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Before;
 import org.junit.Test;
 

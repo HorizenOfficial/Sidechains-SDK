@@ -1,10 +1,10 @@
 package io.horizen.account.api.rpc.service
 
 import io.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
-import io.horizen.evm.{Address, Hash}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.state.AccountStateView
 import io.horizen.account.utils.Bloom
+import io.horizen.evm.{Address, Hash}
 
 object RpcFilter {
   /**

@@ -1,6 +1,6 @@
 package io.horizen.api.http
 
-import io.horizen.{SidechainSettings, SidechainSettingsReader}
+import io.horizen.SidechainSettingsReader
 import sparkz.core.api.client.ApiClient
 
 import scala.io.StdIn

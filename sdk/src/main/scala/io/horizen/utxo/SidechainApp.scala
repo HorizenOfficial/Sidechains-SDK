@@ -23,9 +23,11 @@ import io.horizen.utxo.api.http.route._
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
 import io.horizen.utxo.box.BoxSerializer
+import io.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
 import io.horizen.utxo.csw.CswManagerRef
+import io.horizen.utxo.forge.ForgerRef
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.network.SidechainNodeViewSynchronizer
 import io.horizen.utxo.node._

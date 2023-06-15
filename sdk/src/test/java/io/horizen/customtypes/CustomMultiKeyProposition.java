@@ -3,10 +3,13 @@ package io.horizen.customtypes;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
-import io.horizen.proposition.*;
+import io.horizen.json.Views;
+import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.proposition.PropositionSerializer;
+import io.horizen.proposition.ProvableCheckResult;
+import io.horizen.proposition.ProvableCheckResultImpl;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.secret.Secret;
-import io.horizen.json.Views;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Ed25519;
 

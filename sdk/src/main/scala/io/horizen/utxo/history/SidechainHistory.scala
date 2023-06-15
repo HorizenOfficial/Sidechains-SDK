@@ -1,14 +1,14 @@
 package io.horizen.utxo.history
 
+import io.horizen.SidechainTypes
 import io.horizen.consensus._
+import io.horizen.history.AbstractHistory
+import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node.NodeHistory
 import io.horizen.utxo.storage.SidechainHistoryStorage
-import io.horizen.SidechainTypes
-import io.horizen.history.AbstractHistory
-import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import scala.util.Try

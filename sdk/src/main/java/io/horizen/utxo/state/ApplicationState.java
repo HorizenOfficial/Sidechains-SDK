@@ -1,14 +1,13 @@
 package io.horizen.utxo.state;
 
+import io.horizen.proposition.Proposition;
 import io.horizen.utxo.backup.BoxIterator;
 import io.horizen.utxo.block.SidechainBlock;
 import io.horizen.utxo.box.Box;
-import io.horizen.proposition.Proposition;
 import io.horizen.utxo.transaction.BoxTransaction;
+import scala.util.Try;
 
 import java.util.List;
-
-import scala.util.Try;
 
 // TO DO: provide access to HistoryReader
 public interface ApplicationState {

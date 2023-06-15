@@ -7,7 +7,6 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
-
 import sparkz.util.encode.Base58;
 
 import java.util.Arrays;
@@ -175,6 +174,10 @@ public final class BytesUtils {
         for (int i = 0; i < bytes.length; i++)
             res[i] = bytes[bytes.length - 1 - i];
         return res;
+    }
+
+    public static byte[] toMainchainFormat(byte[] bytes) {
+        return reverseBytes(bytes);
     }
 
     // Get byte array from hex string;

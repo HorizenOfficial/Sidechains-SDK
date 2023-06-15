@@ -3,8 +3,8 @@ package io.horizen.account.utils
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import io.horizen.json.Views
-import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 

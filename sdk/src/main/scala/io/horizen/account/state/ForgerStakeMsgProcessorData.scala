@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
-import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.evm.Address
+import io.horizen.json.Views
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
+import io.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}

@@ -6,10 +6,10 @@ import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProc
 import io.horizen.account.state.events.AddWithdrawalRequest
 import io.horizen.account.utils.WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.evm.Address
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import io.horizen.utils.ZenCoinsUtils
-import io.horizen.evm.Address
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}

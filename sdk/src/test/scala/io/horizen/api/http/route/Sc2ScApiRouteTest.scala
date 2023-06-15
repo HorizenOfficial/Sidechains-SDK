@@ -28,8 +28,8 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
 
   var simulateEnError = false
 
-  val testCrossChainMessage = new CrossChainMessageEle(
-    CrossChainProtocolVersion.VERSION_1,
+  val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
+    CrossChainProtocolVersion.VERSION_1.getVal,
     1,
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
