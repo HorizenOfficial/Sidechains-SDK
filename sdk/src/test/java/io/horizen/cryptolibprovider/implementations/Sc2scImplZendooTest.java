@@ -74,20 +74,20 @@ public class Sc2scImplZendooTest {
         CrossChainMessage msg2 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(StandardCharsets.UTF_8),
+                "senderSidechain2senderSidechain2".getBytes(StandardCharsets.UTF_8),
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
-                "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
+                "receiverSidechain2receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
                 "payload1".getBytes()
         );
         CrossChainMessage notIncludedMsg = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(StandardCharsets.UTF_8),
+                "senderSidechain3senderSidechain3".getBytes(StandardCharsets.UTF_8),
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
-                "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
+                "receiverSidechain3receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "notIncludedPayload".getBytes()
         );
         List<CrossChainMessage> messages = List.of(msg1, msg2);
         Seq<CrossChainMessage> messagesSeq = JavaConverters.asScalaIteratorConverter(messages.iterator()).asScala().toSeq();

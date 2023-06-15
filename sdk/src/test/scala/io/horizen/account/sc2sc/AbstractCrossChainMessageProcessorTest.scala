@@ -78,7 +78,6 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
       val epochNum = 102
       // No messages
       val msg = listOfCrosschainMessages(epochNum)
-      val counterKey = getMessageProcessorTestImpl("MainNetParams()".getBytes).getMessageEpochCounterKey(epochNum)
       val numOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(0))
 
       Mockito
@@ -104,7 +103,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
         val sender = Array.fill(20)(Random.nextInt().toByte)
         val receiverSidechain = Array.fill(32)(Random.nextInt().toByte)
         val receiver = Array.fill(20)(Random.nextInt().toByte)
-        val payload = Array.fill(20)(Random.nextInt().toByte)
+        val payload = Array.fill(4)(Random.nextInt().toByte)
 
         val wr = AccountCrossChainMessage(
           1,

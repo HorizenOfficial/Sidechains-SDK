@@ -1,15 +1,11 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import io.horizen.sc2sc.CrossChainMessageValidator
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
-import io.horizen.sc2sc.CrossChainMessageValidator
-import org.web3j.abi.datatypes.generated.Uint32
-import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
-
-import java.nio.ByteBuffer
 
 case class AccountCrossChainMessage
 (
@@ -34,13 +30,6 @@ case class AccountCrossChainMessage
       new Bytes20(receiver),
       new Bytes4(payload)
     )
-  }
-
-  override def toString: String = {
-    val buffer = ByteBuffer.allocate(Integer.BYTES)
-    buffer.put(payload)
-    buffer.rewind()
-    "AccountCrossChainMessage(\"payload\": " + buffer.getInt() +")"
   }
 
   override def hashCode(): Int = super.hashCode()
