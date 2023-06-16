@@ -1,25 +1,28 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.transaction.TransactionSerializer;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.ZenBox;
-import io.horizen.utxo.box.data.BoxData;
-import io.horizen.utxo.box.data.ForgerBoxData;
-import io.horizen.utxo.box.data.ZenBoxData;
-import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.MCPublicKeyHashProposition;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.secret.PrivateKey25519Creator;
+import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.BoxData;
+import io.horizen.utxo.box.data.ForgerBoxData;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;

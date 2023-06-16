@@ -5,7 +5,7 @@ import scala.util.Try;
 
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class Signature25519SerializerTest {
 

@@ -3,10 +3,10 @@ package io.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.json.Views;
 import io.horizen.proof.VrfProof;
 import io.horizen.secret.VrfSecretKey;
-import io.horizen.json.Views;
-import io.horizen.cryptolibprovider.CryptoLibProvider;
 import io.horizen.utils.BytesUtils;
 
 import java.util.Arrays;

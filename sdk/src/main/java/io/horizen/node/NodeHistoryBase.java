@@ -2,9 +2,9 @@ package io.horizen.node;
 
 import io.horizen.block.*;
 import io.horizen.chain.AbstractFeePaymentsInfo;
+import io.horizen.chain.MainchainBlockReferenceInfo;
 import io.horizen.chain.MainchainHeaderInfo;
 import io.horizen.chain.SidechainBlockInfo;
-import io.horizen.chain.MainchainBlockReferenceInfo;
 import io.horizen.transaction.Transaction;
 
 import java.util.List;

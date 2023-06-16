@@ -3,11 +3,11 @@ package io.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import io.horizen.block.MainchainTxForwardTransferCrosschainOutput;
-import io.horizen.utxo.box.ZenBox;
-import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Utils;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.ZenBoxData;
 import sparkz.crypto.hash.Blake2b256;
 
 
@@ -53,7 +53,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
         return new ZenBox(
                 new ZenBoxData(
                         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
-                        new PublicKey25519Proposition(BytesUtils.reverseBytes(output.propositionBytes())),
+                        new PublicKey25519Proposition(BytesUtils.toMainchainFormat(output.propositionBytes())),
                         output.amount()),
                 nonce);
     }

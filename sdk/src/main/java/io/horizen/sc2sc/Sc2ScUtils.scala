@@ -141,11 +141,14 @@ trait Sc2ScUtils[
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
       Using.resource(
-        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      ) {
-        pathCert =>
+        CommonCircuit.createWithdrawalCertificate(topCert, networkParams.sidechainCreationVersion)
+      ) { withdrawalCertificate =>
+        Using.resource(
+          commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()
+        ) { pathCert =>
           pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
           pathCert.serialize()
+        }
       }
     }
   }

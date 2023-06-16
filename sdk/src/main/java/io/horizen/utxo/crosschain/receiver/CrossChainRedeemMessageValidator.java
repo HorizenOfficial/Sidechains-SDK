@@ -1,6 +1,5 @@
 package io.horizen.utxo.crosschain.receiver;
 
-import io.horizen.SidechainSettings;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.params.NetworkParams;
 import io.horizen.proposition.Proposition;
@@ -19,18 +18,15 @@ import scala.collection.JavaConverters;
 import java.util.Arrays;
 
 public class CrossChainRedeemMessageValidator implements CrossChainValidator<SidechainBlock> {
-    private final SidechainSettings sidechainSettings;
     private final SidechainStateStorage scStateStorage;
     private final Sc2scCircuit sc2scCircuit;
     private final NetworkParams networkParams;
 
     public CrossChainRedeemMessageValidator(
-            SidechainSettings sidechainSettings,
             SidechainStateStorage scStateStorage,
             Sc2scCircuit sc2scCircuit,
             NetworkParams networkParams
     ) {
-        this.sidechainSettings = sidechainSettings;
         this.scStateStorage = scStateStorage;
         this.sc2scCircuit = sc2scCircuit;
         this.networkParams = networkParams;
@@ -64,7 +60,7 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
     private void validateCorrectSidechain(CrossChainMessage msg) {
         byte[] receivingSidechain = msg.getReceiverSidechain();
         String receivingSidechainAsString = BytesUtils.toHexString(receivingSidechain);
-        String sidechainId = sidechainSettings.genesisData().scId();
+        String sidechainId = BytesUtils.toHexString(BytesUtils.toMainchainFormat(networkParams.sidechainId()));
 
         if (!receivingSidechainAsString.equals(sidechainId)) {
             throw new IllegalArgumentException(
@@ -83,11 +79,11 @@ public class CrossChainRedeemMessageValidator implements CrossChainValidator<Sid
 
     private void verifyCommitmentTreeRootAndNextCommitmentTreeRoot(byte[] scCommitmentTreeRoot, byte[] nextScCommitmentTreeRoot) {
         if (!scStateStorage.doesScTxCommitmentTreeRootExist(scCommitmentTreeRoot)) {
-            throw new IllegalArgumentException(String.format("Sidechain commitment tree root `%s` does not exist", Arrays.toString(scCommitmentTreeRoot)));
+            throw new IllegalArgumentException(String.format("Sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(scCommitmentTreeRoot)));
         }
 
         if (!scStateStorage.doesScTxCommitmentTreeRootExist(nextScCommitmentTreeRoot)) {
-            throw new IllegalArgumentException(String.format("Next sidechain commitment tree root `%s` does not exist", Arrays.toString(nextScCommitmentTreeRoot)));
+            throw new IllegalArgumentException(String.format("Next sidechain commitment tree root `%s` does not exist", BytesUtils.toHexString(nextScCommitmentTreeRoot)));
         }
     }
 

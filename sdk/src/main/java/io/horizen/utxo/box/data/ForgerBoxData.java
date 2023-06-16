@@ -1,10 +1,11 @@
 package io.horizen.utxo.box.data;
 
 import com.google.common.primitives.Bytes;
-import io.horizen.utxo.box.ForgerBox;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.box.ForgerBox;
 import sparkz.crypto.hash.Blake2b256;
+
 import java.util.Objects;
 
 public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {

@@ -9,8 +9,8 @@ import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.fork.ForkManager
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScUtils}
 import io.horizen.proposition.SchnorrProposition
+import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScUtils}
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging

@@ -22,6 +22,7 @@ import io.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -65,7 +66,7 @@ class SidechainStateStorageTest
   val nonCeasingParams: NetworkParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
 
   val crossChainMessages : Seq[CrossChainMessage] = Seq(
-    SidechainState.buildCrosschainMessageFromUTXO(getRandomCrossMessageBox(System.currentTimeMillis()), nonCeasingParams)
+    SidechainState.buildCrosschainMessageFromUTXO(getRandomCrossMessageBox(System.currentTimeMillis()), params)
   )
 
   @Rule  def temporaryFolder = _temporaryFolder
@@ -156,7 +157,7 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Set(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
@@ -164,7 +165,7 @@ class SidechainStateStorageTest
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
-      Seq(),  Seq(), Seq(), Seq(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Seq(),  Seq(), Seq(), Set(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -255,14 +256,14 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(),
-      crossChainMessages, Seq(), Seq(), consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
+      crossChainMessages, Seq(), Set(), consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if (tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
-      Seq(), Seq(), Seq(), Seq(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Seq(), Seq(), Seq(), Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

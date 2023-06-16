@@ -1,7 +1,6 @@
 package io.horizen.api.http
 
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.RejectionHandler
 import akka.http.scaladsl.server._
 
 object SidechainApiRejectionHandler {

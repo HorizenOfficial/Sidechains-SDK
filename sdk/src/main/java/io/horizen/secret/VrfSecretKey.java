@@ -1,21 +1,21 @@
 package io.horizen.secret;
 
+import io.horizen.cryptolibprovider.CryptoLibProvider;
+import io.horizen.cryptolibprovider.VrfFunctions;
+import io.horizen.proof.VrfProof;
 import io.horizen.proposition.ProofOfKnowledgeProposition;
+import io.horizen.proposition.VrfPublicKey;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
-import io.horizen.cryptolibprovider.VrfFunctions;
-import io.horizen.cryptolibprovider.CryptoLibProvider;
-import io.horizen.proof.VrfProof;
-import io.horizen.proposition.VrfPublicKey;
 import io.horizen.vrf.VrfOutput;
 
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Objects;
 
-import static io.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
-import static io.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
 import static io.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
+import static io.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
+import static io.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
 
 public class VrfSecretKey implements Secret {
     public static final int SECRET_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfSecretKeyLength();

@@ -2,7 +2,7 @@ package io.horizen.history
 
 import io.horizen.SidechainSyncInfo
 import io.horizen.account.state.HistoryBlockHashProvider
-import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase, MainchainHeaderHash => McHeaderHash}
 import io.horizen.chain._
 import io.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}

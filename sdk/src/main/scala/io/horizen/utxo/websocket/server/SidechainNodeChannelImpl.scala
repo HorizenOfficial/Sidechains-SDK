@@ -11,9 +11,9 @@ import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.utxo.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.util.{ModifierId, SparkzLogging}

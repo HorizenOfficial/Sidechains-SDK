@@ -3,6 +3,7 @@ package io.horizen.account.utils;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import sparkz.util.serialization.Reader;
+
 import java.util.ArrayList;
 
 /**

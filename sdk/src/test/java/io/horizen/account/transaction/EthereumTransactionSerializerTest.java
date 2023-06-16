@@ -6,10 +6,10 @@ import io.horizen.account.secret.PrivateKeySecp256k1Serializer;
 import io.horizen.account.state.GasUtil;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.Option;
 import scala.util.Try;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;

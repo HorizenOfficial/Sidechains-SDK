@@ -1,7 +1,7 @@
 package io.horizen.utxo.box;
 
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.MCPublicKeyHashProposition;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Before;
 import org.junit.Test;
 

@@ -6,7 +6,7 @@ import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedExceptio
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
-import io.horizen.utils.{BytesUtils, Constants}
+import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
 
 import java.nio.charset.StandardCharsets

@@ -9,10 +9,8 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.sc2scnative.Sc2Sc;
 import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
-import io.horizen.cryptolibprovider.utils.FieldElementUtils;
-import io.horizen.cryptolibprovider.utils.HashUtils;
-import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 
 import java.util.Optional;
@@ -51,8 +49,8 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                     String provingKeyPath
     ) {
         return Sc2Sc.createProof(
-                nextScTxCommitmentRoot,
-                scTxCommitmentRoot,
+                BytesUtils.toMainchainFormat(nextScTxCommitmentRoot),
+                BytesUtils.toMainchainFormat(scTxCommitmentRoot),
                 messageHash.getValue(),
                 nextWithdrawalCertificate,
                 currWithdrawalCertificate,
@@ -72,8 +70,8 @@ public class Sc2scImplZendoo implements Sc2scCircuit {
                                      byte[] proof,
                                      String verifyKeyPath) {
         return Sc2Sc.verifyProof(
-                nextScTxCommitmentRootCertEpoch,
-                scTxCommitmentRootCertEpoch,
+                BytesUtils.toMainchainFormat(nextScTxCommitmentRootCertEpoch),
+                BytesUtils.toMainchainFormat(scTxCommitmentRootCertEpoch),
                 messageHash.getValue(),
                 proof,
                 verifyKeyPath

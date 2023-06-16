@@ -9,7 +9,6 @@ import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -170,7 +169,6 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     unconfirmed.add(entry)
     true
   }
-
 
   // TO DO: check usage in Sparkz core
   // Probably, we need to do a Global check inside for both new and existing transactions.

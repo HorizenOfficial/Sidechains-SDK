@@ -1,9 +1,9 @@
 package io.horizen.secret;
 
+import io.horizen.cryptolibprovider.CryptoLibProvider;
 import io.horizen.proof.SchnorrProof;
 import io.horizen.proposition.ProofOfKnowledgeProposition;
 import io.horizen.proposition.SchnorrProposition;
-import io.horizen.cryptolibprovider.CryptoLibProvider;
 import io.horizen.utils.BytesUtils;
 
 import java.util.Arrays;

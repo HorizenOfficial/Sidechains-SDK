@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Shorts;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.box.CrossChainMessageBox;
 import sparkz.crypto.hash.Blake2b256;
 
@@ -11,7 +12,7 @@ import java.util.Objects;
 
 public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey25519Proposition, CrossChainMessageBox, CrossChainMessageBoxData> {
 
-    private CrossChainProtocolVersion protocolVersion;
+    private final CrossChainProtocolVersion protocolVersion;
     private final int messageType;
     private final byte[]  receiverSidechain;
     private final byte[]  receiverAddress;
@@ -69,6 +70,17 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Bytes.concat(Shorts.toByteArray(protocolVersion.getVal()),
                 new byte[]{(byte)messageType}, receiverSidechain, receiverAddress, payload));
+    }
+
+    @Override
+    public String toString() {
+        return "CrossChainMessageBoxData{" +
+                "protocolVersion=" + protocolVersion +
+                ", messageType=" + messageType +
+                ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
+                ", receiverAddress=" + BytesUtils.toHexString(receiverAddress) +
+                ", payload=" + BytesUtils.toHexString(payload) +
+                '}';
     }
 }
 

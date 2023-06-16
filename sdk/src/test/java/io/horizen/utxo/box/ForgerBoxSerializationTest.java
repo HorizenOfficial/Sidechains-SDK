@@ -1,10 +1,10 @@
 package io.horizen.utxo.box;
 
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Ed25519;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,9 +16,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class ForgerBoxSerializationTest extends BoxFixtureClass
 {

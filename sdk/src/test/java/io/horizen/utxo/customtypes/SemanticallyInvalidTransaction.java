@@ -1,11 +1,11 @@
 package io.horizen.utxo.customtypes;
 
-import io.horizen.utxo.box.BoxUnlocker;
-import io.horizen.utxo.box.ZenBox;
 import io.horizen.proposition.PublicKey25519Proposition;
-import io.horizen.utxo.transaction.SidechainTransaction;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.transaction.SidechainTransaction;
 
 import java.util.ArrayList;
 import java.util.List;

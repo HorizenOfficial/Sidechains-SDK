@@ -3,14 +3,14 @@ package io.horizen.utxo.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.CoinsBox;
-import io.horizen.utxo.box.BoxUnlocker;
-import io.horizen.utxo.box.WithdrawalRequestBox;
 import io.horizen.proposition.Proposition;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.ZenCoinsUtils;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utxo.box.CoinsBox;
+import io.horizen.utxo.box.WithdrawalRequestBox;
 import sparkz.crypto.hash.Blake2b256;
 
 import java.io.ByteArrayOutputStream;

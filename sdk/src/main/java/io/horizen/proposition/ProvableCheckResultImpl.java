@@ -1,6 +1,7 @@
 package io.horizen.proposition;
 
 import io.horizen.secret.Secret;
+
 import java.util.ArrayList;
 import java.util.List;
 

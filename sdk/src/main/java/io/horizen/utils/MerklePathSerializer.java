@@ -3,6 +3,7 @@ package io.horizen.utils;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
+
 import java.util.ArrayList;
 
 public class MerklePathSerializer implements SparkzSerializer<MerklePath> {

@@ -1,11 +1,9 @@
 package io.horizen.sc2sc
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import io.horizen.{AbstractState, SidechainAppEvents, SidechainSettings, SidechainTypes}
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import io.horizen.certificatesubmitter.dataproof.CertificateData
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -13,6 +11,7 @@ import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import io.horizen.wallet.Wallet
+import io.horizen.{AbstractState, SidechainAppEvents, SidechainSettings, SidechainTypes}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.transaction.MemoryPool

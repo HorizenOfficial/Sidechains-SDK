@@ -1,7 +1,7 @@
 package io.horizen.utxo.box.data;
 
-import io.horizen.utxo.box.ZenBox;
 import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.utxo.box.ZenBox;
 
 
 public final class ZenBoxData extends AbstractBoxData<PublicKey25519Proposition, ZenBox, ZenBoxData> {

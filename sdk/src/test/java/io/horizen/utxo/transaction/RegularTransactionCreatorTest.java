@@ -1,16 +1,16 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.ZenBox;
-import io.horizen.utxo.box.data.BoxData;
-import io.horizen.utxo.box.data.ZenBoxData;
-import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.fixtures.SecretFixtureClass;
-import io.horizen.utxo.node.NodeWallet;
 import io.horizen.proposition.*;
 import io.horizen.secret.*;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.ZenBox;
+import io.horizen.utxo.box.data.BoxData;
+import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
+import io.horizen.utxo.node.NodeWallet;
 import org.junit.Before;
 import org.junit.Test;
 

@@ -3,7 +3,6 @@ package io.horizen.account.websocket.data
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonInclude, JsonProperty}
 import io.horizen.account.api.rpc.response.RpcResponseSuccess
-import io.horizen.network.SyncStatus
 
 import java.math.BigInteger
 

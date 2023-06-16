@@ -1,10 +1,10 @@
 package io.horizen.account.state
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.account.utils.ZenWeiConverter
-import io.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
 import io.horizen.json.Views
+import io.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}

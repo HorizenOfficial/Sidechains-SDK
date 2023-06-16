@@ -542,6 +542,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
+        "SC2SC_PROVING_KEY_PATH": sc_node_config.sc2sc_proving_key_file_path if sc_node_config.sc2sc_proving_key_file_path is not None else "",
+        "SC2SC_VERIFICATION_KEY_PATH": sc_node_config.sc2sc_verification_key_file_path if sc_node_config.sc2sc_verification_key_file_path is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "MAX_MODIFIERS_SPEC_MESSAGE_SIZE": int(max_modifiers_spec_message_size),

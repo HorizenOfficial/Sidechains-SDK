@@ -1,10 +1,9 @@
 package io.horizen.certificatesubmitter.strategies
 
-import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.AbstractState
+import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.history.AbstractHistory
 import sparkz.util.ModifierId
-import sparkz.core.NodeViewHolder.CurrentView
 
 trait CertificateSubmissionStrategy {
 

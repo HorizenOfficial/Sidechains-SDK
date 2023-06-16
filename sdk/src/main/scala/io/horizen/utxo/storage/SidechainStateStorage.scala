@@ -5,7 +5,7 @@ import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
-import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
+import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}
@@ -361,7 +361,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              crossChainMessagesToAppendSeq: Seq[CrossChainMessage],
              crossChainMessageHashesToAppend: Seq[CrossChainMessageHash],
-             hashScTxsCommitment: Seq[Array[Byte]],
+             hashScTxsCommitment: Set[String],
              consensusEpoch: ConsensusEpochNumber,
              topQualityCerts: Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)],
              blockFeeInfo: BlockFeeInfo,
@@ -421,6 +421,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch, keyRotationProof.index, keyRotationProof.keyType.id),
         new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
     })
+
     // Store utxo tree merkle root if present
     utxoMerkleTreeRootOpt.foreach(merkleRoot => {
       updateList.add(new JPair(getUtxoMerkleTreeRootKey(withdrawalEpochInfo.epoch), new ByteArrayWrapper(merkleRoot)))
@@ -464,7 +465,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
-
     if (params.isNonCeasing) {
       topQualityCertificateOpt.foreach(certificate => {
         // For non-ceasing sidechain store the id of the SC block which contains the certificate.
@@ -494,6 +494,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         }
       })
     }
+
     // Store referenced epoch number and the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getLastCertificateEpochNumberKey,
@@ -524,7 +525,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
         updateList.add(new JPair(getCrosschainMessagesKey(withdrawalEpochInfo.epoch, nextCrossChainMessageEpochCounter),
           new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
-
       }
 
       // Save all the cross-chain message hashes received in a redeem tx
@@ -534,7 +534,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
       // Save all the hash sidechain transaction commitment in mainchain header
       hashScTxsCommitment.foreach(scCommHash =>
-        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(scCommHash), Array.emptyByteArray))
+        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(BytesUtils.fromHexString(scCommHash)), Array.emptyByteArray))
       )
 
       //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
@@ -543,7 +543,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           new ByteArrayWrapper(ele._2.value)))
       )
     }
-
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

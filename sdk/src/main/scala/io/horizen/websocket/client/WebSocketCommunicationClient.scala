@@ -1,16 +1,15 @@
 package io.horizen.websocket.client
 
-import java.util.concurrent.atomic.AtomicInteger
 import com.fasterxml.jackson.databind.{DeserializationFeature, JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import sparkz.util.SparkzLogging
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 case class WebSocketServerError(msgType: Int, requestId: String, errorCode: Int, message: String)
 

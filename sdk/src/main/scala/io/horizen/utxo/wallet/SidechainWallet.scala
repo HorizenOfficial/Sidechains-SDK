@@ -1,5 +1,6 @@
 package io.horizen.utxo.wallet
 
+import io.horizen.SidechainTypes
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition._
@@ -10,10 +11,9 @@ import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import io.horizen.utxo.node.NodeWallet
+import io.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
 import io.horizen.utxo.storage.{BackupStorage, ForgingBoxesInfoStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
 import io.horizen.utxo.utils.CswData
-import io.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
-import io.horizen.SidechainTypes
 import io.horizen.wallet.AbstractWallet
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}

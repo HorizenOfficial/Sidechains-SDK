@@ -2,8 +2,8 @@ package io.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.certnative.BackwardTransfer
-import io.horizen.params.NetworkParams
 import io.horizen.json.Views
+import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
 
 import java.math.BigDecimal
@@ -50,7 +50,7 @@ object CertificateRequestCreator {
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
       // Note: we should send uint256 types in BE.
-      BytesUtils.reverseBytes(sidechainId),
+      BytesUtils.toMainchainFormat(sidechainId),
       epochNumber,
       endEpochCumCommTreeHash,
       proofBytes,

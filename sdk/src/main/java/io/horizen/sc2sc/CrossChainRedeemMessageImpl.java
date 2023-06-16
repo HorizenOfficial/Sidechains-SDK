@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonView;
 import io.horizen.json.Views;
 import io.horizen.utils.BytesUtils;
 
+import java.util.Arrays;
+
 @JsonView(Views.Default.class)
 public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     private final static CrossChainRedeemMessageSemanticValidator ccMsgValidator = new CrossChainRedeemMessageSemanticValidator();
@@ -15,12 +17,14 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     private byte[] nextScCommitmentTreeRoot;
     private byte[] proof;
 
-    public CrossChainRedeemMessageImpl(CrossChainMessage message,
-                                       byte[] certificateDataHash,
-                                       byte[] nextCertificateDataHash,
-                                       byte[] scCommitmentTreeRoot,
-                                       byte[] nextScCommitmentTreeRoot,
-                                       byte[] proof){
+    public CrossChainRedeemMessageImpl(
+            CrossChainMessage message,
+            byte[] certificateDataHash,
+            byte[] nextCertificateDataHash,
+            byte[] scCommitmentTreeRoot,
+            byte[] nextScCommitmentTreeRoot,
+            byte[] proof
+    ) {
         this.message = message;
         this.certificateDataHash = certificateDataHash;
         this.nextCertificateDataHash = nextCertificateDataHash;
@@ -89,10 +93,12 @@ public class CrossChainRedeemMessageImpl implements CrossChainRedeemMessage {
     public String toString() {
         return "CrossChainRedeemMessage{" +
                 "message=" + message.toString() +
-                ", certificateDataHash=" +  BytesUtils.toHexString(certificateDataHash) +
+                ", certificateDataHash=" + BytesUtils.toHexString(certificateDataHash) +
                 ", nextCertificateDataHash=" + BytesUtils.toHexString(nextCertificateDataHash) +
                 ", scCommitmentTreeRoot=" + BytesUtils.toHexString(scCommitmentTreeRoot) +
                 ", nextScCommitmentTreeRoot=" + BytesUtils.toHexString(nextScCommitmentTreeRoot) +
+                ", proof=" + BytesUtils.toHexString(Arrays.copyOfRange(proof, 0, 16)) +
+                " ... " + BytesUtils.toHexString(Arrays.copyOfRange(proof, proof.length - 16, proof.length)) +
                 '}';
     }
 }

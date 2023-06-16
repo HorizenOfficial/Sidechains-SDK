@@ -1,8 +1,8 @@
 package io.horizen.utxo.transaction;
 
 import io.horizen.proof.Proof;
-import io.horizen.proposition.*;
 import io.horizen.proof.Signature25519;
+import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -13,7 +13,10 @@ import io.horizen.utxo.box.data.ForgerBoxData;
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
 import scala.Array;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 
