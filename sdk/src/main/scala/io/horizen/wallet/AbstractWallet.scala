@@ -116,19 +116,16 @@ abstract class AbstractWallet[
       case None => 0
     }
     for (_ <- 0 to secretsNumber) {
+      nonce += 1
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
       if (!secretStorage.contains(secret)) {
-        secretStorage.add(secret) match {
-          case Success(_) =>
-            secretStorage.storeNonce(nonce, salt) match {
-              case Success(_) => return Success(this, secret)
-              case Failure(exception) => throw new RuntimeException("Can't store nonce while generating next secret " + exception)
-            }
-          case Failure(exception) => throw new RuntimeException("Can't store secret while generating next secret " + exception)
+        secretStorage.storeSecretAndNonceAtomic(secret, nonce, salt) match {
+          case Success(_) => return Success(this, secret)
+          case Failure(exception) =>
+            throw new RuntimeException("Can't store secret and nonce while generating next secret " + exception)
         }
       }
-      nonce += 1
     }
     throw new RuntimeException("Exceeded number of attempts generating secret")
   }
