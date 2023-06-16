@@ -2,9 +2,10 @@ package io.horizen.account.mempool
 
 import io.horizen.account.api.rpc.types.EthereumTransactionView
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.mempool.MempoolMap._
 import io.horizen.account.mempool.TxExecutableStatus.TxExecutableStatus
-import io.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException, TxOversizedException}
+import io.horizen.account.mempool.exception._
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.{AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
@@ -59,7 +60,7 @@ class MempoolMap(
     if (!contains(ethTransaction.id)) {
       val account = ethTransaction.getFrom
 
-      //Reject transactions that are too big
+      // Reject transactions that are too big
       val txSize = ethTransaction.size()
       if (txSize > MaxTxSize) {
         log.trace(s"Transaction $ethTransaction size exceeds maximum allowed size: current size $txSize, " +
@@ -67,7 +68,13 @@ class MempoolMap(
         throw TxOversizedException(account.asInstanceOf[AddressProposition].address(), txSize)
       }
 
-      //Reject transactions with a nonce gap too big
+      // Reject transaction with max fee less than the current minimum base fee
+      val currentEpochNumber = baseStateReaderProvider.getBaseStateReader().getConsensusEpochNumber.getOrElse(0)
+      if (GasFeeFork.get(currentEpochNumber).baseFeeMinimum.compareTo(ethTransaction.getMaxFeePerGas) > 0) {
+        throw FeeCapBelowMinimum(ethTransaction.id, ethTransaction.getMaxFeePerGas)
+      }
+
+      // Reject transactions with a nonce gap too big
       val stateNonce = accountStateReaderProvider.getAccountStateReader().getNonce(account.asInstanceOf[AddressProposition].address())
       val maxAcceptableNonce = getMaxAcceptableNonce(stateNonce)
       if (ethTransaction.getNonce.compareTo(maxAcceptableNonce) > 0) {
@@ -759,5 +766,3 @@ object MempoolMap {
     ((numOfBytes + TxSlotSize - 1) / TxSlotSize).toInt
   }
 }
-
-
