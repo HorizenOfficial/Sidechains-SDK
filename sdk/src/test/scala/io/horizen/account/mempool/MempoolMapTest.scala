@@ -1,15 +1,17 @@
 package io.horizen.account.mempool
 
 import io.horizen.account.fixtures.EthereumTransactionFixture
-import io.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, NonceGapTooWideException, TransactionReplaceUnderpricedException, TxOversizedException}
+import io.horizen.account.fork.GasFeeFork
+import io.horizen.account.mempool.exception.{AccountMemPoolOutOfBoundException, FeeCapBelowMinimumException, NonceGapTooWideException, TransactionReplaceUnderpricedException, TxOversizedException}
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Address
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.state.BaseStateReader
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
+import io.horizen.utils.Pair
+import io.horizen.{AccountMempoolSettings, SidechainTypes, utils}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito.when
@@ -20,6 +22,8 @@ import sparkz.util.ModifierId
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.util
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import scala.util.{Failure, Random, Success}
 
 class MempoolMapTest
@@ -1224,6 +1228,49 @@ class MempoolMapTest
       case Failure(e) => assertTrue(s"Wrong exception type: ${e.getClass}", e.isInstanceOf[TxOversizedException])
     }
 
+  }
+
+  @Test
+  def testAddMaxFeeLowerThanMinimum(): Unit = {
+
+    // minimum base fee required after fork (before the fork the default is zero)
+    val mininumBaseFee = BigInteger.valueOf(1000)
+    val activationEpoch = 5
+
+    class MinimumFeeTestFork extends SimpleForkConfigurator {
+      override def getOptionalSidechainForks
+      : util.List[utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = {
+        List(
+          new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+            SidechainForkConsensusEpoch(activationEpoch, activationEpoch, activationEpoch),
+            new GasFeeFork(
+              BigInteger.valueOf(30000000),
+              BigInteger.valueOf(2),
+              BigInteger.valueOf(8),
+              mininumBaseFee
+            )
+          ),
+        ).asJava
+      }
+    }
+    ForkManagerUtil.initializeForkManager(new MinimumFeeTestFork(), "regtest")
+
+    val txGasLow = createEIP1559Transaction(value = BigInteger.ONE, gasFee = mininumBaseFee.subtract(BigInteger.ONE))
+    val txGasHigh = createEIP1559Transaction(value = BigInteger.ONE, gasFee = mininumBaseFee)
+
+
+    // before the fork both TX should be accepted
+    var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
+    mempoolMap.add(txGasLow).get
+    mempoolMap.add(txGasHigh).get
+    assertEquals(2, mempoolMap.size)
+
+    // after the fork the TX with max fee lower than the minimum should be rejected
+    mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, AccountMempoolSettings())
+    Mockito.when(baseStateViewMock.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(activationEpoch)))
+    assertThrows[FeeCapBelowMinimumException](mempoolMap.add(txGasLow).get)
+    mempoolMap.add(txGasHigh).get
+    assertEquals(1, mempoolMap.size)
   }
 
   @Test

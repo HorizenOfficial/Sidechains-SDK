@@ -71,7 +71,7 @@ class MempoolMap(
       // Reject transaction with max fee less than the current minimum base fee
       val currentEpochNumber = baseStateReaderProvider.getBaseStateReader().getConsensusEpochNumber.getOrElse(0)
       if (GasFeeFork.get(currentEpochNumber).baseFeeMinimum.compareTo(ethTransaction.getMaxFeePerGas) > 0) {
-        throw FeeCapBelowMinimum(ethTransaction.id, ethTransaction.getMaxFeePerGas)
+        throw FeeCapBelowMinimumException(ethTransaction.id, ethTransaction.getMaxFeePerGas)
       }
 
       // Reject transactions with a nonce gap too big
