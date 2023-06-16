@@ -52,7 +52,7 @@ case class SidechainNodeApiRoute[
   NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams, eonVersion: String = null)
                                 (implicit val context: ActorRefFactory, val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
 
@@ -249,6 +249,7 @@ case class SidechainNodeApiRoute[
             protocolVersion = protocolVersion,
             agentName = agentName,
             sdkVersion = RpcUtils.getClientVersion,
+            eonVersion = Option(eonVersion),
             scId = sidechainId,
             scType = if (params.isNonCeasing) "non ceasing" else "ceasing",
             scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) "UTXO" else "Account",
@@ -526,6 +527,7 @@ object SidechainNodeRestSchema {
                                          protocolVersion: String,
                                          agentName: String,
                                          sdkVersion: String,
+                                         eonVersion: Option[String],
                                          scId: String,
                                          scType: String,
                                          scModel: String,

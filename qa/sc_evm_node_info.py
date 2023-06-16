@@ -138,6 +138,7 @@ class SCEvmNodeInfo(AccountChainSetup):
         assert_true(node_info_1['protocolVersion'], '0.0.1')
         assert_true(node_info_1['agentName'], '2-Hop')
         assert_true(node_info_1['sdkVersion'], "sdkVersion should be present")
+        assert_true(node_info_1['eonVersion'], "eonVersion should be present")
         assert_true(node_info_1['scId'], self.sc_nodes_bootstrap_info.sidechain_id)
         assert_true(node_info_1['scType'], "non ceasing" if self.sc_nodes_bootstrap_info.is_non_ceasing else "ceasing")
         assert_true(node_info_1['scModel'], 'Account')
