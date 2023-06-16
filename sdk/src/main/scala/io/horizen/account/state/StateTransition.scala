@@ -17,6 +17,10 @@ class StateTransition(
   // the current stack of invocations
   private val invocationStack = new ListBuffer[Invocation]
 
+  // the current call depth, might be more than invocationStack.length of a message processor handled multiple levels,
+  // e.g. multiple internal calls withing the EVM
+  var depth = 0
+
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
    * always be in a consistent state, possible outcomes are:
@@ -39,6 +43,7 @@ class StateTransition(
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     try {
+      // TODO: trace TX start
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
@@ -62,6 +67,7 @@ class StateTransition(
         throw err
     } finally {
       if (!skipRefund) refundGas(msg, gasPool)
+      // TODO: trace TX end
     }
   }
 
@@ -133,7 +139,9 @@ class StateTransition(
   @throws(classOf[ExecutionFailedException])
   def execute(invocation: Invocation): Array[Byte] = {
     // limit call depth to 1024
-    if (invocationStack.length >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
+    if (depth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
+    // increase call depth
+    depth += 1
     // allocate gas from caller to the nested invocation, this can throw if the caller does not have enough gas
     invocationStack.headOption.foreach(_.gasPool.subGas(invocation.gasPool.getGas))
     // add new invocation to the stack
@@ -177,6 +185,8 @@ class StateTransition(
       invocationStack.remove(0)
       // return remaining gas to the caller
       invocationStack.headOption.foreach(_.gasPool.addGas(invocation.gasPool.getGas))
+      // reduce call depth
+      depth -= 1
     }
   }
 }

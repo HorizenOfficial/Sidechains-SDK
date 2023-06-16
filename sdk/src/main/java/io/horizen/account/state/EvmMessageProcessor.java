@@ -58,6 +58,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             evmContext.externalContracts = nativeContractAddresses;
             evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer();
+            evmContext.initialDepth = context.depth();
 
             // transform to libevm Invocation type
             var evmInvocation = new io.horizen.evm.Invocation(
@@ -119,10 +120,10 @@ public class EvmMessageProcessor implements MessageProcessor {
         }
 
         @Override
-        protected InvocationResult execute(io.horizen.evm.Invocation invocation) {
+        protected InvocationResult execute(ExternalInvocation invocation) {
             var gasPool = new GasPool(invocation.gas);
             try {
-                var returnData = context.execute(
+                var returnData = context.executeDepth(
                     // transform to SDK Invocation type
                     Invocation.apply(
                         invocation.caller,
@@ -131,7 +132,8 @@ public class EvmMessageProcessor implements MessageProcessor {
                         invocation.input,
                         gasPool,
                         invocation.readOnly
-                    )
+                    ),
+                    invocation.depth
                 );
                 return new InvocationResult(returnData, gasPool.getGas(), "", false, null);
             } catch (ExecutionRevertedException e) {
