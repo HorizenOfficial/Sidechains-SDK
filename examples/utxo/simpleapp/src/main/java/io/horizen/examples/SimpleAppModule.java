@@ -5,6 +5,7 @@ import com.google.inject.name.Names;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
 import io.horizen.examples.api.VoteController;
+import io.horizen.examples.transaction.RedeemVoteMessageTransactionSerializer;
 import io.horizen.examples.transaction.SendVoteMessageTransactionSerializer;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proposition.Proposition;

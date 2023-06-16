@@ -20,7 +20,7 @@ public class AccountSimpleAppModel extends AbstractAccountModel {
     protected List<MessageProcessor> getCustomMessageProcessors(NetworkParams params) {
         ScTxCommitmentTreeRootHashMessageProcessor$ scTxMsgProc = MessageProcessorUtil.getScTxMsgProc();
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
-        byte[] scId = BytesUtils.reverseBytes(params.sidechainId());
+        byte[] scId = BytesUtils.toMainchainFormat(params.sidechainId());
         Sc2scCircuit circuit = new Sc2scImplZendoo();
         customMessageProcessors.add(new VoteMessageProcessor(scId));
         customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, params.sc2ScVerificationKeyFilePath(), circuit, scTxMsgProc));
