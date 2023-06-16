@@ -21,7 +21,6 @@ import io.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder
-import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar

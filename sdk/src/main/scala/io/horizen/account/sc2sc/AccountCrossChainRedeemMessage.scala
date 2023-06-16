@@ -7,8 +7,6 @@ import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
-import java.util
-
 case class AccountCrossChainRedeemMessage
 (
   messageType: Int,

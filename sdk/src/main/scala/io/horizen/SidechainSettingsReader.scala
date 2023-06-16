@@ -4,7 +4,6 @@ import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import net.ceedubs.ficus.readers.{ValueReader, EnumerationReader}
 import net.ceedubs.ficus.readers.{EnumerationReader, ValueReader}
 import sparkz.core.settings.{SettingsReaders, SparkzSettings}
 

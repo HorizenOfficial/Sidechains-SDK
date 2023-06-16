@@ -1,7 +1,6 @@
 package io.horizen;
 
 import io.horizen.settings.LogInitializer;
-import io.horizen.tools.utils.ConsolePrinter;
 import io.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

@@ -10,8 +10,6 @@ import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.Sc2ScConfigurator
-import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.transaction.Transaction
 
 import java.util.Optional

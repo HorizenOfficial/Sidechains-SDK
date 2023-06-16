@@ -21,7 +21,6 @@ import sparkz.core.serialization.SparkzSerializer
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 

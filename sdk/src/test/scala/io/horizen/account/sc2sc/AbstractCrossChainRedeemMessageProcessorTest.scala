@@ -1,7 +1,7 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.fixtures.AccountCrossChainMessageFixture
-import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{contractAddress, nextScCommitmentTreeRoot, receiverSidechain, scCommitmentTreeRoot}
+import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{contractAddress, nextScCommitmentTreeRoot, scCommitmentTreeRoot}
 import io.horizen.account.state._
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address

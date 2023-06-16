@@ -22,7 +22,6 @@ import io.horizen.block._
 import io.horizen.consensus._
 import io.horizen.evm.{Address, Hash}
 import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
-import io.horizen.fork.ForkManager
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}

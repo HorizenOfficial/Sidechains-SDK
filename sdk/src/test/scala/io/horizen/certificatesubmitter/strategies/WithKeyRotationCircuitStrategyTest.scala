@@ -38,9 +38,6 @@ import sparkz.util.ModifierId
 import java.lang
 import java.nio.charset.StandardCharsets
 import java.util.Optional
-import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
-import org.scalatest.Assertions.{assertResult, fail}
-
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.duration._

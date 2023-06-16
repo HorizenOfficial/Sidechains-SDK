@@ -8,7 +8,6 @@ import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesSt
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
-import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition

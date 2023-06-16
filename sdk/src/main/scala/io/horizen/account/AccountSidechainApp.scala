@@ -8,9 +8,6 @@ import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlo
 import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.rpc.handler.RpcHandler
 import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
-import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
-import io.horizen.account.api.rpc.handler.RpcHandler
-import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import io.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import io.horizen.account.chain.AccountFeePaymentsInfo

@@ -3,6 +3,7 @@ package io.horizen.utxo
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import io.horizen._
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
@@ -35,7 +36,6 @@ import io.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProv
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
-import io.horizen._
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction

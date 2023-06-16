@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.horizen.utxo.block.SidechainBlock
-import jakarta.websocket.server.ServerEndpoint
 import jakarta.websocket._
+import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
 
 import java.util

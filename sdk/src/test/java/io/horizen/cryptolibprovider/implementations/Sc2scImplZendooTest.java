@@ -17,13 +17,11 @@ import io.horizen.cryptolibprovider.CommonCircuit;
 import io.horizen.cryptolibprovider.Sc2scCircuit;
 import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.cryptolibprovider.utils.HashUtils;
-import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
-import io.horizen.utils.BytesUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -37,7 +35,6 @@ import java.util.Optional;
 import java.util.Random;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertTrue;
 
 public class Sc2scImplZendooTest {
     @Rule
