@@ -12,9 +12,9 @@ class CrossChainMessageMerkleTreeTest {
   @Test
   def ifMessageIsNotIncludedInMessagesList_getCrossChainMessageMerklePath_throwsIllegalArgumentException(): Unit = {
     // Arrange
-    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "payload1".getBytes)
-    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "payload2".getBytes)
-    val notIncludedMsg = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "payload3".getBytes)
+    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes)
+    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes)
+    val notIncludedMsg = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes)
     val messages = Seq(msg1, msg2)
     val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 
@@ -35,9 +35,9 @@ class CrossChainMessageMerkleTreeTest {
   @Test
   def verifyMessageMerklePathCorrectness(): Unit = {
     // Arrange
-    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "payload1".getBytes)
-    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "payload2".getBytes)
-    val msg3 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "payload3".getBytes)
+    val msg1 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes)
+    val msg2 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "f3281225c13d6e6c79befd1781daaaf5".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes)
+    val msg3 = new CrossChainMessage(CrossChainProtocolVersion.VERSION_1, 1, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "ac35757b0e5e8516f77ea05b889140ae".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "dfb5f051c7d132499c16a8ff8572a8f7".getBytes, "bbc4442c5620d5681f942ba8ff15ef4c".getBytes)
     val messages = Seq(msg1, msg2, msg3)
     val ccMsgMerkleTree = new CrossChainMessageMerkleTree()
 

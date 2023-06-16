@@ -6,10 +6,12 @@ import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.Constants;
 
 public final class CrossChainMessageSemanticValidator {
-    private final static String SENDER_SIDECHAIN_ID_ERROR_MESSAGE = "Sender sidechain id must be 32 bytes long";
-    private final static String RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE = "Receiver sidechain id must be 32 bytes long";
-    private final static String SENDER_ADDRESS_ERROR_MESSAGE = "Sender address length is not correct";
-    private final static String RECEIVER_ADDRESS_ERROR_MESSAGE = "Receiver address length is not correct";
+    public final static String MESSAGE_TYPE_ERROR_MESSAGE = "CrossChain message type cannot be negative";
+    public final static String SENDER_SIDECHAIN_ID_ERROR_MESSAGE = "Sender sidechain id must be 32 bytes long";
+    public final static String RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE = "Receiver sidechain id must be 32 bytes long";
+    public final static String SENDER_ADDRESS_ERROR_MESSAGE = "Sender address length is not correct";
+    public final static String RECEIVER_ADDRESS_ERROR_MESSAGE = "Receiver address length is not correct";
+    public final static String PAYLOAD_ERROR_MESSAGE = "Payload hash must be 32 bytes long";
 
     public void validateMessage(CrossChainMessage msg) {
         validateMsgType(msg.getMessageType());
@@ -29,7 +31,7 @@ public final class CrossChainMessageSemanticValidator {
 
     private void validateMsgType(int msgType) {
         if (msgType < 0) {
-            throw new IllegalArgumentException("CrossChain message type cannot be negative");
+            throw new IllegalArgumentException(MESSAGE_TYPE_ERROR_MESSAGE);
         }
     }
 
@@ -47,7 +49,7 @@ public final class CrossChainMessageSemanticValidator {
 
     private void validatePayloadHash(byte[] payload) {
         if (payload.length != Constants.Sc2Sc$.MODULE$.PAYLOAD_HASH()) {
-            throw new IllegalArgumentException("Payload hash must be 32 bytes long");
+            throw new IllegalArgumentException(PAYLOAD_ERROR_MESSAGE);
         }
     }
 }

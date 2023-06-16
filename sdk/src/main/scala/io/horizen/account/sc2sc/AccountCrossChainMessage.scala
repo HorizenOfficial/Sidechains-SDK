@@ -1,8 +1,8 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.sc2sc.CrossChainMessageSemanticValidator
-import io.horizen.utils.Constants
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -24,9 +24,9 @@ case class AccountCrossChainMessage
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
   private[horizen] def asABIType(): StaticStruct = {
-    val senderAddressABI = if (sender.length == Constants.ABI_ADDRESS_SIZE) new Bytes20(sender)
+    val senderAddressABI = if (sender.length == AddressProposition.LENGTH) new Bytes20(sender)
                            else new Bytes32(sender)
-    val receiverAddressABI = if (receiver.length == Constants.ABI_ADDRESS_SIZE) new Bytes20(receiver)
+    val receiverAddressABI = if (receiver.length == AddressProposition.LENGTH) new Bytes20(receiver)
                              else new Bytes32(receiver)
     new StaticStruct(
       new Uint32(messageType),

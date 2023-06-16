@@ -23,7 +23,7 @@ public class CrossChainMessageSemanticValidatorTest {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
         // Assert
-        String expectedMsg = "CrossChain message type cannot be negative";
+        String expectedMsg = CrossChainMessageSemanticValidator.MESSAGE_TYPE_ERROR_MESSAGE;
         assertEquals(expectedMsg, exception.getMessage());
     }
 
@@ -44,7 +44,7 @@ public class CrossChainMessageSemanticValidatorTest {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
-            String expectedMsg = "Sender sidechain id must be 32 bytes long";
+            String expectedMsg = CrossChainMessageSemanticValidator.SENDER_SIDECHAIN_ID_ERROR_MESSAGE;
             assertEquals(expectedMsg, exception.getMessage());
         }
     }
@@ -67,7 +67,7 @@ public class CrossChainMessageSemanticValidatorTest {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
-            String expectedMsg = "Receiver sidechain id must be 32 bytes long";
+            String expectedMsg = CrossChainMessageSemanticValidator.RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE;
             assertEquals(expectedMsg, exception.getMessage());
         }
     }
@@ -90,7 +90,7 @@ public class CrossChainMessageSemanticValidatorTest {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
-            String expectedMsg = "Sender address length is not correct";
+            String expectedMsg = CrossChainMessageSemanticValidator.SENDER_ADDRESS_ERROR_MESSAGE;
             assertEquals(expectedMsg, exception.getMessage());
         }
     }
@@ -114,7 +114,7 @@ public class CrossChainMessageSemanticValidatorTest {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
-            String expectedMsg = "Receiver address length is not correct";
+            String expectedMsg = CrossChainMessageSemanticValidator.RECEIVER_ADDRESS_ERROR_MESSAGE;
             assertEquals(expectedMsg, exception.getMessage());
         }
     }
@@ -140,7 +140,7 @@ public class CrossChainMessageSemanticValidatorTest {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
-            String expectedMsg = "Payload hash must be 32 bytes long";
+            String expectedMsg = CrossChainMessageSemanticValidator.PAYLOAD_ERROR_MESSAGE;
             assertEquals(expectedMsg, exception.getMessage());
         }
     }
