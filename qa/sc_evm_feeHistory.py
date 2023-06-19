@@ -124,6 +124,7 @@ class SCEvmFeeHistory(AccountChainSetup):
         generate_next_block(sc_node_2, "second node")
         self.sc_sync_all()
 
+        # test 1 - test 'latest' and 'pending' newest block tags
         sc_height = sc_node_1.block_best()["result"]['height']
         block_count = 16
         expected_result_length = min(block_count, sc_height)
@@ -143,6 +144,25 @@ class SCEvmFeeHistory(AccountChainSetup):
         assert_equal(expected_result_length + 1, len(history_pending_sc_node_1['result']['baseFeePerGas']))  # +1 because baseFeePerGas is calculated for the next block after the requested range
         assert_equal(expected_result_length, len(history_pending_sc_node_1['result']['gasUsedRatio']))
         assert_equal(expected_result_length, len(history_pending_sc_node_1['result']['reward']))
+
+        # test 2 - specific block fee history
+        block_count = 1
+        newest_block = 5
+        specific_block_history = sc_node_1.rpc_eth_feeHistory(hex(block_count), hex(newest_block), [])
+        assert_equal(hex(newest_block), specific_block_history['result']['oldestBlock'])
+        assert_equal(block_count + 1, len(specific_block_history['result']['baseFeePerGas']))
+        assert_equal(block_count, len(specific_block_history['result']['gasUsedRatio']))
+        assert_equal(None, specific_block_history['result']['reward'])
+
+        # test 3 - first 3 blocks fee history
+        # cannot get history before the genesis block, so only first block fee history and estimation for the second are returned
+        block_count = 3
+        newest_block = "earliest"  # genesis block
+        earliest_block_history = sc_node_1.rpc_eth_feeHistory(hex(block_count), newest_block, [])
+        assert_equal(hex(1), earliest_block_history['result']['oldestBlock'])
+        assert_equal(2, len(earliest_block_history['result']['baseFeePerGas']))  # genesis block + second block
+        assert_equal(1, len(earliest_block_history['result']['gasUsedRatio']))
+        assert_equal(None, earliest_block_history['result']['reward'])
 
 
 if __name__ == "__main__":
