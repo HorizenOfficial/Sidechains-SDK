@@ -4,7 +4,7 @@
 3. Packages overall refactoring, in particular UTXO specific classed moved to `io.horizen.utxo`, Account to `io.horizen.account`. 
 4. Change in the consensus protocol: forger eligibility rule. 
 5. zendoo-sc-cryptolib updated: certificate and CSW circuits were modified (backward incompatible to previous version). 
-6. Sparkz dependency updated from 2.0.0-RC9 to 2.0.0-RC11
+6. Sparkz dependency updated from 2.0.0-RC9 to 2.0.1
 7. Deterministic key generation mechanism changed: all secret keys now deterministic. Ed25519 key generation algorithm modified.
 8. PeerToPeer and API rate limiting
 
