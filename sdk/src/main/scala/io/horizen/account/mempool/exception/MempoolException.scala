@@ -20,6 +20,3 @@ case class AccountMemPoolOutOfBoundException(txId: ModifierId)
 
 case class TransactionReplaceUnderpricedException(txId: ModifierId)
   extends MempoolException(s"transaction with txId $txId cannot replace existing transaction because underpriced")
-
-case class FeeCapBelowMinimumException(txId: ModifierId, maxFee: BigInteger)
-  extends MempoolException(s"transaction max fee below minimum: $txId, maxFeePerGas $maxFee")

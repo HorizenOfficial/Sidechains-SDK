@@ -1,13 +1,11 @@
 package io.horizen.account.mempool
 
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.{AccountEventNotifier, AccountStateReader}
-import io.horizen.consensus.intToConsensusEpochNumber
-import io.horizen.evm.Address
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.state.BaseStateReader
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
+import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -26,12 +24,11 @@ class AccountMemoryPoolTest
 
   @Test
   def testTakeExecutableTxs(): Unit = {
-    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+
     val initialStateNonce = BigInteger.ZERO
     val accountStateViewMock = mock[AccountStateReader]
     val baseStateViewMock = mock[BaseStateReader]
     Mockito.when(baseStateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
-    Mockito.when(baseStateViewMock.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(0)))
     Mockito.when(accountStateViewMock.getNonce(ArgumentMatchers.any[Address])).thenReturn(initialStateNonce)
 
     val mempoolSettings = AccountMempoolSettings()
