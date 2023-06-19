@@ -207,4 +207,61 @@ class SidechainSecretStorageTest
       })
     sidechainSecretStorage.storeNonce(nonce, salt)
   }
+
+  @Test
+  def testStoreSecretAndNonceAtomic(): Unit = {
+    val pathToDB = tempFile()
+    val storage = getStorage(pathToDB)
+    val sidechainSecretStorage = new SidechainSecretStorage(storage, sidechainSecretsCompanion)
+
+    // Test 1: add secret
+    val salt = PrivateKey25519Creator.getInstance().salt()
+    val nonce = 1
+    val secret = getPrivateKey25519
+
+    val result1 = sidechainSecretStorage.storeSecretAndNonceAtomic(secret, nonce, salt)
+
+    val s1 = sidechainSecretStorage.get(secret.publicImage())
+    assertTrue(result1.isSuccess)
+    assertTrue("Storage must contain added Secret.", s1.isDefined)
+    assertEquals("Secret in storage must be the same as added.", secret, s1.get)
+    assertEquals("Storage must contain 1 secret.", 1, sidechainSecretStorage.getAll.size)
+
+    val n1 = sidechainSecretStorage.getNonce(salt)
+    assertTrue("Storage must contain nonce.", n1.isDefined)
+    assertEquals("Nonce in storage must be the same as added.", nonce, n1.get)
+
+    // Test 2: add Custom Secret to storage using SidechainSecretsCompanion with CustomSecret serializer
+    val salt2 = PrivateKey25519Creator.getInstance().salt()
+    val nonce2 = 2
+    val customSecret = getCustomPrivateKey
+
+    val result2 = sidechainSecretStorage.storeSecretAndNonceAtomic(customSecret, nonce2, salt2)
+
+    val s2 = sidechainSecretStorage.get(customSecret.publicImage())
+    assertTrue(result2.isSuccess)
+    assertTrue("Storage must contain added Secret.", s2.isDefined)
+    assertEquals("Secret in storage must be the same as added.", customSecret, s2.get)
+    assertEquals("Storage must contain 2 secrets.", 2, sidechainSecretStorage.getAll.size)
+
+    val n2 = sidechainSecretStorage.getNonce(salt2)
+    assertTrue("Storage must contain nonce.", n2.isDefined)
+    assertEquals("Nonce in storage must be the same as added.", nonce2, n2.get)
+
+    // Test 3: try to add same secret again
+    val result3 = sidechainSecretStorage.storeSecretAndNonceAtomic(customSecret, nonce2, salt2)
+    assertTrue(result3.isFailure)
+
+    // Test 4: try to add negative nonce
+    val result4 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, -3, salt)
+    assertTrue(result4.isFailure)
+
+    // Test 5: try to add null salt
+    val result5 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, nonce, null)
+    assertTrue(result5.isFailure)
+
+    // Test 6: try to add null secret
+    val result6 = sidechainSecretStorage.storeSecretAndNonceAtomic(null, nonce, salt)
+    assertTrue(result6.isFailure)
+  }
 }
