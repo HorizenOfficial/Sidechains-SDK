@@ -27,18 +27,7 @@ import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}

@@ -1,21 +1,21 @@
 package io.horizen.block
 
-import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures._
+import io.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.VrfSecretKey
 import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
-import io.horizen.history.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.ModifierId
 
+import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.nio.charset.StandardCharsets
 import scala.io.Source
 import scala.util.{Failure, Success}

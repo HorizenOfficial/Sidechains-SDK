@@ -4,6 +4,7 @@ import io.horizen.account.proposition.AddressProposition;
 import io.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
+
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 

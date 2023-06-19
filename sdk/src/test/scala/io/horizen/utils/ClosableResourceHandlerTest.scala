@@ -1,18 +1,10 @@
 package io.horizen.utils
 
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
-import io.horizen.fixtures._
-import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.utxo.block.SidechainBlock
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.Mockito.{times, verify}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.util.bytesToId
-
-import java.time.Instant
 
 
 class ClosableResourceHandlerTest extends JUnitSuite with MockitoSugar {

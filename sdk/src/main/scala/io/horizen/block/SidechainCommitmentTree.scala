@@ -1,14 +1,14 @@
 package io.horizen.block
 
-import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import io.horizen.utils.BytesUtils
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.certnative.BackwardTransfer
-
-import scala.compat.java8.OptionConverters._
-import scala.collection.JavaConverters._
+import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation}
+import io.horizen.utils.BytesUtils
+
+import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 
 class SidechainCommitmentTree {
   val commitmentTree: CommitmentTree = CommitmentTree.init()

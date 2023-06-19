@@ -1,23 +1,25 @@
 package io.horizen.examples;
 
-import io.horizen.utxo.backup.BoxIterator;
-import io.horizen.utxo.block.SidechainBlock;
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
-import io.horizen.utxo.state.ApplicationState;
-import io.horizen.utxo.state.SidechainStateReader;
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import io.horizen.utxo.transaction.BoxTransaction;
 import io.horizen.utils.ByteArrayWrapper;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
+import io.horizen.utxo.backup.BoxIterator;
+import io.horizen.utxo.block.SidechainBlock;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.state.ApplicationState;
+import io.horizen.utxo.state.SidechainStateReader;
+import io.horizen.utxo.transaction.BoxTransaction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import scala.util.Success;
 import scala.util.Try;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class DefaultApplicationState implements ApplicationState {
 

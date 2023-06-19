@@ -1,12 +1,12 @@
 package io.horizen.consensus
 
-import java.util.Random
 import io.horizen.fixtures.sidechainblock.generation._
 import io.horizen.params.{NetworkParams, TestNetParams}
 import io.horizen.utxo.history.SidechainHistory
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
+import java.util.Random
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 

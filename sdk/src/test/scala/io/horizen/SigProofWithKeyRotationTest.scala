@@ -1,9 +1,9 @@
 package io.horizen
 
 import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
@@ -14,6 +14,7 @@ import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
+
 import java.io._
 import java.util.Optional
 import java.{lang, util}
@@ -64,7 +65,7 @@ class SigProofWithKeyRotationTest extends SecretFixture {
     val keysRootHash = genesisKeyRootHash.clone() // key root hash remains the same as the genesis one
 
     val messageToBeSignedForEpoch0 = sigCircuit.generateMessageToBeSigned(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, keysRootHash)
+      btrFee, ftMinAmount, Seq(keysRootHash).asJava)
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
     val signaturesForEpoch0: util.List[Optional[Array[Byte]]] = (signerKeyPairs
@@ -101,18 +102,18 @@ class SigProofWithKeyRotationTest extends SecretFixture {
 
     var proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signaturesForEpoch0, schnorrKeysSignatures,
-      threshold, Optional.empty(), 2, genesisKeyRootHash, provingKeyPath, true, true)
+      threshold, Optional.empty(), 2, genesisKeyRootHash, Seq().asJava, provingKeyPath, true, true)
 
 
-    var result = sigCircuit.verifyProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, keysRootHash,
-      threshold, Optional.empty(), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+    var result = sigCircuit.verifyProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount,
+      threshold, Optional.empty(), sysConstant, 2, proofAndQuality.getKey, Seq().asJava, verificationKeyPath)
 
     assertTrue("Proof verification expected to be successfully", result)
 
 
     // Try with no key updates and not a first epoch certificate
     val epochNumber10 = 10
-    val messageToBeSignedForEpoch10 = sigCircuit.generateMessageToBeSigned(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, keysRootHash)
+    val messageToBeSignedForEpoch10 = sigCircuit.generateMessageToBeSigned(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, Seq(keysRootHash).asJava)
     val signaturesForEpoch10 = (signerKeyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedForEpoch10)}
       .map(b => Optional.of(b))
@@ -121,7 +122,7 @@ class SigProofWithKeyRotationTest extends SecretFixture {
       .asJava
 
 
-    var prevCustomFields: Seq[Array[Byte]] = sigCircuit.getCertificateCustomFields(genesisKeyRootHash).asScala
+    var prevCustomFields: Seq[Array[Byte]] = sigCircuit.getCertificateCustomFields(Seq(genesisKeyRootHash).asJava).asScala
     val prevEndCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
 
     var prevEpochCertificate = WithdrawalEpochCertificate(
@@ -146,10 +147,10 @@ class SigProofWithKeyRotationTest extends SecretFixture {
     System.out.println("Generating snark proof...")
     proofAndQuality = sigCircuit.createProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signaturesForEpoch10, schnorrKeysSignatures,
-      threshold, Optional.of(prevEpochCertificate), 2, genesisKeyRootHash, provingKeyPath, true, true)
+      threshold, Optional.of(prevEpochCertificate), 2, genesisKeyRootHash, Seq().asJava, provingKeyPath, true, true)
 
-    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, keysRootHash,
-      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount,
+      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, Seq().asJava, verificationKeyPath)
 
     assertTrue("Proof verification expected to be successfully", result)
 
@@ -200,7 +201,7 @@ class SigProofWithKeyRotationTest extends SecretFixture {
     var newKeysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(updatedSignerPublicKeysBytes, masterPublicKeysBytes)
 
     val messageToBeSignedWithRotationEpoch0 = sigCircuit.generateMessageToBeSigned(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, newKeysRootHash)
+      btrFee, ftMinAmount, Seq(newKeysRootHash).asJava)
 
     val signaturesWithRotationEpoch0: util.List[Optional[Array[Byte]]] = (signerKeyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedWithRotationEpoch0)}
@@ -211,11 +212,11 @@ class SigProofWithKeyRotationTest extends SecretFixture {
 
     proofAndQuality = sigCircuit.createProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signaturesWithRotationEpoch0, schnorrKeysSignatures,
-      threshold, Optional.empty(), 2, genesisKeyRootHash, provingKeyPath, true, true)
+      threshold, Optional.empty(), 2, genesisKeyRootHash, Seq().asJava, provingKeyPath, true, true)
 
 
-    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, newKeysRootHash,
-      threshold.asInstanceOf[Long], Optional.empty(), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber0, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount,
+      threshold.asInstanceOf[Long], Optional.empty(), sysConstant, 2, proofAndQuality.getKey, Seq().asJava, verificationKeyPath)
 
     assertTrue("Proof verification expected to be successfully", result)
 
@@ -254,7 +255,7 @@ class SigProofWithKeyRotationTest extends SecretFixture {
     )
 
     newKeysRootHash = CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(signerPublicKeysBytes, updatedMasterPublicKeysBytes)
-    prevCustomFields = sigCircuit.getCertificateCustomFields(genesisKeyRootHash).asScala
+    prevCustomFields = sigCircuit.getCertificateCustomFields(Seq(genesisKeyRootHash).asJava).asScala
 
     prevEpochCertificate = WithdrawalEpochCertificate(
       Array[Byte](),
@@ -276,7 +277,7 @@ class SigProofWithKeyRotationTest extends SecretFixture {
     prevCertificate = CommonCircuit.createWithdrawalCertificate(prevEpochCertificate, SidechainCreationVersions.SidechainCreationVersion2)
 
     val messageToBeSignedWithRotationEpoch10 = sigCircuit.generateMessageToBeSigned(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, newKeysRootHash)
+      btrFee, ftMinAmount, Seq(newKeysRootHash).asJava)
 
     val signaturesWithRotationEpoch10: util.List[Optional[Array[Byte]]] = (signerKeyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedWithRotationEpoch10)}
@@ -287,10 +288,10 @@ class SigProofWithKeyRotationTest extends SecretFixture {
 
     proofAndQuality = sigCircuit.createProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signaturesWithRotationEpoch10, schnorrKeysSignatures,
-      threshold, Optional.of(prevEpochCertificate), 2, genesisKeyRootHash, provingKeyPath, true, true)
+      threshold, Optional.of(prevEpochCertificate), 2, genesisKeyRootHash, Seq().asJava, provingKeyPath, true, true)
 
-    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, newKeysRootHash,
-      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, verificationKeyPath)
+    result = sigCircuit.verifyProof(bt, sidechainId, epochNumber10, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount,
+      threshold.asInstanceOf[Long], Optional.of(prevCertificate), sysConstant, 2, proofAndQuality.getKey, Seq().asJava, verificationKeyPath)
 
     assertTrue("Proof verification expected to be successfully", result)
   }

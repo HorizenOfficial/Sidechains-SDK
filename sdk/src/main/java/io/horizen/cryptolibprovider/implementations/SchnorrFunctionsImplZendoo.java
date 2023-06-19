@@ -1,16 +1,18 @@
 package io.horizen.cryptolibprovider.implementations;
 
-import io.horizen.cryptolibprovider.SchnorrFunctions;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.schnorrnative.SchnorrKeyPair;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.cryptolibprovider.SchnorrFunctions;
+
 import java.util.EnumMap;
-import static io.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
+
 import static io.horizen.cryptolibprovider.SchnorrFunctions.KeyType.PUBLIC;
 import static io.horizen.cryptolibprovider.SchnorrFunctions.KeyType.SECRET;
+import static io.horizen.cryptolibprovider.utils.FieldElementUtils.messageToFieldElement;
 
 public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
 

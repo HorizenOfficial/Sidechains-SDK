@@ -1,7 +1,9 @@
 package io.horizen.account.state
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.history.validation.InvalidTransactionChainIdException
 import io.horizen.account.node.NodeAccountState
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
@@ -11,16 +13,14 @@ import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.GasFeeFork
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
-import io.horizen.params.NetworkParams
-import io.horizen.state.State
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.evm._
 import io.horizen.fork.{ForkManager, Sc2ScFork}
+import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
+import io.horizen.state.State
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider

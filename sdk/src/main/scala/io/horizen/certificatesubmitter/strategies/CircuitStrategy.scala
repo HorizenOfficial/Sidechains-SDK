@@ -6,10 +6,9 @@ import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesSt
 import io.horizen.certificatesubmitter.dataproof.CertificateData
 import io.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.consensus.ConsensusEpochNumber
-import io.horizen.fork.{ForkManager, Sc2ScFork}
+import io.horizen.fork.ForkManager
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}

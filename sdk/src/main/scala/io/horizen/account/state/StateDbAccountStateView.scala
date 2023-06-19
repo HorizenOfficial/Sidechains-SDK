@@ -4,8 +4,8 @@ import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.sc2sc.{CrossChainMessageProvider, CrossChainRedeemMessageProvider, ScTxCommitmentTreeRootHashMessageProvider}
-import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -13,18 +13,17 @@ import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddr
 import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
-import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
 import java.util.Optional
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
-
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 

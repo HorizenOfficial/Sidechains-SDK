@@ -1,27 +1,24 @@
 package io.horizen.storage
 
+import io.horizen.SidechainTypes
 import io.horizen.companion.SidechainSecretsCompanion
 import io.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import io.horizen.fixtures._
 import io.horizen.secret._
-import io.horizen.utils.ByteArrayWrapper
-import io.horizen.utils.Pair
-
-import java.util.{HashMap => JHashMap, List => JList}
-import java.lang.{Byte => JByte}
-import io.horizen.SidechainTypes
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import io.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert._
 import org.junit._
+import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import org.mockito._
 import sparkz.crypto.hash.Blake2b256
 
+import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
+import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class SidechainSecretStorageTest

@@ -1,14 +1,15 @@
 package io.horizen.utxo.transaction;
 
+import io.horizen.proposition.Proposition;
+import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.utils.Pair;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.ZenBox;
 import io.horizen.utxo.box.data.BoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.utxo.node.NodeWallet;
-import io.horizen.proposition.Proposition;
-import io.horizen.proposition.PublicKey25519Proposition;
-import io.horizen.secret.PrivateKey25519;
-import io.horizen.utils.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

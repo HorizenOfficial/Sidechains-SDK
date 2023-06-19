@@ -3,13 +3,13 @@ package io.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import io.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import io.horizen.utxo.box.ForgerBox;
-import io.horizen.utxo.box.data.ForgerBoxData;
 import io.horizen.consensus.ForgingStakeInfo;
 import io.horizen.proposition.PublicKey25519Proposition;
+import io.horizen.proposition.VrfPublicKey;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Utils;
-import io.horizen.proposition.VrfPublicKey;
+import io.horizen.utxo.box.ForgerBox;
+import io.horizen.utxo.box.data.ForgerBoxData;
 import scala.compat.java8.OptionConverters;
 import sparkz.crypto.hash.Blake2b256;
 
@@ -61,7 +61,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 //                    VrfPublicKey.KEY_LENGTH + ", actual: " + output.customCreationData().length);
 //        }
         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
-        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.toMainchainFormat(output.address()));
         long value = output.amount();
 
         // we must not read past the vfr key bytes in the custom data

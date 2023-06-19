@@ -1,7 +1,7 @@
 package io.horizen.fixtures;
 
-import io.horizen.secret.VrfKeyGenerator;
 import io.horizen.proof.VrfProof;
+import io.horizen.secret.VrfKeyGenerator;
 import io.horizen.secret.VrfSecretKey;
 import io.horizen.utils.Pair;
 import io.horizen.vrf.VrfOutput;

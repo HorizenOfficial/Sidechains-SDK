@@ -1,14 +1,14 @@
 package io.horizen.fixtures
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.testkit.TestActorRef
 import io.horizen._
+import io.horizen.utxo.SidechainNodeViewHolder
+import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
-import io.horizen.utxo.SidechainNodeViewHolder
 import io.horizen.utxo.wallet.SidechainWallet
-import io.horizen.utxo.block.SidechainBlock
-import akka.testkit.TestActorRef
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}

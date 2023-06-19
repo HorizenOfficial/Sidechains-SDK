@@ -5,14 +5,13 @@ import io.horizen.account.fixtures.AccountCrossChainMessageFixture
 import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, CrossChainMessageProvider}
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils.ZenWeiConverter
-import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.evm.{Address, StateDB}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.sc2sc.CrossChainMessage
 import io.horizen.utils.ByteArrayWrapper
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
-import io.horizen.evm.{Address, StateDB}
-import io.horizen.sc2sc.CrossChainMessage
 import org.junit.Assert._
 import org.junit._
 import org.mockito._

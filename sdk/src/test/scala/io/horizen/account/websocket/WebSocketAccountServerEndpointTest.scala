@@ -5,7 +5,6 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import io.horizen.{SidechainSettings, SidechainTypes, WebSocketServerSettings}
 import io.horizen.account.AccountSidechainNodeViewHolder.NewExecTransactionsEvent
 import io.horizen.account.api.rpc.types.EthereumBlockView
 import io.horizen.account.api.rpc.utils.RpcCode
@@ -20,6 +19,7 @@ import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.{NotifySyncStart, NotifySyncStop, NotifySyncUpdate}
 import io.horizen.params.MainNetParams
 import io.horizen.utils.{BytesUtils, CountDownLatchController}
+import io.horizen.{SidechainSettings, SidechainTypes, WebSocketServerSettings}
 import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}

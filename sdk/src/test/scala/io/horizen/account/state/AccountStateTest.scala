@@ -9,7 +9,6 @@ import io.horizen.evm.Database
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import io.horizen.params.MainNetParams
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.Database
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}

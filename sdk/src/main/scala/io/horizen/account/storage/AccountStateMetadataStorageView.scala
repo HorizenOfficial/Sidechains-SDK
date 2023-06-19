@@ -9,9 +9,9 @@ import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, Withdr
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.storage.Storage
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import sparkz.core.{VersionTag, versionToBytes}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
-import sparkz.core.{VersionTag, versionToBytes}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets

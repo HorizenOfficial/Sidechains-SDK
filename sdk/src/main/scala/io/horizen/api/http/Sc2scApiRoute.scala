@@ -31,15 +31,15 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
                          )
                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
-  SidechainTypes#SCBT,
-  SidechainBlockHeader,
-  SidechainBlock,
-  SidechainFeePaymentsInfo,
-  NodeHistory,
-  NodeState,
-  NodeWallet,
-  NodeMemoryPool,
-  SidechainNodeView]
+    SidechainTypes#SCBT,
+    SidechainBlockHeader,
+    SidechainBlock,
+    SidechainFeePaymentsInfo,
+    NodeHistory,
+    NodeState,
+    NodeWallet,
+    NodeMemoryPool,
+    SidechainNodeView]
 {
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
   override implicit lazy val timeout: Timeout = akka.util.Timeout.create(Duration.ofSeconds(60))
@@ -56,25 +56,25 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
       _ =>
       entity(as[ReqCreateRedeemMessage]) { body =>
 
-        val crossChainMessage = new CrossChainMessage(
-          body.message.protocolVersion,
-          body.message.messageType,
-          BytesUtils.fromHexString(body.message.senderSidechain),
-          BytesUtils.fromHexString(body.message.sender),
-          BytesUtils.fromHexString(body.message.receiverSidechain),
-          BytesUtils.fromHexString(body.message.receiver),
-          BytesUtils.fromHexString(body.message.payload)
-        )
+          val crossChainMessage = new CrossChainMessage(
+            CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
+            body.message.messageType,
+            BytesUtils.fromHexString(body.message.senderSidechain),
+            BytesUtils.fromHexString(body.message.sender),
+            BytesUtils.fromHexString(body.message.receiverSidechain),
+            BytesUtils.fromHexString(body.message.receiver),
+            BytesUtils.fromHexString(body.message.payload)
+          )
 
-        val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
-        Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
-          case Success(ret) => {
-           ApiResponseUtil.toResponse(RespCreateRedeemMessage(ret))
+          val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
+          Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
+            case Success(ret) => {
+              ApiResponseUtil.toResponse(RespCreateRedeemMessage(ret))
+            }
+            case Failure(e) =>
+              ApiResponseUtil.toResponse(GenericSc2ScApiError("Failed to create redeem message", JOptional.of(e)))
           }
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(GenericSc2ScApiError("Failed to create redeem message", JOptional.of(e)))
         }
-      }
     }
   }
 }
@@ -84,24 +84,24 @@ object Sc2scApiRouteRestScheme {
   private[api] case class ReqCreateRedeemMessage(message: CrossChainMessageEle)
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class CrossChainMessageEle(
-                                                protocolVersion: CrossChainProtocolVersion,
+                                                protocolVersion: Short,
                                                 messageType: Int,
                                                 senderSidechain: String,
                                                 sender: String,
                                                 receiverSidechain: String,
                                                 receiver: String,
                                                 payload: String
-  ){
+                                              ) {
     require(senderSidechain != null, "Empty sender Sidechain")
     require(sender != null, "Empty sender address")
     require(receiverSidechain != null, "Empty receiver Sidechain")
     require(receiver != null, "Empty receiver address")
     require(payload != null, "Empty payload ")
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
 }
 
 object Sc2scApiErrorResponse {

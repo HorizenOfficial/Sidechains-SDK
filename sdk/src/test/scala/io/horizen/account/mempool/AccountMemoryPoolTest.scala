@@ -1,11 +1,11 @@
 package io.horizen.account.mempool
 
-import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.{AccountEventNotifier, AccountStateReader}
-import io.horizen.state.BaseStateReader
 import io.horizen.evm.Address
+import io.horizen.state.BaseStateReader
+import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}

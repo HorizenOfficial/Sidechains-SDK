@@ -26,11 +26,11 @@ import io.horizen.transaction.Transaction
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.BytesUtils
 import io.horizen.wallet.Wallet
-import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.transaction.MemoryPool
+import sparkz.util.SparkzLogging
 
 import java.io.File
 import java.util

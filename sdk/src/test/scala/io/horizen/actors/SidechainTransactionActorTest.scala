@@ -4,23 +4,22 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
-import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.api.http.SidechainTransactionActorRef
 import io.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
 import io.horizen.utxo.transaction.RegularTransaction
+import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
-
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success}
-import org.junit.Assert._
 import sparkz.util.ModifierId
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 class SidechainTransactionActorTest extends JUnitSuite with MockitoSugar with TransactionFixture with SidechainTypesTestsExtension {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")

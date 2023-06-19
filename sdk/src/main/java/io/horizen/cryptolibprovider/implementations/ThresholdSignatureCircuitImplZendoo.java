@@ -4,13 +4,14 @@ package io.horizen.cryptolibprovider.implementations;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
-import io.horizen.cryptolibprovider.CommonCircuit;
-import io.horizen.cryptolibprovider.ThresholdSignatureCircuit;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.cryptolibprovider.CommonCircuit;
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuit;
 import io.horizen.utils.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

@@ -1,13 +1,13 @@
 package io.horizen.utxo.integration.storage
 
 import io.horizen.SidechainTypes
-import io.horizen.utxo.companion._
 import io.horizen.fixtures._
-import io.horizen.utxo.wallet.WalletBox
 import io.horizen.utxo.box.{BoxSerializer, ZenBox}
+import io.horizen.utxo.companion._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.storage.SidechainWalletBoxStorage
+import io.horizen.utxo.wallet.WalletBox
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite

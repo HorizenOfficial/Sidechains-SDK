@@ -5,6 +5,7 @@ import akka.http.scaladsl.server.{Directives, Route}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+
 import scala.language.implicitConversions
 
 case class SidechainApiError(statusCode: StatusCode, reason: String = "") {

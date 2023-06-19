@@ -891,7 +891,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             }
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
-            resJson.put("scId", BytesUtils.toHexString(BytesUtils.reverseBytes(scId))); // scId output expected to be in BE
+            resJson.put("scId", BytesUtils.toHexString(BytesUtils.toMainchainFormat(scId))); // scId output expected to be in BE
             resJson.put("scGenesisBlockHex", sidechainBlockHex);
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);

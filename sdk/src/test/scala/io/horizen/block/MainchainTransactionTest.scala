@@ -1,7 +1,7 @@
 package io.horizen.block
 
-import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import io.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test

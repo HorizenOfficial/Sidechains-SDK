@@ -2,10 +2,10 @@ package io.horizen.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import io.horizen.proposition.SchnorrProposition;
 import io.horizen.cryptolibprovider.CryptoLibProvider;
-import io.horizen.secret.SchnorrSecret;
 import io.horizen.json.Views;
+import io.horizen.proposition.SchnorrProposition;
+import io.horizen.secret.SchnorrSecret;
 
 import java.util.Arrays;
 

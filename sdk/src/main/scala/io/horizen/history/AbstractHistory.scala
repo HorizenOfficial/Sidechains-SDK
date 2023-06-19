@@ -2,7 +2,7 @@ package io.horizen.history
 
 import io.horizen.SidechainSyncInfo
 import io.horizen.account.state.HistoryBlockHashProvider
-import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase, MainchainHeaderHash => McHeaderHash}
 import io.horizen.chain._
 import io.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
@@ -17,7 +17,6 @@ import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
-import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer

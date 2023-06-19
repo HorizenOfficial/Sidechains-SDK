@@ -1,12 +1,11 @@
 package io.horizen.certificatesubmitter.strategies
+import io.horizen.AbstractState
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{ObsoleteWithdrawalEpochException, SignaturesStatus}
+import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import io.horizen.AbstractState
-import io.horizen.history.AbstractHistory
 import sparkz.util.{ModifierId, SparkzLogging}
-import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.util.{Failure, Success, Try}
 

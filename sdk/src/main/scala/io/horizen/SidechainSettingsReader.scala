@@ -4,8 +4,7 @@ import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import net.ceedubs.ficus.readers.ValueReader
-import net.ceedubs.ficus.readers.EnumerationReader._
+import net.ceedubs.ficus.readers.{EnumerationReader, ValueReader}
 import sparkz.core.settings.{SettingsReaders, SparkzSettings}
 
 import java.io.File
@@ -14,10 +13,10 @@ import java.net.URL
 import java.util.{Optional => JOptional}
 import scala.compat.java8.OptionConverters.toScala
 
-
 object SidechainSettingsReader
   extends LazyLogging
     with SettingsReaders
+    with EnumerationReader
 {
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 

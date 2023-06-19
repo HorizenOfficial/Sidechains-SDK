@@ -9,6 +9,7 @@ import io.horizen.utils.CountDownLatchController
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.transaction.RegularTransaction
+import jakarta.websocket._
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
@@ -21,7 +22,6 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempo
 
 import java.net.URI
 import java.util
-import jakarta.websocket._
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}

@@ -1,10 +1,10 @@
 package io.horizen.utxo.state
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
@@ -27,7 +27,7 @@ import io.horizen.utxo.node.NodeState
 import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
-import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
+import io.horizen.{AbstractState, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._
 import sparkz.core.utils.TimeProvider
@@ -46,7 +46,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                                       forgerBoxStorage: SidechainStateForgerBoxStorage,
                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                       val params: NetworkParams,
-                                      sidechainSettings: SidechainSettings,
                                       override val version: VersionTag,
                                       val applicationState: ApplicationState,
                                       timeProvider: TimeProvider)
@@ -62,7 +61,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
     new CrossChainMessageValidator(this, params, timeProvider),
-    new CrossChainRedeemMessageValidator(sidechainSettings, stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
+    new CrossChainRedeemMessageValidator(stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
   lazy val verificationKeyFullFilePath: String = {
@@ -578,7 +577,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
           getKeyRotationProofsToAdd(mod.sidechainTransactions),
-          mod.mainchainHeaders.map(mcHeader => mcHeader.hashScTxsCommitment)
+          mod.mainchainHeaders.map(mcHeader => BytesUtils.toHexString(mcHeader.hashScTxsCommitment)).toSet
         )
       })
     }
@@ -627,7 +626,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                    blockFeeInfo: BlockFeeInfo,
                    forgerListIndexes: Array[Int],
                    keyRotationProofsToAdd: Seq[KeyRotationProof],
-                   hashScTxsCommitment: Seq[Array[Byte]]
+                   hashScTxsCommitment: Set[String]
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
@@ -717,7 +716,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,
-          sidechainSettings,
           newVersion,
           appState,
           timeProvider
@@ -754,7 +752,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           forgerBoxStorageNew,
           utxoMerkleTreeProviderNew,
           params,
-          sidechainSettings,
           to,
           appState,
           timeProvider)
@@ -938,13 +935,12 @@ object SidechainState {
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
                                     utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
-                                    sidechainSettings: SidechainSettings,
                                     applicationState: ApplicationState,
                                     timeProvider: TimeProvider): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty) {
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
-        params, sidechainSettings, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, timeProvider)
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, timeProvider)
       )
     } else
       None
@@ -955,14 +951,13 @@ object SidechainState {
                                           utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
-                                          sidechainSettings: SidechainSettings,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock,
                                           timeProvider: TimeProvider): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
       var state = new SidechainState(
-        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, sidechainSettings,
+        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params,
         idToVersion(genesisBlock.parentId), applicationState, timeProvider
       )
       if (!backupStorage.isEmpty) {
@@ -982,7 +977,7 @@ object SidechainState {
     new CrossChainMessage(
       box.getProtocolVersion,
       box.getMessageType,
-      params.sidechainId,
+      BytesUtils.toMainchainFormat(params.sidechainId),
       box.proposition().pubKeyBytes(),
       box.getReceiverSidechain,
       box.getReceiverAddress,

@@ -1,21 +1,22 @@
 package io.horizen.utxo.transaction;
 
+import io.horizen.proposition.Proposition;
+import io.horizen.secret.PrivateKey25519;
+import io.horizen.secret.PrivateKey25519Creator;
+import io.horizen.utils.Pair;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.ZenBox;
 import io.horizen.utxo.box.data.BoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
 import io.horizen.utxo.fixtures.BoxFixtureClass;
-import io.horizen.proposition.Proposition;
-import io.horizen.secret.PrivateKey25519;
-import io.horizen.secret.PrivateKey25519Creator;
-import io.horizen.utils.Pair;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClass {
 

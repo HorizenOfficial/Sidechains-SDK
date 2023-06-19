@@ -6,14 +6,13 @@ import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creato
 import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
-import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
+import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -23,7 +22,7 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
-import sparkz.util.serialization.{Reader, VLQByteBufferReader}
+import sparkz.util.serialization.VLQByteBufferReader
 
 import java.math.BigInteger
 import java.nio.ByteBuffer

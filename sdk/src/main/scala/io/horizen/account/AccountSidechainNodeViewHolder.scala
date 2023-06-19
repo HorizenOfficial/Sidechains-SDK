@@ -13,17 +13,15 @@ import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataSt
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.consensus._
+import io.horizen.evm.Database
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
-import io.horizen.evm.Database
-import io.horizen.fork.{ForkManager, Sc2ScFork}
-import io.horizen.utils.TimeToEpochUtils
-import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, NodeViewHolderEvent, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}

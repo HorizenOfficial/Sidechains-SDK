@@ -1,30 +1,28 @@
 package io.horizen.certificatesubmitter.strategy
 
 import akka.actor.{ActorRef, ActorSystem}
-import io.horizen.{MempoolSettings, SidechainSettings}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import io.horizen.certificatesubmitter.strategies.{NonCeasingSidechain, SubmissionWindowStatus}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.SidechainBlockFixture.sidechainTransactionsCompanion
-import io.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolder, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
+import io.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture, SidechainBlockFixture}
 import io.horizen.params.MainNetParams
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.utils.WithdrawalEpochInfo
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.junit.{Before, Test}
-import org.mockito.{ArgumentMatchers, Mockito}
-import org.mockito.Mockito.when
-import org.scalatestplus.junit.JUnitSuite
-import org.scalatestplus.mockito.MockitoSugar.mock
-import sparkz.util.ModifierId
-import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import io.horizen.utils.BytesUtils
+import io.horizen.secret.SchnorrKeyGenerator
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.{MempoolSettings, SidechainSettings}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.{Before, Test}
+import org.mockito.Mockito.when
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.util.ModifierId
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer

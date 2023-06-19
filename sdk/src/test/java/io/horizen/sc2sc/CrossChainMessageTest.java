@@ -2,9 +2,11 @@ package io.horizen.sc2sc;
 
 import org.junit.Before;
 import org.junit.Test;
+
 import java.util.Random;
-import static org.junit.Assert.assertEquals;
+
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class CrossChainMessageTest {
 
@@ -23,9 +25,9 @@ public class CrossChainMessageTest {
         version = CrossChainProtocolVersion.VERSION_1;
         messageType = 1;
         senderSidechain = getRandomBytes(32);
-        sender = getRandomBytes(12);
+        sender = getRandomBytes(20);
         receiverSidechain = getRandomBytes(32);
-        receiver = getRandomBytes(15);
+        receiver = getRandomBytes(32);
         payload = "TestPayLoad".getBytes();
 
         randomHash = getRandomBytes(32);

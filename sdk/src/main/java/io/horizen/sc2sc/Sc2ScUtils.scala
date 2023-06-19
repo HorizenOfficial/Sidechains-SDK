@@ -11,7 +11,6 @@ import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
 
@@ -142,11 +141,14 @@ trait Sc2ScUtils[
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
       Using.resource(
-        commTree.getScCommitmentCertPath(networkParams.sidechainId, topCert.bytes).get()
-      ) {
-        pathCert =>
+        CommonCircuit.createWithdrawalCertificate(topCert, networkParams.sidechainCreationVersion)
+      ) { withdrawalCertificate =>
+        Using.resource(
+          commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()
+        ) { pathCert =>
           pathCert.updateScCommitmentPath(MerklePath.deserialize(existenceProof))
           pathCert.serialize()
+        }
       }
     }
   }

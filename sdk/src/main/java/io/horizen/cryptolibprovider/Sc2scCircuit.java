@@ -3,7 +3,6 @@ package io.horizen.cryptolibprovider;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.commitmenttreenative.ScCommitmentCertPath;
 import com.horizen.merkletreenative.MerklePath;
-import io.horizen.sc2sc.CrossChainMessage;
 import io.horizen.sc2sc.CrossChainMessageHash;
 
 public interface Sc2scCircuit {

@@ -1,15 +1,12 @@
 package io.horizen.proof
 
-import java.io.File
-import java.util
-import java.util.Optional
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.SchnorrFunctionsImplZendoo
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -18,6 +15,10 @@ import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
+
+import java.io.File
+import java.util
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._

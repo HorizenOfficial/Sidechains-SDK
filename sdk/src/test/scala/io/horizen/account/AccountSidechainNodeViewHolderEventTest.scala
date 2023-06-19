@@ -24,7 +24,6 @@ import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider

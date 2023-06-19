@@ -2,24 +2,21 @@ package io.horizen.utxo
 
 import io.horizen.SidechainTypes
 import io.horizen.consensus.TimeProviderFixture
-import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import io.horizen.fork.{ForkManager, ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, Pair => JPair}
 import io.horizen.utxo.backup.{BackupBox, BoxIterator}
 import io.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.state.SidechainBackup
 import io.horizen.utxo.storage.{BackupStorage, BoxBackupInterface}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.rules.TemporaryFolder
 import org.junit.{Before, Rule, Test}
-import org.mockito.Mockito
-import org.scalatestplus.junit.JUnitSuite
-import sparkz.core.utils.TimeProvider
 import sparkz.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}

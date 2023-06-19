@@ -1,8 +1,8 @@
 package io.horizen.fixtures.sidechainblock.generation
 
-import java.util.Random
-
 import sparkz.util.ModifierId
+
+import java.util.Random
 
 case class GenerationRules(forgingBoxesToAdd: Set[SidechainForgingData] = Set(),
                            forgingBoxesToSpent: Set[SidechainForgingData] = Set(),

@@ -5,19 +5,18 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.account.sc2sc.CrossChainMessageProcessorFixture
 import io.horizen.api.http.Sc2scApiRouteRestScheme.{CrossChainMessageEle, ReqCreateRedeemMessage}
 import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.json.SerializationUtil
+import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
+import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import sparkz.core.NodeViewHolder.CurrentView
 
-import scala.util.{Failure, Success}
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
-import io.horizen.utils.BytesUtils
-
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
+import scala.util.{Failure, Success}
 
 
 class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProcessorFixture {
@@ -28,8 +27,8 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
 
   var simulateEnError = false
 
-  val testCrossChainMessage = new CrossChainMessageEle(
-    CrossChainProtocolVersion.VERSION_1,
+  val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
+    CrossChainProtocolVersion.VERSION_1.getVal,
     1,
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),

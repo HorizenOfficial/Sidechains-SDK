@@ -4,7 +4,6 @@ import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.Sc2ScDataForCertificate
 import io.horizen.utils.BytesUtils
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -27,7 +26,7 @@ case class CertificateDataWithoutKeyRotation(override val referencedEpochNumber:
   override def toString: String = {
     "CertificateDataWithKeyRotation(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
-      s"sidechainId = $sidechainId, " +
+      s"sidechainId = ${BytesUtils.toHexString(sidechainId)}, " +
       s"withdrawalRequests = {${backwardTransfers.mkString(",")}}, " +
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +

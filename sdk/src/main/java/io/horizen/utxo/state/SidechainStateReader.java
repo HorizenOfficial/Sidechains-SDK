@@ -1,6 +1,5 @@
 package io.horizen.utxo.state;
 
-import io.horizen.utxo.box.*;
 import io.horizen.utxo.box.Box;
 
 import java.util.Optional;

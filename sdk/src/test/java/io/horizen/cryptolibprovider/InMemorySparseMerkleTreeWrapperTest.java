@@ -1,11 +1,14 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
 import com.horizen.librustsidechains.FieldElement;
+import io.horizen.cryptolibprovider.utils.InMemorySparseMerkleTreeWrapper;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 

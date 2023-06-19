@@ -1,7 +1,6 @@
 package io.horizen.consensus
 
-import io.horizen.vrf.VrfOutput
-import org.junit.Assert.{assertEquals, fail}
+import org.junit.Assert.fail
 import org.junit.Test
 
 import scala.util.{Failure, Success, Try}

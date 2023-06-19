@@ -7,10 +7,11 @@ import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.secret.PrivateKeySecp256k1;
 import io.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
+import io.horizen.json.Views;
 import io.horizen.json.serializer.HexNoPrefixBigIntegerSerializer;
 import io.horizen.proof.ProofOfKnowledge;
 import io.horizen.proof.ProofSerializer;
-import io.horizen.json.Views;
+
 import java.math.BigInteger;
 
 

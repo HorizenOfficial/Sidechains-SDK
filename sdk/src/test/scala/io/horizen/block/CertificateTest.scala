@@ -1,9 +1,9 @@
 package io.horizen.block
 
 import io.horizen.utils.BytesUtils
+import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import org.junit.Assert._
 
 import scala.io.Source
 

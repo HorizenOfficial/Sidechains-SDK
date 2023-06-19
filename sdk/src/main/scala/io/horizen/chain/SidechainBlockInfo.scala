@@ -9,12 +9,12 @@ import io.horizen.transaction.Transaction
 import io.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.vrf.{VrfOutput, VrfOutputSerializer}
-import sparkz.util.serialization.{Reader, Writer}
-import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.Timestamp
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 

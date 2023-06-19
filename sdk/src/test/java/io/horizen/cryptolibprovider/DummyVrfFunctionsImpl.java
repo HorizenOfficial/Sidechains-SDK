@@ -4,7 +4,10 @@ package io.horizen.cryptolibprovider;
 import io.horizen.utils.Utils;
 
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.Objects;
+import java.util.Optional;
 
 public class DummyVrfFunctionsImpl implements VrfFunctions {
     private static int vrfLength = 32; //sha256HashLen

@@ -4,7 +4,7 @@ public enum CrossChainProtocolVersion {
 
     VERSION_1((short) 1);
 
-    private short val;
+    private final short val;
 
     public static CrossChainProtocolVersion fromShort(short x) {
         switch(x) {

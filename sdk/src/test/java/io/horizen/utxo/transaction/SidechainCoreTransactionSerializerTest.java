@@ -1,16 +1,16 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.transaction.TransactionSerializer;
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.fixtures.BoxFixtureClass;
 import io.horizen.proof.Proof;
 import io.horizen.proof.Signature25519;
 import io.horizen.proposition.MCPublicKeyHashProposition;
 import io.horizen.proposition.Proposition;
+import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.data.BoxData;
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData;
 import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.fixtures.BoxFixtureClass;
 import org.junit.Test;
 import scala.util.Try;
 

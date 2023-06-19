@@ -1,10 +1,10 @@
 package io.horizen.fixtures.sidechainblock.generation
 
-import java.util.Random
-
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.params.NetworkParams
 import io.horizen.proof.VrfProof
+
+import java.util.Random
 
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,

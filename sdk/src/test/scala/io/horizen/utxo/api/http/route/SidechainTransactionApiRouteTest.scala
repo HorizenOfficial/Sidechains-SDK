@@ -16,7 +16,6 @@ import org.junit.Assert._
 import java.nio.charset.StandardCharsets
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success}
 
 class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 

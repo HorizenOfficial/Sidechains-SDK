@@ -9,7 +9,7 @@ import io.horizen.sc2sc.CrossChainProtocolVersion
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.ZenCoinsUtils
 import io.horizen.utxo.box.data.{CrossChainMessageBoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import io.horizen.utxo.box.{Box, CrossChainMessageBox, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.box._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
 import io.horizen.utxo.wallet.WalletBox
 import sparkz.core.bytesToId
@@ -62,7 +62,7 @@ trait BoxFixture
     val random: Random = new Random(seed)
     val receiverSidechain = new Array[Byte](32)
     random.nextBytes(receiverSidechain)
-    val receiverAddress = new Array[Byte](16)
+    val receiverAddress = new Array[Byte](20)
     random.nextBytes(receiverAddress)
     getCrossMessageBox(
       getPrivateKey25519(Longs.toByteArray(random.nextLong())).publicImage(),

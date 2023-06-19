@@ -1,6 +1,5 @@
 package io.horizen.fixtures
 
-import java.util.Random
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
@@ -8,6 +7,8 @@ import io.horizen.utils
 import io.horizen.utils.Ed25519
 import io.horizen.utxo.box.ForgerBox
 import io.horizen.utxo.box.data.ForgerBoxData
+
+import java.util.Random
 
 case class ForgerBoxGenerationMetadata(propositionSecret: PrivateKey25519, blockSignSecret: PrivateKey25519, vrfSecret: VrfSecretKey,
                                        forgingStakeInfo: ForgingStakeInfo)

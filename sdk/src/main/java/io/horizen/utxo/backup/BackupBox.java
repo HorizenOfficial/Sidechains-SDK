@@ -1,7 +1,7 @@
 package io.horizen.utxo.backup;
 
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
 
 public class BackupBox {
     private Box<Proposition> box;

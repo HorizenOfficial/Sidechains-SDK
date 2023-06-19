@@ -3,8 +3,8 @@ package io.horizen.account.api.rpc.service
 import io.horizen.SidechainTypes
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture}
-import io.horizen.account.state.{AccountStateView, GasUtil}
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumReceipt}
+import io.horizen.account.state.{AccountStateView, GasUtil}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{Bloom, EthereumTransactionUtils}
 import io.horizen.evm.{Address, Hash}

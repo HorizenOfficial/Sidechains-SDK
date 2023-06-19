@@ -8,6 +8,7 @@ import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import io.horizen.utils
 import io.horizen.utils.Ed25519
+
 import java.math.BigInteger
 import java.util
 import java.util.Random

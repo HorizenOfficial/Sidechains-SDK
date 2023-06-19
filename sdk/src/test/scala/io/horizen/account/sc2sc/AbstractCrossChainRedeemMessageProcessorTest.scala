@@ -6,7 +6,6 @@ import io.horizen.account.state._
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.Test
@@ -171,9 +170,9 @@ class CrossChainRedeemMessageProcessorImpl(networkParams: NetworkParams, sc2scCi
   override protected def getAccountCrossChainRedeemMessageFromMessage(msg: Message): AccountCrossChainRedeemMessage = {
     val accountCrossChainMessage = AccountCrossChainMessage(
       messageType = 1,
-      sender = BytesUtils.fromHexString("d504dbfde192182c68d2bcec6e452049"),
+      sender = "d504dbfde192182c68d2bcec6e452049".getBytes,
       receiverSidechain = receiverSidechain,
-      receiver = BytesUtils.fromHexString("0303908acce9dd1078bdf16a87a9d9f8"),
+      receiver = "0303908acce9dd1078bdf16a87a9d9f8".getBytes,
       payload = "my payload".getBytes,
     )
     val certificateDataHash = BytesUtils.fromHexString("8b4a3cf70f33a2b9692d1bd5c612e2903297b35289e59c9be7afa0984befd230")

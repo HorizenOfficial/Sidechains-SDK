@@ -1,7 +1,7 @@
 package io.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import io.horizen.{SidechainTypes, _}
+import io.horizen._
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion

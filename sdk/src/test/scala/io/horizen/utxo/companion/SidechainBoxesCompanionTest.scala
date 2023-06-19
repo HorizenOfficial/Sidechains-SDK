@@ -2,7 +2,6 @@ package io.horizen.utxo.companion
 
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
-import io.horizen.customtypes._
 import io.horizen.utxo.box.BoxSerializer
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
@@ -12,7 +11,6 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-import scala.util.{Failure, Success}
 
 class SidechainBoxesCompanionTest
   extends JUnitSuite

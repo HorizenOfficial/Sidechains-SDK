@@ -8,19 +8,19 @@ import io.horizen.account.state.receipt.{EthereumConsensusDataReceipt, EthereumR
 import io.horizen.account.utils.Bloom
 import io.horizen.block._
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.TrieHasher
+import io.horizen.history.validation.InconsistentSidechainBlockDataException
+import io.horizen.json.Views
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.secret.PrivateKey25519
-import io.horizen.json.Views
 import io.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
-import io.horizen.history.validation.InconsistentSidechainBlockDataException
 import io.horizen.vrf.VrfOutput
 import io.horizen.{SidechainTypes, account}
-import io.horizen.evm.TrieHasher
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging
-import scala.collection.JavaConverters._
 
 import java.math.BigInteger
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))

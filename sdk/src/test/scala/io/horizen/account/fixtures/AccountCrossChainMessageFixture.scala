@@ -1,10 +1,11 @@
 package io.horizen.account.fixtures
 
 
-import scala.util.Random
 import com.google.common.primitives.Longs
 import io.horizen.account.sc2sc.AccountCrossChainMessage
 import io.horizen.fixtures.SecretFixture
+
+import scala.util.Random
 
 trait AccountCrossChainMessageFixture extends SecretFixture{
 
@@ -12,7 +13,7 @@ trait AccountCrossChainMessageFixture extends SecretFixture{
     val random: Random = new Random(seed)
     val receiverSidechain = new Array[Byte](32)
     random.nextBytes(receiverSidechain)
-    val receiverAddress = new Array[Byte](16)
+    val receiverAddress = new Array[Byte](20)
     random.nextBytes(receiverAddress)
     AccountCrossChainMessage(
       1,

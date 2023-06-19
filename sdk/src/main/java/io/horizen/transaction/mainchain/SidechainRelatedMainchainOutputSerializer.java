@@ -1,6 +1,5 @@
 package io.horizen.transaction.mainchain;
 
-import scala.util.Try;
 import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;

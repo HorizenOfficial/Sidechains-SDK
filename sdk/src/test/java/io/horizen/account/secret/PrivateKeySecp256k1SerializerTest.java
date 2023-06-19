@@ -4,7 +4,9 @@ import io.horizen.secret.SecretSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
+
 import java.nio.charset.StandardCharsets;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 

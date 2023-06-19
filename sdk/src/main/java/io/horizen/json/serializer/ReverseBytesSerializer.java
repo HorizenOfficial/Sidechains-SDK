@@ -12,6 +12,6 @@ import java.io.IOException;
 public class ReverseBytesSerializer extends JsonSerializer<byte[]> {
     @Override
     public void serialize(byte[] bytes, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-        jsonGenerator.writeString(BytesUtils.toHexString(BytesUtils.reverseBytes(bytes)));
+        jsonGenerator.writeString(BytesUtils.toHexString(BytesUtils.toMainchainFormat(bytes)));
     }
 }

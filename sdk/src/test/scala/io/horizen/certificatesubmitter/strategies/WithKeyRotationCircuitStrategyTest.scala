@@ -1,23 +1,24 @@
 package io.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
+import com.horizen.certnative.BackwardTransfer
+import com.horizen.librustsidechains.FieldElement
+import com.horizen.schnorrnative.SchnorrKeyPair
 import io.horizen._
 import io.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
-import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
+import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
-import io.horizen.certificatesubmitter.strategies.WithKeyRotationCircuitStrategyTest.{certifiersKeys, master, signing}
-import com.horizen.certnative.BackwardTransfer
+import io.horizen.certificatesubmitter.strategies.WithKeyRotationCircuitStrategyTest.{certifiersKeys, signing}
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo}
+import io.horizen.consensus.TimeProviderFixture
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
-import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
-import com.horizen.librustsidechains.FieldElement
+import io.horizen.fixtures.FieldElementFixture
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrKeyPair
-import io.horizen.consensus.TimeProviderFixture
-import io.horizen.fixtures.FieldElementFixture
+import io.horizen.sc2sc.CrossChainMessage
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.WithdrawalRequestBox
@@ -25,23 +26,19 @@ import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.wallet.SidechainWallet
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
+import org.junit.Assert.{assertArrayEquals, assertEquals}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.junit.JUnitSuite
+import org.scalatest.Assertions.{assertResult, fail}
 import org.scalatestplus.mockito.MockitoSugar
-import sparkz.util.ModifierId
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
+import sparkz.util.ModifierId
 
 import java.lang
 import java.nio.charset.StandardCharsets
 import java.util.Optional
-import io.horizen.sc2sc.CrossChainMessage
-import org.scalatest.Assertions.{assertResult, fail}
-import sparkz.core.utils.TimeProvider
-
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.duration._
@@ -159,7 +156,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
       ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-      ArgumentMatchers.any())) thenAnswer (answer => {
+      ArgumentMatchers.any(), ArgumentMatchers.any())) thenAnswer (answer => {
       assertResult(32)(answer.getArgument(1).asInstanceOf[Array[Byte]].length)
       assertResult(10)(answer.getArgument(2).asInstanceOf[Integer])
       assertResult(100L)(answer.getArgument(4).asInstanceOf[Long])
@@ -176,8 +173,8 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       assertResult(Optional.empty())(answer.getArgument(9).asInstanceOf[Optional[Integer]])
       assertResult(2)(answer.getArgument(10).asInstanceOf[Integer])
       assertResult(32)(answer.getArgument(11).asInstanceOf[Array[Byte]].length)
-      assertResult("filePath")(answer.getArgument(12).asInstanceOf[String])
-      assertResult(true)(answer.getArgument(13).asInstanceOf[Boolean])
+      assertResult("filePath")(answer.getArgument(13).asInstanceOf[String])
+      assertResult(true)(answer.getArgument(14).asInstanceOf[Boolean])
       new io.horizen.utils.Pair(key, 429L)
     })
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, timeProvider)
@@ -207,7 +204,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       assertEquals(32, args.getArgument(3).asInstanceOf[Array[Byte]].length)
       assertEquals(0L, args.getArgument(4).asInstanceOf[Long])
       assertEquals(54L, args.getArgument(5).asInstanceOf[Long])
-      assertArrayEquals(keysRootHash, args.getArgument(6).asInstanceOf[Array[Byte]])
+      assertEquals(java.util.List.of(keysRootHash, Array.emptyByteArray, Array.emptyByteArray), args.getArgument(6).asInstanceOf[java.util.List[Array[Byte]]])
       msg.clone()
     })
 

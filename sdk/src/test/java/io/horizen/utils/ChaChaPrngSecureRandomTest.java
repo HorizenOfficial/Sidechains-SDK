@@ -1,8 +1,11 @@
 package io.horizen.utils;
 
 import org.junit.Test;
+
 import java.security.SecureRandom;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ChaChaPrngSecureRandomTest {
     static int littleEndianToInt(byte[] data) {

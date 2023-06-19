@@ -1,36 +1,36 @@
 package io.horizen.api.http
 
-import java.time.Instant
-import java.util
-import java.util.{Optional, ArrayList => JArrayList, List => JList}
 import io.horizen.block.{MainchainBlockReference, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import io.horizen.chain._
 import io.horizen.consensus.ConsensusEpochInfo
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
-import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
+import io.horizen.fixtures._
 import io.horizen.params.MainNetParams
-import io.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import io.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
 import io.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
-import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.mockito.MockitoSugar
 import io.horizen.utxo.block.SidechainBlock
-import io.horizen.utxo.box.{Box, ZenBox}
 import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ZenBox}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import io.horizen.utxo.node._
 import io.horizen.utxo.state.{ApplicationState, SidechainState}
 import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWallet}
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
-import sparkz.core.NodeViewHolder.CurrentView
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.util
+import java.util.{Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}

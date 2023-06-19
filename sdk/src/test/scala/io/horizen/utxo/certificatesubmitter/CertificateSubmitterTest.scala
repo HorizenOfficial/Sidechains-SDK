@@ -28,8 +28,8 @@ import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.utxo.wallet.SidechainWallet
 import io.horizen.websocket.client._
 import org.junit.Assert._

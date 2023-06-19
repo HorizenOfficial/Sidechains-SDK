@@ -7,7 +7,6 @@ import io.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import io.horizen.certificatesubmitter.dataproof.CertificateData
 import io.horizen.certificatesubmitter.strategies._
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
-import io.horizen.fork.Sc2ScFork
 import io.horizen.params.NetworkParams
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo

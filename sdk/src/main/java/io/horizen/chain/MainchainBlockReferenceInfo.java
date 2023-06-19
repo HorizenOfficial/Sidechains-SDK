@@ -2,8 +2,8 @@ package io.horizen.chain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import io.horizen.params.CommonParams;
 import io.horizen.json.Views;
+import io.horizen.params.CommonParams;
 import sparkz.core.serialization.BytesSerializable;
 import sparkz.core.serialization.SparkzSerializer;
 

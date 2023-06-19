@@ -1,8 +1,8 @@
 package io.horizen.sc2sc;
 
+import sparkz.core.serialization.SparkzSerializer;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
-import sparkz.core.serialization.SparkzSerializer;
 
 public class CrossChainMessageSerializer<T extends CrossChainMessage> implements SparkzSerializer<T> {
 

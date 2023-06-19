@@ -3,8 +3,10 @@ package io.horizen.account.utils;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
+
 import java.math.BigInteger;
 import java.util.Optional;
+
 import static io.horizen.account.utils.Secp256k1.LOWER_REAL_V;
 
 public final class EthereumTransactionUtils {

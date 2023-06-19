@@ -36,7 +36,7 @@ import io.horizen.utxo.csw.CswManager.Responses._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
-import io.horizen.{ForgerSettings, GenesisDataSettings, LogInfoSettings, SidechainSettings, SidechainTypes, WithdrawalEpochCertificateSettings}
+import io.horizen._
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -47,9 +47,9 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.app.Version
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import sparkz.core.network.peer.PeerInfo
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, GetAllPeers, GetBlacklistedPeers, GetPeer, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.network._
+import sparkz.core.network.peer.PeerInfo
+import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.settings.{NetworkSettings, RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Blake2b256
