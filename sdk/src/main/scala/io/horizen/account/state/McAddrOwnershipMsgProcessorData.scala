@@ -2,12 +2,11 @@ package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
-import io.horizen.account.state.McAddrOwnershipData.decodeMcSignature
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.json.Views
 import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes24, Bytes32}
 import org.web3j.abi.datatypes.{DynamicStruct, StaticStruct, Type, Utf8String, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -27,13 +26,10 @@ case class AddNewOwnershipCmdInput(mcTransparentAddress: String, mcSignature: St
 
   override def asABIType(): DynamicStruct = {
 
-    val mcSignatureBytes = mcSignature.getBytes(StandardCharsets.UTF_8)
-
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new Utf8String(mcTransparentAddress),
-      new Bytes24(util.Arrays.copyOfRange(mcSignatureBytes, 0, 24)),
-      new Bytes32(util.Arrays.copyOfRange(mcSignatureBytes, 24, 56)),
-      new Bytes32(util.Arrays.copyOfRange(mcSignatureBytes, 56, BytesUtils.HORIZEN_MC_SIGNATURE_BASE_64_LENGTH)))
+      new Utf8String(mcSignature)
+    )
     new DynamicStruct(listOfParams)
 
   }
@@ -49,28 +45,25 @@ object AddNewOwnershipCmdInputDecoder
     with MsgProcessorInputDecoder[AddNewOwnershipCmdInput] {
 
   override def getABIDataParamsDynamicLengthInBytes: Int =
-    Type.MAX_BYTE_LENGTH + // offset of the dynamic utf8string (it is placed at the end of the struct)
-      3 * Type.MAX_BYTE_LENGTH + // three chiunks of 32 bytes for 88 bytes signature
-        Type.MAX_BYTE_LENGTH + // the 32 padded utf8String size
-          2 * Type.MAX_BYTE_LENGTH  // two chunks for the 35 bytes mc address string
+      2*Type.MAX_BYTE_LENGTH + // offsets of the 2 dynamic utf8strings
+      Type.MAX_BYTE_LENGTH + // the 32 padded utf8String size
+      2 * Type.MAX_BYTE_LENGTH +  // two chunks for the 35 bytes mc address string
+      Type.MAX_BYTE_LENGTH + // the 32 padded utf8String size
+      3 * Type.MAX_BYTE_LENGTH  // three chunks for the 88 bytes mc address string
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
       // mc transparent address
       new TypeReference[Utf8String]() {},
       // signature
-      new TypeReference[Bytes24]() {},
-      new TypeReference[Bytes32]() {},
-      new TypeReference[Bytes32]() {}))
+      new TypeReference[Utf8String]() {}
+    ))
   }
 
 
   override def createType(listOfParams: util.List[Type[_]]): AddNewOwnershipCmdInput = {
     val mcTransparentAddress = listOfParams.get(0).asInstanceOf[Utf8String].getValue
-    val mcSignature = decodeMcSignature(
-      listOfParams.get(1).asInstanceOf[Bytes24],
-      listOfParams.get(2).asInstanceOf[Bytes32],
-      listOfParams.get(3).asInstanceOf[Bytes32])
+    val mcSignature = listOfParams.get(1).asInstanceOf[Utf8String].getValue
 
     AddNewOwnershipCmdInput(mcTransparentAddress, mcSignature)
   }
@@ -163,6 +156,8 @@ object RemoveOwnershipCmdInputDecoder
 case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
   extends BytesSerializable  with ABIEncodable[DynamicStruct] {
 
+  require(scAddress.length == 2*AddressProposition.LENGTH,
+    s"Invalid sc address length: ${scAddress.length}")
   require(mcTransparentAddress.length == BytesUtils.HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH,
     s"Invalid mc address length: ${mcTransparentAddress.length}")
 
@@ -180,12 +175,6 @@ case class McAddrOwnershipData(scAddress: String, mcTransparentAddress: String)
       new Utf8String(mcTransparentAddress)
     )
     new DynamicStruct(listOfParams)
-  }
-}
-
-object McAddrOwnershipData {
-  def decodeMcSignature(first24Bytes: Bytes24, middle32Bytes: Bytes32, last32Bytes: Bytes32): String = {
-    new String(first24Bytes.getValue ++ middle32Bytes.getValue ++ last32Bytes.getValue, StandardCharsets.UTF_8)
   }
 }
 

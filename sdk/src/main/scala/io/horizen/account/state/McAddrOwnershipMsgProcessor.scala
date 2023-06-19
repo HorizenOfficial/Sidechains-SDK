@@ -317,8 +317,8 @@ object McAddrOwnershipMsgProcessor {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
 
-  val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(bytes3,bytes32,bytes24,bytes32,bytes32)")
-  val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(bytes3,bytes32)")
+  val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(string, string)")
+  val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(string)")
   val GetListOfAllOwnershipsCmd: String = getABIMethodId("getAllKeyOwnerships()")
   val GetListOfOwnershipsCmd: String = getABIMethodId("getKeyOwnerships(address)")
 
