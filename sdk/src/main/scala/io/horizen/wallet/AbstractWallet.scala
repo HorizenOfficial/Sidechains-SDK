@@ -123,7 +123,7 @@ abstract class AbstractWallet[
         secretStorage.storeSecretAndNonceAtomic(secret, nonce, salt) match {
           case Success(_) => return Success(this, secret)
           case Failure(exception) =>
-            throw new RuntimeException("Can't store secret and nonce while generating next secret " + exception)
+            throw new RuntimeException("Can't store secret and nonce while generating next secret " + exception, exception)
         }
       }
     }

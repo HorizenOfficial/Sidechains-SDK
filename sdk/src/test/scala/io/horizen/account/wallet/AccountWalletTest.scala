@@ -259,6 +259,6 @@ class AccountWalletTest
 
     Assert.assertEquals("Total number of secrets must be 9", 9, storageList.size)
     Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 3, schnorrNonce)
-    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 4, key25519Nonce)
+    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 4", 4, key25519Nonce)
   }
 }

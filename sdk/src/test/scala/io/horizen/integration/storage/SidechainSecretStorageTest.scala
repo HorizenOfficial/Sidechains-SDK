@@ -190,25 +190,6 @@ class SidechainSecretStorageTest
   }
 
   @Test
-  def testStoreNonce(): Unit = {
-    val mockedAdapter = mock[VersionedLevelDbStorageAdapter]
-    val sidechainSecretStorage = new SidechainSecretStorage(mockedAdapter, sidechainSecretsCompanion)
-    val salt = PrivateKey25519Creator.getInstance().salt()
-    val nonceKey: ByteArrayWrapper = sidechainSecretStorage.getNonceKey(salt)
-    val nonce = 5
-    val byteNonce = Ints.toByteArray(nonce)
-    Mockito.when(mockedAdapter.get(nonceKey)).thenReturn(Optional.of(new ByteArrayWrapper(byteNonce)))
-    Mockito.when(mockedAdapter.update(ArgumentMatchers.any[ByteArrayWrapper](),
-      ArgumentMatchers.anyList[Pair[ByteArrayWrapper, ByteArrayWrapper]](),
-      ArgumentMatchers.anyList[ByteArrayWrapper]()))
-      .thenAnswer(answer => {
-        val value = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-        Assert.assertEquals(nonce, Ints.fromByteArray(value.data()))
-      })
-    sidechainSecretStorage.storeNonce(nonce, salt)
-  }
-
-  @Test
   def testStoreSecretAndNonceAtomic(): Unit = {
     val pathToDB = tempFile()
     val storage = getStorage(pathToDB)
@@ -248,20 +229,36 @@ class SidechainSecretStorageTest
     assertTrue("Storage must contain nonce.", n2.isDefined)
     assertEquals("Nonce in storage must be the same as added.", nonce2, n2.get)
 
-    // Test 3: try to add same secret again
-    val result3 = sidechainSecretStorage.storeSecretAndNonceAtomic(customSecret, nonce2, salt2)
-    assertTrue(result3.isFailure)
+    // Test 3: test with same nonce, different salt and secret
+    val secretSchnorr = SchnorrKeyGenerator.getInstance().generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+    val saltSchnorr = SchnorrKeyGenerator.getInstance().salt()
 
-    // Test 4: try to add negative nonce
-    val result4 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, -3, salt)
+    val result3 = sidechainSecretStorage.storeSecretAndNonceAtomic(secretSchnorr, nonce2, saltSchnorr)
+
+    val s3 = sidechainSecretStorage.get(secretSchnorr.publicImage())
+    assertTrue(result3.isSuccess)
+    assertTrue("Storage must contain added Secret.", s3.isDefined)
+    assertEquals("Secret in storage must be the same as added.", secretSchnorr, s3.get)
+    assertEquals("Storage must contain 3 secrets.", 3, sidechainSecretStorage.getAll.size)
+
+    val n3 = sidechainSecretStorage.getNonce(saltSchnorr)
+    assertTrue("Storage must contain nonce.", n3.isDefined)
+    assertEquals("Nonce in storage must be the same as added.", nonce2, n3.get)
+
+    // Test 4: try to add same secret again
+    val result4 = sidechainSecretStorage.storeSecretAndNonceAtomic(customSecret, nonce2, salt2)
     assertTrue(result4.isFailure)
 
-    // Test 5: try to add null salt
-    val result5 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, nonce, null)
+    // Test 5: try to add negative nonce
+    val result5 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, -3, salt)
     assertTrue(result5.isFailure)
 
-    // Test 6: try to add null secret
-    val result6 = sidechainSecretStorage.storeSecretAndNonceAtomic(null, nonce, salt)
+    // Test 6: try to add null salt
+    val result6 = sidechainSecretStorage.storeSecretAndNonceAtomic(getPrivateKey25519, nonce, null)
     assertTrue(result6.isFailure)
+
+    // Test 7: try to add null secret
+    val result7 = sidechainSecretStorage.storeSecretAndNonceAtomic(null, nonce, salt)
+    assertTrue(result7.isFailure)
   }
 }
