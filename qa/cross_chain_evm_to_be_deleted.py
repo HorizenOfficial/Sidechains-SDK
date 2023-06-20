@@ -2,7 +2,6 @@ import logging
 import time
 from decimal import Decimal
 from eth_utils import remove_0x_prefix
-import os
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa
