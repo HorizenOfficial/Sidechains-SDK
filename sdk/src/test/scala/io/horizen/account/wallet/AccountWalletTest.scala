@@ -258,7 +258,7 @@ class AccountWalletTest
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
 
     Assert.assertEquals("Total number of secrets must be 9", 9, storageList.size)
-    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 3, schnorrNonce)
-    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 4", 4, key25519Nonce)
+    Assert.assertEquals("After generating schnorr secrets, schnorr nonce must be 3", 3, schnorrNonce)
+    Assert.assertEquals("After generating 25519 key secrets, 25519 key nonce must be 4", 4, key25519Nonce)
   }
 }
