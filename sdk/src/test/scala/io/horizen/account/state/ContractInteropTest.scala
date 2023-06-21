@@ -86,14 +86,16 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
       val traceResult = tracer.getResult.result
 //      println("traceResult" + traceResult.toPrettyString)
 
-      // TODO: native contracts don't trigger the tracer yet, some information is therefore expected to be missing here
       assertJsonEquals(
         s"""{
-          "type": "",
-          "from": "",
-          "gas": "",
-          "gasUsed": "",
-          "input": "",
+          "type": "CALL",
+          "from": "$origin",
+          "to": "${NativeTestContract.contractAddress}",
+          "gas": "0x186a0",
+          "gasUsed": "0xf6",
+          "input": "$contractAddress",
+          "value": "0x0",
+          "output": "0x400000000000000000000000000000000000000000000000000000000000002a",
           "calls": [{
             "type": "STATICCALL",
             "from": "${NativeTestContract.contractAddress}",
