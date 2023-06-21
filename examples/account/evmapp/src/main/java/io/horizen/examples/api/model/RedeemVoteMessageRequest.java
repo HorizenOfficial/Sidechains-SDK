@@ -5,7 +5,7 @@ public final class RedeemVoteMessageRequest {
     private String sender;
     private String receiverSidechain;
     private String receiver;
-    private int payload;
+    private String payloadHash;
     private String certificateDataHash;
     private String nextCertificateDataHash;
     private String scCommitmentTreeRoot;
@@ -32,8 +32,8 @@ public final class RedeemVoteMessageRequest {
         return receiver;
     }
 
-    public int getPayload() {
-        return payload;
+    public String getPayloadHash() {
+        return payloadHash;
     }
 
     public String getCertificateDataHash() {

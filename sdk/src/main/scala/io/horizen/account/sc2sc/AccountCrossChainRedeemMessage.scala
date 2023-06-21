@@ -4,6 +4,9 @@ import io.horizen.account.abi.ABIEncodable
 import io.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
 import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
+import io.horizen.sc2sc.CrossChainRedeemMessageSemanticValidator
+import org.web3j.abi.datatypes.generated.Bytes32
+import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -13,7 +16,7 @@ case class AccountCrossChainRedeemMessage
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
-  payload: Array[Byte],
+  payloadHash: Array[Byte],
   certificateDataHash: Array[Byte],
   nextCertificateDataHash: Array[Byte],
   scCommitmentTreeRoot: Array[Byte],
@@ -22,6 +25,7 @@ case class AccountCrossChainRedeemMessage
 ) extends BytesSerializable with ABIEncodable[DynamicStruct] {
   override type M = AccountCrossChainRedeemMessage
 
+  AccountCrossChainRedeemMessageSemanticValidator.ccMsgValidator.validateMessage(this)
   override def serializer: SparkzSerializer[AccountCrossChainRedeemMessage] = AccountCrossChainRedeemMessageSerializer
 
   override def asABIType(): DynamicStruct = {
@@ -30,7 +34,7 @@ case class AccountCrossChainRedeemMessage
       new Bytes20(sender),
       new Bytes32(receiverSidechain),
       new Bytes20(receiver),
-      new Bytes4(payload),
+      new Bytes32(payloadHash),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
@@ -38,8 +42,22 @@ case class AccountCrossChainRedeemMessage
       new Utf8String(BytesUtils.toHexString(proof)),
     )
   }
-}
 
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: AccountCrossChainRedeemMessage =>
+        messageType == that.messageType && sender.sameElements(that.sender) &&
+          receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
+          payloadHash.sameElements(that.payloadHash) && certificateDataHash.sameElements(that.certificateDataHash) &&
+          nextCertificateDataHash.sameElements(that.nextCertificateDataHash) && scCommitmentTreeRoot.sameElements(scCommitmentTreeRoot) &&
+          nextScCommitmentTreeRoot.sameElements(that.nextScCommitmentTreeRoot) && proof.sameElements(that.proof)
+
+      case _ => false
+    }
+  }
+}
 
 object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[AccountCrossChainRedeemMessage] {
   override def serialize(redeemMsg: AccountCrossChainRedeemMessage, w: Writer): Unit = {
@@ -47,7 +65,7 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
     writeBytes(w, redeemMsg.sender)
     writeBytes(w, redeemMsg.receiverSidechain)
     writeBytes(w, redeemMsg.receiver)
-    writeBytes(w, redeemMsg.payload)
+    writeBytes(w, redeemMsg.payloadHash)
     writeBytes(w, redeemMsg.certificateDataHash)
     writeBytes(w, redeemMsg.nextCertificateDataHash)
     writeBytes(w, redeemMsg.scCommitmentTreeRoot)
@@ -87,4 +105,8 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
     val valueByteArrayLength = reader.getUInt().toInt
     reader.getBytes(valueByteArrayLength)
   }
+}
+
+object AccountCrossChainRedeemMessageSemanticValidator {
+  val ccMsgValidator = new CrossChainRedeemMessageSemanticValidator()
 }

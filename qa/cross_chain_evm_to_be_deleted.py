@@ -67,7 +67,7 @@ class CrossChainEvmToBeDeleted(AccountChainSetup):
         sc_node.block_best()
 
         sc_id = self.sc_nodes_bootstrap_info.sidechain_id
-        tx_data = sendVoteMessage(sc_node, 1, hex_evm_addr, sc_id, hex_evm_addr, '8')
+        tx_data = sendVoteMessage(sc_node, 1, hex_evm_addr, sc_id, hex_evm_addr, 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130')
 
         createEIP1559Transaction(sc_node,
                                  fromAddress=hex_evm_addr.lower(),
@@ -99,14 +99,14 @@ class CrossChainEvmToBeDeleted(AccountChainSetup):
         time.sleep(30)
         
         redeem_message = \
-             createAccountRedeemMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',sc_id)["result"]["redeemMessage"]
+             createAccountRedeemMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130',sc_id)["result"]["redeemMessage"]
 
         cert_data_hash = redeem_message['certificateDataHash']
         next_cert_data_hash = redeem_message['nextCertificateDataHash']
         sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
         next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
         proof = redeem_message['proof']
-        redeem_tx_data = redeemVoteMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), '00000008',
+        redeem_tx_data = redeemVoteMessage(sc_node, 1, hex_evm_addr.lower(), sc_id, hex_evm_addr.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130',
                                             cert_data_hash, next_cert_data_hash, sc_commitment_tree,
                                             next_sc_commitment_tree, proof)
 

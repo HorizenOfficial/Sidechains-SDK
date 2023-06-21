@@ -14,7 +14,6 @@ import io.horizen.examples.messageprocessor.VoteMessageProcessor;
 import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
 import io.horizen.utils.BytesUtils;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,33 +28,29 @@ public class VoteController extends AccountApplicationApiGroup {
     public List<Route> getRoutes() {
         List<Route> routes = new ArrayList<>();
         routes.add(bindPostRequest("sendVoteMessage", this::sendVoteMessage, SendVoteMessageRequest.class));
-        routes.add(bindPostRequest("redeem", this::redeemVoteMessage, RedeemVoteMessageRequest.class));
+        routes.add(bindPostRequest("redeemVoteMessage", this::redeemVoteMessage, RedeemVoteMessageRequest.class));
         return routes;
     }
 
     private ApiResponse sendVoteMessage(AccountNodeView accountNodeView, SendVoteMessageRequest request) {
-        ByteBuffer bb = ByteBuffer.allocate(4);
-        bb.putInt(request.getPayload());
         AccountCrossChainMessage ccMsg = new AccountCrossChainMessage(
                 request.getMessageType(),
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                bb.array()
+                BytesUtils.fromHexString(request.getPayloadHash())
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteMessageProcessor.SEND_VOTE), ccMsg.encode());
         return new SuccessResponseTx(BytesUtils.toHexString(data));
     }
 
     private ApiResponse redeemVoteMessage(AccountNodeView accountNodeView, RedeemVoteMessageRequest request) {
-        ByteBuffer bb = ByteBuffer.allocate(4);
-        bb.putInt(request.getPayload());
         AccountCrossChainRedeemMessage redeemMsg = new AccountCrossChainRedeemMessage(
                 request.getMessageType(),
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                bb.array(),
+                BytesUtils.fromHexString(request.getPayloadHash()),
                 BytesUtils.fromHexString(request.getCertificateDataHash()),
                 BytesUtils.fromHexString(request.getNextCertificateDataHash()),
                 BytesUtils.fromHexString(request.getScCommitmentTreeRoot()),

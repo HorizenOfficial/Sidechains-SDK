@@ -1,6 +1,5 @@
 package io.horizen.examples.messageprocessor;
 
-import io.horizen.SidechainSettings;
 import io.horizen.account.sc2sc.AbstractCrossChainRedeemMessageProcessor;
 import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProvider;
@@ -15,8 +14,6 @@ import static io.horizen.account.abi.ABIUtil.*;
 
 public class VoteRedeemMessageProcessor extends AbstractCrossChainRedeemMessageProcessor {
     public final static String REDEEM_SEND_VOTE = getABIMethodId("redeemSendVote(uint32,bytes20,bytes20,bytes20,bytes1,bytes20,bytes20,bytes20,bytes20,bytes)");
-    private SidechainSettings sidechainSettings;
-    private Sc2scCircuit sc2scCircuit;
 
     public VoteRedeemMessageProcessor(byte[] scId, Option<String> path, Sc2scCircuit sc2scCircuit, ScTxCommitmentTreeRootHashMessageProvider scTxMsgProc) {
         super(scId, path, sc2scCircuit, scTxMsgProc);

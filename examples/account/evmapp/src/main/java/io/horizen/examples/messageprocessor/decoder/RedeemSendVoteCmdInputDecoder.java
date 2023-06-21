@@ -23,7 +23,7 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
                 new TypeReference<Bytes20>() {},
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes20>() {},
-                new TypeReference<Bytes4>() {},
+                new TypeReference<Bytes32>() {},
 
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes32>() {},
@@ -39,14 +39,14 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
         byte[] sender = ((Bytes20) listOfParams.get(1)).getValue();
         byte[] receiverSidechain = ((Bytes32) listOfParams.get(2)).getValue();
         byte[] receiver = ((Bytes20) listOfParams.get(3)).getValue();
-        byte[] payload = ((Bytes4) listOfParams.get(4)).getValue();
+        byte[] payload = ((Bytes32) listOfParams.get(4)).getValue();
 
         byte[] certificateDataHash = ((Bytes32) listOfParams.get(5)).getValue();
         byte[] nextCertificateDataHash = ((Bytes32) listOfParams.get(6)).getValue();
         byte[] scCommitmentTreeRoot = ((Bytes32) listOfParams.get(7)).getValue();
         byte[] nextScCommitmentTreeRoot = ((Bytes32) listOfParams.get(8)).getValue();
-        String proofAsBytes32 = ((Utf8String) listOfParams.get(9)).getValue();
-        byte[] proof = BytesUtils.fromHexString(proofAsBytes32);
+        String proofAsString = ((Utf8String) listOfParams.get(9)).getValue();
+        byte[] proof = BytesUtils.fromHexString(proofAsString);
 
         return new AccountCrossChainRedeemMessage(
                 messageType, sender, receiverSidechain, receiver, payload,

@@ -84,7 +84,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
       _ =>
         entity(as[ReqCreateAccountRedeemMessage]) { body =>
 
-          val crossChainMessage = AccountCrossChainMessage(
+          val accountCcMsg = AccountCrossChainMessage(
             body.message.messageType,
             BytesUtils.fromHexString(body.message.sender),
             BytesUtils.fromHexString(body.message.receiverSidechain),
@@ -92,8 +92,8 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
             BytesUtils.fromHexString(body.message.payload)
           )
 
-          val bla = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(crossChainMessage, BytesUtils.fromHexString(body.scId))
-          val future = sc2scProver ? BuildRedeemMessage(bla)
+          val crossChainMessage = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accountCcMsg, BytesUtils.fromHexString(body.scId))
+          val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
           Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
             case Success(ret) => {
               ApiResponseUtil.toResponse(RespCreateRedeemMessage(ret))

@@ -10,7 +10,6 @@ import sparkz.crypto.hash.Keccak256;
 import static io.horizen.account.abi.ABIUtil.*;
 
 public class VoteMessageProcessor extends AbstractCrossChainMessageProcessor {
-    public static final Address contractAddress = CustomWellknownAddress.VOTE_SMART_CONTRACT_ADDRESS;
     public final static String SEND_VOTE = getABIMethodId("sendVote(uint32,bytes20,bytes20,bytes20,bytes1)");
 
     public VoteMessageProcessor(byte[] sidechainId) {

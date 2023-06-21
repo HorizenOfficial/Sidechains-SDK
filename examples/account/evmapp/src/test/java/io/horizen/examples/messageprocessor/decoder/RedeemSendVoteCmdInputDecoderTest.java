@@ -8,12 +8,12 @@ import static org.junit.Assert.*;
 
 public class RedeemSendVoteCmdInputDecoderTest {
     @Test
-    public void encodingAndDecodingAnAccountCriossChainRedeemMessageProducesAnEqualMessage() {
+    public void encodingAndDecodingAnAccountCrossChainRedeemMessageProducesAnEqualMessage() {
         // Arrange
         int messageType = 1;
         byte[] sender = "d504dbfde192182c68d2".getBytes();
         byte[] receiver = "0303908afe9d1078bdf1".getBytes();
-        byte[] payload = "1234".getBytes();
+        byte[] payload = "ffafe9d10303908afe9d1078bdf1f123".getBytes();
         byte[] receiverSidechain = BytesUtils.fromHexString("237a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb6");
 
         byte[] certificateDataHash = BytesUtils.fromHexString("8b4a3cf70f33a2b9692d1bd5c612e2903297b35289e59c9be7afa0984befd230");
@@ -35,7 +35,7 @@ public class RedeemSendVoteCmdInputDecoderTest {
             assertEquals(accCcRedeemMsg.messageType(), decoded.messageType());
             assertArrayEquals(accCcRedeemMsg.sender(), decoded.sender());
             assertArrayEquals(accCcRedeemMsg.receiver(), decoded.receiver());
-            assertArrayEquals(accCcRedeemMsg.payload(), decoded.payload());
+            assertArrayEquals(accCcRedeemMsg.payloadHash(), decoded.payloadHash());
             assertArrayEquals(accCcRedeemMsg.receiverSidechain(), decoded.receiverSidechain());
             assertArrayEquals(accCcRedeemMsg.certificateDataHash(), decoded.certificateDataHash());
             assertArrayEquals(accCcRedeemMsg.nextCertificateDataHash(), decoded.nextCertificateDataHash());

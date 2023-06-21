@@ -14,23 +14,23 @@ import java.util.Objects;
 
 @JsonView(Views.Default.class)
 public final class CrossChainMessage implements BytesSerializable {
-    private final static CrossChainMessageValidator ccMsgValidator = new CrossChainMessageValidator();
+    private final static CrossChainMessageSemanticValidator ccMsgValidator = new CrossChainMessageSemanticValidator();
     private final CrossChainProtocolVersion version;
     private final int messageType;
     private final byte[] senderSidechain;
     private final byte[] sender;
     private final byte[] receiverSidechain;
     private final byte[] receiver;
-    private final byte[] payload;
+    private final byte[] payloadHash;
 
-    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
+    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payloadHash) {
         this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
         this.sender = sender;
         this.receiverSidechain = receiverSidechain;
         this.receiver = receiver;
-        this.payload = payload;
+        this.payloadHash = payloadHash;
 
         ccMsgValidator.validateMessage(this);
     }
@@ -59,8 +59,8 @@ public final class CrossChainMessage implements BytesSerializable {
         return receiver;
     }
 
-    public byte[] getPayload() {
-        return payload;
+    public byte[] getPayloadHash() {
+        return payloadHash;
     }
 
     @Override
@@ -100,7 +100,7 @@ public final class CrossChainMessage implements BytesSerializable {
         CrossChainMessage that = (CrossChainMessage) o;
         return messageType == that.messageType && version == that.version && Arrays.equals(senderSidechain, that.senderSidechain)
                 && Arrays.equals(sender, that.sender) && Arrays.equals(receiverSidechain, that.receiverSidechain)
-                && Arrays.equals(receiver, that.receiver) && Arrays.equals(payload, that.payload);
+                && Arrays.equals(receiver, that.receiver) && Arrays.equals(payloadHash, that.payloadHash);
     }
 
     @Override
@@ -110,7 +110,7 @@ public final class CrossChainMessage implements BytesSerializable {
         result = 31 * result + Arrays.hashCode(sender);
         result = 31 * result + Arrays.hashCode(receiverSidechain);
         result = 31 * result + Arrays.hashCode(receiver);
-        result = 31 * result + Arrays.hashCode(payload);
+        result = 31 * result + Arrays.hashCode(payloadHash);
         return result;
     }
 }

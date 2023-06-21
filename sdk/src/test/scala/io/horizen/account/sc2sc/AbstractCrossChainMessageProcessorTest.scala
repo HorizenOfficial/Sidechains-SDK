@@ -4,11 +4,13 @@ import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.{AccountStateView, ExecutionFailedException, MessageProcessorFixture}
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
+import io.horizen.params.MainNetParams
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertArrayEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
@@ -16,8 +18,7 @@ import java.math.BigInteger
 import java.util
 import scala.util.Random
 
-class AbstractCrossChainMessageProcessorTest extends JUnitSuite
-  with MockitoSugar
+class AbstractCrossChainMessageProcessorTest extends MockitoSugar
   with MessageProcessorFixture
   with StoreFixture
   with CrossChainMessageProcessorFixture {
@@ -40,7 +41,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
         assertArrayEquals("Different address expected.", CrossChainMessageProcessorTestImpl.contractAddress.toBytes, args.getArgument(0).asInstanceOf[Address].toBytes)
         assertArrayEquals("Different code expected.", CrossChainMessageProcessorTestImpl.contractCode, args.getArgument(1))
       })
-    getMessageProcessorTestImpl("MainNetParams()".getBytes).init(mockStateView)
+    getMessageProcessorTestImpl("scId".getBytes).init(mockStateView)
   }
 
   @Test
@@ -48,13 +49,13 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
     val msg = listOfCrosschainMessages(1)
     assertTrue(
       "Message listOfCrosschainMessages cannot be processed",
-      getMessageProcessorTestImpl("MainNetParams()".getBytes).canProcess(msg, mockStateView)
+      getMessageProcessorTestImpl("scId".getBytes).canProcess(msg, mockStateView)
     )
     val wrongAddress =  new Address("0x25fdd51e73221f467b40946c97791a3e19799beb")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for CrosschainMsgProcessor can be processed",
-      getMessageProcessorTestImpl("MainNetParams()".getBytes).canProcess(msgNotProcessable, mockStateView)
+      getMessageProcessorTestImpl("scId".getBytes).canProcess(msgNotProcessable, mockStateView)
     )
   }
 
@@ -65,7 +66,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
     val data = BytesUtils.fromHexString("99")
     val msgWithWrongFunctionCall = getMessage(CrossChainMessageProcessorTestImpl.contractAddress, value, data)
     assertThrows[ExecutionFailedException] {
-      withGas(getMessageProcessorTestImpl("MainNetParams()".getBytes).process(msgWithWrongFunctionCall, mockStateView, _, defaultBlockContext))
+      withGas(getMessageProcessorTestImpl("scId".getBytes).process(msgWithWrongFunctionCall, mockStateView, _, defaultBlockContext))
     }
   }
 
@@ -103,7 +104,7 @@ class AbstractCrossChainMessageProcessorTest extends JUnitSuite
         val sender = Array.fill(20)(Random.nextInt().toByte)
         val receiverSidechain = Array.fill(32)(Random.nextInt().toByte)
         val receiver = Array.fill(20)(Random.nextInt().toByte)
-        val payload = Array.fill(4)(Random.nextInt().toByte)
+        val payload = Array.fill(32)(Random.nextInt().toByte)
 
         val wr = AccountCrossChainMessage(
           1,

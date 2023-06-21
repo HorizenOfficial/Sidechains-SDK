@@ -127,7 +127,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     (0 until 3).foreach(index => {
       val wr: CrossChainMessage = res(index)
       assertEquals("wrong address", fakeMessages(index).getMessageType, wr.getMessageType)
-      assertEquals("wrong payload", fakeMessages(index).getPayload, wr.getPayload)
+      assertEquals("wrong payload", fakeMessages(index).getPayloadHash, wr.getPayloadHash)
     })
 
     val messageHash = res(1).getCrossChainMessageHash

@@ -34,7 +34,7 @@ public class CrossChainRedeemMessageBoxSerializerTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "0303908acce9dd1078bdf16a87a9d9f8".getBytes(StandardCharsets.UTF_8),
                 "182c68d2bcec6e452049".getBytes(StandardCharsets.UTF_8),
-                "payload".getBytes(StandardCharsets.UTF_8)
+                "bfde192182c68d2bced504dc6e452049".getBytes(StandardCharsets.UTF_8)
         );
         byte[] certificateDataHash = "certificateDataHash".getBytes(StandardCharsets.UTF_8);
         byte[] nextCertificateDataHash = "nextCertificateDataHash".getBytes(StandardCharsets.UTF_8);

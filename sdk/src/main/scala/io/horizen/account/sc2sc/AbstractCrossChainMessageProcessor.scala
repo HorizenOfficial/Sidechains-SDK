@@ -87,7 +87,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
     view.updateAccountStorageBytes(contractAddress, messageHash.getValue, Ints.toByteArray(currentEpochNum))
 
     val event = AddCrossChainMessage(
-      new Address(request.sender), request.messageType, request.receiverSidechain, request.receiver, request.payload
+      new Address(request.sender), request.messageType, request.receiverSidechain, request.receiver, request.payloadHash
     )
     val evmLog = getEthereumConsensusDataLog(event)
     view.addLog(evmLog)
@@ -143,7 +143,7 @@ object AbstractCrossChainMessageProcessor {
       data.sender,
       data.receiverSidechain,
       data.receiver,
-      data.payload
+      data.payloadHash
     )
   }
 }

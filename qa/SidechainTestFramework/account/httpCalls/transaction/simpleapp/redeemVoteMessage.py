@@ -9,7 +9,7 @@ def redeemVoteMessage(sidechain_node, message_type, sender, receiver_sidechain, 
         "sender": sender,
         "receiverSidechain": receiver_sidechain,
         "receiver": receiver,
-        "payload": payload,
+        "payloadHash": payload,
         "certificateDataHash": certificate_data_hash,
         "nextCertificateDataHash": next_certificate_data_hash,
         "scCommitmentTreeRoot": sc_commitment_tree_root,
@@ -17,5 +17,5 @@ def redeemVoteMessage(sidechain_node, message_type, sender, receiver_sidechain, 
         "proof": proof
     }
     request = json.dumps(j)
-    response = sidechain_node.vote_redeem(request)
+    response = sidechain_node.vote_redeemVoteMessage(request)
     return response['result']['transactionBytes']
