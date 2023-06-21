@@ -1,3 +1,6 @@
+**0.7.1**
+ Sparkz dependency updated from 2.0.0-RC9 to 2.0.2
+
 **0.7.0**
 1. Account model introduced. EvmApp application example added.
 2. Base package renamed from `com.horizen` to `io.horizen`
