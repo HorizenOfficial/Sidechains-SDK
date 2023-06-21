@@ -49,7 +49,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
-    MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors, timeProvider)
+    val consensusEpoch = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
+    MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors, consensusEpoch)
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {

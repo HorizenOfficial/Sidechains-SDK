@@ -48,6 +48,10 @@ object ForkManager {
     findActiveFork(forksOfTypeT, consensusEpoch)
   }
 
+  def findOptionalForkOfType[ForkType](): Boolean = {
+    optionalSidechainForks.exists {optFork => optFork._2.isInstanceOf[ForkType]}
+  }
+
   def init(forkConfigurator: ForkConfigurator, networkName: String): Unit = {
     if (initialized) throw new IllegalStateException("ForkManager is already initialized.")
 

@@ -155,12 +155,9 @@ trait Sc2ScUtils[
 }
 
 object Sc2ScUtils {
-  def isActive(networkParams: NetworkParams, sc2ScForkOption: Option[Sc2ScFork]): Boolean = {
+  def isActive(sc2ScForkOption: Option[Sc2ScFork]): Boolean = {
     sc2ScForkOption match {
-      case Some(sc2ScFork) =>
-        val keysFilesAreDefined = networkParams.sc2ScProvingKeyFilePath.nonEmpty || networkParams.sc2ScVerificationKeyFilePath.nonEmpty
-        val canEitherSendOrReceive = sc2ScFork.sc2ScCanSend || sc2ScFork.sc2ScCanReceive
-        keysFilesAreDefined && canEitherSendOrReceive
+      case Some(sc2ScFork) => sc2ScFork.sc2ScCanSend || sc2ScFork.sc2ScCanReceive
       case _ => false
     }
   }

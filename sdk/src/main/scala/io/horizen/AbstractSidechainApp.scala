@@ -134,27 +134,6 @@ abstract class AbstractSidechainApp
       s"Current value: $consensusSecondsInSlot")
   }
 
-  if (!isCSWEnabled) {
-    val epoch = TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time())
-    if (Sc2ScUtils.isActive(params, ForkManager.getOptionalSidechainFork[Sc2ScFork](epoch))) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("You must define a sc2sc proving key file path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("You must define a sc2sc verification key file path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
-  }
-
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -267,27 +246,6 @@ abstract class AbstractSidechainApp
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
-  if (!isCSWEnabled) {
-    val epoch = TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time())
-    if (Sc2ScUtils.isActive(params, ForkManager.getOptionalSidechainFork[Sc2ScFork](epoch))) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
-  }
-
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
@@ -314,6 +272,26 @@ abstract class AbstractSidechainApp
   // Init ForkManager
   // We need to have it initializes before the creation of the SidechainState
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
+
+  if (!isCSWEnabled) {
+    if (ForkManager.findOptionalForkOfType[Sc2ScFork]()) {
+      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
+      )
+      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
+      )
+      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
+      if (keyFilesDontExist) {
+        log.info("Generating Sc2Sc snark keys. It may take some time.")
+        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
+
+        if (!keysCreated) {
+          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
+        }
+      }
+    }
+  }
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

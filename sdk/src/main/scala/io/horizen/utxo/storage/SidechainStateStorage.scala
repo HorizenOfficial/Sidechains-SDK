@@ -505,7 +505,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
 
-    if (Sc2ScUtils.isActive(params, ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpoch))) {
+    if (Sc2ScUtils.isActive(ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpoch))) {
       if (crossChainMessagesToAppendSeq.nonEmpty) {
         // Calculate the next counter for storing crosschain messages requests without duplication previously stored ones.
         val nextCrossChainMessageEpochCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpochInfo.epoch) + 1

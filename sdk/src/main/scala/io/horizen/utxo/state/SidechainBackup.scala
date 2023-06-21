@@ -27,14 +27,11 @@ class SidechainBackup @Inject()
    @Named("BackupStorage") val backUpStorage: Storage,
    @Named("BackUpper") val backUpper : BoxBackupInterface,
    @Named("Params") val params : NetworkParams,
-   timeProvider: TimeProvider
+   sc2ScFork: Sc2ScFork
   ) extends SparkzLogging
   {
-    private val epoch = TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time())
-    private val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](epoch)
-    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers, Sc2ScUtils.isActive(params, sc2ScFork))
+    protected val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxSerializers, Sc2ScUtils.isActive(Some(sc2ScFork)))
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
-
 
     def createBackup(stateStoragePath: String, sidechainBlockIdToRollback: String, copyStateStorage: Boolean): Unit = {
       var storagePath = stateStoragePath
