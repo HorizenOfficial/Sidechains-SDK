@@ -5,9 +5,9 @@ import io.horizen.evm.EvmContext
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
-import java.time.Instant
 import scala.collection.mutable.ListBuffer
 import scala.jdk.OptionConverters.RichOptional
+import scala.util.{Failure, Success, Try}
 
 class StateTransition(
     view: StateDbAccountStateView,
@@ -19,6 +19,9 @@ class StateTransition(
 
   // the current stack of invocations
   private val invocationStack = new ListBuffer[Invocation]
+
+  // short hand to access the tracer
+  private val tracer = blockContext.getTracer.toScala
 
   // the current call depth, might be more than invocationStack.length of a message processor handled multiple levels,
   // e.g. multiple internal calls withing the EVM
@@ -45,9 +48,9 @@ class StateTransition(
     var skipRefund = false
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
+    // trace TX start
+    tracer.foreach(_.CaptureTxStart(gasPool.initialGas))
     try {
-      // trace TX start
-      blockContext.getTracer.toScala.foreach(_.CaptureTxStart(gasPool.initialGas))
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
@@ -73,7 +76,7 @@ class StateTransition(
     } finally {
       if (!skipRefund) refundGas(msg, gasPool)
       // trace TX end
-      blockContext.getTracer.toScala.foreach(_.CaptureTxEnd(gasPool.getGas))
+      tracer.foreach(_.CaptureTxEnd(gasPool.getGas))
     }
   }
 
@@ -182,9 +185,9 @@ class StateTransition(
   }
 
   private def invoke(processor: MessageProcessor, invocation: Invocation): Array[Byte] = {
-    val startTime = Instant.now()
+    val startTime = System.nanoTime()
     if (!processor.customTracing()) {
-      blockContext.getTracer.toScala.foreach(tracer => {
+      tracer.foreach(tracer => {
         if (depth == 0) {
           // trace start of top-level call frame
           val context = new EvmContext
@@ -219,52 +222,59 @@ class StateTransition(
         }
       })
     }
+
     // add new invocation to the stack
     invocationStack.prepend(invocation)
     // increase call depth
     depth += 1
     // create a snapshot before any changes are made by the processor
     val revert = view.snapshot
-    var output = Array.emptyByteArray
-    var error = ""
-    try {
-      // execute the message processor
-      output = processor.process(invocation, view, this)
-      output
-    } catch {
+    // execute the message processor
+    val result = Try.apply(processor.process(invocation, view, this))
+    // handle errors
+    result match {
       // if the processor throws ExecutionRevertedException we revert changes
-      case err: ExecutionRevertedException =>
+      case Failure(_: ExecutionRevertedException) =>
         view.revertToSnapshot(revert)
-        output = err.returnData
-        error = err.getMessage
-        throw err
       // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
-      case err: ExecutionFailedException =>
+      case Failure(_: ExecutionFailedException) =>
         view.revertToSnapshot(revert)
         invocation.gasPool.subGas(invocation.gasPool.getGas)
-        error = err.getMessage
-        throw err
-    } finally {
-      // reduce call depth
-      depth -= 1
-      // remove the current invocation from the stack
-      invocationStack.remove(0)
-      if (!processor.customTracing()) {
-        blockContext.getTracer.toScala.foreach(tracer => {
-          if (depth == 0) {
-            // trace end of top-level call frame
-            tracer.CaptureEnd(
-              output,
-              invocation.gasPool.getUsedGas,
-              java.time.Duration.between(startTime, Instant.now()).toNanos,
-              error
-            )
-          } else {
-            // trace end of nested call frame
-            tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)
-          }
-        })
-      }
+      // other errors will be handled further up the stack
+      case _ =>
     }
+    // reduce call depth
+    depth -= 1
+    // remove the current invocation from the stack
+    invocationStack.remove(0)
+
+    if (!processor.customTracing()) {
+      tracer.foreach(tracer => {
+        val output = result match {
+          // revert reason returned from message processor
+          case Failure(err: ExecutionRevertedException) => err.returnData
+          // successful result
+          case Success(value) => value
+          // other errors do not have a return value
+          case _ => Array.emptyByteArray
+        }
+        // get error message if any
+        val error = result match {
+          case Failure(exception) => exception.getMessage
+          case _ => ""
+        }
+        if (depth == 0) {
+          // trace end of top-level call frame
+          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, System.nanoTime() - startTime, error)
+        } else {
+          // trace end of nested call frame
+          tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)
+        }
+      })
+    }
+
+    // note: this will either return the output of the message processor
+    // or rethrow any exception caused during execution
+    result.get
   }
 }
