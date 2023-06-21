@@ -14,12 +14,14 @@ trait AccountCrossChainMessageFixture extends SecretFixture{
     random.nextBytes(receiverSidechain)
     val receiverAddress = new Array[Byte](20)
     random.nextBytes(receiverAddress)
+    val payloadHash = new Array[Byte](32)
+    random.nextBytes(payloadHash)
     AccountCrossChainMessage(
       1,
       getPrivateKey25519(Longs.toByteArray(random.nextLong())).publicImage().pubKeyBytes(),
       receiverSidechain,
       receiverAddress,
-      "my payload".getBytes
+      payloadHash
     )
   }
 }

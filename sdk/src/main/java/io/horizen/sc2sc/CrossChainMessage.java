@@ -11,23 +11,23 @@ import sparkz.core.serialization.BytesSerializable;
 
 @JsonView(Views.Default.class)
 public final class CrossChainMessage implements BytesSerializable {
-    private final static CrossChainMessageValidator ccMsgValidator = new CrossChainMessageValidator();
+    private final static CrossChainMessageSemanticValidator ccMsgValidator = new CrossChainMessageSemanticValidator();
     private final CrossChainProtocolVersion version;
     private final int messageType;
     private final byte[] senderSidechain;
     private final byte[] sender;
     private final byte[] receiverSidechain;
     private final byte[] receiver;
-    private final byte[] payload;
+    private final byte[] payloadHash;
 
-    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
+    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payloadHash) {
         this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
         this.sender = sender;
         this.receiverSidechain = receiverSidechain;
         this.receiver = receiver;
-        this.payload = payload;
+        this.payloadHash = payloadHash;
 
         ccMsgValidator.validateMessage(this);
     }
@@ -56,8 +56,8 @@ public final class CrossChainMessage implements BytesSerializable {
         return receiver;
     }
 
-    public byte[] getPayload() {
-        return payload;
+    public byte[] getPayloadHash() {
+        return payloadHash;
     }
 
     @Override

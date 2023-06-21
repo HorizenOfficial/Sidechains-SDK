@@ -19,6 +19,7 @@ import io.horizen.cryptolibprovider.utils.FieldElementUtils;
 import io.horizen.cryptolibprovider.utils.HashUtils;
 import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainMessage;
+import io.horizen.sc2sc.CrossChainMessageHash;
 import io.horizen.sc2sc.CrossChainProtocolVersion;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
@@ -202,7 +203,7 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "payloadHashpayloadHashpayloadHas".getBytes(StandardCharsets.UTF_8),
         );
 
         CrossChainMessageMerkleTree ccMsgMerkleTree = new CrossChainMessageMerkleTree();
