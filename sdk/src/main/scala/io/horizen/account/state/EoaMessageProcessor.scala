@@ -11,6 +11,8 @@ object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
     // No actions required for transferring coins during genesis state initialization.
   }
 
+  override def customTracing(): Boolean = false
+
   override def canProcess(invocation: Invocation, view: BaseAccountStateView): Boolean = {
     // Can process only EOA to EOA transfer, so when "to" is an EOA account:
     // There is no need to check "from" account because it can't be a smart contract one,

@@ -15,6 +15,12 @@ public class EvmMessageProcessor implements MessageProcessor {
     };
 
     @Override
+    public boolean customTracing() {
+        // the EVM handles all calls to the tracer, if there is one
+        return true;
+    }
+
+    @Override
     public void init(BaseAccountStateView view) {
         // nothing to do here
     }
@@ -57,7 +63,8 @@ public class EvmMessageProcessor implements MessageProcessor {
             evmContext.blockHashCallback = blockHashGetter;
             evmContext.externalContracts = nativeContractAddresses;
             evmContext.externalCallback = nativeContractProxy;
-            evmContext.tracer = block.getTracer();
+            evmContext.tracer = block.getTracer().orElse(null);
+            // TODO: off-by-one error? do we need to pass depth-1?
             evmContext.initialDepth = context.depth();
 
             // transform to libevm Invocation type
@@ -133,6 +140,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                         gasPool,
                         invocation.readOnly
                     ),
+                    // advance call depth by the call depth processed by the EVM
                     invocation.depth
                 );
                 return new InvocationResult(returnData, gasPool.getGas(), "", false, null);

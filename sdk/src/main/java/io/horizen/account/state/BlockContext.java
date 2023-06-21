@@ -6,6 +6,7 @@ import io.horizen.evm.Hash;
 import io.horizen.evm.Tracer;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 public class BlockContext {
     public final Address forgerAddress;
@@ -64,8 +65,8 @@ public class BlockContext {
         this.random = new Hash(blockHeader.vrfOutput().bytes());
     }
 
-    public Tracer getTracer() {
-        return this.tracer;
+    public Optional<Tracer> getTracer() {
+        return Optional.ofNullable(this.tracer);
     }
 
     public void setTracer(Tracer tracer) {

@@ -24,6 +24,8 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     }
   }
 
+  override def customTracing(): Boolean = false
+
   override def canProcess(invocation: Invocation, view: BaseAccountStateView): Boolean = {
     // we rely on the condition that init() has already been called at this point
     invocation.callee.exists(contractAddress.equals(_))

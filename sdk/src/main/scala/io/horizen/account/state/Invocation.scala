@@ -1,6 +1,6 @@
 package io.horizen.account.state
 
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, TracerOpCode}
 
 import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
@@ -48,6 +48,18 @@ case class Invocation(
   def staticCall(addr: Address, input: Array[Byte], gas: BigInteger): Invocation = {
     Invocation(callee.get, Some(addr), BigInteger.ZERO, input, new GasPool(gas), readOnly = true)
   }
+
+  def guessOpCode(): TracerOpCode = {
+    if (callee.isEmpty) {
+      TracerOpCode.CREATE
+    } else if (readOnly) {
+      TracerOpCode.STATICCALL
+    } else {
+      TracerOpCode.CREATE
+    }
+  }
+
+//  def traceTopLevel(tracer: Tracer): Unit = {}
 }
 
 object Invocation {

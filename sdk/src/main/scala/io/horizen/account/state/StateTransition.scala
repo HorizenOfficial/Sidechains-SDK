@@ -1,10 +1,13 @@
 package io.horizen.account.state
 
 import io.horizen.account.utils.BigIntegerUtil
+import io.horizen.evm.EvmContext
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
+import java.time.Instant
 import scala.collection.mutable.ListBuffer
+import scala.jdk.OptionConverters.RichOptional
 
 class StateTransition(
     view: StateDbAccountStateView,
@@ -43,7 +46,8 @@ class StateTransition(
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     try {
-      // TODO: trace TX start
+      // trace TX start
+      blockContext.getTracer.toScala.foreach(_.CaptureTxStart(gasPool.initialGas))
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
@@ -52,6 +56,7 @@ class StateTransition(
       view.setupAccessList(msg)
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
+      // execute top-level call frame
       execute(Invocation.fromMessage(msg, gasPool))
     } catch {
       // execution failed was already handled
@@ -67,7 +72,8 @@ class StateTransition(
         throw err
     } finally {
       if (!skipRefund) refundGas(msg, gasPool)
-      // TODO: trace TX end
+      // trace TX end
+      blockContext.getTracer.toScala.foreach(_.CaptureTxEnd(gasPool.getGas))
     }
   }
 
@@ -135,17 +141,21 @@ class StateTransition(
     blockGasPool.addGas(gas.getGas)
   }
 
+  /**
+   * Execute given invocation on the current call stack.
+   */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def execute(invocation: Invocation): Array[Byte] = {
     // limit call depth to 1024
     if (depth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
-    // increase call depth
-    depth += 1
+    // get caller gas pool, for the top-level call this is empty
+    // TODO: this will be wrong after a call to `callDepth()` because it does not add a new invocation to the stack
+    //  as gas can only ever decrease using a gaspool "too high" up the stack will only ever "too much" gas, i.e. this
+    //  will never throw a false out-of-gas error, but the gas limit is not correctly checked
+    val callerGas = invocationStack.headOption.map(_.gasPool)
     // allocate gas from caller to the nested invocation, this can throw if the caller does not have enough gas
-    invocationStack.headOption.foreach(_.gasPool.subGas(invocation.gasPool.getGas))
-    // add new invocation to the stack
-    invocationStack.prepend(invocation)
+    callerGas.foreach(_.subGas(invocation.gasPool.getGas))
     // enable write protection if it is not already on
     // every nested invocation after a read-only invocation must remain read-only
     val firstReadOnlyInvocation = invocation.readOnly && !view.readOnly
@@ -161,32 +171,100 @@ class StateTransition(
         case None =>
           log.error(s"No message processor found for invocation: $invocation")
           throw new IllegalArgumentException("Unable to execute invocation.")
-        case Some(processor) =>
-          // create a snapshot before any changes are made by the processor
-          val revert = view.snapshot
-          try {
-            processor.process(invocation, view, this)
-          } catch {
-            // if the processor throws ExecutionRevertedException we revert changes
-            case err: ExecutionRevertedException =>
-              view.revertToSnapshot(revert)
-              throw err
-            // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
-            case err: ExecutionFailedException =>
-              view.revertToSnapshot(revert)
-              invocation.gasPool.subGas(invocation.gasPool.getGas)
-              throw err
-          }
+        case Some(processor) => invoke(processor, invocation)
       }
     } finally {
       // disable write protection only if it was disabled before this invocation
       if (firstReadOnlyInvocation) view.disableWriteProtection()
-      // remove the current invocation from the stack
-      invocationStack.remove(0)
       // return remaining gas to the caller
-      invocationStack.headOption.foreach(_.gasPool.addGas(invocation.gasPool.getGas))
+      callerGas.foreach(_.addGas(invocation.gasPool.getGas))
+    }
+  }
+
+  private def invoke(processor: MessageProcessor, invocation: Invocation): Array[Byte] = {
+    val startTime = Instant.now()
+    if (!processor.customTracing()) {
+      blockContext.getTracer.toScala.foreach(tracer => {
+        if (depth == 0) {
+          // trace start of top-level call frame
+          val context = new EvmContext
+          context.chainID = BigInteger.valueOf(blockContext.chainID)
+          context.coinbase = blockContext.forgerAddress
+          context.gasLimit = blockContext.blockGasLimit
+          context.gasPrice = msg.getGasPrice
+          context.blockNumber = BigInteger.valueOf(blockContext.blockNumber)
+          context.time = BigInteger.valueOf(blockContext.timestamp)
+          context.baseFee = blockContext.baseFee
+          context.random = blockContext.random
+          tracer.CaptureStart(
+            view.getStateDbHandle,
+            context,
+            invocation.caller,
+            invocation.callee.orNull,
+            invocation.callee.isEmpty,
+            invocation.input,
+            invocation.gasPool.initialGas,
+            invocation.value
+          )
+        } else {
+          // trace start of nested call frame
+          tracer.CaptureEnter(
+            invocation.guessOpCode(),
+            invocation.caller,
+            invocation.callee.orNull,
+            invocation.input,
+            invocation.gasPool.initialGas,
+            invocation.value
+          )
+        }
+      })
+    }
+    // add new invocation to the stack
+    invocationStack.prepend(invocation)
+    // increase call depth
+    depth += 1
+    // create a snapshot before any changes are made by the processor
+    val revert = view.snapshot
+    var output = Array.emptyByteArray
+    var error = ""
+    try {
+      // execute the message processor
+      output = processor.process(invocation, view, this)
+      output
+    } catch {
+      // if the processor throws ExecutionRevertedException we revert changes
+      case err: ExecutionRevertedException =>
+        view.revertToSnapshot(revert)
+        output = err.returnData
+        error = err.getMessage
+        throw err
+      // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
+      case err: ExecutionFailedException =>
+        view.revertToSnapshot(revert)
+        invocation.gasPool.subGas(invocation.gasPool.getGas)
+        error = err.getMessage
+        throw err
+    } finally {
       // reduce call depth
       depth -= 1
+      // remove the current invocation from the stack
+      invocationStack.remove(0)
+      if (!processor.customTracing()) {
+        blockContext.getTracer.toScala.foreach(tracer => {
+          if (depth == 0) {
+            // trace end of top-level call frame
+            tracer.CaptureEnd(
+              output,
+              invocation.gasPool.getUsedGas,
+              java.time.Duration.between(startTime, Instant.now()).toNanos,
+              error
+            )
+          } else {
+            // trace end of nested call frame
+            tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)
+          }
+        })
+      }
     }
   }
 }

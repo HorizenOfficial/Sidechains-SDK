@@ -16,6 +16,9 @@ trait ExecutionContext {
    */
   var depth: Int
 
+  /**
+   * Manually advance call depth by given amount and continue execution with the given invocation.
+   */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def executeDepth(invocation: Invocation, additionalDepth: Int): Array[Byte] = {

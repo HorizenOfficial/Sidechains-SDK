@@ -16,6 +16,8 @@ public interface MessageProcessor {
     // Common pattern: declare a new native smart contract account in the View
     void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
 
+    boolean customTracing();
+
     // Checks if the processor can execute the given Invocation
     boolean canProcess(Invocation invocation, BaseAccountStateView view);
 
