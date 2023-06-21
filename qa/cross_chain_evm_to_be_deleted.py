@@ -35,6 +35,11 @@ class CrossChainEvmToBeDeleted(AccountChainSetup):
         tx_hash = sendTransaction(sc_node, payload=signed_raw_tx)
         return tx_hash
 
+    def sc_setup_chain(self):
+        # mandatory for this test
+        self.options.nonceasing = True
+        super().sc_setup_chain()
+
     def run_test(self):
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
