@@ -23,10 +23,10 @@ Test:
     - Forge SC block by the first SC node for the next consensus epoch.
     - Forge SC block by the second SC node for the next consensus epoch. (ForgerBoxes must become active for this epoch).
     - Disconnect SC nodes.
-    - Generate 2 MC blocks. First SC node should include 2 headers and 1 MC block reference. 
+    - Generate 2 MC blocks. First SC node should include 1 MC block reference. 
     - Synchronize SC nodes.
     - Disconnect SC nodes.
-    - Generate 2 MC blocks. Second SC node should include 2 headers and 3 MC block reference.
+    - Generate 2 MC blocks. Second SC node should include 3 MC headers and 3 MC block reference.
     - Synchronize SC nodes.
 """
 
@@ -157,14 +157,14 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         scblock_id1 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id0, scblock_id1, sc_node1)
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(2, scblock_id1, sc_node1)
+        check_mcheaders_amount(1, scblock_id1, sc_node1)
         check_mcreferencedata_amount(1, scblock_id1, sc_node1)
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node1)
         check_ommers_amount(0, scblock_id1, sc_node1)
 
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
-        check_mcheaders_amount(2, scblock_id1, sc_node2)
+        check_mcheaders_amount(1, scblock_id1, sc_node2)
         check_mcreferencedata_amount(1, scblock_id1, sc_node2)
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node2)
         check_ommers_amount(0, scblock_id1, sc_node2)
@@ -177,22 +177,22 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         scblock_id2 = generate_next_blocks(sc_node2, "second node", 1)[0]
         check_scparent(scblock_id1, scblock_id2, sc_node2)
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(2, scblock_id2, sc_node2)
+        check_mcheaders_amount(3, scblock_id2, sc_node2)
         check_mcreferencedata_amount(3, scblock_id2, sc_node2)
+        check_mcreference_presence(mcblock_hash2, scblock_id2, sc_node2)
         check_mcreference_presence(mcblock_hash3, scblock_id2, sc_node2)
         check_mcreference_presence(mcblock_hash4, scblock_id2, sc_node2)
-        check_mcreferencedata_presence(mcblock_hash2, scblock_id2, sc_node2)
         check_ommers_amount(0, scblock_id2, sc_node2)
 
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(2, scblock_id2, sc_node1)
+        check_mcheaders_amount(3, scblock_id2, sc_node1)
         check_mcreferencedata_amount(3, scblock_id2, sc_node1)
+        check_mcreference_presence(mcblock_hash2, scblock_id2, sc_node1)
         check_mcreference_presence(mcblock_hash3, scblock_id2, sc_node1)
         check_mcreference_presence(mcblock_hash4, scblock_id2, sc_node1)
-        check_mcreferencedata_presence(mcblock_hash2, scblock_id2, sc_node1)
         check_ommers_amount(0, scblock_id2, sc_node1)
 
 if __name__ == "__main__":

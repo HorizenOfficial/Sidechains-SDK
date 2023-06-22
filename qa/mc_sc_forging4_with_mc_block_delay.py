@@ -34,7 +34,8 @@ class MCSCForging4(SidechainTestFramework):
 
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
-    inclusion_per_block = 49 # This value depends on amount of block hashes Sidechain can retrieve from the Mainchain in one request
+    inclusion_per_block = 48 # This value depends on amount of block hashes Sidechain can retrieve from the Mainchain
+                             # in one request and MC Block Reference which reduces number of MC Headers to include
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -68,39 +69,36 @@ class MCSCForging4(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
 
-        # Generate MC block. Hash of this block will be included into SC block, but not reference.
-        # Without this MC block hash next SC block will include 49 hashes and 48 references,
-        # all other blocks will have 49 hashes and 48 references.
+        # Generate MC block. Hash of this block won't be included into first SC block(scblock_id0)
         mcblock_id0 = mc_node.generate(1)[0]
         # Generate SC block
         scblock_id0 = generate_next_blocks(sc_node, "first node", 1)[0]
-        check_mcheaders_amount(1, scblock_id0, sc_node)
-        check_mcheader_presence(mcblock_id0, scblock_id0, sc_node)
+        check_mcheaders_amount(0, scblock_id0, sc_node)
         check_mcreferencedata_amount(0, scblock_id0, sc_node)
 
 
         # Generate 200 MC blocks
         mcblock_hashes = mc_node.generate(200)
-        mcblock_references = [mcblock_id0] + mcblock_hashes[:199]
+        included_mcblock_hashes = [mcblock_id0] + mcblock_hashes[:199]
         # Generate 5 SC blocks
         scblock_ids = generate_next_blocks(sc_node, "first node", 5)
 
         # Verify that SC block contains newly created MC blocks as MainchainHeaders and MainchainReferenceData
-        # First 4 SC blocks. Every block contains 49 MainchainHeaders and 49 MainchainReferenceData
+        # First 4 SC blocks. Every block contains 48 MainchainHeaders and 48 MainchainReferenceData
         for i in range(4):
             check_mcheaders_amount(self.inclusion_per_block, scblock_ids[i], sc_node)
-            for mchash in mcblock_hashes[i * self.inclusion_per_block : (i + 1) * self.inclusion_per_block]:
+            for mchash in included_mcblock_hashes[i * self.inclusion_per_block : (i + 1) * self.inclusion_per_block]:
                  check_mcheader_presence(mchash, scblock_ids[i], sc_node)
             check_mcreferencedata_amount(self.inclusion_per_block, scblock_ids[i], sc_node)
-            for mchash in mcblock_references[i * self.inclusion_per_block : (i + 1) * self.inclusion_per_block]:
+            for mchash in included_mcblock_hashes[i * self.inclusion_per_block : (i + 1) * self.inclusion_per_block]:
                  check_mcreferencedata_presence(mchash, scblock_ids[i], sc_node)
 
-        # Fifth block. Contains 4 MainchainHeaders and 4 MainchainReferenceData
-        check_mcheaders_amount(4, scblock_ids[4], sc_node)
-        for mchash in mcblock_hashes[self.inclusion_per_block*4:200]:
+        # Fifth block. Contains 8 MainchainHeaders and 8 MainchainReferenceData
+        check_mcheaders_amount(8, scblock_ids[4], sc_node)
+        for mchash in included_mcblock_hashes[self.inclusion_per_block*4:200]:
             check_mcheader_presence(mchash, scblock_ids[4], sc_node)
-        check_mcreferencedata_amount(4, scblock_ids[4], sc_node)
-        for mchash in mcblock_references[self.inclusion_per_block*4:200]:
+        check_mcreferencedata_amount(8, scblock_ids[4], sc_node)
+        for mchash in included_mcblock_hashes[self.inclusion_per_block*4:200]:
             check_mcreferencedata_presence(mchash, scblock_ids[4], sc_node)
 
 

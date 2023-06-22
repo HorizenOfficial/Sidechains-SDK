@@ -112,9 +112,8 @@ class MCSCForging3(SidechainTestFramework):
         scblock_id1 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id0, scblock_id1, sc_node1)
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(2, scblock_id1, sc_node1)
+        check_mcheaders_amount(1, scblock_id1, sc_node1)
         check_mcheader_presence(mcblock_hash1, scblock_id1, sc_node1)
-        check_mcheader_presence(mcblock_hash2, scblock_id1, sc_node1)
         check_mcreferencedata_amount(1, scblock_id1, sc_node1)
         check_mcreferencedata_presence(mcblock_hash1, scblock_id1, sc_node1)
         check_ommers_amount(0, scblock_id1, sc_node1)
@@ -136,11 +135,10 @@ class MCSCForging3(SidechainTestFramework):
         scblock_id2 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id0, scblock_id2, sc_node1)
         # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
-        check_mcheaders_amount(3, scblock_id2, sc_node1)
+        check_mcheaders_amount(2, scblock_id2, sc_node1)
         check_mcreferencedata_amount(0, scblock_id2, sc_node1)
         check_mcheader_presence(fork_mcblock_hash1, scblock_id2, sc_node1)
         check_mcheader_presence(fork_mcblock_hash2, scblock_id2, sc_node1)
-        check_mcheader_presence(fork_mcblock_hash3, scblock_id2, sc_node1)
         # Verify that SC block contains 1 Ommer with 1 MainchainHeader
         check_ommers_amount(1, scblock_id2, sc_node1)
         check_ommers_cumulative_score(1, scblock_id2, sc_node1)
@@ -166,12 +164,11 @@ class MCSCForging3(SidechainTestFramework):
         scblock_id3 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id0, scblock_id3, sc_node1)
         # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
-        check_mcheaders_amount(4, scblock_id3, sc_node1)
+        check_mcheaders_amount(3, scblock_id3, sc_node1)
         check_mcreferencedata_amount(0, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash1, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash2, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash3, scblock_id3, sc_node1)
-        check_mcheader_presence(mcblock_hash4, scblock_id3, sc_node1)
         # Verify Ommers cumulative score, that must also count 1 subommer
         check_ommers_cumulative_score(2, scblock_id3, sc_node1)
         # Verify that SC block contains 1 Ommer with 2 MainchainHeader
