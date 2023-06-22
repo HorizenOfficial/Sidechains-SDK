@@ -147,11 +147,11 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Considering the delay last MC block reference of the previous epoch must appear in the Sidechain
         scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
-        check_mcheader_presence(we1_1_mcblock_hash, scblock_id2, sc_node)
         # Generate one more block to make MCblock appear in the Sidechain and start certificate submission
         mc_node.generate(1)[0]
         epoch_mc_blocks_left -= 1
         scblock_id3 = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcheader_presence(we1_1_mcblock_hash, scblock_id3, sc_node)
         check_mcreferencedata_presence(we1_1_mcblock_hash, scblock_id3, sc_node)
 
         # Wait until Certificate will appear in MC node mempool
@@ -195,11 +195,11 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node, "first node", 1)[0]
-        check_mcheader_presence(we1_3_mcblock_hash, scblock_id4, sc_node)
 
         we1_4_mcblock_hash = mc_node.generate(1)[0]
         epoch_mc_blocks_left -= 1
         scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcheader_presence(we1_3_mcblock_hash, scblock_id5, sc_node)
         check_mcreferencedata_presence(we1_3_mcblock_hash, scblock_id5, sc_node)
 
         # Check that certificate generation skipped because chain have certificate with same quality
@@ -274,11 +274,11 @@ class SCBackwardTransfer(SidechainTestFramework):
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
         # Considering the delay last MC block reference of the previous epoch must appear in the Sidechain
         we2_1_scblock_id = generate_next_block(sc_node, "first node")
-        check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
-        check_mcheader_presence(we2_1_mcblock_hash, we2_1_scblock_id, sc_node)
+        check_mcreferencedata_presence(we1_end_mcblock_hash, we2_1_scblock_id, sc_node)
         mc_node.generate(1)[0]
         epoch_mc_blocks_left -= 1
         we2_2_scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcheader_presence(we2_1_mcblock_hash, we2_2_scblock_id, sc_node)
         check_mcreferencedata_presence(we2_1_mcblock_hash, we2_2_scblock_id, sc_node)
 
         # Wait until Certificate will appear in MC node mempool
@@ -331,7 +331,6 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Generate SC block and verify that certificate is synced back
         scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
-        check_mcheader_presence(we2_3_mcblock_hash, scblock_id5, sc_node)
 
         # Check that certificate generation skipped because chain have certificate with same quality
         time.sleep(2)
@@ -340,6 +339,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         mc_node.generate(1)[0]
         scblock_id6 = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcheader_presence(we2_3_mcblock_hash, scblock_id6, sc_node)
         check_mcreferencedata_presence(we2_3_mcblock_hash, scblock_id6, sc_node)
 
         # Verify Certificate for epoch 1 on SC side
