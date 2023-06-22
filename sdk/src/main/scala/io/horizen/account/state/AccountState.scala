@@ -34,7 +34,6 @@ import scala.util.{Failure, Success, Try}
 
 class AccountState(
                     val params: NetworkParams,
-                    timeProvider: NetworkTimeProvider,
                     blockHashProvider: HistoryBlockHashProvider,
                     override val version: VersionTag,
                     stateMetadataStorage: AccountStateMetadataStorage,
@@ -233,7 +232,6 @@ class AccountState(
 
       new AccountState(
         params,
-        timeProvider,
         blockHashProvider,
         idToVersion(mod.id),
         stateMetadataStorage,
@@ -336,7 +334,7 @@ class AccountState(
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-    new AccountState(params, timeProvider, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
+    new AccountState(params, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
   } recoverWith { case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -570,7 +568,6 @@ object AccountState extends SparkzLogging {
                                      stateDbStorage: Database,
                                      messageProcessors: Seq[MessageProcessor],
                                      params: NetworkParams,
-                                     timeProvider: NetworkTimeProvider,
                                      blockHashProvider: HistoryBlockHashProvider
                                    ): Option[AccountState] = {
 
@@ -580,7 +577,6 @@ object AccountState extends SparkzLogging {
       Some(
         new AccountState(
           params,
-          timeProvider,
           blockHashProvider,
           bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
           stateMetadataStorage,
@@ -596,7 +592,6 @@ object AccountState extends SparkzLogging {
                                            stateDbStorage: Database,
                                            messageProcessors: Seq[MessageProcessor],
                                            params: NetworkParams,
-                                           timeProvider: NetworkTimeProvider,
                                            blockHashProvider: HistoryBlockHashProvider,
                                            genesisBlock: AccountBlock
                                          ): Try[AccountState] = Try {
@@ -605,7 +600,6 @@ object AccountState extends SparkzLogging {
 
     new AccountState(
       params,
-      timeProvider,
       blockHashProvider,
       idToVersion(genesisBlock.parentId),
       stateMetadataStorage,

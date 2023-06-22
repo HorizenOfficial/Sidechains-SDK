@@ -980,7 +980,6 @@ class AccountSidechainNodeViewHolderPerfTest
 
     state = new AccountState(
       params,
-      timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       stateMetadataStorage,

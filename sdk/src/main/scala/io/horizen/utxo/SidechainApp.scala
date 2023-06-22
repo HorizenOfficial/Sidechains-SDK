@@ -9,7 +9,7 @@ import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
-import io.horizen.fork.{ForkConfigurator, Sc2ScFork}
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper._
 import io.horizen.params._
 import io.horizen.sc2sc.Sc2ScProverRef
@@ -95,8 +95,8 @@ class SidechainApp @Inject()
   override val swaggerConfig: String = Source.fromResource("utxo/api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
-  private lazy val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time()))
-  protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxSerializers, sc2ScFork.sc2ScCanSend)
+  private lazy val isSc2ScConfigured: Boolean = ForkManager.hasOptionalForkOfType[Sc2ScFork]()
+  protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxSerializers, isSc2ScConfigured)
 
   // Deserialize genesis block bytes
   override lazy val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -210,7 +210,7 @@ class SidechainApp @Inject()
 
   // Init Certificate Submitter
   // Depends on params.isNonCeasing submitter will choose a proper strategy.
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, timeProvider, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, sidechainStateStorage, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
@@ -222,7 +222,7 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef, sidechainSettings.websocketServer.wsServerPort)
   }
 
-  var sc2scProverRef: Option[ActorRef] = if (sc2ScFork.sc2ScCanSend) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
+  var sc2scProverRef: Option[ActorRef] = if (isSc2ScConfigured) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
@@ -240,7 +240,7 @@ class SidechainApp @Inject()
       SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
     )
 
-    if (sc2ScFork.sc2ScCanSend) {
+    if (isSc2ScConfigured) {
       routes = routes :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
     }
 

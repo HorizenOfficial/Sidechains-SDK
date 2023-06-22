@@ -11,14 +11,15 @@ import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CrossChainMessageBox
 import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.storage.SidechainStateStorage
 import sparkz.core.utils.TimeProvider
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
+                                  scStateStorage: SidechainStateStorage,
                                   scState: SidechainState,
-                                  networkParams: NetworkParams,
-                                  timeProvider: TimeProvider
+                                  networkParams: NetworkParams
                                 ) extends CrossChainValidator[SidechainBlock] {
   override def validate(scBlock: SidechainBlock): Unit = {
     validateNoMoreThanOneMessagePerBlock(scBlock)
@@ -29,7 +30,7 @@ class CrossChainMessageValidator(
   private def validateNoMoreThanOneMessagePerBlock(scBlock: SidechainBlock): Unit = {
     val allCrossMessagesBox = scBlock.transactions.flatMap(tx => tx.newBoxes().asScala.filter(box => box.isInstanceOf[CrossChainMessageBox]))
     if (allCrossMessagesBox.nonEmpty) {
-      val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(networkParams, timeProvider.time()))
+      val sc2ScFork = Sc2ScFork.get(scStateStorage.getConsensusEpochNumber.getOrElse(0))
 
       if (!sc2ScFork.sc2ScCanSend) {
         throw new IllegalArgumentException("CrossChainMessages not allowed in this sidechain")
@@ -63,7 +64,7 @@ class CrossChainMessageValidator(
     // Do we really need this check since we're filtering the boxes instances of CrossChainMessageBox??
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
       val ccBoxes = tx.newBoxes().asScala.filter(box => box.isInstanceOf[CrossChainMessageBox])
-      val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(networkParams, timeProvider.time()))
+      val sc2ScFork = Sc2ScFork.get(scStateStorage.getConsensusEpochNumber.getOrElse(0))
 
       if (!sc2ScFork.sc2ScCanSend && ccBoxes.nonEmpty) {
         throw new Exception(s"CrossChainMessages not allowed in this sidechain")

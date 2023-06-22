@@ -179,7 +179,6 @@ class AccountSidechainNodeViewHolderEventTest
     Mockito.when(params.sc2ScVerificationKeyFilePath).thenReturn(None)
 
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
-    when(timeProvider.time()).thenReturn(System.currentTimeMillis())
     when(params.consensusSlotsInEpoch).thenReturn(10)
     when(params.consensusSecondsInSlot).thenReturn(5)
 
@@ -197,7 +196,6 @@ class AccountSidechainNodeViewHolderEventTest
 
     state = new AccountState(
       params,
-      timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       stateMetadataStorage,

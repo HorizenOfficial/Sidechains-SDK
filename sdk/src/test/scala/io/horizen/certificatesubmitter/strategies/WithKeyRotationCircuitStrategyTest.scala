@@ -81,7 +81,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
     )
 
     val mockedCryptolibCircuit = mock[ThresholdSignatureCircuitWithKeyRotation]
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, timeProvider)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, 0)
     val certificateDataWithKeyRotation: CertificateDataWithKeyRotation =
       keyRotationStrategy.buildCertificateData(sidechainNodeView().history, sidechainNodeView().state, signaturesStatus)
 
@@ -177,7 +177,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       assertResult(true)(answer.getArgument(14).asInstanceOf[Boolean])
       new io.horizen.utils.Pair(key, 429L)
     })
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, timeProvider)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, 0)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 429L)
     info.foreach(element => {
@@ -208,7 +208,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       msg.clone()
     })
 
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, timeProvider)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit, 0)
     keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithKeyRotationCircuitStrategyTest.epochNumber) match {
       case Success((resMsg: Array[Byte], resPubKeys: Seq[SchnorrProposition])) =>
         assertArrayEquals("Invalid message to sign.", msg, resMsg)

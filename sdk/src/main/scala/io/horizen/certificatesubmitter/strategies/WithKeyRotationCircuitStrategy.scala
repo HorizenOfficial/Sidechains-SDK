@@ -7,6 +7,7 @@ import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, Withdrawa
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
+import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import io.horizen.fork.Sc2ScFork
 import io.horizen.history.AbstractHistory
@@ -15,6 +16,7 @@ import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.{Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
 import io.horizen.utils.TimeToEpochUtils
+import io.horizen.utxo.storage.SidechainStateStorage
 import sparkz.core.utils.TimeProvider
 
 import java.util.Optional
@@ -30,9 +32,9 @@ class WithKeyRotationCircuitStrategy[
   MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
                                       params: NetworkParams,
                                       circuit: ThresholdSignatureCircuitWithKeyRotation,
-                                      timeProvider: TimeProvider)
+                                      consensusEpochNumber: Int)
   extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) with Sc2ScUtils[TX, H, PM, MS, HIS] {
-  val sc2ScFork: Sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time()))
+  val sc2ScFork: Sc2ScFork = Sc2ScFork.get(consensusEpochNumber)
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
     val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =

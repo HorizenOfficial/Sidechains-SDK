@@ -48,7 +48,7 @@ object ForkManager {
     findActiveFork(forksOfTypeT, consensusEpoch)
   }
 
-  def findOptionalForkOfType[ForkType](): Boolean = {
+  def hasOptionalForkOfType[ForkType](): Boolean = {
     optionalSidechainForks.exists {optFork => optFork._2.isInstanceOf[ForkType]}
   }
 

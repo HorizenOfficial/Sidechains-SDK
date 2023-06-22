@@ -274,12 +274,12 @@ abstract class AbstractSidechainApp
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
   if (!isCSWEnabled) {
-    if (ForkManager.findOptionalForkOfType[Sc2ScFork]()) {
+    if (ForkManager.hasOptionalForkOfType[Sc2ScFork]()) {
       val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc proving key path")
       )
       val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc verification key path")
       )
       val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
       if (keyFilesDontExist) {

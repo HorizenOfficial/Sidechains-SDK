@@ -38,11 +38,9 @@ class AccountStateTest
 
     val stateDbStorege: Database = mock[Database]
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
-    val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     state = new AccountState(
       params,
-      mockedTimeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       metadataStorage,

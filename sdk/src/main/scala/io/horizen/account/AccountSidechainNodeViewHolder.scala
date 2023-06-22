@@ -127,7 +127,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val restoredData = for {
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(),
         () => minimalState(),
@@ -141,7 +141,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider, genesisBlock)
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))

@@ -60,7 +60,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
-    new CrossChainMessageValidator(this, params, timeProvider),
+    new CrossChainMessageValidator(stateStorage, this, params),
     new CrossChainRedeemMessageValidator(stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
@@ -108,13 +108,13 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   }
 
   override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
-    val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time()))
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
 
     if (sc2ScFork.sc2ScCanSend) stateStorage.getCrossChainMessagesPerEpoch(withdrawalEpoch) else Seq()
   }
 
   override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] = {
-    val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time()))
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
 
     if (sc2ScFork.sc2ScCanSend) stateStorage.getCrossChainMessageHashEpoch(messageHash) else None
   }
@@ -370,7 +370,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     }
 
     //sc2sc validation
-    val sc2ScFork = Sc2ScFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timeProvider.time()))
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
 
     if (sc2ScFork.sc2ScCanSend) {
       validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
