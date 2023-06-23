@@ -14,10 +14,10 @@ package io.horizen.account.state;
 public interface MessageProcessor {
     // Initialization is going to happen only once at genesis State creation.
     // Common pattern: declare a new native smart contract account in the View
-    void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
+    void init(AccountStateView view) throws MessageProcessorInitializationException;
 
     // Checks if the processor is applicable to the Message
-    boolean canProcess(Message msg, BaseAccountStateView view);
+    boolean canProcess(Message msg, AccountStateView view);
 
     /**
      * Apply message to the given view. Possible results:
@@ -36,6 +36,6 @@ public interface MessageProcessor {
      * @throws ExecutionFailedException revert-and-consume-all-gas, also mark the message as "failed"
      * @throws RuntimeException any other exceptions are consideres as "invalid message"
      */
-    byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
+    byte[] process(Message msg, AccountStateView view, GasPool gas, BlockContext blockContext)
             throws ExecutionFailedException;
 }

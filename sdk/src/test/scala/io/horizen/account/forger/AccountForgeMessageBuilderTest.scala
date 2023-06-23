@@ -398,7 +398,7 @@ class AccountForgeMessageBuilderTest
       .when(
         mockMsgProcessor.canProcess(
           ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[BaseAccountStateView]
+          ArgumentMatchers.any[AccountStateView]
         )
       )
       .thenReturn(true)
@@ -406,7 +406,7 @@ class AccountForgeMessageBuilderTest
       .when(
         mockMsgProcessor.process(
           ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[BaseAccountStateView],
+          ArgumentMatchers.any[AccountStateView],
           ArgumentMatchers.any[GasPool],
           ArgumentMatchers.any[BlockContext]
         )

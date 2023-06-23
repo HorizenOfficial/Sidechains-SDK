@@ -11,8 +11,9 @@ from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership impor
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
-from SidechainTestFramework.scutil import generate_next_block
+from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
                                  forward_transfer_to_sidechain)
 
@@ -122,10 +123,12 @@ def check_get_key_ownership(abiReturnValue, exp_dict):
     assert_equal(res, json.dumps(dict(sorted(exp_dict.items()))))
 
 
+ZENDAO_FORK_EPOCH = 7
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=2)
+        super().__init__(number_of_sidechain_nodes=2,
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME  * ZENDAO_FORK_EPOCH)
 
     def run_test(self):
         ft_amount_in_zen = Decimal('500.0')
@@ -162,7 +165,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature1)
 
-
         # add sc/mc ownership sending a transaction with data invoking native smart contract
         ret = sendKeysOwnership(sc_node, nonce=0,
                                  sc_address=sc_address,
@@ -170,6 +172,22 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
                                  mc_signature=mc_signature1)
 
         tx_hash = ret['transactionId']
+        self.sc_sync_all()
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # get mempool contents and check tx has not been forged since the fork is not active yet
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash in response['transactionIds'])
+
+        # reach the fork
+        bestEpoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
+
+        for i in range(0, ZENDAO_FORK_EPOCH - bestEpoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr1)
 
 

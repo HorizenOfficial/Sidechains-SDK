@@ -2,6 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
@@ -38,11 +39,29 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   override val contractAddress: Address = MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("McAddrOwnershipSmartContractCode")
 
-  // ecdsa curve y^2 mod p = (x^3 + 7) mod p
-  val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
+  private def isForkActive(view: AccountStateView) :  Boolean = {
+    val epochNumber = view.getConsensusEpochNumberAsInt
+    val forkIsActive = ZenDAOFork.get(epochNumber).active
+    val strVal = if (forkIsActive) {"YES"} else {"NO"}
+    log.info(s"Epoch $epochNumber: ZenDAO fork active=$strVal")
+    forkIsActive
+  }
 
-  override def init(view: BaseAccountStateView): Unit = {
+  private def initDone(view: BaseAccountStateView) : Boolean = {
+    view.accountExists(contractAddress)
+  }
+
+  override def init(view: AccountStateView): Unit = {
+    if (!isForkActive(view)) {
+      log.warn(s"Can not perform ${getClass.getName} initialization, fork is not active")
+      return
+    }
+    else
+      if (initDone(view))
+        throw new MessageProcessorInitializationException("McAddrOwnership msg processor already initialized")
+
     super.init(view)
+
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
@@ -54,6 +73,17 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       throw new MessageProcessorInitializationException("initial tip already set")
 
     view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
+  }
+
+  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
+    if (isForkActive(view)) {
+      if (!initDone(view))
+        init(view)
+      super.canProcess(msg, view)
+    } else {
+      log.warn(s"Can not process message with opcode ${getFunctionSignature(msg.getData)} in ${getClass.getName}, fork is not active")
+      false
+    }
   }
 
   private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
@@ -261,6 +291,9 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView, scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = {
     var ownershipsList = Seq[McAddrOwnershipData]()
+    if (!initDone(view))
+      return ownershipsList
+
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
@@ -279,6 +312,9 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   override def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean = {
+    if (!initDone(view))
+      return false
+
     // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
     val data = view.getAccountStorage(contractAddress, ownershipId)
     // getting a not existing key from state DB using RAW strategy
@@ -298,7 +334,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+  override def process(msg: Message, view: AccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(msg, gasView)
@@ -321,6 +357,9 @@ object McAddrOwnershipMsgProcessor {
   val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(bytes3,bytes32)")
   val GetListOfAllOwnershipsCmd: String = getABIMethodId("getAllKeyOwnerships()")
   val GetListOfOwnershipsCmd: String = getABIMethodId("getKeyOwnerships(address)")
+
+  // ecdsa curve y^2 mod p = (x^3 + 7) mod p
+  val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
 
   // ensure we have strings consistent with size of opcode
   require(

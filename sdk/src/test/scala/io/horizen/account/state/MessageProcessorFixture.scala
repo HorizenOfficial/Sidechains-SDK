@@ -3,9 +3,11 @@ package io.horizen.account.state
 import io.horizen.account.AccountFixture
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorageView
+import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.{Address, Hash, MemoryDatabase, StateDB}
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
+import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}

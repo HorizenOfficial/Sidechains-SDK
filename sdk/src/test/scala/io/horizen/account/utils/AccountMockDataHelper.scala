@@ -437,10 +437,10 @@ case class AccountMockDataHelper(genesis: Boolean)
   private def setupMockMessageProcessor = {
     val mockMsgProcessor = mock[MessageProcessor]
     Mockito
-      .when(mockMsgProcessor.canProcess(any[Message], any[BaseAccountStateView]))
+      .when(mockMsgProcessor.canProcess(any[Message], any[AccountStateView]))
       .thenReturn(true)
     Mockito
-      .when(mockMsgProcessor.process(any[Message], any[BaseAccountStateView], any[GasPool], any[BlockContext]))
+      .when(mockMsgProcessor.process(any[Message], any[AccountStateView], any[GasPool], any[BlockContext]))
       .thenReturn(Array.empty[Byte])
     mockMsgProcessor
   }

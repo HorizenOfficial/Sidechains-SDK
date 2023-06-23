@@ -15,7 +15,7 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
   lazy val contractCodeHash: Array[Byte] = Keccak256.hash(contractCode)
 
   @throws[MessageProcessorInitializationException]
-  override def init(view: BaseAccountStateView): Unit = {
+  override def init(view: AccountStateView): Unit = {
     if (!view.accountExists(contractAddress)) {
       view.addAccount(contractAddress, contractCode)
       log.debug(s"created Message Processor account $contractAddress")
@@ -26,7 +26,7 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     }
   }
 
-  override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
+  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
     // we rely on the condition that init() has already been called at this point
     msg.getTo.asScala.exists(contractAddress.equals(_))
   }

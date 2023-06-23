@@ -6,7 +6,7 @@ import sparkz.util.SparkzLogging
 import java.math.BigInteger
 
 class StateTransition(
-    view: StateDbAccountStateView,
+    view: AccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
