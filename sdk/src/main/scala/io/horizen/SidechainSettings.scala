@@ -166,5 +166,3 @@ case class SidechainSettings(
       s"certificateSigningIsEnabled: ${withdrawalEpochCertificateSettings.certificateSigningIsEnabled}")
 
 }   
-)
-
