@@ -130,11 +130,27 @@ class SyncStatusActor[
         } else {
           // Fork branch applied
           val revertedBlocks: Int = lastAppliedBlockIds.indexOf(sidechainBlock.parentId)
+
           if (revertedBlocks == -1) {
-            // Must never happen
-            // Crash the actor and start from scratch
-            throw new IllegalStateException(s"SyncStatusActor: unexpected new tip appeared ${sidechainBlock.id}")
+            // Crash the actor throwing an exception and start from scratch
+            val stoppingMessage = s"SyncStatusActor: unexpected new tip ${sidechainBlock.id} appeared"
+            val noMatchingBlocksException = new IllegalStateException(stoppingMessage)
+            // We can encounter two cases:
+            // - If the internal applied block IDs list has less then 100 elements we thrown an exception without stack trace
+            //   and log the actor restart at Warn level. This can happen in this case:
+            //   forger node recently restarted that has created some blocks on its own and then receive valid blocks from
+            //   the peers that are applied due to the longest chain rule
+            if (lastAppliedBlockIds.length < 100) {
+              log.warn(stoppingMessage + " due to recent node restart")
+              noMatchingBlocksException.setStackTrace(Array.empty)  // remove the stack trace
+              throw noMatchingBlocksException
+            }
+            // - Otherwise log the entire stack trace and and log the actor at Error level
+            else {
+              log.error(stoppingMessage); throw noMatchingBlocksException
+            }
           }
+
           currentBlock = currentBlock - revertedBlocks + 1
           lastAppliedBlockIds.drop(revertedBlocks)
           // We must not consider fork blocks of the same height as "syncing"

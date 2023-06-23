@@ -2,7 +2,8 @@ package io.horizen.api.http.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Post
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.headers.{Accept, RawHeader}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, HttpRequest, HttpResponse, MediaTypes, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.{Http, HttpExt}
 import io.horizen.RemoteKeysManagerSettings
@@ -25,12 +26,18 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
   private val signatureSerializer: SchnorrSignatureSerializer = SchnorrSignatureSerializer.getSerializer
   val SCHNORR = "schnorr"
 
+  val headers: List[HttpHeader] = List(
+    Accept(MediaTypes.`application/json`),
+    RawHeader("Content-Type", "application/json")
+  )
+
   def isEnabled: Boolean = settings.enabled
 
   def listPublicKeys(): Future[Seq[SchnorrProposition]] = {
     http.singleRequest(
       Post(settings.address + "/api/v1/listKeys")
-        .withEntity(HttpEntity(ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
+        .withEntity(HttpEntity(ContentTypes.`application/json`, ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
+        .withHeaders(headers)
     )
       .flatMap {
         case response@HttpResponse(StatusCodes.OK, _, _, _) =>
@@ -83,9 +90,11 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
     Post(settings.address + "/api/v1/createSignature")
       .withEntity(
         HttpEntity(
+          ContentTypes.`application/json`,
           CreateSignatureRequest(BytesUtils.toHexString(message), serializePublicKey(publicKey), SCHNORR).asJson.noSpaces
         )
       )
+      .withHeaders(headers)
   }
 
   private def serializePublicKey(publicKey: SchnorrProposition) =

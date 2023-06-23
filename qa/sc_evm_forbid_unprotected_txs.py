@@ -68,7 +68,7 @@ class SCEvmForbidUnprotectedTxs(AccountChainSetup):
         self.evm_address = '0x' + sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         evm_hex_address = remove_0x_prefix(self.evm_address)
         evm_address_sc_node_2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-        recipient_keys = generate_account_proposition("seed3", 1)[0]
+        recipient_keys = generate_account_proposition("seed3", 1, self.model)[0]
         recipient_proposition = recipient_keys.proposition
 
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,

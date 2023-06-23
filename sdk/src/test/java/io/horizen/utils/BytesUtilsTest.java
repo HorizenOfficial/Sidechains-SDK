@@ -8,8 +8,10 @@ import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
 import io.horizen.params.TestNetParams;
 import org.junit.Test;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;

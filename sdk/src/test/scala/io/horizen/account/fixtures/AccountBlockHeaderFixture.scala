@@ -1,9 +1,10 @@
 package io.horizen.account.fixtures
 
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.utils.Bloom
-import io.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE}
+import io.horizen.account.utils.FeeUtils.INITIAL_BASE_FEE
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -43,7 +44,7 @@ trait AccountBlockHeaderFixture {
     val forgerAddress : AddressProposition = accountPayment.address
     val baseFee: BigInteger = INITIAL_BASE_FEE
     val gasUsed: BigInteger = BigInteger.valueOf(21000)
-    val gasLimit: BigInteger = GAS_LIMIT
+    val gasLimit: BigInteger = DefaultGasFeeFork.blockGasLimit
     val ommersRootHash = Utils.ZEROS_HASH
     val ommersCumulativeScore : Long = 0L;
     val feePaymentHash = new Array[Byte](32)
@@ -52,7 +53,7 @@ trait AccountBlockHeaderFixture {
     val unsignedHeader = AccountBlockHeader(
       blockVersion,
       bytesToId(parentId),
-      random.nextInt(100) + 10000,
+      random.nextInt(100) + 90000,
       forgingStakeInfo,
       merklePath,
       vrfProof,

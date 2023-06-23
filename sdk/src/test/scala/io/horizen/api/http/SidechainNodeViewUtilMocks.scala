@@ -3,18 +3,18 @@ package io.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-import io.horizen.block.MainchainBlockReference
+import io.horizen.block.{MainchainBlockReference, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import io.horizen.consensus.ConsensusEpochInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import io.horizen.params.MainNetParams
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, SchnorrKeyGenerator}
-import io.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
+import io.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import io.horizen.utils.WithdrawalEpochInfo
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.{Box, ZenBox}
 import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
@@ -60,6 +60,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val transactionList: util.List[RegularTransaction] = getTransactionList
 
   val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
+
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
     SidechainBlock.BLOCK_VERSION,
@@ -175,8 +176,32 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   }
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeState = {
-    val nodeState: NodeState = mock[NodeState]
+    val nodeState: NodeState = Mockito.mock(classOf[SidechainState])
     Mockito.when(nodeState.hasCeased()).thenReturn(true)
+
+    val mockWithdrawalEpochInfo = mock[WithdrawalEpochInfo]
+    Mockito.when(mockWithdrawalEpochInfo.epoch).thenAnswer(_ => 1)
+    Mockito.when(nodeState.getWithdrawalEpochInfo).thenAnswer(_ => mockWithdrawalEpochInfo)
+    Mockito.when(nodeState.asInstanceOf[SidechainState].getCurrentConsensusEpochInfo).thenAnswer(_ => {
+      val consensusEpochInfo = mock[ConsensusEpochInfo]
+      Mockito.when(consensusEpochInfo.epoch).thenAnswer(_ => 3)
+      Mockito.when(consensusEpochInfo.forgersStake).thenAnswer(_ => 300000L)
+      ("modifier id", consensusEpochInfo)
+    })
+
+    Mockito.when(nodeState.asInstanceOf[SidechainState].lastCertificateReferencedEpoch()).thenAnswer(_ => {
+      Option(1)
+    })
+    Mockito.when(nodeState.asInstanceOf[SidechainState].certificate(1)).thenAnswer(_ => {
+      val mockWithdrawalEpochCertificate = mock[WithdrawalEpochCertificate]
+      Mockito.when(mockWithdrawalEpochCertificate.epochNumber).thenReturn(3)
+      Mockito.when(mockWithdrawalEpochCertificate.quality).thenReturn(6)
+      Mockito.when(mockWithdrawalEpochCertificate.btrFee).thenReturn(241)
+      Mockito.when(mockWithdrawalEpochCertificate.ftMinAmount).thenReturn(21)
+      Mockito.when(mockWithdrawalEpochCertificate.hash).thenReturn(new Array[Byte](32))
+      Option(mockWithdrawalEpochCertificate)
+    })
+
     nodeState
   }
 
@@ -262,9 +287,11 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   }
 
   def getNodeMemoryPoolMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeMemoryPool = {
-    val memoryPool: NodeMemoryPool = mock[NodeMemoryPool]
+    val memoryPool: NodeMemoryPool = mock[SidechainMemoryPool]
 
     Mockito.when(memoryPool.getTransactions).thenAnswer(_ => transactionList)
+    Mockito.when(memoryPool.asInstanceOf[SidechainMemoryPool].usedSizeKBytes).thenAnswer(_ => 128)
+    Mockito.when(memoryPool.asInstanceOf[SidechainMemoryPool].usedPercentage).thenAnswer(_ => 4)
 
     Mockito.when(memoryPool.getTransactionsSortedByFee(ArgumentMatchers.any())).thenAnswer(_ => {
       if (sidechainApiMockConfiguration.getShould_history_getTransactionsSortedByFee_return_value())

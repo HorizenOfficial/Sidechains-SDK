@@ -30,6 +30,7 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.Random
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)

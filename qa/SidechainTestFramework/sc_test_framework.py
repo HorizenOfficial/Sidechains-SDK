@@ -21,6 +21,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 
 from SidechainTestFramework.scutil import APP_LEVEL_ERROR, APP_LEVEL_DEBUG, TEST_LEVEL_INFO, TEST_LEVEL_DEBUG
 
+from SidechainTestFramework.scutil import UtxoModel
 
 '''
 The workflow is the following:
@@ -40,6 +41,8 @@ Default behavior: the framework starts 1 SC node connected to 1 MC node.
 
 '''
 class SidechainTestFramework(BitcoinTestFramework):
+    def __init__(self):
+        self.model = UtxoModel
 
     def set_parallel_test(self, n):
         set_mc_parallel_test(n)
@@ -155,7 +158,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.7.1-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")

@@ -11,6 +11,8 @@ import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
 
+import scala.concurrent.duration._
+
 case class MainNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
                           override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)),

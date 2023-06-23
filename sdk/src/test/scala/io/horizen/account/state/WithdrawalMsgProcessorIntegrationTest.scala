@@ -1,11 +1,12 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.state.events.AddWithdrawalRequest
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
-import io.horizen.account.utils.{FeeUtils, ZenWeiConverter}
-import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.evm.{Address, Hash}
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
@@ -53,7 +54,7 @@ class WithdrawalMsgProcessorIntegrationTest
         Address.ZERO,
         0,
         0,
-        FeeUtils.GAS_LIMIT,
+        DefaultGasFeeFork.blockGasLimit,
         0,
         0,
         withdrawalEpoch,

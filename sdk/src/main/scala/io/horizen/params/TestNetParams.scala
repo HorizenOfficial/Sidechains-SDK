@@ -10,6 +10,7 @@ import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, Vr
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
+import scala.concurrent.duration._
 
 case class TestNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),

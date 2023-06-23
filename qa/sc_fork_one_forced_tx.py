@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration, SCForgerConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, \
-    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block
+    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block, UtxoModel
 from httpCalls.block.forgingInfo import http_block_forging_info
 from httpCalls.transaction.openStake import createOpenStakeTransaction
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCointsToMultipleAddress, \
@@ -32,8 +32,8 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
     number_of_forgers = 2
-    allowed_forger_propositions: List[Any] = generate_secrets("seed", number_of_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers)
+    allowed_forger_propositions: List[Any] = generate_secrets("seed", number_of_forgers, UtxoModel)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers, UtxoModel)
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)

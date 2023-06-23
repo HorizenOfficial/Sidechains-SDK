@@ -11,6 +11,8 @@ import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, Vr
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
 
+import scala.concurrent.duration.FiniteDuration
+
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
   val EquihashN: Int

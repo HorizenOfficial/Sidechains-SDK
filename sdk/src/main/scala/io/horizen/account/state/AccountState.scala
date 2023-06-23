@@ -12,6 +12,7 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, A
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.params.NetworkParams
@@ -221,7 +222,7 @@ class AccountState(
       stateView.updateTransactionReceipts(receiptList)
 
       // update next base fee
-      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod))
+      stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod, params))
 
       stateView.commit(idToVersion(mod.id))
 
@@ -464,24 +465,27 @@ class AccountState(
     }
 
     ethTx.semanticValidity()
+    val sender = ethTx.getFrom.address()
 
-    if (FeeUtils.GAS_LIMIT.compareTo(ethTx.getGasLimit) < 0)
-      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
+    val feeFork = GasFeeFork.get(stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
+    if (feeFork.blockGasLimit.compareTo(ethTx.getGasLimit) < 0)
+      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${feeFork.blockGasLimit}")
+
+    if (feeFork.baseFeeMinimum.compareTo(ethTx.getMaxFeePerGas) > 0)
+      throw new IllegalArgumentException(s"max fee per gas below minimum: address $sender, maxFeePerGas ${ethTx.getMaxFeePerGas}, minimum ${feeFork.baseFeeMinimum}")
 
     using(getView) { stateView =>
-        //Check the nonce
-        val sender = ethTx.getFrom.address()
+        // Check the nonce
         val stateNonce = stateView.getNonce(sender)
         if (stateNonce.compareTo(ethTx.getNonce) > 0) {
           throw NonceTooLowException(sender, ethTx.getNonce, stateNonce)
         }
-        //Check the balance
 
-        val maxTxCost = ethTx.maxCost()
-
+        // Check the balance
+        val maxTxCost = ethTx.maxCost
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(maxTxCost) < 0) {
-          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${ethTx.maxCost}")
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
         }
 
         // Check that the sender is an EOA

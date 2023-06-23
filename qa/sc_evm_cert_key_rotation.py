@@ -136,13 +136,13 @@ class SCKeyRotationTest(AccountChainSetup):
         private_signing_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_signers_secrets
         private_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.schnorr_masters_secrets
         public_master_keys = self.sc_nodes_bootstrap_info.certificate_proof_info.public_master_keys
-        new_signing_key = generate_cert_signer_secrets("random_seed", 1)[0]
+        new_signing_key = generate_cert_signer_secrets("random_seed", 1, self.model)[0]
         new_public_key = new_signing_key.publicKey
-        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1)[0]
+        new_signing_key_2 = generate_cert_signer_secrets("random_seed2", 1, self.model)[0]
         new_public_key_2 = new_signing_key_2.publicKey
-        new_master_key = generate_cert_signer_secrets("random_seed3", 1)[0]
+        new_master_key = generate_cert_signer_secrets("random_seed3", 1, self.model)[0]
         new_public_key_3 = new_master_key.publicKey
-        new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1)[0]
+        new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1, self.model)[0]
         new_public_key_4 = new_signing_key_4.publicKey
 
         private_master_keys.append(new_signing_key.secret)
@@ -158,12 +158,12 @@ class SCKeyRotationTest(AccountChainSetup):
         new_signing_keys = []
         new_master_keys = []
         for i in range(self.cert_max_keys):
-            new_s_key = generate_cert_signer_secrets(f"random_seed5{i}", 1)[0]
+            new_s_key = generate_cert_signer_secrets(f"random_seed5{i}", 1, self.model)[0]
             new_signing_keys += [new_s_key]
             private_master_keys.append(new_s_key.secret)
             public_master_keys.append(new_s_key.publicKey)
 
-            new_m_key = generate_cert_signer_secrets(f"random_seed6{i}", 1)[0]
+            new_m_key = generate_cert_signer_secrets(f"random_seed6{i}", 1, self.model)[0]
             new_master_keys += [new_m_key]
             private_master_keys.append(new_m_key.secret)
             public_master_keys.append(new_m_key.publicKey)

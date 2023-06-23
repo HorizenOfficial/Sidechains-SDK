@@ -94,6 +94,16 @@ case class EthServiceSettings(
      * might require more gas than is ever required during a transaction.
      */
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
+
+    /**
+     * Size limit of the number of results returned by the RPC call eth_getLogs
+     */
+    getLogsSizeLimit: Int = 10000,
+
+    /**
+     * Timeout limit for the RPC call eth_getLogs
+     */
+    getLogsQueryTimeout: FiniteDuration = 10.seconds
 ) extends SensitiveStringer
 
 // Default values are the same as in Geth/Erigon
@@ -126,6 +136,12 @@ case class AccountMempoolSettings(
   require(txLifetime.toSeconds > 0, s"Transaction lifetime cannot be 0 or less seconds: $txLifetime")
 }
 
+case class ApiRateLimiterSettings(
+    enabled: Boolean = false,
+    minThroughput: Int = 10,
+    throttlingThresholdMs: Int = 2000,
+) extends SensitiveStringer
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -140,6 +156,7 @@ case class SidechainSettings(
     logInfo: LogInfoSettings,
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
+    apiRateLimiter: ApiRateLimiterSettings,
 ){
   require(sparkzSettings.network.handlingTransactionsEnabled || (!forger.automaticForging &&
     !withdrawalEpochCertificateSettings.submitterIsEnabled && !withdrawalEpochCertificateSettings.certificateSigningIsEnabled),
@@ -148,4 +165,6 @@ case class SidechainSettings(
       s"submitterIsEnable: ${withdrawalEpochCertificateSettings.submitterIsEnabled}, " +
       s"certificateSigningIsEnabled: ${withdrawalEpochCertificateSettings.certificateSigningIsEnabled}")
 
-}
+}   
+)
+

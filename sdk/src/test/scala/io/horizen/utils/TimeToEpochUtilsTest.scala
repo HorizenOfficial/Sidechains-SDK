@@ -12,6 +12,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
+import scala.concurrent.duration._
 
 import java.math.BigInteger
 

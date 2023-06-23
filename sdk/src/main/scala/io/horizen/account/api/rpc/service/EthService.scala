@@ -51,9 +51,11 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
     scNodeViewHolderRef: ActorRef,
@@ -72,20 +74,20 @@ class EthService(
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   implicit val timeout: Timeout = new Timeout(nvtimeout)
 
+
   override def isNotAllowed(method: Method): Boolean = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
 
-
-  private def applyOnAccountView[R](functionToBeApplied: NV => R) = {
+  private def applyOnAccountView[R](functionToBeApplied: NV => R,  fTimeout: FiniteDuration = nvtimeout): R  = {
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
           // wrap any exceptions
           Try(functionToBeApplied(nodeview))
         }
-      }
+      }(fTimeout)
       .asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
-    Await.result(res, nvtimeout) match {
+    Await.result(res, fTimeout) match {
       case Success(value) => value
       case Failure(exception) =>
         exception match {
@@ -713,7 +715,7 @@ class EthService(
     pendingStateView.updateTransactionReceipts(receiptList)
 
     // update next base fee
-    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block))
+    pendingStateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(block, networkParams))
 
     pendingStateView
   }
@@ -1039,7 +1041,7 @@ class EthService(
           }
         }
         // calculate baseFee for the next block after the requested range
-        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock)
+        baseFeePerGas(blocks) = calculateNextBaseFee(requestedBlock, networkParams)
 
         new EthereumFeeHistoryView(oldestBlock, baseFeePerGas, gasUsedRatio, reward)
       }
@@ -1066,32 +1068,46 @@ class EthService(
 
   @RpcMethod("eth_getLogs")
   def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
-    applyOnAccountView { nodeView =>
-      using(nodeView.state.getView) { stateView =>
-        if (query.blockHash != null) {
-          // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
-          // geth retrieves all logs of a block by blockhash
-          val block = nodeView.history
-            .getStorageBlockById(bytesToId(query.blockHash.toBytes))
-            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
-          RpcFilter.getBlockLogs(stateView, block, query)
-        } else {
-          val start = parseBlockTag(nodeView, query.fromBlock)
-          val end = parseBlockTag(nodeView, query.toBlock)
-          if (start > end) {
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
+    try {
+      applyOnAccountView({ nodeView =>
+        using(nodeView.state.getView) { stateView =>
+          if (query.blockHash != null) {
+            // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
+            // geth retrieves all logs of a block by blockhash
+            val block = nodeView.history
+              .getStorageBlockById(bytesToId(query.blockHash.toBytes))
+              .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+            RpcFilter.getBlockLogs(stateView, block, query)
+          } else {
+            val start = parseBlockTag(nodeView, query.fromBlock)
+            val end = parseBlockTag(nodeView, query.toBlock)
+            if (start > end) {
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
+            }
+
+            var resultCount = 0
+            // get the logs from all blocks in the range into one flat list
+            (start to end).flatMap(blockNumber => {
+              val logs = nodeView.history
+                .blockIdByHeight(blockNumber)
+                .map(ModifierId(_))
+                .flatMap(nodeView.history.getStorageBlockById)
+                .map(RpcFilter.getBlockLogs(stateView, _, query))
+                .get
+
+              resultCount += logs.length
+              if (resultCount > settings.getLogsSizeLimit)
+                throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a " + settings.getLogsSizeLimit + " response size. Limit some parameters and try again."))
+
+              logs
+            })
+
           }
-          // get the logs from all blocks in the range into one flat list
-          (start to end).flatMap(blockNumber => {
-            nodeView.history
-              .blockIdByHeight(blockNumber)
-              .map(ModifierId(_))
-              .flatMap(nodeView.history.getStorageBlockById)
-              .map(RpcFilter.getBlockLogs(stateView, _, query))
-              .get
-          })
         }
-      }
+      }, settings.getLogsQueryTimeout)
+    }catch {
+      case _: TimeoutException =>
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"Query execution time exceeded. Query duration must not exceed ${settings.getLogsQueryTimeout} seconds. Limit some parameters and try again."))
     }
   }
 
