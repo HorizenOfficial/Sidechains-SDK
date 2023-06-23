@@ -10,10 +10,10 @@ import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import io.horizen.account.utils.{AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import io.horizen.api.http.route.BlockBaseErrorResponse.ErrorInvalidBlockId
-import io.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.BlockBaseApiRoute
+import io.horizen.api.http.route.BlockBaseErrorResponse.ErrorInvalidBlockId
+import io.horizen.api.http.route.BlockBaseRestSchema.ReqFeePayments
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.json.Views
 import io.horizen.node.NodeWalletBase
@@ -46,7 +46,7 @@ case class AccountBlockApiRoute(
       AccountNodeView
     ](settings, sidechainBlockActorRef, companion, forgerRef, params) {
 
-  override val route: Route = pathPrefix("block") {
+  override val route: Route = pathPrefix(blockPathPrefix) {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~
       getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo ~
       getCurrentHeight

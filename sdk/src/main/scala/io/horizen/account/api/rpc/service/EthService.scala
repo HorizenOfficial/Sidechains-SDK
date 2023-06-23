@@ -44,6 +44,7 @@ import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -72,6 +73,9 @@ class EthService(
       with SparkzLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   implicit val timeout: Timeout = new Timeout(nvtimeout)
+
+
+  override def isNotAllowed(method: Method): Boolean = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
 
   private def applyOnAccountView[R](functionToBeApplied: NV => R,  fTimeout: FiniteDuration = nvtimeout): R  = {
     val res = scNodeViewHolderRef
@@ -104,6 +108,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_status")
+  @NotAllowedOnSeederNode
   def txpoolStatus(): TxPoolStatus = applyOnAccountView { nodeView =>
     new TxPoolStatus(
       nodeView.pool.getExecutableTransactions.size(),
@@ -112,6 +117,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_content")
+  @NotAllowedOnSeederNode
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
       nodeView.pool.getExecutableTransactionsMap,
@@ -120,6 +126,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_contentFrom")
+  @NotAllowedOnSeederNode
   def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
     new TxPoolContentFrom(
       nodeView.pool.getExecutableTransactionsMapFrom(from),
@@ -128,6 +135,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_inspect")
+  @NotAllowedOnSeederNode
   def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
     new TxPoolInspect(
       nodeView.pool.getExecutableTransactionsMapInspect,
@@ -221,6 +229,7 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def call(params: TransactionArgs, input: Object): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val tag = getBlockTagByEip1898Input(nodeView, input)
@@ -231,12 +240,14 @@ class EthService(
 
 
   @RpcMethod("eth_sendTransaction")
+  @NotAllowedOnSeederNode
   def sendTransaction(params: TransactionArgs): Hash = {
     val tx = signTransaction(params)
     sendRawTransaction(tx)
   }
 
   @RpcMethod("eth_signTransaction")
+  @NotAllowedOnSeederNode
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val unsignedTx =
@@ -257,6 +268,7 @@ class EthService(
    * gives context to the signed message and prevents signing of transactions.
    */
   @RpcMethod("eth_sign")
+  @NotAllowedOnSeederNode
   def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
     val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
@@ -370,6 +382,7 @@ class EthService(
 
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       doEstimateGas(nodeView, params, tag)
@@ -747,6 +760,7 @@ class EthService(
   }
 
   @RpcMethod("eth_sendRawTransaction")
+  @NotAllowedOnSeederNode
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
     val tx = try {
       EthereumTransactionDecoder.decode(signedTxData)

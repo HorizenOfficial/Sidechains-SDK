@@ -118,6 +118,7 @@ testScriptsEvm=(
     'account_websocket_server.py'
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
+    'sc_evm_seedernode.py'
 );
 
 testScriptsUtxo=(
@@ -196,6 +197,7 @@ testScriptsUtxo=(
     'sc_ft_limit_fork.py'
     'sc_fork_one_forced_tx.py'
     'sc_big_block.py'
+    'sc_seedernode.py'
 );
 
 testScriptsNetworking=(
