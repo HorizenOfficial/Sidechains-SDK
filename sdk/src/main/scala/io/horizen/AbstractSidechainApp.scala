@@ -54,7 +54,7 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val sc2scConfigurator : Sc2ScConfigurator,
+   val sc2scConfigurator: Sc2ScConfigurator,
    val chainInfo : ChainInfo,
    val consensusSecondsInSlot: Int
   )
@@ -133,27 +133,6 @@ abstract class AbstractSidechainApp
   if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
     throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
       s"Current value: $consensusSecondsInSlot")
-  }
-
-  if (!isCSWEnabled) {
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    if (sc2scIsActive) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("You must define a sc2sc proving key file path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("You must define a sc2sc verification key file path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
   }
 
   // Init proper NetworkParams depend on MC network

@@ -1,11 +1,9 @@
 package io.horizen.history.validation
 
-import java.time.Instant
 import io.horizen.SidechainTypes
 import io.horizen.block.MainchainBlockReference
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.cryptolibprovider.CircuitTypes
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proposition.Proposition
@@ -13,18 +11,19 @@ import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsMan
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.utxo.transaction.SidechainTransaction
 import org.junit.Assert.assertTrue
-import org.junit.{Before, Ignore, Test}
+import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.{ModifierId, bytesToId}
 
-import scala.io.Source
+import java.time.Instant
 
 class WithdrawalEpochValidatorTest
   extends JUnitSuite

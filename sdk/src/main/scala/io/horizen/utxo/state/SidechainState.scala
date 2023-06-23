@@ -3,7 +3,6 @@ package io.horizen.utxo.state
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
-import io.horizen.block.{MainchainHeaderHash, SidechainBlockBase, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{KeyRotationProofType, MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus._
@@ -13,7 +12,6 @@ import io.horizen.fork.ForkManager
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
-import io.horizen.sc2sc.{CrossChainMessageHash, CrossChainMessage, Sc2ScConfigurator}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -30,7 +28,6 @@ import io.horizen.utxo.storage.{BackupStorage, SidechainStateForgerBoxStorage, S
 import io.horizen.utxo.transaction.{CertificateKeyRotationTransaction, OpenStakeTransaction, SidechainTransaction}
 import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
 import io.horizen.{AbstractState, SidechainTypes}
-import io.horizen.{AbstractState, SidechainSettings, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._
 import sparkz.crypto.hash.Blake2b256
@@ -241,7 +238,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
       val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
       if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
-        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
+        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)} while real is ${BytesUtils.toHexString(mod.feePaymentsHash)}")
     } else {
       // No fee payments expected
       if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
@@ -511,7 +508,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
             if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
               closedCoinsBoxesAmount += box.value()
           }
-          case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
+          case None => throw new Exception(s"Box ${BytesUtils.toHexString(u.closedBoxId())} is not found in state")
         }
       }
 

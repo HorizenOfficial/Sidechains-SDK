@@ -10,9 +10,9 @@ import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.utils.BytesUtils
 import org.mockito.Mockito
 
-import java.{lang, util}
 import java.math.BigInteger
 import java.util.Optional
+import java.{lang, util}
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 

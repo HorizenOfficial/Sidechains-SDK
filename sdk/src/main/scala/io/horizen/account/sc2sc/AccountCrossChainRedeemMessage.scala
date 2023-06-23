@@ -1,6 +1,9 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import io.horizen.utils.BytesUtils
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
+import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import io.horizen.sc2sc.CrossChainRedeemMessageSemanticValidator
 import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
@@ -9,32 +12,60 @@ import sparkz.util.serialization.{Reader, Writer}
 
 case class AccountCrossChainRedeemMessage
 (
-  accountCrossChainMessage: AccountCrossChainMessage,
+  messageType: Int,
+  sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
+  receiverSidechain: Array[Byte],
+  receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
+  payloadHash: Array[Byte],
   certificateDataHash: Array[Byte],
   nextCertificateDataHash: Array[Byte],
   scCommitmentTreeRoot: Array[Byte],
   nextScCommitmentTreeRoot: Array[Byte],
   proof: Array[Byte]
-) extends BytesSerializable with ABIEncodable[StaticStruct] {
+) extends BytesSerializable with ABIEncodable[DynamicStruct] {
   override type M = AccountCrossChainRedeemMessage
 
   AccountCrossChainRedeemMessageSemanticValidator.ccMsgValidator.validateMessage(this)
   override def serializer: SparkzSerializer[AccountCrossChainRedeemMessage] = AccountCrossChainRedeemMessageSerializer
 
-  override def asABIType(): StaticStruct =
-    new StaticStruct(
-      new DynamicBytes(accountCrossChainMessage.bytes),
+  override def asABIType(): DynamicStruct = {
+    new DynamicStruct(
+      new Uint32(messageType),
+      new Bytes20(sender),
+      new Bytes32(receiverSidechain),
+      new Bytes20(receiver),
+      new Bytes32(payloadHash),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
       new Bytes32(nextScCommitmentTreeRoot),
-      new DynamicBytes(proof)
+      new Utf8String(BytesUtils.toHexString(proof)),
     )
+  }
+
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: AccountCrossChainRedeemMessage =>
+        messageType == that.messageType && sender.sameElements(that.sender) &&
+          receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
+          payloadHash.sameElements(that.payloadHash) && certificateDataHash.sameElements(that.certificateDataHash) &&
+          nextCertificateDataHash.sameElements(that.nextCertificateDataHash) && scCommitmentTreeRoot.sameElements(scCommitmentTreeRoot) &&
+          nextScCommitmentTreeRoot.sameElements(that.nextScCommitmentTreeRoot) && proof.sameElements(that.proof)
+
+      case _ => false
+    }
+  }
 }
 
 object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[AccountCrossChainRedeemMessage] {
   override def serialize(redeemMsg: AccountCrossChainRedeemMessage, w: Writer): Unit = {
-    writeBytes(w, redeemMsg.accountCrossChainMessage.bytes)
+    w.putUInt(redeemMsg.messageType)
+    writeBytes(w, redeemMsg.sender)
+    writeBytes(w, redeemMsg.receiverSidechain)
+    writeBytes(w, redeemMsg.receiver)
+    writeBytes(w, redeemMsg.payloadHash)
     writeBytes(w, redeemMsg.certificateDataHash)
     writeBytes(w, redeemMsg.nextCertificateDataHash)
     writeBytes(w, redeemMsg.scCommitmentTreeRoot)
@@ -43,7 +74,12 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
   }
 
   override def parse(r: Reader): AccountCrossChainRedeemMessage = {
-    val crossChainMessage = AccountCrossChainMessageSerializer.parse(r)
+    val messageType = r.getUInt().toInt
+    val sender = parseNextBytes(r)
+    val receiverSidechain = parseNextBytes(r)
+    val receiver = parseNextBytes(r)
+    val payload = parseNextBytes(r)
+    AccountCrossChainMessage(messageType, sender, receiverSidechain, receiver, payload)
     val certificateDataHash = parseNextBytes(r)
     val nextCertificateDataHash = parseNextBytes(r)
     val scCommitmentTreeRoot = parseNextBytes(r)
@@ -51,7 +87,7 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
     val proof = parseNextBytes(r)
 
     AccountCrossChainRedeemMessage(
-      crossChainMessage,
+      messageType, sender, receiverSidechain, receiver, payload,
       certificateDataHash,
       nextCertificateDataHash,
       scCommitmentTreeRoot,

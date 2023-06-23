@@ -8,8 +8,8 @@ import io.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKe
 import io.horizen.sc2sc.CrossChainProtocolVersion
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.ZenCoinsUtils
+import io.horizen.utxo.box._
 import io.horizen.utxo.box.data.{CrossChainMessageBoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import io.horizen.utxo.box.{Box, CrossChainMessageBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
 import io.horizen.utxo.wallet.WalletBox
 import sparkz.core.bytesToId

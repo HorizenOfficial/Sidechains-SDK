@@ -25,6 +25,7 @@ import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -62,6 +63,7 @@ class AccountForgeMessageBuilder(
   def computeBlockInfo(
       view: AccountStateView,
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
+      mainchainHeaders: Seq[MainchainHeader],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       blockContext: BlockContext,
       forgerAddress: AddressProposition,
@@ -72,13 +74,14 @@ class AccountForgeMessageBuilder(
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
 
     val (receiptList, appliedTransactions, cumBaseFee, cumForgerTips) =
-      tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, blockContext, blockSize).get
+      tryApplyAndGetBlockInfo(view, mainchainHeaders, mainchainBlockReferencesData, sidechainTransactions, blockContext, blockSize).get
 
     (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
   private def tryApplyAndGetBlockInfo(
       stateView: AccountStateView,
+      mainchainHeaders: Seq[MainchainHeader],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
       blockContext: BlockContext,
@@ -90,6 +93,10 @@ class AccountForgeMessageBuilder(
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
       stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+    }
+
+    if (Sc2ScUtils.isActive(params)) {
+      mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
@@ -235,6 +242,7 @@ class AccountForgeMessageBuilder(
               computeBlockInfo(
                 dummyView,
                 sidechainTransactions,
+                mainchainHeaders,
                 mainchainBlockReferencesData,
                 blockContext,
                 forgerAddress,

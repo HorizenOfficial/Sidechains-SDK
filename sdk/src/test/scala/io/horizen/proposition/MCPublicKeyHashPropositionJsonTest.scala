@@ -1,8 +1,8 @@
 package io.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.json.serializer.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Assert, Test}

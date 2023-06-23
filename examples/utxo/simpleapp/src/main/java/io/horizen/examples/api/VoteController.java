@@ -2,19 +2,24 @@ package io.horizen.examples.api;
 
 import akka.http.javadsl.server.Route;
 import io.horizen.api.http.ApiResponse;
-import io.horizen.examples.api.model.*;
+import io.horizen.examples.api.model.ErrorResponseTx;
+import io.horizen.examples.api.model.RedeemVoteMessageRequest;
+import io.horizen.examples.api.model.SendVoteMessageToSidechainRequest;
+import io.horizen.examples.api.model.SuccessResponseTx;
 import io.horizen.examples.transaction.RedeemVoteMessageTransaction;
 import io.horizen.examples.transaction.SendVoteMessageTransaction;
 import io.horizen.proof.Signature25519;
 import io.horizen.proposition.Proposition;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.proposition.PublicKey25519PropositionSerializer;
-import io.horizen.sc2sc.*;
+import io.horizen.sc2sc.CrossChainMessage;
+import io.horizen.sc2sc.CrossChainProtocolVersion;
+import io.horizen.sc2sc.CrossChainRedeemMessage;
+import io.horizen.sc2sc.CrossChainRedeemMessageImpl;
 import io.horizen.utils.ByteArrayWrapper;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup;
 import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.CrossChainMessageBox;
 import io.horizen.utxo.box.ZenBox;
 import io.horizen.utxo.box.data.CrossChainMessageBoxData;
 import io.horizen.utxo.box.data.CrossChainRedeemMessageBoxData;
@@ -26,7 +31,6 @@ import io.horizen.utxo.transaction.BoxTransaction;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class VoteController extends SidechainApplicationApiGroup {
     private static final String VOTING_BASE_PATH = "vote";

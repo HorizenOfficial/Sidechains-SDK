@@ -36,6 +36,19 @@ case class AccountCrossChainMessage
       new Bytes32(payloadHash)
     )
   }
+
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: AccountCrossChainMessage =>
+        messageType == that.messageType && sender.sameElements(that.sender) &&
+          receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
+          payloadHash.sameElements(that.payloadHash)
+
+      case _ => false
+    }
+  }
 }
 
 object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossChainMessage] {

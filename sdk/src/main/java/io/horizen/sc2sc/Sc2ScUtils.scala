@@ -10,7 +10,6 @@ import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Success, Try, Using}
 
@@ -79,8 +78,8 @@ trait Sc2ScUtils[
             val nextCertScCommitmentRoot = nextTopCertInfos.scCommitmentRoot
 
             Using.resources(
-              CommonCircuit.createWithdrawalCertificate(topCertInfos.certificate, params.sidechainCreationVersion),
-              CommonCircuit.createWithdrawalCertificate(nextTopCertInfos.certificate, params.sidechainCreationVersion),
+              CommonCircuit.createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(topCertInfos.certificate, params.sidechainCreationVersion),
+              CommonCircuit.createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(nextTopCertInfos.certificate, params.sidechainCreationVersion),
               ScCommitmentCertPath.deserialize(topCertInfos.commitmentCertPath),
               ScCommitmentCertPath.deserialize(nextTopCertInfos.commitmentCertPath),
             ) { (currWithdrawalCertificate, nextWithdrawalCertificate, certCommitmentCertPath, nextCertCommitmentCertPath) =>
@@ -141,7 +140,7 @@ trait Sc2ScUtils[
       mcBlockRef.data.commitmentTree(networkParams.sidechainId, networkParams.sidechainCreationVersion).commitmentTree
     ) { commTree =>
       Using.resource(
-        CommonCircuit.createWithdrawalCertificate(topCert, networkParams.sidechainCreationVersion)
+        CommonCircuit.createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(topCert, networkParams.sidechainCreationVersion)
       ) { withdrawalCertificate =>
         Using.resource(
           commTree.getScCommitmentCertPath(networkParams.sidechainId, withdrawalCertificate.getHashBytes).get()

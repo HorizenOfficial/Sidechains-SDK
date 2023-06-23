@@ -1,7 +1,7 @@
 package io.horizen.account.api.http
 
-import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Serializer}
@@ -9,12 +9,12 @@ import io.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, Forg
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.api.http.SidechainApiMockConfiguration
+import io.horizen.evm.Address
 import io.horizen.fixtures._
 import io.horizen.node.NodeWalletBase
 import io.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.Address
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 

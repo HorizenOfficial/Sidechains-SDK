@@ -9,7 +9,6 @@ import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
-import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.mutable.ArrayBuffer

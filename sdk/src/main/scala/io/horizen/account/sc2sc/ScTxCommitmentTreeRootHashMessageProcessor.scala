@@ -1,7 +1,6 @@
 package io.horizen.account.sc2sc
 
 import com.google.common.primitives.Bytes
-import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.account.utils.WellKnownAddresses.SC_TX_COMMITMENT_TREE_ROOT_HASH_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
@@ -13,9 +12,9 @@ trait ScTxCommitmentTreeRootHashMessageProvider {
 }
 
 /**
- * This fake smart contract is responsible to save and retrieve the scTxCommitmentTreeRootHash and cannot be called
+ * This native smart contract is responsible to save and retrieve the scTxCommitmentTreeRootHash and cannot be called
  */
-case class ScTxCommitmentTreeRootHashMessageProcessor()
+object ScTxCommitmentTreeRootHashMessageProcessor
   extends NativeSmartContractMsgProcessor with ScTxCommitmentTreeRootHashMessageProvider {
   override val contractAddress: Address = SC_TX_COMMITMENT_TREE_ROOT_HASH_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ScTxCommitmentTreeRootHashSmartContractCode")
@@ -27,10 +26,10 @@ case class ScTxCommitmentTreeRootHashMessageProcessor()
     throw new ExecutionRevertedException("Cannot call ScTxCommitmentTreeRootHashMessageProcessor directly")
 
   override def addScTxCommitmentTreeRootHash(hash: Array[Byte], view: BaseAccountStateView): Unit =
-    view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), Array.emptyByteArray)
+    view.updateAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash), hash)
 
   override def doesScTxCommitmentTreeRootHashExist(hash: Array[Byte], view: BaseAccountStateView): Boolean =
-    !view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash)).sameElements(NULL_HEX_STRING_32)
+    view.getAccountStorage(contractAddress, getScTxCommitmentTreeRootHashKey(hash)).nonEmpty
 
   private[sc2sc] def getScTxCommitmentTreeRootHashKey(hash: Array[Byte]): Array[Byte] =
     calculateKey(Bytes.concat("scCommitmentTreeRootHash".getBytes, hash))

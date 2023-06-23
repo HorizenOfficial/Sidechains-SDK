@@ -1,8 +1,6 @@
 package io.horizen.chain
 
-import java.io.{PrintWriter, StringWriter}
-
-import io.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator, FieldElementFixture}
+import io.horizen.fixtures.{FieldElementFixture, SidechainBlockInfoFixture, VrfGenerator}
 import io.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
@@ -10,6 +8,7 @@ import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util.ModifierId
 
+import java.io.{PrintWriter, StringWriter}
 import scala.collection.breakOut
 import scala.util.Try
 

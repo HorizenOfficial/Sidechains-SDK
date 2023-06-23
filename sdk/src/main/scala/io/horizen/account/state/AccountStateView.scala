@@ -75,8 +75,9 @@ class AccountStateView(
     metadataStorageView.commit(version)
   }
 
-  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
+  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
+  }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
 

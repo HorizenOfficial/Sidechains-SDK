@@ -9,6 +9,9 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 import sparkz.core.serialization.BytesSerializable;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 @JsonView(Views.Default.class)
 public final class CrossChainMessage implements BytesSerializable {
     private final static CrossChainMessageSemanticValidator ccMsgValidator = new CrossChainMessageSemanticValidator();
@@ -88,5 +91,26 @@ public final class CrossChainMessage implements BytesSerializable {
                 ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
                 ", receiver=" + BytesUtils.toHexString(receiver) +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CrossChainMessage that = (CrossChainMessage) o;
+        return messageType == that.messageType && version == that.version && Arrays.equals(senderSidechain, that.senderSidechain)
+                && Arrays.equals(sender, that.sender) && Arrays.equals(receiverSidechain, that.receiverSidechain)
+                && Arrays.equals(receiver, that.receiver) && Arrays.equals(payloadHash, that.payloadHash);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(version, messageType);
+        result = 31 * result + Arrays.hashCode(senderSidechain);
+        result = 31 * result + Arrays.hashCode(sender);
+        result = 31 * result + Arrays.hashCode(receiverSidechain);
+        result = 31 * result + Arrays.hashCode(receiver);
+        result = 31 * result + Arrays.hashCode(payloadHash);
+        return result;
     }
 }

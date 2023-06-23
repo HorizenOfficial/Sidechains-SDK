@@ -1,20 +1,20 @@
 package io.horizen.utils
 
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes
-import CircuitTypes.CircuitTypes
+import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
-import scala.concurrent.duration._
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
+import scala.concurrent.duration._
 
 class TimeToEpochUtilsTest extends JUnitSuite {
 

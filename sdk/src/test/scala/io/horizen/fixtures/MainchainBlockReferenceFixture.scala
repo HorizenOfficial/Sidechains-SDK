@@ -1,15 +1,14 @@
 package io.horizen.fixtures
 
-import java.time.Instant
-import java.util.Random
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
 import io.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.utils._
-import io.horizen.utxo.block.SidechainBlock
 import org.scalatestplus.mockito.MockitoSugar.mock
 
+import java.time.Instant
+import java.util.Random
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.{Success, Try}

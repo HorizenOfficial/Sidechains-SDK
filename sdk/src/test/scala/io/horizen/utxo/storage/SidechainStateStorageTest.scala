@@ -3,9 +3,7 @@ package io.horizen.utxo.storage
 import com.google.common.primitives.Ints
 import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture, WithdrawalEpochCertificateSerializer}
-import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
@@ -15,6 +13,7 @@ import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import io.horizen.utxo.backup.{BackupBox, BoxIterator}
 import io.horizen.utxo.box.{BoxSerializer, CoinsBox}
+import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.state.SidechainState
@@ -22,7 +21,6 @@ import io.horizen.utxo.utils.{BlockFeeInfo, BlockFeeInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder
-import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar

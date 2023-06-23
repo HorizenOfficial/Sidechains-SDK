@@ -41,7 +41,7 @@ class AbstractCrossChainMessageProcessorTest extends MockitoSugar
         assertArrayEquals("Different address expected.", CrossChainMessageProcessorTestImpl.contractAddress.toBytes, args.getArgument(0).asInstanceOf[Address].toBytes)
         assertArrayEquals("Different code expected.", CrossChainMessageProcessorTestImpl.contractCode, args.getArgument(1))
       })
-    getMessageProcessorTestImpl(MainNetParams()).init(mockStateView)
+    getMessageProcessorTestImpl("scId".getBytes).init(mockStateView)
   }
 
   @Test
@@ -49,13 +49,13 @@ class AbstractCrossChainMessageProcessorTest extends MockitoSugar
     val msg = listOfCrosschainMessages(1)
     assertTrue(
       "Message listOfCrosschainMessages cannot be processed",
-      getMessageProcessorTestImpl(MainNetParams()).canProcess(msg, mockStateView)
+      getMessageProcessorTestImpl("scId".getBytes).canProcess(msg, mockStateView)
     )
     val wrongAddress =  new Address("0x25fdd51e73221f467b40946c97791a3e19799beb")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for CrosschainMsgProcessor can be processed",
-      getMessageProcessorTestImpl(MainNetParams()).canProcess(msgNotProcessable, mockStateView)
+      getMessageProcessorTestImpl("scId".getBytes).canProcess(msgNotProcessable, mockStateView)
     )
   }
 
@@ -66,13 +66,13 @@ class AbstractCrossChainMessageProcessorTest extends MockitoSugar
     val data = BytesUtils.fromHexString("99")
     val msgWithWrongFunctionCall = getMessage(CrossChainMessageProcessorTestImpl.contractAddress, value, data)
     assertThrows[ExecutionFailedException] {
-      withGas(getMessageProcessorTestImpl(MainNetParams()).process(msgWithWrongFunctionCall, mockStateView, _, defaultBlockContext))
+      withGas(getMessageProcessorTestImpl("scId".getBytes).process(msgWithWrongFunctionCall, mockStateView, _, defaultBlockContext))
     }
   }
 
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
-    val proc : AbstractCrossChainMessageProcessor  = getMessageProcessorTestImpl(MainNetParams())
+    val proc : AbstractCrossChainMessageProcessor  = getMessageProcessorTestImpl("MainNetParams()".getBytes)
 
     usingView(proc) { view =>
       proc.init(view)

@@ -1,8 +1,8 @@
 package io.horizen.utils
 
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture}
 import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito

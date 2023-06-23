@@ -1,13 +1,12 @@
 package io.horizen.utxo.transaction
 
-import java.util.{ArrayList => JArrayList, List => JList}
 import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.json.serializer.ApplicationJsonSerializer
-import io.horizen.utils.{Pair => JPair}
 import io.horizen.proposition.Proposition
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import io.horizen.utxo.box.{Box, ZenBox}
+import io.horizen.utils.{Pair => JPair}
 import io.horizen.utxo.box.data.{BoxData, ZenBoxData}
+import io.horizen.utxo.box.{Box, ZenBox}
 import io.horizen.utxo.fixtures.BoxFixture
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
@@ -15,6 +14,7 @@ import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.SparkzEncoder
 
 import java.nio.charset.StandardCharsets
+import java.util.{ArrayList => JArrayList, List => JList}
 
 
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.account.fixtures.EthereumTransactionFixture
 import io.horizen.account.utils.EthereumTransactionDecoder
 import io.horizen.json.serializer.ApplicationJsonSerializer
-import org.junit.Assert.{assertEquals, assertNull, assertTrue}
-import org.junit.{Ignore, Test}
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.SparkzEncoder
 

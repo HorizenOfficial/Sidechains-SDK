@@ -1,9 +1,9 @@
 package io.horizen
 
 import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.block.{FieldElementCertificateField, SidechainCreationVersions, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitWithKeyRotationImplZendoo}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
@@ -14,6 +14,7 @@ import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.box.data.WithdrawalRequestBoxData
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
+
 import java.io._
 import java.util.Optional
 import java.{lang, util}

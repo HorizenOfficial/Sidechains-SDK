@@ -6,21 +6,21 @@ import io.horizen.customtypes._
 import io.horizen.fixtures._
 import io.horizen.secret._
 import io.horizen.storage._
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
+import io.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import sparkz.core.VersionTag
 import sparkz.crypto.hash.Blake2b256
+
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 class AccountWalletTest
   extends JUnitSuite

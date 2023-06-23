@@ -7,7 +7,7 @@ import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, Withdrawa
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
-import io.horizen.cryptolibprovider.{CryptoLibProvider, ThresholdSignatureCircuitWithKeyRotation}
+import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
@@ -123,12 +123,17 @@ class WithKeyRotationCircuitStrategy[
       case false => None
     }
 
-    val (previousCertificateBytes, messageTreeRootHash): (Array[Byte], Array[Byte]) = sc2ScDataForCertificate match {
+    val previousCertificateBytes: Array[Byte] = sc2ScDataForCertificate match {
       case Some(sc2scData) => sc2scData.previousTopQualityCertificateHash match {
-        case Some(cert) => (cert, sc2scData.messagesTreeRoot)
-        case None => (Array.emptyByteArray, sc2scData.messagesTreeRoot)
+        case Some(cert) => cert
+        case None => Array.emptyByteArray
       }
-      case None => (Array.emptyByteArray, Array.emptyByteArray)
+      case None => Array.emptyByteArray
+    }
+
+    val messageTreeRootHash = sc2ScDataForCertificate match {
+      case Some(sc2scData) => sc2scData.messagesTreeRoot
+      case None => Array.emptyByteArray
     }
 
     val message = circuit.generateMessageToBeSigned(backwardTransfers.asJava, sidechainId, referencedWithdrawalEpochNumber,

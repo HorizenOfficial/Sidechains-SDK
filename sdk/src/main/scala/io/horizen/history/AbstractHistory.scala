@@ -17,7 +17,6 @@ import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.util.{ModifierId, SparkzLogging, idToBytes}
-import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
