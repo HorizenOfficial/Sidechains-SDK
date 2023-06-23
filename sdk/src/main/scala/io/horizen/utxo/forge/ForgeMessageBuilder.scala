@@ -165,8 +165,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val mempoolTx =
       if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled) {
       //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
-        nodeView.pool.take(allowedCrossChainMessageBoxes)
+        val withdrawalBoxes = nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+        val ccMsgBox = nodeView.pool.take(allowedCrossChainMessageBoxes)
+        withdrawalBoxes ++ ccMsgBox
       } else
         nodeView.pool.take(nodeView.pool.size)
 
