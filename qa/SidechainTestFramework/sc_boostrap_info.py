@@ -13,6 +13,16 @@ KEY_ROTATION_CIRCUIT = 'NaiveThresholdSignatureCircuitWithKeyRotation'
 
 DEFAULT_API_KEY = "TopSecret"
 
+# Default value of max difference between tx nonce and state nonce allowed by mempool.
+DEFAULT_MAX_NONCE_GAP = 16
+# Default value of max number of slots a single account transactions can occupy
+DEFAULT_MAX_ACCOUNT_SLOTS = 16
+# Default value of max number of mempool slots transactions can occupy
+DEFAULT_MAX_MEMPOOL_SLOTS = 6144
+# Default value of max number of non exec sub slots transactions can occupy
+DEFAULT_MAX_NONEXEC_POOL_SLOTS = 1024
+# Default value of max time a tx can stay in the mempool waiting to be included in a block, in seconds
+DEFAULT_TX_LIFETIME = 10800
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -119,7 +129,9 @@ class SCNodeConfiguration(object):
                  cert_submitter_enabled=True,
                  cert_signing_enabled=True,
                  submitter_private_keys_indexes=None,
-                 max_connections=100,
+                 max_incoming_connections=100,
+                 max_outgoing_connections=100,
+                 get_peers_interval="2m",
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options=SCForgerConfiguration(),
@@ -128,15 +140,31 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  initial_private_keys=[],
+                 remote_keys_manager_enabled=False,
+                 remote_keys_server_address=None,
+                 known_peers=[],
+                 declared_address=None,
                  initial_signing_private_keys=[],
-                 remote_keys_manager_enabled=False):
+                 storage_backup_interval='15m',
+                 storage_backup_delay='5m',
+                 websocket_server_enabled=False,
+                 websocket_server_port=0,
+                 allow_unprotected_txs=True,
+                 max_nonce_gap=DEFAULT_MAX_NONCE_GAP,
+                 max_account_slots=DEFAULT_MAX_ACCOUNT_SLOTS,
+                 max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
+                 max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
+                 tx_lifetime=DEFAULT_TX_LIFETIME
+                 ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
         self.cert_submitter_enabled = cert_submitter_enabled
         self.cert_signing_enabled = cert_signing_enabled
         self.submitter_private_keys_indexes = submitter_private_keys_indexes
-        self.max_connections = max_connections
+        self.max_incoming_connections = max_incoming_connections
+        self.max_outgoing_connections = max_outgoing_connections
+        self.get_peers_interval = get_peers_interval
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
@@ -147,6 +175,26 @@ class SCNodeConfiguration(object):
         self.initial_private_keys = initial_private_keys
         self.initial_signing_private_keys = initial_signing_private_keys
         self.remote_keys_manager_enabled = remote_keys_manager_enabled
+        if remote_keys_manager_enabled:
+            self.remote_keys_server_address = remote_keys_server_address
+        self.known_peers = known_peers
+        if declared_address is not None:
+            self.declared_address = declared_address
+        self.storage_backup_interval = storage_backup_interval
+        self.storage_backup_delay = storage_backup_delay
+        self.websocket_server_enabled = websocket_server_enabled
+        self.websocket_server_port = websocket_server_port
+        self.allow_unprotected_txs = allow_unprotected_txs
+        self.max_nonce_gap = max_nonce_gap
+        self.max_account_slots = max_account_slots
+        self.max_mempool_slots = max_mempool_slots
+        self.max_nonexec_pool_slots = max_nonexec_pool_slots
+        self.tx_lifetime = tx_lifetime
+
+    def update_websocket_config(self, websocket_server_enabled, websocket_server_port):
+        self.websocket_server_enabled = websocket_server_enabled
+        self.websocket_server_port = websocket_server_port
+
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.
@@ -207,11 +255,14 @@ VrfAccount : {
 
 
 class VrfAccount(object):
-
     def __init__(self, secret, publicKey):
         self.secret = secret
         self.publicKey = publicKey
 
+class AccountKey(object):
+    def __init__(self, secret, proposition):
+        self.secret = secret
+        self.proposition = proposition
 
 """
 A Schnorr key.
@@ -278,16 +329,15 @@ SCBootstrapInfo: {
     "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
     "cert_keys_paths": an instance of ProofKeysPaths for certificate
     "csw_keys_paths": an instance of ProofKeysPaths for ceased sidechain withdrawal
+    "genesis_evm_account": an instance of Account for EVM Sidechain
 }
 """
-
-
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
                  sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
                  certificate_proof_info, initial_cumulative_comm_tree_hash, is_non_ceasing, cert_keys_paths, csw_keys_paths,
-                 circuit_type):
+                 genesis_evm_account, circuit_type):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -302,6 +352,7 @@ class SCBootstrapInfo(object):
         self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
         self.cert_keys_paths = cert_keys_paths
         self.csw_keys_paths = csw_keys_paths
+        self.genesis_evm_account = genesis_evm_account
         self.circuit_type = circuit_type
 
 

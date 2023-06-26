@@ -1,6 +1,6 @@
 import json
 #execute a transaction/createopenStakeTransaction call
-def createOpenStakeTransaction(sidechain_node, boxid, address, forger_index, fee = 0, format = False, automatic_send = False):
+def createOpenStakeTransaction(sidechain_node, boxid, address, forger_index, fee = 0, format = False, automatic_send = False, api_key = None):
       j = { 
             "transactionInput": 
             { 
@@ -13,11 +13,14 @@ def createOpenStakeTransaction(sidechain_node, boxid, address, forger_index, fee
             "automaticSend": automatic_send
       }
       request = json.dumps(j)
-      response = sidechain_node.transaction_createOpenStakeTransaction(request)
+      if (api_key != None):
+          response = sidechain_node.transaction_createOpenStakeTransaction(request, api_key)
+      else:
+          response = sidechain_node.transaction_createOpenStakeTransaction(request)
       return response["result"]
 
 #execute a transaction/createOpenStakeTransactionSimplified call
-def createOpenStakeTransactionSimplified(sidechain_node, forger_proposition, forger_index, fee, format = False, automatic_send = False):
+def createOpenStakeTransactionSimplified(sidechain_node, forger_proposition, forger_index, fee, format = False, automatic_send = False, api_key = None):
       j = {
             "forgerProposition": forger_proposition,
             "forgerIndex": forger_index,
@@ -26,5 +29,8 @@ def createOpenStakeTransactionSimplified(sidechain_node, forger_proposition, for
             "automaticSend": automatic_send
       }
       request = json.dumps(j)
-      response = sidechain_node.transaction_createOpenStakeTransactionSimplified(request)
+      if (api_key != None):
+          response = sidechain_node.transaction_createOpenStakeTransactionSimplified(request, api_key)
+      else:
+          response = sidechain_node.transaction_createOpenStakeTransactionSimplified(request)
       return response["result"]

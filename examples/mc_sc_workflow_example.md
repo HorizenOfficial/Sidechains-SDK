@@ -1,0 +1,551 @@
+**MC and SC workflow example**
+-------
+
+**Prerequisite**
+
+Installed Java 11, installed Maven
+
+**Sidechain Versions**
+There are 3 versions of sidechains supported by the mainchain at this moment: all sidechain features and required Mainchain height are described in the table below.
+
+| Version | Description                                                                                        | Mainchain height |
+|---------|----------------------------------------------------------------------------------------------------|------------------|
+| 0       | Obsolete                                                                                           | 450              |
+| 1       | Basic functionality. Uses a simple Threshold Signature Circuit. Supports ceasing sidechain and CSW | 450              |
+| 2       | Uses Threshold Signature Circuit with Key Rotation. Ceasing and non-ceasing sidechain support      | 480              |
+
+
+_Ceasing Sidechain_ - a type of sidechain which is obliged to submit the certificate to Mainchain after each epoch. Otherwise, the sidechain will be considered as ceased. The sidechain can send several certificates per epoch, and the certificate with the maximum quality will be chosen.  
+_Non-ceasing Sidechain_ - a type of sidechain which is not submitting a certificate at a certain period of time. Certificate submission can be postponed, however, certificates should be submitted in consecutive order. Only one certificate per epoch will be accepted.  
+_Threshold Signature Circuit_ - base certificate signature circuit. Allows using CSW(Ceased Sidechain Withdrawal).  
+_CSW(Ceased Sidechain Withdrawal)_ - This circuit allows retrieval coins to Mainchain from Sidechain that was already ceased.  
+_Threshold Signature Circuit with Key Rotation_ - certificate signature circuit that allows replacing lost or compromised signing keys. Cannot be used along with the CSW.  
+
+The following example is made for ceasing sidechain version 1 with a simple Threshold Signature Circuit. The differences with version 2, non ceasing sidechain, and key rotation circuit will be noted.
+
+**Step 1: Building SDK**
+
+Build SDK components by using a command (in the root of the Sidechains-SDK folder):
+`mvn clean package`. It will compile Sidechain SDK and Bootstrapping tool, which are used on next steps.
+
+**Step 2: Run Bootstrapping tool**
+
+Run Bootstrapping tool using the command depending on the sidechain model:
+
+- account: `java -jar tools/sidechains-sdk-account_sctools/target/sidechains-sdk-account_sctools-0.7.0.jar`
+- utxo: `java -jar tools/sidechains-sdk-utxo_sctools/target/sidechains-sdk-utxo_sctools-0.7.0.jar`
+
+All other commands are performed as commands for Bootstrapping tool in the next format: `"command name"  "parameters for command in JSON format"`.
+For any help, you could use the command `help`, for the exit just print `exit`
+
+**Step 3: Generate keypairs for the first Forger in the Sidechain**
+
+As a next step we need a Vrf keypair and an ed25519 keypair, those keys will be used as inputs for the first Forger in the newly created Sidechain, i.e. output for Mainchain to Sidechain transaction
+
+For generating ed25519 key use the command:  
+`generatekey {"seed":"my seed"}` 
+
+Example output of newly created keypair is:
+```
+{
+    "publicKey": "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac"
+    "secret": "003868b579a763b620cabe5882dae3c39be8c84719d6c2ba4ad2ab4b0653aacd04a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac",
+}
+```
+
+For generating Vrf key use command:  
+`generateVrfKey {"seed":"my seed"}`  
+
+Example output of newly created Vrf keypair:
+```
+{
+    "vrfPublicKey": "b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00"
+    "vrfSecret": "0300000020b8235a39cbbdb61d6b7abed3c078cf5c47cd93c989279c0ab75dd772b6b47802b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00",
+}
+```
+
+**Model: Account**
+
+As well as the Vrf keypair and ed25519 keypair the EVM Account model requires a Secp256k1 keypair.
+
+For generating Secp256k1 key use command:  
+`generateAccountKey {"seed":"my seed"}`
+
+Example output of newly created Secp256k1 keypair:
+```
+{
+    "accountSecret":"05af34a8b28696763ca6870326969614194c853d69703a0cb7b97f6d92f4d97b2e",
+    "accountProposition":"e8674062598b86d8258257a4d79e99d15594d864"
+}
+```
+
+**Step 4: Generate data for ceased sidechain withdrawals proofs creation and verification**
+
+*NOTE:  Ceased Sidechain Withdrawal (CSW) is only available for the UTXO model sidechains running Version 1 Threshold Signature Circuit*
+
+SDK-based sidechains implement a specific mechanism that allows users to withdraw their coins in case the sidechain has ceased.
+Sidechain creation requires specific data for proving ceased sidechain withdrawal (CSW) operations validity.
+Considering CSW's impact on sidechain performance, this feature can be disabled.
+In case CSW is not requested, this step can be skipped, otherwise, proof specific data could be generated by the next command:
+
+`generateCswProofInfo {"withdrawalEpochLen": 900, "verificationKeyPath": "/tmp/sidechainapp/csw_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/csw_marlin_snark_pk"}`
+
+Example of output is:
+```
+{
+    "withdrawalEpochLen": 900,
+    "verificationKey": "02d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e8000"
+}
+
+```
+Note: `withdrawalEpochLen` - is expected to be in a range between 100 and 900 and is the same value as the one declared by `sc_create` command below.
+Note: CSW is not supported in version 2.
+
+
+**Step 5: Generate Schnorr keypairs for certificate signers**
+
+As a next step we need schnorr keypairs, those keys will be used by certificate Signers (for both Signers Keys and Master Keys)
+
+For generating Schnorr key use the command:  
+`generateCertificateSignerKey {"seed":"my seed"}`
+
+Example output of newly created key pair is:
+```
+{
+    "signerPublicKey": "24be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"
+    "signerSecret": "0400000020930c3927bbdf74fffd54860bf3a6192488493f116040381dbaa63f91a0e68c1324be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00",
+}
+```
+
+For retrieving other Schnorr keys repeat this command.
+
+**Step 6: Generate data for certificate proof creation and verification**
+
+The creation of Sidechains requires data for proving backward transfer operations, included in certificates.
+*If the circuit without key rotation, that data could be generated by the next command:*
+
+`generateCertProofInfo {"signersPublicKeys": [pk1, pk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk", "isCSWEnabled": true}`
+
+Note:
+- `signersPublicKeys` - list of Schnorr public keys of certificate Signers generated on step 5;
+- `threshold` - the minimum set of participants required for a valid proof creation;
+- `isCSWEnabled` - Its value should be true if the Ceased Sidechain Withdrawal is enabled, false otherwise.
+
+*If circuit with key rotation:*
+
+`generateCertWithKeyRotationProofInfo {"signersPublicKeys": [signerPk1, signerPk2, ...], "mastersPublicKeys": [masterPk1, masterPk2, ...], "threshold": 5, "verificationKeyPath": "/tmp/sidechainapp/cert_marlin_snark_vk", "provingKeyPath": "/tmp/sidechainapp/cert_marlin_snark_pk"}`
+
+Note:
+- `signersPublicKeys` - list of Schnorr public signing keys of certificate Signers generated on step 5;
+- `mastersPublicKeys` - list of Schnorr public master keys of certificate Signers generated separately on step 5 by the same function generateCertificateSignerKey, mastersKeys have to be different from signersKeys;
+- `threshold` - the minimum set of participants required for a valid proof creation;
+- `isCSWEnabled` - For non ceasing sidechains, it's always false and is not specified for generateCertWithKeyRotationProofInfo.
+
+*Note that generateCertificateSignerKey is called twice, separately for signersPublicKeys and separately for mastersPublicKeys and signersPublicKeys and mastersPublicKeys size should be equal.*
+
+Example of output is:
+```
+{
+    "maxPks": 7,
+    "threshold": 5,
+    "genSysConstant": "e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436",
+    "verificationKey": "02386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c42734148000
+    "schnorrKeys": ["b54cea3768f2716f7b36622ea312191a501fec575b4560f9f6cce85098799c0e00",
+                    "ef10cc28ae822389739507ae29f6d732416a02e157522db2fcf473e2ccef301680",
+                    "4b120dcf207cb5825f7f64e2427fc5704bf22966ad89edb57d38fad325af4b1f00",
+                    "8d2d1688e560e8c306d350ee228b837778802e6d4c6ce720563e93c978e85f0e00",
+                    "6729ddeec2704f3e80fb91f1cac475e7048fe456eb768760a68448b53d366d2100",
+                    "58ca3858c5e3890b69c748ade4706f82225c5a74b5a909665fcceeebd217a90f80",
+                    "24be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"]
+}
+```
+
+Save all outputs from previous steps and type `exit` for exit from Bootstrapping tool
+
+**Step 7: Clone and compile zen node**
+
+Compile MC sources with SC support code:	
+1. Clone Horizen core repository - https://github.com/HorizenOfficial/zen/
+2. Use the main SC support branch - `master`
+3. Build the Core for your platform using the guides in the repo.
+
+**Step 8: Setup local zen node**
+
+Run zen node for regtest network:  
+`./zend -regtest -websocket`
+
+*Version 1 (Threshold Signature Circuit)*
+
+Generate 450 blocks to enable the Sidechain logic with version 1 support. Otherwise, a v1 sidechain can't be created.  
+`./zen-cli -regtest generate 450`
+
+*Version 2 (Threshold Signature Circuit with Key Rotation)*
+
+Generate 480 blocks to enable the Sidechain logic with version 2 support. Otherwise, a v2 sidechain can't be created.  
+`./zen-cli -regtest generate 480`
+
+
+As a result, the ids of generated blocks are printed:
+```
+[
+    "08371bc5df88176872c58d9b4318b247801a736d0c13a33c6e09cf70cb91d5de",
+    "09c39ef2e1ecc53dcf4020cc56b2ab2c0d8a781e05d04e3064001ed2aa5ceca1",
+    ...
+    "0250078ae99bc6d053cb96f541f59d29cb80e38afdc87338d43b93099531dd38"
+]
+```
+
+**Step 9: Sidechain declaration in a Mainchain node**
+
+Declare SC by the next command:
+```
+ ./zen-cli -regtest \
+    sc_create '{
+        "version": 1,
+        "withdrawalEpochLength": 900,
+        "toaddress": "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac", 
+        "amount": 600.0,
+        "wCertVk": "02386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c42734148000",
+        "customData": "b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00",
+        "constant": "e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436",
+        "wCeasedVk": "02d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e8000",
+        "vFieldElementCertificateFieldConfig": []
+    }'
+```
+As a result id of the transaction and id of the sidechain will be printed:
+```
+{
+    "txid": "bf5439205cca15554332d100669e5aa0e91608aaca5f86e42478c2582a9bed5c",
+    "scid": "1f3b001136ca1afb15e13ac325170929feca6282bdfd89365684bf01f7c6ba14",
+}
+```
+
+Parameters for `sc_create` are:
+1. **"version"**: the version of the sidechain. Versions `0`, `1` and `2` are allowed by Zendoo. Version `1` or `2` is recommended to be used.
+2. **"withdrawalEpochLength"**: Length of the withdrawal epoch (`900`) - how often (in Mainchain blocks size) backward transfers from sidechain to mainchain could be done. The current maximum value is 900. For non ceasing sidechains must be set to 0.
+3. **"toaddress"**: Address to transfer initial coins amount (`"a5b...ac"`) - The public key differs depending on the model being used:
+   - **UTXO**: The public key generated by `generatekey` command on step 3
+   - **Account**: The public key generated by `generateAccountKey` command on step 3
+4. **"amount"**: Initial coins amount (`600`)
+5. **"wCertVk"**: Verification key from step 6 (`"0238...36"`) - That key is used for verifying backward transfers, verification file shall contain that key in byte form
+6. **"customData"**: - This value differs depending on the model being used: 
+   - **UTXO**: Vrf public key (`"b722...00"`) - that key was generated by `generateVrfKey` command on step 3
+   - **Account**: A concatenation of the Vrf public key generated by `generateVrfKey` AND the public key generated by `generatekey` (`"a5b...ac0238...36"`) 
+7. **"constant"**: GenSysConstant (`"e258...36"`) - it was generated on step 6
+8. **wCeasedVk**: Verification key from step 4 (`"02d7...14"`) - That key is used for verifying ceased sidechain withdrawals. If CSW is disabled, leave the value empty.
+9. **vFieldElementCertificateFieldConfig**: - number and size of custom data expected to be put into certificates.
+In case of _Threshold Signature Circuit WITHOUT CSW_ equals to `[]`.
+In case of _Threshold Signature Circuit WITH CSW_ equals to `[255, 255]`.
+In case of _Threshold Signature Circuit with Key Rotation_ equals to `[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]` - 32 elements of length 255.
+
+_There are some other optional parameters for the `sc_create` command, which is not needed for now._
+ 
+_Note: The Sidechain id is generated automatically._
+
+_Creation command of non ceasing sidechains(Sidechains which certificate submission can be postponed without ceasing) is similar to ceasing sidechains. The version must be set to 2 and withdrawalEpochLength to 0, all other parameters remain the same._
+
+**Step 10: Apply Sidechain declaration in a Mainchain node**
+Sidechain creation transaction is now in the memory pool of the Mainchain node, thus Sidechain is prepared, but not created yet. For creating a new Sidechain, the Sidechain creation transaction shall be put into the Mainchain block. To do it generate 1 more block:  
+`./zen-cli -regtest generate 1`
+
+As a result id of the block with the Sidechain transaction will be printed:
+```
+[
+  "0a14a1723676fd21e611601b28b6ff3e8fab40871dc51754f6b607786d1e6ee0"
+]
+```
+
+Now mainchain contains created Sidechain.
+
+Note: Sidechain id can be found as a part of the transaction that contains the sidechain creation output. To get the transaction information using one of the following commands:
+1. `./zen-cli -regtest getrawtransaction bf54...5c 1` 
+2. `./zen-cli -regtest gettransaction bf54...5c`
+
+Where `bf54...5c` is the Sidechain creation transaction id.
+
+Example of the output of `gettransaction` cmd with the sidechain id as `"scid": "1f3b...14"` is:
+```
+{
+    "fee": "-0.00013098", 
+    "timereceived": 1639043290, 
+    "blockhash": "08208f7ac541cd7331155b558967f14fbeff35017cafe1332d3057d910be5690", 
+    "blockindex": 1, 
+    "walletconflicts": [], 
+    "vjoinsplit": [], 
+    "hex": "fcff...00", 
+    "txid": "bf5439205cca15554332d100669e5aa0e91608aaca5f86e42478c2582a9bed5c", 
+    "blocktime": 1639043357, 
+    "amount": "-600.00000000", 
+    "version": -4, 
+    "details": [
+        {
+            "category": "send", 
+            "account": "", 
+            "fee": "-0.00013098", 
+            "vout": 1, 
+            "amount": "-600.00000000", 
+            "size": 13094
+        }
+    ], 
+    "confirmations": 1, 
+    "time": 1639043290, 
+    "vcsw_ccin": [], 
+    "vmbtr_out": [], 
+    "vsc_ccout": [
+        {
+            "version": 1,
+            "wCertVk": "02386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c42734148000", 
+            "constant": "e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436", 
+            "withdrawalEpochLength": 900, 
+            "vBitVectorCertificateFieldConfig": [], 
+            "vFieldElementCertificateFieldConfig": [
+                255, 
+                255
+            ], 
+            "customData": "b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00", 
+            "value": "600.00000000", 
+            "certProvingSystem": "CoboundaryMarlin", 
+            "wCeasedVk": "02d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e8000", 
+            "scid": "1f3b001136ca1afb15e13ac325170929feca6282bdfd89365684bf01f7c6ba14", 
+            "ftScFee": "0E-8", 
+            "address": "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac", 
+            "n": 0, 
+            "cswProvingSystem": "CoboundaryMarlin", 
+            "mbtrRequestDataLength": 0, 
+            "mbtrScFee": "0E-8"
+        }
+    ], 
+    "vft_ccout": []
+}
+```
+
+**Step 11: Get information from the mainchain for forming the genesis Sidechain block**
+
+Sidechain now is created in mainchain, but for starting Sidechain genesis Sidechain block shall be formed and put to configuration file, as well as some additional parameters.
+Genesis info for further use in ScBootstrappingTool could be extracted by the next command:
+```
+$ ./zen-cli -regtest getscgenesisinfo 1f3b001136ca1afb15e13ac325170929feca6282bdfd89365684bf01f7c6ba14
+```
+Where `"1f3b...14"` is the Sidechain id from step 9. As a result, we retrieve the byte sequence which will be passed to the Bootstrap tool later.
+
+Example output:
+```
+0214bac6f701bf84563689fdbd8262cafe29091725c33ae115fb1aca3611003b1f1c1dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201bd1b161f70e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f20a40100002068ed60c2e761bca39e2acb0b97bc1d6cab3c4e34e9418e315a0a152c092da60e03000000a55641f5c218184bfa5a3141650adf8a5ff20c155640c78ed1d67f255392dd0b85ff3c7daddde096973ff160b6b3ef4da00cf00eba9475388654e41adb39752cf59344fb4493c8730985fe27fccb543b9eddfcae00ef31c47e68b096ac8a37121dd1b161f70e0f205900300ffbacd1be0b5236a5eed303e352a61fb861166240d35f7029f0650000240908b43e94ab5f29a2285b20f6447e395cbf099658cc877bc7b1e62f9dfabe8adf4b0fdb0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0502a4010101ffffffff04aa4ab42c000000001976a914314fe5027467e293b0d5f43e8caaf3242b6d0ca888ac80b2e60e0000000017a914ea81ee2d877a25c7530a33fcf5a65c72f681250f87405973070000000017a914e7d25d82be231cf77ab8aecb80b6066923819ffc87405973070000000017a914ca76beb25c5f1c29c305a2b3e71a2de5fe1d2eed8700000000fcffffff5180324473d469ff502ed6c319a76ca72bec224dedca1a5cdb446879a0b02291d7000000006a473044022073eaed3b1c18c600e85dae806c3f9b343d52d366b30585410b134c6ba0760e1502207c4f456a5d2bad8d53dafb1c719b045c29a56c1d0c04925cf59f111ee30bb2a201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff64aa170e1dd0f731f302fb11d64f5fe63886110b0282a4fb142e21e03d75688d000000006a4730440220059df0fe2685a815b964aad77b92f657e8659b0657d332ea2c02533ce65ca33a0220529e311ad8c9e7bbe4657a5df3f0a41245aa1c195e36e804bbf49fa37eed95a501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff663d1d0f5b6edbcbc50ab954f13190901f9787dc8968da749f568c4e9953bd1b000000006a473044022007e2fcf967da0bbb48dd8ada940482a201cddd9aa597cd50ee0595b60ea3340302207638c7a0091870ae94142dceac1dc4b60f209b40c42032f9f79c48d924982aad01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff69aea70cec84ee910bc04e3119c8173606aa3d8cd2080be375f0ed816bf4f577000000006b483045022100e1bc6ebe190d0a87af8cfe3d942e5d398d26686045979da10bac5e5d5bd3e6f302203c012b4e648b6c9e5b0854e6deece819cb9eb5f2212a33501c59b4926e6a3f3d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff6c4ff1dcd7c2e23e514a9dfd17c3f2443ef03f6d2f42ac5308c74f48c3bf2d0f000000006a47304402207f7daf924c3c77e07e46aad826efe4b6e5b8c3b23d5835a3c0900ef8ccf340b802204388afb6ee6efc18e8f74b5749213407e5e9c6a1096261dbac1b93056f18a05001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff72507e16431ade03114b57c59309bcfa672bab68316f6c4f5eebfe02a1e86429000000006b48304502210088d1c9ff63ed2504db4ffcd6a3a15950941ac74813e0e5bdfb2ab6cd6db33b8e022030ae31d5b7d9172874e74af3d76fcc69f9a442367a134efc36f36293c50ce1ab01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff73ba408cfa02b5d053f3fd5df06b397f8d53746728a06cba2b0354ab3e8ab5de000000006a473044022028495ecd855da3fd72b9a9ee7cd91595e1980a44ef5d7026ea3897503508874f02200534c35437e7268ec0efe32ce9af56c8fe3f2df386401941d6a71509d71c0d5f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff74692650a5654bac7029ecb89623db9474488ccaeee8dc7b7d8642c16cab0eff000000006b48304502210085dd189782378758aa2267735d835ef17cbe433bca479a4fbd12477aadcf3f49022024931b29b422509a0687518d236184ec2b312a80d0415f1a3fbc75671f86346401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff751c82bda26181e15675e905eebf1e3161a992948f8b7b16e21121d8ab0aa756000000006b483045022100bedbc9a5a5634964e8baa281e3e25c5fee83b861a5c2d5641b1dc1ad2645fb22022017d56323b58f12acb3f860bc67cd89d908aaf70c4206b1617dd97d30b2dc22ca01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff75746d4b3d3ef5b1e50c34f7802b56891ceb03aee413375d8782fc4dbf849f7c000000006b4830450221009ccf0f098b0f0e40937323b0b05727eeb4719679624c1cd2dfc207f05848e971022057951624f68c13659a22d116f32e79a5cb4f4034fc0264cbf3d528750acd345501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff7e2a972b4b79a1f8f9fb945a2a40892d6c15fbe488c4eefd0dc88b47429b1074000000006a473044022019e08bc7c6a095f268316ee18fb50c25da1571edc327dc70d3d9ce774aac46f102203754e4ffb8fb5fa2c66a288bcb664c005f1887c078c9ff301ac9214c95c0cb0501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff640bffa6ae54aaeb4e7872fc77a6d5c416e6e026d2efcdfc9991eb86a870845d000000006b483045022100a9a45300ed8426fdddf915244af8ed076a89f3ab75084ec4c25f7deb47da5a73022068e74422761119f7c12295076aa4fab3afff75270a222e1b248f6f480f26bd7801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff92087228809680861ecf99cb343ff22ca537dbfaa90bfac19dd979083f8c80d1000000006a47304402205a8a0c4382e3333355e8dbcbde1153f9f05c0f8680d338fc41464ecc07cc1baf02201e1ba2dc83f032d09f7627d5b6916761c6798ee25b5d24054d83fbb4eb9229f301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff93004e26e1609672d2a7c1b3169e57d6d88c1ca2420c94f48b3500f8f8796e48000000006a473044022021f41511fef074cf7b0889242b6d02bef03d5f3baff3ae05ccd595e8b8fba833022008846fddd6609f35777b5e863e3e6c08e05850cad0b45d0c6b85a1d1d60c75b501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff93a8371dd26cce3fe3446c0cedf6b61b6cc10c0bff911941279b853a67580b29000000006b4830450221008cb87ebbe2da37d2665e72ef372dc1cfa369757f5f59d60e86dfe7cfeda6c0cc022042bf1d5f19f3837898139752cc2eedbe8acb68f8a9d616a78a477452eb65134a01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff94f6312a9fc69ae21758520dac429c50e9b9c366c0ae241088734d053200f177000000006b4830450221009b2e0fc2a32e97918e796b4e6165278b41ba205da90b4395e66f59788cc043ec0220463bca43c6fc00236357c43a99d66aa573359313deb3c0ab970ce8616ad6e0c801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9538b3d66f36e264319fbf518448626639b9e8104e0bd055365ca7a3aeb70abc000000006a47304402202c093c63d8be03e23a792f5adf99a496d882cb4ee4d0ffcfe64ca9ae27c4a32802200276ad13af13d15228be71e8edde9f6d26b8ca18d197d4b1de2bcbeace43e66601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9562a8f458cb9ddd84cfc3521367fd23249de1d0fc4cfe21f57861d99c33448a000000006b483045022100ad55a4319f0909e511a5d80f9ebe4b1160e78bd89e889e9f55cb881ae09bb99b022015248ad200765996dd380172fe140f4d39f00b783c8150941faa39e9b74f750f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff98c368acb63a5e58d12d777a6b32b0a85ec631136bbe4c74f6de83f0c6c8e6af000000006a473044022050765a7dad65937985b4972e062bcc94f8b01e13f967b6b4a64e1555794929d602206f89fe8d55f4f3959fd76dc372d4ba115647b392c9c3f930d4295a88287ce78a01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9c46d36fff2cf80c77f1b5b8034b10c8962e06f27120b9241f4a71d50427d8d3000000006b4830450221008f32c988c59861103a9e5447952edc53710a117dce2d8fd0b4d4ceaa17475da202206b879882fee8f9dd4db345df3bdc96d3a5f01a30db322ede47746f27f16e34d201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa22dccef4852defb8a3c65cb3cc545099ff1e059f2afaec18518aa82453dd06a000000006a47304402203e2607ccb1aeb574d4ea51af24fb8d3a6bc6a7b7170efdfc9d81a29d1463dd3f022061802115df2f6cf161ddcb83594089174137de4529e0ffd13ee4692baa2d071101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff4f0ba4c038bee817c146e86f09982b1f3efca9798c62396da996eb0d36c81ef4000000006a47304402206c7339fffa334360dd93cf7d7e9e952b7cc5257be5dd16208483fb29cd921d4202204da02325560aac645d0cf834085f3e6ad0684bd55a4a6b87b48b3f48a74c809401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3e136f9a1215a968adc146cf5d88ae6f1431437f59559cd97e1200ff25229c40000000006b483045022100a5c6d418ec97f43e8d54ad52f3245fd85b533ddb3a1a77963d38758e2de7bff10220264b1b28d40f92fb91b48a428d13bcf043f0cf149c7c997761feb330f1c9ae0801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3e6e70e5cffec82fe582c82175cbf50f63347b57a0d33ac6879f6e8c7b3569ac000000006a47304402201e7bc2f2c4a013560bbe6b5ad10e0f4ab605843b306af1565fc91628ae46053002203908a466e0f74b40209b244ee8094ab9cc24bdf05890becae660ec5f8370e28001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3fabc7e01b33971305e1ecbfea9ffe714b66954e7bdab7be2f8e020acc98ff5b000000006b483045022100ee20e58b764a6b265fc81d35316a367bdec22f8297da9fec93ba41484be532f7022050e8f09dbcdb38e186a383941d2ac8df69c338b354b1488ab07175ac465702ec01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3ff7ec4b337d157d689f4ea43e883b1ed0cd9615366c92878c48ae813329fe87000000006b483045022100a889cabcc8c6ad81cbca06f45028fedc18b52117eba816b1a9bfa7925576cd45022030584e093f5c1221e81f07f490abbfd9c84526175612fb2babcbd96e814d1b8101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff40775b129a491d72763a64a0a30db9233ed24cbdaf97cf33c72de44e455066d1000000006b4830450221008a72bec965bab9dcc3b254f5a2b5bd1a0b1941487ac1192d3769cbb18892e4f702200af130c24634af51c95a7283ebffc0d691ebd49773a229aaf15988b1e3c0732c01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff42eb1b3c250b4c19416cfacda166698fb511bf69473fb37487e4fccdd54df401000000006b483045022100bc8db80ec0b7b1c7e430412eb48d90d2f7706dffe8745393bd25c7948269e644022048f9dd667c858612d38e4ced397e6666ca8f216a0c80f25fe86f802dee02fb8601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff43f2fc8e9028d1a49d8db95e8d7ce0940a5fc651e6ea8bae34afdad9bb12ac8c000000006b483045022100d1788ac24d3fd884331f11eb83abdae5a1967e28036a9f23b74e2f79132c966e02201d4e8e3c18337c015e8137eb2c0dba765681eef97daf58a741f8546e479f0cf101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff45f5063fa660ff25e74f104eabd9620e6fa3a548dbaa15301a3eddfa8f3fa973000000006b483045022100b04de9a661e360e2b6d3ba3b5c7acf93ab297ad471561379c401521d577e1bb50220587b4ce33de50ad0a98f0a2ce6fde55a428e70277709297c6cfdc976b67ee2b101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff472d7cd6304b0d00986de94c2af3a531ae822ea9fd79a91157c8d97f056483aa000000006a473044022015b111c93aa0bd05bc48aaf71dbf113f4c1490ae130a27cdb044be7a3359667f022003fe07c321c44036a8d1e192520626168f49a220dbc825c8ddb0c5574765192501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff481e285f71b39efd2e96c6fbc58d7a1b61fdacfa04c27b1c2ab239067c584d0f000000006b483045022100e127c69af6e75e0565e472598abaed730d46d7decca245ccbf41346e905e342002201d042f0881601c793da7434d07acebbbc037d15e4a5fe0a3042f213d52d034a801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa4da8a8c6ca3171edfbcb6dedbcdb09565655b943d6692ae63d72bdeabd2e01c000000006a4730440220158910427779dfef08a150d29a985ee119afe714f9f5f412d7b004183809816a02207ab2cc0e4109d04475ff2e28aabcb93f2f640039247e2146209c0c839554135501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff51417845d72f986f861a440bd0eb052bbaf516507ee4ad07cace14174b588278000000006a473044022073e72e9945a80a4b1af3cc51c446374e1192aff1d7d999e229e046db98b4875802202dce56e36b64dd31e9b53f6819e749bb75a519524a35d2942463791fbd9d91d001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff529e3111a791271daf2b1822ff5ed1a90fa6d9a4d9f9e6606d4e93f85a329acc000000006a4730440220594a85fa6329efe77eea594c6044307881585973badf1a19923c8da40decfc5f0220566218c6a9c263a3ed8281eea080ae1b9da8c3778f6ae098e95b8796c3a58ee001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff54731456f2d96232b1da2195f3111a517b6e544d590f416f8a4cc84158985b98000000006a47304402207edbc70eefcdc5889d09b676cca358ca0c539154aa09b44420975c85df37a9a902207adc1db8b0b7bb2a211f99e0ab792f547a8cfae753d1bc34c4cfff5c5dc4030001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff55b85e7b4e6cbae54ae1313a5ca01adff45ee23ae5645b3f2e5f98eb4e33761d000000006b483045022100b3644b13f7e7e56fabbc7af65538917dabe49a9490f87caf133963622949af3702202ba31867c6a4c2eb1bdd907b6974d73b609e5351c8dfd6498039c551065424aa01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff55dda9be98b8cbd337a2d08d273996a29319b6efd03d3ae2a631d9779aa8ada7000000006a473044022039c7ce4d2568b4e9fcbcadaf2edadc81c8a7b0231f54eb6aa882be201af659e80220293eb029f922bfbf57db87161bf6220f6f353cd474c0070aad3d7a1d7e8bddce01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff562927bdc0b5eb551757d5f98d63353bab7f5c8aec70a9d85dd1cd9f43062885000000006b483045022100c886065102b0162e304378a0c0021ae9cea5e003a3f88a94db688b8921f7abba02207e723f554f49761de61b0463f9240f668c8538d341631282d320d47055c5fd0501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff588cbf070bf663d1d493c6454953ac2b763e388a8921afa08455039879c48431000000006b48304502210088484cc3f605ee684dcdeda0e95a535f97988bab9c9ed222f79beeb8c2e5a7e202200fbd1526ac3ad74b40008ac0e4850267c4e1a377c21ee385909d1717e02bb3f001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff5b09711cbd1759bffa0f9d1e13f985823957a71b33c00309f949231c0c9553a5000000006a47304402204db1fd4ee448dd5197617158d588221f92cd263d46044025c67a91857c62d03a02204f1788c1bfd3ecc19b86561e5e0c801c025c89cc43d6ec1e8e2e3f999936138f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff5b42547390d9bdf4eeef945dfadb764173454ca3316189a283d3adc2a48cd06f000000006b483045022100f933a6ca73508f772aba112f08a0d98cc3d72481f645ff45bd0a94f1d2d082e2022059dc582eb615aa1c5371be63fea9ddf5d91e0642c352f6a913e9045d6e2c63da01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff3b18fe05535f349ebbd6ede0932ff58e7b8691e737146398f681c91ebc2740d000000006b483045022100c4034888c8b78cdeab19b3df2ad20f3c98e4b1dcc69827e7ad3b653422b8172c02204e84460c70c13563d5594337d493d5206366b390831133a9e2a20b641ed41fbe01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffd85f86b46798cac4be7c048216f433a06ff62c0062600cfbfd9a8d9b943a4042000000006b483045022100bd6d7bebdff7c1971a96401e0958d04180fc3d2cc0ae26d20a5926664083ca7b02201e803ef4ac86255d7e77819b9d0a00f644c3a1a721d24fe68085ae20894eff0001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffdb443a405c727d03b0ccbe2cfab26657c12b2913e6e5b6636e3024e3c100ab16000000006b483045022100eb472d34ea6b1fd1a694b5001528942be1bd389311e19d3c7c4a80fa61d2273402206f34abbc03f570c156a496a1525354c199fdf9101b465657f6e7a85433a6f36501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffdfb5134c60ff0c3d7124477061f94c6e33cfe7980743816f5a4079ac3f8977d0000000006b483045022100a128f34d9db259ff663e0ed2b7449c7046f51cde150eba3aac9ddd10c7f7efa90220720adab368fbaa403c17a06e7e02f5d45595af5ffec0f2346bfb30ecd4c8672601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe20ef73405b538a45cb880602b5026320c6d186e9a4b0c68f1155b7469ee4473000000006b483045022100835890b28e3feb0288c79ebd7b52fd223142ec1529bd233870ebd914bf269deb02203e27fd3b85ea027f41f569f527ebd6c400c405b02fb96b738e5c758fe934dd3d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe2cb64e2ebf866662887f9959050169f6b0ea41a229c4f15f1bda4472e58ecd8000000006b483045022100c249701ffe29254657d792a73e3b9b65a836ae1755ad889b30f36eb380f51a46022026eddd6e1b704a41f5e89f1a37ec9b8a9625f7acf27e14d4dea6f3abfc7b71ea01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe6d7dac2dea1d3011d525586b5b03075a4aa3c3283d5391030b4d91f18754350000000006a47304402202b9fd2d9ee76ba58200a4a54903e8a8d40e2ea9208987922e151f970cd65d91602202dac273974708cda0d9b79e6ff43b8b9aaf1742eb738678d380c00eafea2e1c801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffeb35af1d9ef0945137a7b7c3b363146f65ed1ca687dd450d2259e32faac06327000000006b483045022100dba36d764ff5f81db71904cd2a8690ff70af4cd908ec4a14060174d4e993eb130220724f0269fd5346a1c17052e7d56dcec26bf3cadc16e8c8dc613a7eaadb42780101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffeb53f455cd0f40d2deb0f85f4891f70b1040c410987a9c0a75e088c58949582a000000006b4830450221008650c91f56231590023f4eb40d1c06008399aedd8014fcb8c4d75fde7c0c78f802201b40e85e411830fbc7b0c8a06bd007cf7e8b2a3c1b8bbefadfa8d9a20163db8501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffece4b99982aa3a1bdd62228ece1de0bc34eb403fb34e362bf15b19e0f149439c000000006b483045022100a62867373f8508fed921f4432811c55cbc18ac5d619c816c41334bc41450c5d1022004b40a054243d3bff0bc0449c6d653bc8d1ed29b71ff75bb332e9a1d9c55ac1001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffefdf9245b3636bbbf022d5a588c1791a253e1839b3bda0d9746b053e9902f12d000000006a473044022041d082cf3c829c34274951142b4bbaecb8ee63a7b443d4de32cd2fcc9ed64734022058aef5837a62712da25e64c0897a990907bbcdaf6525c3cd2458be798e1f5fe801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffd820225c1edbb9beca3f610646ee040684de48508bf04d0032a87d6f04a2d0de000000006b483045022100cf293be4ffc30a5156f0577bb3db2d697f7bed50a5dac331361d631561a2131602204a8a0d509dd855dde95ed12b691e406dd1b718c835b7aa9c751072faf91455dc01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff46c5439349a5a2c0447d1bb94cba7b6a0c57de6d7e20dd023b074377560b50f000000006a47304402207015ae2b2c8282d3256e7c98a4ef0f01c8e1728dd32094dde58db1d0994b5d3c022022834b0780bedc14c19193053d0753f4d43731af843b8b15bb104c14960ac3a101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff4ba43002b3825793575db10cad19fbec7a8cb279d487f1550b5742d7ca131ac000000006a47304402206fe96f44a1f698f6d15d2f74d3818a586e8c94964ee734e2905a11e020008f81022003c0c62e85ac91086909f3fa0ee1630cdadf00397da769d905d6f8922a92a8ad01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff699eb4e9d55da09c3cb86c4f2192a89d28352c2e41039f9f386d2a93b1400cc000000006a4730440220221934b7e3521869acdb08472ef1b821e7a10fefcb502a806332f9604a6eb711022034c0cdb6b327a90de1270d807f11dff4b027ca28e6fc7fb3bf39aef421a03b5101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff8dfe8a96ef80a93739c94ae949945e4eed3c9074956b21a84f8d8ae6e441a36000000006a4730440220190353d1b5cea18e603d0600458b64d98b6abc9f92a86a9933c3703b00f7b8d40220358833408984be17662dd1c9c9c020cde564110f9bda6df64cfca0ed669e879901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff9e3a90632c66d5c038ba5a7437158a7c46c98d8d4635f05601a0c5d1cca486f000000006b4830450221009fb8831e8f3fda4aa4579fc98cf5e1beeff38da2ee3ba89b6b9bea46fd2cf3220220159f9e05e06374095f673ce08344f4b8a50a4c0ad251387acd4448f23ece6e6501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffa3172981470c0739991dbbd28b3dc64fdee3f51d606764dfb7377283271a8e0000000006a47304402202ecb27b54e9a13e39065ba8120c72a069f6661a3d03571254069912e9e6758190220015b57547bf2c261ae6a6944a3bde9cb3fad0a7b571002b3a9e10aa3ce85db7901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffa516d5c25a6c521334660c2132027a95ae6598f2a0a42d95c40361ffc2114de000000006a47304402207866a38a387305c35da96f6865432419ec7a12a8971904dd2a6a78ee6d7570ee02201d8f434914464852c01263db72623aa802cd82f23fdf6fc41ec5c984c681b64201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffdcf395cb2fcf9f90b6ee9334a7b92009a743969272a91eb44929bdc43155103000000006b483045022100da840078a8313fe7525b0a0e6a1118e13bf1494cb2851658ba9a0fc72005c10a02202e81028f1fcc672bf015c56c703b6c4b4f6701def505d889e680358eccf7eca301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffff9748f0e33bf2a035c080dd3853e51d640f5b3b1e2e86eeb85d00e30e247a05000000006a47304402201e147f842707b4b3aa4737a1fccefddb95bf9d740b7034c1e9fe7f74a395392e022044ddcb06ded85c05420d79b1de41708ab1d86845a774759fb7c39b00df6ee92001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffbcca697ff1a1251febf749b8b06739bbb62132cf4f00033984fb76df625d7afe000000006a473044022026572ad45fa037b806affe01aa0a5b76b0f8e0202fabb65d53cfc2bb5505bd930220305bc945a398c4adf3b03a0109b7051003580e1c633607d24154a30da34b1f8b01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa5131642141f872f89de7d7e952d40449a28e7fac073d13880fe24fb8c0a75c2000000006a473044022048c1ebbcfa905114e627fcb4f98eb05f1799cc68ccf5d616e3318b8cf89f5412022062150d11e301f7c58e2a62058dadd037a646274b131f049637deea1ca030481201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa5d05733aae2d0117439e4b6e07a600553260c5c1ebdb3552941bde3c23898ff000000006b483045022100bb1331371d05142470c5aa2ff5aa3507ebb62ceca7297703bc3027011535acf602200510e83a051289fdd358d5b7d5e6564904d998c7a4bbba1defe5687545cefb5401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa9b17acb1b6c9604fb468f1ef3baecb3e775ba301945d91570b1ba5e4f085422000000006b483045022100c19168c1fd09728a2a1741da57cac50cc9f0e0c960e6b07c7440a59fdecdeb7502203eba0ec0cd5a8e592edfd379394808ea22cebdb0e70838b36f76f96f553bb1f801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffaa8754bc766d6bacd6247c486be64572eb80ee063f30c873b78600250c5798f4000000006b483045022100e98a1380810ce4442f3e5a7ca0d68897a8505728d988b17c79ba8320bcd84bfc02202a3d13cf8048edd2dcec5a3420d69303399f5955f7bee24432908df88761d85f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb1154f3ed7f700546c5d6277d8409c102bde5ef9f1fa68e5a197c780a2d550d6000000006a473044022002708dab35d196b2848499d331be0c4a0b6062ccaef19b576de6216e508146f5022007a8bb39f23930c4ffaaee345431c400bd0a3f7e75437907bbf682d3cef7cf4c01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb15a4114d603acd4fe03b1f6b86e701c2f59585cb828abb40de8a447bd78286a000000006a4730440220543b7237743d2b5bb18a1cc051737a3c8cfb8b495ef642baadf2736340b015c102203db5a58456a94d9028daeb9a7f503e286026fe463867a421498f8edd910e95c901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb231f1f7908f9583557acf48cd9eb1e089ee9abfbcde5a7bbbd8f93a92bc2735000000006a47304402205b41a45ff5c5d87ca55b331ad127e4fcc7ed45e3b7ba4911bf8dedab61680ceb0220576552ab6def30254d49809f42a05ad7084cbced60eab7c443f9bdaa254f190f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb4bc6e6cfb82f1ebcf99cb1c6c4e8fa8267b0df2813eb560b531dc289acd607b000000006b483045022100ad1dea11c68a02228eb7934ecf4de73ce78e2ab37c57d092baeaec229a7f6d5602202ef6d36921f341e91c6a3f2533949231a55499693e49a0b299ef7ee5025a414701210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb95095f84945aa5616f742d9eb4d73d1172398c84167ca14f7228b27a37c3a07000000006a473044022059ace9fb5304353d656d3e0ed0db3aa5584d7fc9bbdfd18730900316c433768c022013f4396108fd629832ccd0205f1678424e79bb9e7a0c7b28cb20ffe7e998a01f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffba3c10a02217e7741687c9bd011e9f5f223330f2837ffb9b02eadde224da3cc1000000006b483045022100c58c50e935e827bbf009968758d2ec25ea571aab479084d5e04af54bd947d36202204f03bdf098234ee6d9412e7276b1c2abe9b88c3bebfeb0372587bf1a94e69d6d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff7807fe541c9b046b4a8777d97aaf918bb1c63ce137783cf95a95a99edeb8b984000000006a47304402206d944c6fcfc7b54bed95cf31da6b2451ba6f62a331c427f74b66634e465376290220503870de5b1ef982c7b31691de87913e345732a89fa8d400b38fff143c4ea2dd01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffbcdf5418b972e1bd692b09680731418f45e435778d9ee769108492e0817478b8000000006b483045022100f4b2fe7b8b6641a7ea923731e4d246b0d4860b6126235f831476a10445444de7022005596fc4da3c0fd244f6f741b31792aade536ba270bec38395b517b3c666403b01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc4380757e1deb6b155c5ae9557be7b0db95c327c8f34f91dd0fd6bcb10186ff1000000006a47304402204e31d7f111286c4fd281f0d5463918b1dc425a044ed07ab0bb194601ad3f72dd0220788dbdb256ef7ca9fd4fdcb1bc4edf48d0960ed9d4c35bf3f54d5305a9045c3301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc5c52d23657d404fe39433124d6ed16e7325a4cf478bae41eabdcd0d17c1c336000000006a473044022061f89b52d301351a4883db58d2c1948aa5259de64faa5eb29e9eb5a6abc24b9e0220021e5534c8ce0bc43e8a1e3d688a14399aebe90f599b25746c6d47bde57de37901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc7afc7cfe915b95c98bc7c839b65a3ddbb9d88ef040ecd38362fcebcac5b036a000000006b483045022100f03953ab67650b2caa2be9f5bd3dab676c9b1aaec3f0b10e75bc2dc5df0d73f7022008ae40f687016a6392dce76491043cc1bde7c9689f97a01d63c01608dc07c6c301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc8247a966430428fb1ae0d457dc01f0bec67410f701a526b00b22a8d170ac534000000006a473044022060e015f5304fad88dc3671b4bf8939c7b54dea63a915f37f8778b7c1d852428002205fc99dd0760ed0790aa179ceec0f795f6f6b1e5479f11a18cc264d1845783e7501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffcb0203871d38c42280b48e31e403bdbea02ab4b97adc125bf8d867f7779d8ff1000000006a473044022067ffc4ecfc14eef8cbe7eb6868e9a87aef282629621cd2823e3b0beab93b1d07022001f0ad27cc7d7a8cc2935795d8c63eb3be86fb93e234280c4eb30bf2b30eae3e01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff0156e4b32c000000003d76a914314fe5027467e293b0d5f43e8caaf3242b6d0ca888ac20bf41684638316ffeccffe65fe87fbad2ec355a2a566853f7f259866654ca9b090177b40001e8030000005847f80d000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a521b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e000120e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436fdcd0102386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c4273414800001fdcd0102d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e800002ffff00000000000000000000000000000000000000000000000000
+```
+
+**Step 12: Forming Sidechain genesis block in hex string form by Bootstrapping tool**
+
+
+Run the Bootstrapping tool again and execute the `genesisinfo` command with the next parameters:
+1. `"model": "utxo"` sets the model to be used, either `utxo` or `account` values can be used.
+2. `"info": "0214...00"` is output from step 11
+2. `"secret": "0038...ac"` is a secret key generated on step 3
+3. `"vrfSecret": "0300...00"` is a VRF secret key generated on step 3
+
+Example:
+```
+genesisinfo {"model": "account", "info": "0214bac6f701bf84563689fdbd8262cafe29091725c33ae115fb1aca3611003b1f1c1dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201bd1b161f70e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f20a40100002068ed60c2e761bca39e2acb0b97bc1d6cab3c4e34e9418e315a0a152c092da60e03000000a55641f5c218184bfa5a3141650adf8a5ff20c155640c78ed1d67f255392dd0b85ff3c7daddde096973ff160b6b3ef4da00cf00eba9475388654e41adb39752cf59344fb4493c8730985fe27fccb543b9eddfcae00ef31c47e68b096ac8a37121dd1b161f70e0f205900300ffbacd1be0b5236a5eed303e352a61fb861166240d35f7029f0650000240908b43e94ab5f29a2285b20f6447e395cbf099658cc877bc7b1e62f9dfabe8adf4b0fdb0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0502a4010101ffffffff04aa4ab42c000000001976a914314fe5027467e293b0d5f43e8caaf3242b6d0ca888ac80b2e60e0000000017a914ea81ee2d877a25c7530a33fcf5a65c72f681250f87405973070000000017a914e7d25d82be231cf77ab8aecb80b6066923819ffc87405973070000000017a914ca76beb25c5f1c29c305a2b3e71a2de5fe1d2eed8700000000fcffffff5180324473d469ff502ed6c319a76ca72bec224dedca1a5cdb446879a0b02291d7000000006a473044022073eaed3b1c18c600e85dae806c3f9b343d52d366b30585410b134c6ba0760e1502207c4f456a5d2bad8d53dafb1c719b045c29a56c1d0c04925cf59f111ee30bb2a201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff64aa170e1dd0f731f302fb11d64f5fe63886110b0282a4fb142e21e03d75688d000000006a4730440220059df0fe2685a815b964aad77b92f657e8659b0657d332ea2c02533ce65ca33a0220529e311ad8c9e7bbe4657a5df3f0a41245aa1c195e36e804bbf49fa37eed95a501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff663d1d0f5b6edbcbc50ab954f13190901f9787dc8968da749f568c4e9953bd1b000000006a473044022007e2fcf967da0bbb48dd8ada940482a201cddd9aa597cd50ee0595b60ea3340302207638c7a0091870ae94142dceac1dc4b60f209b40c42032f9f79c48d924982aad01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff69aea70cec84ee910bc04e3119c8173606aa3d8cd2080be375f0ed816bf4f577000000006b483045022100e1bc6ebe190d0a87af8cfe3d942e5d398d26686045979da10bac5e5d5bd3e6f302203c012b4e648b6c9e5b0854e6deece819cb9eb5f2212a33501c59b4926e6a3f3d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff6c4ff1dcd7c2e23e514a9dfd17c3f2443ef03f6d2f42ac5308c74f48c3bf2d0f000000006a47304402207f7daf924c3c77e07e46aad826efe4b6e5b8c3b23d5835a3c0900ef8ccf340b802204388afb6ee6efc18e8f74b5749213407e5e9c6a1096261dbac1b93056f18a05001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff72507e16431ade03114b57c59309bcfa672bab68316f6c4f5eebfe02a1e86429000000006b48304502210088d1c9ff63ed2504db4ffcd6a3a15950941ac74813e0e5bdfb2ab6cd6db33b8e022030ae31d5b7d9172874e74af3d76fcc69f9a442367a134efc36f36293c50ce1ab01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff73ba408cfa02b5d053f3fd5df06b397f8d53746728a06cba2b0354ab3e8ab5de000000006a473044022028495ecd855da3fd72b9a9ee7cd91595e1980a44ef5d7026ea3897503508874f02200534c35437e7268ec0efe32ce9af56c8fe3f2df386401941d6a71509d71c0d5f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff74692650a5654bac7029ecb89623db9474488ccaeee8dc7b7d8642c16cab0eff000000006b48304502210085dd189782378758aa2267735d835ef17cbe433bca479a4fbd12477aadcf3f49022024931b29b422509a0687518d236184ec2b312a80d0415f1a3fbc75671f86346401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff751c82bda26181e15675e905eebf1e3161a992948f8b7b16e21121d8ab0aa756000000006b483045022100bedbc9a5a5634964e8baa281e3e25c5fee83b861a5c2d5641b1dc1ad2645fb22022017d56323b58f12acb3f860bc67cd89d908aaf70c4206b1617dd97d30b2dc22ca01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff75746d4b3d3ef5b1e50c34f7802b56891ceb03aee413375d8782fc4dbf849f7c000000006b4830450221009ccf0f098b0f0e40937323b0b05727eeb4719679624c1cd2dfc207f05848e971022057951624f68c13659a22d116f32e79a5cb4f4034fc0264cbf3d528750acd345501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff7e2a972b4b79a1f8f9fb945a2a40892d6c15fbe488c4eefd0dc88b47429b1074000000006a473044022019e08bc7c6a095f268316ee18fb50c25da1571edc327dc70d3d9ce774aac46f102203754e4ffb8fb5fa2c66a288bcb664c005f1887c078c9ff301ac9214c95c0cb0501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff640bffa6ae54aaeb4e7872fc77a6d5c416e6e026d2efcdfc9991eb86a870845d000000006b483045022100a9a45300ed8426fdddf915244af8ed076a89f3ab75084ec4c25f7deb47da5a73022068e74422761119f7c12295076aa4fab3afff75270a222e1b248f6f480f26bd7801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff92087228809680861ecf99cb343ff22ca537dbfaa90bfac19dd979083f8c80d1000000006a47304402205a8a0c4382e3333355e8dbcbde1153f9f05c0f8680d338fc41464ecc07cc1baf02201e1ba2dc83f032d09f7627d5b6916761c6798ee25b5d24054d83fbb4eb9229f301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff93004e26e1609672d2a7c1b3169e57d6d88c1ca2420c94f48b3500f8f8796e48000000006a473044022021f41511fef074cf7b0889242b6d02bef03d5f3baff3ae05ccd595e8b8fba833022008846fddd6609f35777b5e863e3e6c08e05850cad0b45d0c6b85a1d1d60c75b501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff93a8371dd26cce3fe3446c0cedf6b61b6cc10c0bff911941279b853a67580b29000000006b4830450221008cb87ebbe2da37d2665e72ef372dc1cfa369757f5f59d60e86dfe7cfeda6c0cc022042bf1d5f19f3837898139752cc2eedbe8acb68f8a9d616a78a477452eb65134a01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff94f6312a9fc69ae21758520dac429c50e9b9c366c0ae241088734d053200f177000000006b4830450221009b2e0fc2a32e97918e796b4e6165278b41ba205da90b4395e66f59788cc043ec0220463bca43c6fc00236357c43a99d66aa573359313deb3c0ab970ce8616ad6e0c801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9538b3d66f36e264319fbf518448626639b9e8104e0bd055365ca7a3aeb70abc000000006a47304402202c093c63d8be03e23a792f5adf99a496d882cb4ee4d0ffcfe64ca9ae27c4a32802200276ad13af13d15228be71e8edde9f6d26b8ca18d197d4b1de2bcbeace43e66601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9562a8f458cb9ddd84cfc3521367fd23249de1d0fc4cfe21f57861d99c33448a000000006b483045022100ad55a4319f0909e511a5d80f9ebe4b1160e78bd89e889e9f55cb881ae09bb99b022015248ad200765996dd380172fe140f4d39f00b783c8150941faa39e9b74f750f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff98c368acb63a5e58d12d777a6b32b0a85ec631136bbe4c74f6de83f0c6c8e6af000000006a473044022050765a7dad65937985b4972e062bcc94f8b01e13f967b6b4a64e1555794929d602206f89fe8d55f4f3959fd76dc372d4ba115647b392c9c3f930d4295a88287ce78a01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff9c46d36fff2cf80c77f1b5b8034b10c8962e06f27120b9241f4a71d50427d8d3000000006b4830450221008f32c988c59861103a9e5447952edc53710a117dce2d8fd0b4d4ceaa17475da202206b879882fee8f9dd4db345df3bdc96d3a5f01a30db322ede47746f27f16e34d201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa22dccef4852defb8a3c65cb3cc545099ff1e059f2afaec18518aa82453dd06a000000006a47304402203e2607ccb1aeb574d4ea51af24fb8d3a6bc6a7b7170efdfc9d81a29d1463dd3f022061802115df2f6cf161ddcb83594089174137de4529e0ffd13ee4692baa2d071101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff4f0ba4c038bee817c146e86f09982b1f3efca9798c62396da996eb0d36c81ef4000000006a47304402206c7339fffa334360dd93cf7d7e9e952b7cc5257be5dd16208483fb29cd921d4202204da02325560aac645d0cf834085f3e6ad0684bd55a4a6b87b48b3f48a74c809401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3e136f9a1215a968adc146cf5d88ae6f1431437f59559cd97e1200ff25229c40000000006b483045022100a5c6d418ec97f43e8d54ad52f3245fd85b533ddb3a1a77963d38758e2de7bff10220264b1b28d40f92fb91b48a428d13bcf043f0cf149c7c997761feb330f1c9ae0801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3e6e70e5cffec82fe582c82175cbf50f63347b57a0d33ac6879f6e8c7b3569ac000000006a47304402201e7bc2f2c4a013560bbe6b5ad10e0f4ab605843b306af1565fc91628ae46053002203908a466e0f74b40209b244ee8094ab9cc24bdf05890becae660ec5f8370e28001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3fabc7e01b33971305e1ecbfea9ffe714b66954e7bdab7be2f8e020acc98ff5b000000006b483045022100ee20e58b764a6b265fc81d35316a367bdec22f8297da9fec93ba41484be532f7022050e8f09dbcdb38e186a383941d2ac8df69c338b354b1488ab07175ac465702ec01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff3ff7ec4b337d157d689f4ea43e883b1ed0cd9615366c92878c48ae813329fe87000000006b483045022100a889cabcc8c6ad81cbca06f45028fedc18b52117eba816b1a9bfa7925576cd45022030584e093f5c1221e81f07f490abbfd9c84526175612fb2babcbd96e814d1b8101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff40775b129a491d72763a64a0a30db9233ed24cbdaf97cf33c72de44e455066d1000000006b4830450221008a72bec965bab9dcc3b254f5a2b5bd1a0b1941487ac1192d3769cbb18892e4f702200af130c24634af51c95a7283ebffc0d691ebd49773a229aaf15988b1e3c0732c01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff42eb1b3c250b4c19416cfacda166698fb511bf69473fb37487e4fccdd54df401000000006b483045022100bc8db80ec0b7b1c7e430412eb48d90d2f7706dffe8745393bd25c7948269e644022048f9dd667c858612d38e4ced397e6666ca8f216a0c80f25fe86f802dee02fb8601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff43f2fc8e9028d1a49d8db95e8d7ce0940a5fc651e6ea8bae34afdad9bb12ac8c000000006b483045022100d1788ac24d3fd884331f11eb83abdae5a1967e28036a9f23b74e2f79132c966e02201d4e8e3c18337c015e8137eb2c0dba765681eef97daf58a741f8546e479f0cf101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff45f5063fa660ff25e74f104eabd9620e6fa3a548dbaa15301a3eddfa8f3fa973000000006b483045022100b04de9a661e360e2b6d3ba3b5c7acf93ab297ad471561379c401521d577e1bb50220587b4ce33de50ad0a98f0a2ce6fde55a428e70277709297c6cfdc976b67ee2b101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff472d7cd6304b0d00986de94c2af3a531ae822ea9fd79a91157c8d97f056483aa000000006a473044022015b111c93aa0bd05bc48aaf71dbf113f4c1490ae130a27cdb044be7a3359667f022003fe07c321c44036a8d1e192520626168f49a220dbc825c8ddb0c5574765192501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff481e285f71b39efd2e96c6fbc58d7a1b61fdacfa04c27b1c2ab239067c584d0f000000006b483045022100e127c69af6e75e0565e472598abaed730d46d7decca245ccbf41346e905e342002201d042f0881601c793da7434d07acebbbc037d15e4a5fe0a3042f213d52d034a801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa4da8a8c6ca3171edfbcb6dedbcdb09565655b943d6692ae63d72bdeabd2e01c000000006a4730440220158910427779dfef08a150d29a985ee119afe714f9f5f412d7b004183809816a02207ab2cc0e4109d04475ff2e28aabcb93f2f640039247e2146209c0c839554135501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff51417845d72f986f861a440bd0eb052bbaf516507ee4ad07cace14174b588278000000006a473044022073e72e9945a80a4b1af3cc51c446374e1192aff1d7d999e229e046db98b4875802202dce56e36b64dd31e9b53f6819e749bb75a519524a35d2942463791fbd9d91d001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff529e3111a791271daf2b1822ff5ed1a90fa6d9a4d9f9e6606d4e93f85a329acc000000006a4730440220594a85fa6329efe77eea594c6044307881585973badf1a19923c8da40decfc5f0220566218c6a9c263a3ed8281eea080ae1b9da8c3778f6ae098e95b8796c3a58ee001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff54731456f2d96232b1da2195f3111a517b6e544d590f416f8a4cc84158985b98000000006a47304402207edbc70eefcdc5889d09b676cca358ca0c539154aa09b44420975c85df37a9a902207adc1db8b0b7bb2a211f99e0ab792f547a8cfae753d1bc34c4cfff5c5dc4030001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff55b85e7b4e6cbae54ae1313a5ca01adff45ee23ae5645b3f2e5f98eb4e33761d000000006b483045022100b3644b13f7e7e56fabbc7af65538917dabe49a9490f87caf133963622949af3702202ba31867c6a4c2eb1bdd907b6974d73b609e5351c8dfd6498039c551065424aa01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff55dda9be98b8cbd337a2d08d273996a29319b6efd03d3ae2a631d9779aa8ada7000000006a473044022039c7ce4d2568b4e9fcbcadaf2edadc81c8a7b0231f54eb6aa882be201af659e80220293eb029f922bfbf57db87161bf6220f6f353cd474c0070aad3d7a1d7e8bddce01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff562927bdc0b5eb551757d5f98d63353bab7f5c8aec70a9d85dd1cd9f43062885000000006b483045022100c886065102b0162e304378a0c0021ae9cea5e003a3f88a94db688b8921f7abba02207e723f554f49761de61b0463f9240f668c8538d341631282d320d47055c5fd0501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff588cbf070bf663d1d493c6454953ac2b763e388a8921afa08455039879c48431000000006b48304502210088484cc3f605ee684dcdeda0e95a535f97988bab9c9ed222f79beeb8c2e5a7e202200fbd1526ac3ad74b40008ac0e4850267c4e1a377c21ee385909d1717e02bb3f001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff5b09711cbd1759bffa0f9d1e13f985823957a71b33c00309f949231c0c9553a5000000006a47304402204db1fd4ee448dd5197617158d588221f92cd263d46044025c67a91857c62d03a02204f1788c1bfd3ecc19b86561e5e0c801c025c89cc43d6ec1e8e2e3f999936138f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff5b42547390d9bdf4eeef945dfadb764173454ca3316189a283d3adc2a48cd06f000000006b483045022100f933a6ca73508f772aba112f08a0d98cc3d72481f645ff45bd0a94f1d2d082e2022059dc582eb615aa1c5371be63fea9ddf5d91e0642c352f6a913e9045d6e2c63da01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff3b18fe05535f349ebbd6ede0932ff58e7b8691e737146398f681c91ebc2740d000000006b483045022100c4034888c8b78cdeab19b3df2ad20f3c98e4b1dcc69827e7ad3b653422b8172c02204e84460c70c13563d5594337d493d5206366b390831133a9e2a20b641ed41fbe01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffd85f86b46798cac4be7c048216f433a06ff62c0062600cfbfd9a8d9b943a4042000000006b483045022100bd6d7bebdff7c1971a96401e0958d04180fc3d2cc0ae26d20a5926664083ca7b02201e803ef4ac86255d7e77819b9d0a00f644c3a1a721d24fe68085ae20894eff0001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffdb443a405c727d03b0ccbe2cfab26657c12b2913e6e5b6636e3024e3c100ab16000000006b483045022100eb472d34ea6b1fd1a694b5001528942be1bd389311e19d3c7c4a80fa61d2273402206f34abbc03f570c156a496a1525354c199fdf9101b465657f6e7a85433a6f36501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffdfb5134c60ff0c3d7124477061f94c6e33cfe7980743816f5a4079ac3f8977d0000000006b483045022100a128f34d9db259ff663e0ed2b7449c7046f51cde150eba3aac9ddd10c7f7efa90220720adab368fbaa403c17a06e7e02f5d45595af5ffec0f2346bfb30ecd4c8672601210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe20ef73405b538a45cb880602b5026320c6d186e9a4b0c68f1155b7469ee4473000000006b483045022100835890b28e3feb0288c79ebd7b52fd223142ec1529bd233870ebd914bf269deb02203e27fd3b85ea027f41f569f527ebd6c400c405b02fb96b738e5c758fe934dd3d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe2cb64e2ebf866662887f9959050169f6b0ea41a229c4f15f1bda4472e58ecd8000000006b483045022100c249701ffe29254657d792a73e3b9b65a836ae1755ad889b30f36eb380f51a46022026eddd6e1b704a41f5e89f1a37ec9b8a9625f7acf27e14d4dea6f3abfc7b71ea01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffe6d7dac2dea1d3011d525586b5b03075a4aa3c3283d5391030b4d91f18754350000000006a47304402202b9fd2d9ee76ba58200a4a54903e8a8d40e2ea9208987922e151f970cd65d91602202dac273974708cda0d9b79e6ff43b8b9aaf1742eb738678d380c00eafea2e1c801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffeb35af1d9ef0945137a7b7c3b363146f65ed1ca687dd450d2259e32faac06327000000006b483045022100dba36d764ff5f81db71904cd2a8690ff70af4cd908ec4a14060174d4e993eb130220724f0269fd5346a1c17052e7d56dcec26bf3cadc16e8c8dc613a7eaadb42780101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffeb53f455cd0f40d2deb0f85f4891f70b1040c410987a9c0a75e088c58949582a000000006b4830450221008650c91f56231590023f4eb40d1c06008399aedd8014fcb8c4d75fde7c0c78f802201b40e85e411830fbc7b0c8a06bd007cf7e8b2a3c1b8bbefadfa8d9a20163db8501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffece4b99982aa3a1bdd62228ece1de0bc34eb403fb34e362bf15b19e0f149439c000000006b483045022100a62867373f8508fed921f4432811c55cbc18ac5d619c816c41334bc41450c5d1022004b40a054243d3bff0bc0449c6d653bc8d1ed29b71ff75bb332e9a1d9c55ac1001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffefdf9245b3636bbbf022d5a588c1791a253e1839b3bda0d9746b053e9902f12d000000006a473044022041d082cf3c829c34274951142b4bbaecb8ee63a7b443d4de32cd2fcc9ed64734022058aef5837a62712da25e64c0897a990907bbcdaf6525c3cd2458be798e1f5fe801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffd820225c1edbb9beca3f610646ee040684de48508bf04d0032a87d6f04a2d0de000000006b483045022100cf293be4ffc30a5156f0577bb3db2d697f7bed50a5dac331361d631561a2131602204a8a0d509dd855dde95ed12b691e406dd1b718c835b7aa9c751072faf91455dc01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff46c5439349a5a2c0447d1bb94cba7b6a0c57de6d7e20dd023b074377560b50f000000006a47304402207015ae2b2c8282d3256e7c98a4ef0f01c8e1728dd32094dde58db1d0994b5d3c022022834b0780bedc14c19193053d0753f4d43731af843b8b15bb104c14960ac3a101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff4ba43002b3825793575db10cad19fbec7a8cb279d487f1550b5742d7ca131ac000000006a47304402206fe96f44a1f698f6d15d2f74d3818a586e8c94964ee734e2905a11e020008f81022003c0c62e85ac91086909f3fa0ee1630cdadf00397da769d905d6f8922a92a8ad01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff699eb4e9d55da09c3cb86c4f2192a89d28352c2e41039f9f386d2a93b1400cc000000006a4730440220221934b7e3521869acdb08472ef1b821e7a10fefcb502a806332f9604a6eb711022034c0cdb6b327a90de1270d807f11dff4b027ca28e6fc7fb3bf39aef421a03b5101210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff8dfe8a96ef80a93739c94ae949945e4eed3c9074956b21a84f8d8ae6e441a36000000006a4730440220190353d1b5cea18e603d0600458b64d98b6abc9f92a86a9933c3703b00f7b8d40220358833408984be17662dd1c9c9c020cde564110f9bda6df64cfca0ed669e879901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffff9e3a90632c66d5c038ba5a7437158a7c46c98d8d4635f05601a0c5d1cca486f000000006b4830450221009fb8831e8f3fda4aa4579fc98cf5e1beeff38da2ee3ba89b6b9bea46fd2cf3220220159f9e05e06374095f673ce08344f4b8a50a4c0ad251387acd4448f23ece6e6501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffa3172981470c0739991dbbd28b3dc64fdee3f51d606764dfb7377283271a8e0000000006a47304402202ecb27b54e9a13e39065ba8120c72a069f6661a3d03571254069912e9e6758190220015b57547bf2c261ae6a6944a3bde9cb3fad0a7b571002b3a9e10aa3ce85db7901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffa516d5c25a6c521334660c2132027a95ae6598f2a0a42d95c40361ffc2114de000000006a47304402207866a38a387305c35da96f6865432419ec7a12a8971904dd2a6a78ee6d7570ee02201d8f434914464852c01263db72623aa802cd82f23fdf6fc41ec5c984c681b64201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448fffffffffdcf395cb2fcf9f90b6ee9334a7b92009a743969272a91eb44929bdc43155103000000006b483045022100da840078a8313fe7525b0a0e6a1118e13bf1494cb2851658ba9a0fc72005c10a02202e81028f1fcc672bf015c56c703b6c4b4f6701def505d889e680358eccf7eca301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffff9748f0e33bf2a035c080dd3853e51d640f5b3b1e2e86eeb85d00e30e247a05000000006a47304402201e147f842707b4b3aa4737a1fccefddb95bf9d740b7034c1e9fe7f74a395392e022044ddcb06ded85c05420d79b1de41708ab1d86845a774759fb7c39b00df6ee92001210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffbcca697ff1a1251febf749b8b06739bbb62132cf4f00033984fb76df625d7afe000000006a473044022026572ad45fa037b806affe01aa0a5b76b0f8e0202fabb65d53cfc2bb5505bd930220305bc945a398c4adf3b03a0109b7051003580e1c633607d24154a30da34b1f8b01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa5131642141f872f89de7d7e952d40449a28e7fac073d13880fe24fb8c0a75c2000000006a473044022048c1ebbcfa905114e627fcb4f98eb05f1799cc68ccf5d616e3318b8cf89f5412022062150d11e301f7c58e2a62058dadd037a646274b131f049637deea1ca030481201210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa5d05733aae2d0117439e4b6e07a600553260c5c1ebdb3552941bde3c23898ff000000006b483045022100bb1331371d05142470c5aa2ff5aa3507ebb62ceca7297703bc3027011535acf602200510e83a051289fdd358d5b7d5e6564904d998c7a4bbba1defe5687545cefb5401210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffa9b17acb1b6c9604fb468f1ef3baecb3e775ba301945d91570b1ba5e4f085422000000006b483045022100c19168c1fd09728a2a1741da57cac50cc9f0e0c960e6b07c7440a59fdecdeb7502203eba0ec0cd5a8e592edfd379394808ea22cebdb0e70838b36f76f96f553bb1f801210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffaa8754bc766d6bacd6247c486be64572eb80ee063f30c873b78600250c5798f4000000006b483045022100e98a1380810ce4442f3e5a7ca0d68897a8505728d988b17c79ba8320bcd84bfc02202a3d13cf8048edd2dcec5a3420d69303399f5955f7bee24432908df88761d85f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb1154f3ed7f700546c5d6277d8409c102bde5ef9f1fa68e5a197c780a2d550d6000000006a473044022002708dab35d196b2848499d331be0c4a0b6062ccaef19b576de6216e508146f5022007a8bb39f23930c4ffaaee345431c400bd0a3f7e75437907bbf682d3cef7cf4c01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb15a4114d603acd4fe03b1f6b86e701c2f59585cb828abb40de8a447bd78286a000000006a4730440220543b7237743d2b5bb18a1cc051737a3c8cfb8b495ef642baadf2736340b015c102203db5a58456a94d9028daeb9a7f503e286026fe463867a421498f8edd910e95c901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb231f1f7908f9583557acf48cd9eb1e089ee9abfbcde5a7bbbd8f93a92bc2735000000006a47304402205b41a45ff5c5d87ca55b331ad127e4fcc7ed45e3b7ba4911bf8dedab61680ceb0220576552ab6def30254d49809f42a05ad7084cbced60eab7c443f9bdaa254f190f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb4bc6e6cfb82f1ebcf99cb1c6c4e8fa8267b0df2813eb560b531dc289acd607b000000006b483045022100ad1dea11c68a02228eb7934ecf4de73ce78e2ab37c57d092baeaec229a7f6d5602202ef6d36921f341e91c6a3f2533949231a55499693e49a0b299ef7ee5025a414701210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffb95095f84945aa5616f742d9eb4d73d1172398c84167ca14f7228b27a37c3a07000000006a473044022059ace9fb5304353d656d3e0ed0db3aa5584d7fc9bbdfd18730900316c433768c022013f4396108fd629832ccd0205f1678424e79bb9e7a0c7b28cb20ffe7e998a01f01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffba3c10a02217e7741687c9bd011e9f5f223330f2837ffb9b02eadde224da3cc1000000006b483045022100c58c50e935e827bbf009968758d2ec25ea571aab479084d5e04af54bd947d36202204f03bdf098234ee6d9412e7276b1c2abe9b88c3bebfeb0372587bf1a94e69d6d01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff7807fe541c9b046b4a8777d97aaf918bb1c63ce137783cf95a95a99edeb8b984000000006a47304402206d944c6fcfc7b54bed95cf31da6b2451ba6f62a331c427f74b66634e465376290220503870de5b1ef982c7b31691de87913e345732a89fa8d400b38fff143c4ea2dd01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffbcdf5418b972e1bd692b09680731418f45e435778d9ee769108492e0817478b8000000006b483045022100f4b2fe7b8b6641a7ea923731e4d246b0d4860b6126235f831476a10445444de7022005596fc4da3c0fd244f6f741b31792aade536ba270bec38395b517b3c666403b01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc4380757e1deb6b155c5ae9557be7b0db95c327c8f34f91dd0fd6bcb10186ff1000000006a47304402204e31d7f111286c4fd281f0d5463918b1dc425a044ed07ab0bb194601ad3f72dd0220788dbdb256ef7ca9fd4fdcb1bc4edf48d0960ed9d4c35bf3f54d5305a9045c3301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc5c52d23657d404fe39433124d6ed16e7325a4cf478bae41eabdcd0d17c1c336000000006a473044022061f89b52d301351a4883db58d2c1948aa5259de64faa5eb29e9eb5a6abc24b9e0220021e5534c8ce0bc43e8a1e3d688a14399aebe90f599b25746c6d47bde57de37901210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc7afc7cfe915b95c98bc7c839b65a3ddbb9d88ef040ecd38362fcebcac5b036a000000006b483045022100f03953ab67650b2caa2be9f5bd3dab676c9b1aaec3f0b10e75bc2dc5df0d73f7022008ae40f687016a6392dce76491043cc1bde7c9689f97a01d63c01608dc07c6c301210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffc8247a966430428fb1ae0d457dc01f0bec67410f701a526b00b22a8d170ac534000000006a473044022060e015f5304fad88dc3671b4bf8939c7b54dea63a915f37f8778b7c1d852428002205fc99dd0760ed0790aa179ceec0f795f6f6b1e5479f11a18cc264d1845783e7501210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffffcb0203871d38c42280b48e31e403bdbea02ab4b97adc125bf8d867f7779d8ff1000000006a473044022067ffc4ecfc14eef8cbe7eb6868e9a87aef282629621cd2823e3b0beab93b1d07022001f0ad27cc7d7a8cc2935795d8c63eb3be86fb93e234280c4eb30bf2b30eae3e01210268386201e01ab008abf42e70677ddcd932148b78a9c24e79ba1b0bb63920a448ffffffff0156e4b32c000000003d76a914314fe5027467e293b0d5f43e8caaf3242b6d0ca888ac20bf41684638316ffeccffe65fe87fbad2ec355a2a566853f7f259866654ca9b090177b40001e8030000005847f80d000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a521b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e000120e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436fdcd0102386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c4273414800001fdcd0102d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e800002ffff00000000000000000000000000000000000000000000000000", "secret": "003868b579a763b620cabe5882dae3c39be8c84719d6c2ba4ad2ab4b0653aacd04a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac", "vrfSecret": "0300000020b8235a39cbbdb61d6b7abed3c078cf5c47cd93c989279c0ab75dd772b6b47802b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00"}
+```
+Note: Some Operating Systems have a terminal line length limit, that can be less than `genesisinfo` command length. In particular, it's actual for the Windows command line. To avoid command arguments truncating use the file mode:
+```
+genesisinfo -f "~/dev/genesis_info_data.txt"
+```
+where `genesis_info_data.txt` file contains proper json data `{"info":...}`.
+
+*Note: For non ceasing sidechains a fifth parameter must be specified:*
+
+`"virtualWithdrawalEpochLength": 100` is the artificial withdrawal epoch length used only on the sidechain side. The minimum value of virtualWithdrawalEpochLength for the RegTest network is 10 and for the MainNet and the TestNet is 100.   
+
+Output example:
+```
+{
+    "scId": "1f3b001136ca1afb15e13ac325170929feca6282bdfd89365684bf01f7c6ba14",
+    "scGenesisBlockHex": "010000000000000000000000000000000000000000000000000000000000000000d6a0899b0c920140a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac42b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e0080e0ba84bf0308000000005fbc4e292fa8089373cc0851c9e9befff1c85404cfa08a18c574c8ff24733d1a0066983d67d39f5c6414d3771884e5281217d89946056f9036d9acf99f288f371127d9c76806cdd820cb828537e71f8839ee052e4d76ab4e32a86d7b6f42136e310000000000000000000000000000000000000000000000000000000000000000160a9b2e2b7a17fac04053710165912af9e32e2e4fb764206bf01ce41a0276b40000000000000000000000000000000000000000000000000000000000000000008001e5f3476c8f4a6d639a8e3ba8d1dc1f5f8c9929a0f6553e8bed3000d294e4f54b839dd414e59a465f7a6b2fd8e3e780f33c81f7e5647276351d2d0059fed08a020002841b08208f7ac541cd7331155b558967f14fbeff35017cafe1332d3057d910be5690a611010000044e02961101e8030000005847f80d000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a521b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e000120e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436fdcd0102386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c4273414800001fdcd0102d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e800002ffff0000000000000000000000000000000000005ced9b2a58c27824e4865fcaaa0816e9a05a9e6600d132435515ca5c203954bf0000000090090c000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000e5898923c5501dbecd48456555cf9225aa44bf3a4e84bc20ec069b4a4dcf972a00000000000000000100000000000000139b3ecbc5a42fb4f3e4ae8cb3f263dc68c4c24e514b44262baf847e0635b22d00000000000000000100000000000000cf4c9401843fc0e2b017d334787fc7cf38a6b1f04d3fa6abd12ba18cc7a9e8170000000000000000010000000000000075ebe544ca04c7aed3c225003514b6a85c07cdea695d42fa7e78d25d2bb62e380000000000000000010000000000000012cf31c4504a3e4135a8a1ef06973ed061e9cc659813ebded719c9f1ca20943a000000000000000001000000000000001cef6ce7dfc27c10d8e2b1612340fcc67dfe2909649c34b6d94379c678235520000000000000000001000000000000009722c66b0e766e57ce97cb7ab82ad27cbad4294061c5b3ddb76331307c90602300000000000000000100000000000000c1f94c50887bb99f6eed3cb27adcac769b8b6cebf24ae6e3199e996c1b534e0b000000000000000001000000000000009ef35bc5fecf5ec5ebee699fb9674c6ac47cae618b76e60f32bdfc4c3fe3073800000000000000000100000000000000cae22c26168c9275bfa5ad7aa496e94450367a19be9a142e2c6a8d3f5afaaf26000000000000000001000000000000003c411e863e54f7a1897b899027feed299445573ad779bda4c4c038b76f749909000000000000000000000002e20203000000a55641f5c218184bfa5a3141650adf8a5ff20c155640c78ed1d67f255392dd0b85ff3c7daddde096973ff160b6b3ef4da00cf00eba9475388654e41adb39752cf59344fb4493c8730985fe27fccb543b9eddfcae00ef31c47e68b096ac8a37121dd1b161f70e0f205900300ffbacd1be0b5236a5eed303e352a61fb861166240d35f7029f0650000240908b43e94ab5f29a2285b20f6447e395cbf099658cc877bc7b1e62f9dfabe8adf4b0fdb00",
+    "powData": "1dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201bd1b161f70e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f20",
+    "mcBlockHeight": 480,
+    "mcNetwork": "regtest",
+    isNonCeasing: false,
+    "withdrawalEpochLength": 900,
+    "initialCumulativeCommTreeHash": "68ed60c2e761bca39e2acb0b97bc1d6cab3c4e34e9418e315a0a152c092da60e"
+}
+```
+
+**Step 13: Update Sidechain configuration file**
+
+Use `examples/utxo/simpleapp/src/main/resources/settings_basic.conf` file and append it with the result from `genesisinfo` in the following structure:
+
+```
+sparkz {
+    genesis {
+        scGenesisBlockHex: "010000000000000000000000000000000000000000000000000000000000000000d6a0899b0c920140a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac42b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e0080e0ba84bf0308000000005fbc4e292fa8089373cc0851c9e9befff1c85404cfa08a18c574c8ff24733d1a0066983d67d39f5c6414d3771884e5281217d89946056f9036d9acf99f288f371127d9c76806cdd820cb828537e71f8839ee052e4d76ab4e32a86d7b6f42136e310000000000000000000000000000000000000000000000000000000000000000160a9b2e2b7a17fac04053710165912af9e32e2e4fb764206bf01ce41a0276b40000000000000000000000000000000000000000000000000000000000000000008001e5f3476c8f4a6d639a8e3ba8d1dc1f5f8c9929a0f6553e8bed3000d294e4f54b839dd414e59a465f7a6b2fd8e3e780f33c81f7e5647276351d2d0059fed08a020002841b08208f7ac541cd7331155b558967f14fbeff35017cafe1332d3057d910be5690a611010000044e02961101e8030000005847f80d000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a521b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e000120e258c6b6e0abfbdd29a6acf0b47ac977767d7d92d5f95dd5f374e3252518f436fdcd0102386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c4273414800001fdcd0102d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e800002ffff0000000000000000000000000000000000005ced9b2a58c27824e4865fcaaa0816e9a05a9e6600d132435515ca5c203954bf0000000090090c000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000e5898923c5501dbecd48456555cf9225aa44bf3a4e84bc20ec069b4a4dcf972a00000000000000000100000000000000139b3ecbc5a42fb4f3e4ae8cb3f263dc68c4c24e514b44262baf847e0635b22d00000000000000000100000000000000cf4c9401843fc0e2b017d334787fc7cf38a6b1f04d3fa6abd12ba18cc7a9e8170000000000000000010000000000000075ebe544ca04c7aed3c225003514b6a85c07cdea695d42fa7e78d25d2bb62e380000000000000000010000000000000012cf31c4504a3e4135a8a1ef06973ed061e9cc659813ebded719c9f1ca20943a000000000000000001000000000000001cef6ce7dfc27c10d8e2b1612340fcc67dfe2909649c34b6d94379c678235520000000000000000001000000000000009722c66b0e766e57ce97cb7ab82ad27cbad4294061c5b3ddb76331307c90602300000000000000000100000000000000c1f94c50887bb99f6eed3cb27adcac769b8b6cebf24ae6e3199e996c1b534e0b000000000000000001000000000000009ef35bc5fecf5ec5ebee699fb9674c6ac47cae618b76e60f32bdfc4c3fe3073800000000000000000100000000000000cae22c26168c9275bfa5ad7aa496e94450367a19be9a142e2c6a8d3f5afaaf26000000000000000001000000000000003c411e863e54f7a1897b899027feed299445573ad779bda4c4c038b76f749909000000000000000000000002e20203000000a55641f5c218184bfa5a3141650adf8a5ff20c155640c78ed1d67f255392dd0b85ff3c7daddde096973ff160b6b3ef4da00cf00eba9475388654e41adb39752cf59344fb4493c8730985fe27fccb543b9eddfcae00ef31c47e68b096ac8a37121dd1b161f70e0f205900300ffbacd1be0b5236a5eed303e352a61fb861166240d35f7029f0650000240908b43e94ab5f29a2285b20f6447e395cbf099658cc877bc7b1e62f9dfabe8adf4b0fdb00"
+        scId: "1f3b001136ca1afb15e13ac325170929feca6282bdfd89365684bf01f7c6ba14"
+        powData: "1dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201dd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201cd1b161f70e0f201bd1b161f70e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201bd1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f201ad1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f2019d1b161f80e0f20"
+        mcBlockHeight: 480
+        mcNetwork: regtest
+        isNonCeasing: false
+        withdrawalEpochLength: 900
+        initialCumulativeCommTreeHash: "68ed60c2e761bca39e2acb0b97bc1d6cab3c4e34e9418e315a0a152c092da60e"
+    }
+}
+```
+
+- For the UTXO model key rotation circuit use `examples/utxo/simpleapp/src/main/resources/sc_settings_with_key_rotation.conf` example configuration.
+- For the Account model use `examples/account/evmapp/src/main/resources/sc_evm_settings.conf` example configuration.
+
+_For non ceasing sidechains withdrawalEpochLength parameter has value of virtualEpochLength._
+
+Besides genesis-related data backward transfer, proof-related data shall be updated as well. Similar to the previous step append to the configuration file next:
+`withdrawalEpochCertificate` block with next parameters:
+1. `submitterIsEnabled`  - boolean. Enable/disable the submitter to submit a backward transfer certificate. The submitter uses zen-cli RPC calls.
+2. `certificateSigningIsEnabled` - boolean (true by default). Enable/disable certificate signing for the Threshold
+   Signature Circuit if node handles any of the certificate’s signing private keys.
+3. `signersPublicKeys` - list of Schnorr signer public keys that were generated by the command `generateCertificateSignerKey`.
+   Please pay attention: order is important here! **Keys must be in the same order they were specified in generateCertProofInfo**,
+   i.e. for example the input of `generateCertProofInfo` from step 6 next part of the config is correct:
+```
+signersPublicKeys = [
+    "b54cea3768f2716f7b36622ea312191a501fec575b4560f9f6cce85098799c0e00",
+    "ef10cc28ae822389739507ae29f6d732416a02e157522db2fcf473e2ccef301680",
+    "4b120dcf207cb5825f7f64e2427fc5704bf22966ad89edb57d38fad325af4b1f00",
+    "8d2d1688e560e8c306d350ee228b837778802e6d4c6ce720563e93c978e85f0e00",
+    "6729ddeec2704f3e80fb91f1cac475e7048fe456eb768760a68448b53d366d2100",
+    "58ca3858c5e3890b69c748ade4706f82225c5a74b5a909665fcceeebd217a90f80",
+    "24be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"
+]
+```
+4. `signersThreshold` - threshold parameter of command generateCertProofInfo. It should be less or equal to the count of Schnorr keys.
+5. `signersSecrets` - list of Schnorr secret keys that were generated by the command `generateCertificateSignerKey`.
+6. `circuitType` - a type of the circuit of the certificate submitter, must be NaiveThresholdSignatureCircuit for Version 1, or NaiveThresholdSignatureCircuitWithKeyRotation for Version 2
+7. `certProvingKeyFilePath` - path to the certificate proving key file.
+8. `certVerificationKeyFilePath` - path to the certificate verification key file.
+9. `certificateAutomaticFeeComputation` - let certificates define the optimal fee size to speed up their inclusion into MC blocks.
+10. If using Version 2 *Threshold Signature Circuit with Key Rotation* then masterPublicKeys must be added:
+```
+mastersPublicKeys = [
+    "f93e1efc1ba4c52545e538ba1596771ad0f0970bb60ed75a868a41dae28ead0d80", 
+    "5f58e0a0bed4ae2cdd01ba36e625d4683affb73823be739e2c2d9aaa87b0390b80", 
+    "8c6a3cba15ccaa643d40589d901cbc1c580ba45768a47b8d02be16d8a318691800", 
+    "9f75135fa8833922c2ecb9b20f196d177f52ca1a3fc413b951a644a5ad0a8d0500", 
+    "170ca25511f0b4fb703c00a32ed14a43ccc17c655f9d65b7cec93630d2dc093100", 
+    "78687a3070a45875b66c798e62e9521bc7c03be202bf0ff280141b3ae828ca1e00", 
+    "c15cd0a8ad2856c7b811c268adbbcfe4a0235ce43b7421ccf9f2c31b0b0b370180"
+]
+```
+
+Example of additional data for the config file:
+```  
+withdrawalEpochCertificate {
+    submitterIsEnabled = true
+    certificateSigningIsEnabled = true
+    signersPublicKeys = [
+        "b54cea3768f2716f7b36622ea312191a501fec575b4560f9f6cce85098799c0e00",
+        "ef10cc28ae822389739507ae29f6d732416a02e157522db2fcf473e2ccef301680",
+        "4b120dcf207cb5825f7f64e2427fc5704bf22966ad89edb57d38fad325af4b1f00",
+        "8d2d1688e560e8c306d350ee228b837778802e6d4c6ce720563e93c978e85f0e00",
+        "6729ddeec2704f3e80fb91f1cac475e7048fe456eb768760a68448b53d366d2100",
+        "58ca3858c5e3890b69c748ade4706f82225c5a74b5a909665fcceeebd217a90f80",
+        "24be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"
+    ]
+    signersThreshold = 5
+    signersSecrets = [
+        "040000002088effe4e28af6a23c0cfd5eea03c42f63e19f0763db08422ccc8aad6808e402eb54cea3768f2716f7b36622ea312191a501fec575b4560f9f6cce85098799c0e00",
+        "0400000020e65da2a22b56f63b2aa2529c8d32da7b0a5e623c7fc59f20a29b7c7b21ffa223ef10cc28ae822389739507ae29f6d732416a02e157522db2fcf473e2ccef301680",
+        "040000002071b60cbcba3c765b3c6f440f678349950fef4741b968e9c3263d1455dcbcb50e4b120dcf207cb5825f7f64e2427fc5704bf22966ad89edb57d38fad325af4b1f00",
+        "0400000020f5d0b3ee3b13035a9b9460bc371854f4283de55673389952e7a48f6dc0bad7198d2d1688e560e8c306d350ee228b837778802e6d4c6ce720563e93c978e85f0e00",
+        "04000000205d40e5292155653dc514f25435fb54e2f9801a2a0084e88094604a1e57a986176729ddeec2704f3e80fb91f1cac475e7048fe456eb768760a68448b53d366d2100",
+        "04000000205db09c410da6be9979128049717073e72a92f1f480e30a8afa5f6efa278a921658ca3858c5e3890b69c748ade4706f82225c5a74b5a909665fcceeebd217a90f80",
+        "0400000020930c3927bbdf74fffd54860bf3a6192488493f116040381dbaa63f91a0e68c1324be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"
+    ]
+    mastersPublicKeys = [
+    "f93e1efc1ba4c52545e538ba1596771ad0f0970bb60ed75a868a41dae28ead0d80", 
+    "5f58e0a0bed4ae2cdd01ba36e625d4683affb73823be739e2c2d9aaa87b0390b80", 
+    "8c6a3cba15ccaa643d40589d901cbc1c580ba45768a47b8d02be16d8a318691800", 
+    "9f75135fa8833922c2ecb9b20f196d177f52ca1a3fc413b951a644a5ad0a8d0500", 
+    "170ca25511f0b4fb703c00a32ed14a43ccc17c655f9d65b7cec93630d2dc093100", 
+    "78687a3070a45875b66c798e62e9521bc7c03be202bf0ff280141b3ae828ca1e00", 
+    "c15cd0a8ad2856c7b811c268adbbcfe4a0235ce43b7421ccf9f2c31b0b0b370180"
+]
+    maxPks = 7
+    circuitType = NaiveThresholdSignatureCircuitWithKeyRotation
+    certProvingKeyFilePath = "sidechainapp/cert_marlin_snark_pk"
+    certVerificationKeyFilePath = "sidechainapp/cert_marlin_snark_vk"
+    certificateAutomaticFeeComputation = true
+}
+```
+
+Similar to the ceased sidechain withdrawals:
+```
+csw {
+    cswProvingKeyFilePath = "/tmp/sidechainapp/csw_marlin_snark_pk"
+    cswVerificationKeyFilePath = "/tmp/sidechainapp/csw_marlin_snark_vk"
+}
+```
+If ceased sidechain withdrawal is disabled, `cswProvingKeyFilePath` and `cswVerificationKeyFilePath` can be left empty (`""`).
+
+To be verified as an owner of the first Forger and be able to forge new Sidechain blocks, generated secrets from step 3 shall be added as well. Find `genesisSecrets` parameter in `wallet` group of the config file and add your secret keys.
+
+These secrets will include those generated by `generateKey`, `generateVrfKey` and (if using the Account model) `generateAccountKey`:
+```
+wallet {
+    seed = "seed1"
+    genesisSecrets = [
+        "003868b579a763b620cabe5882dae3c39be8c84719d6c2ba4ad2ab4b0653aacd04a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac",
+        "0300000020b8235a39cbbdb61d6b7abed3c078cf5c47cd93c989279c0ab75dd772b6b47802b7224e8efa8b12e8ee0f17ed923c6fdc6b16ac0b8b474c3badcb905487b90a3e00",
+        "05af34a8b28696763ca6870326969614194c853d69703a0cb7b97f6d92f4d97b2e" 
+        ]
+}
+```
+
+
+Save changes into the file like `./examples/my_settings.conf`
+
+**Step 14: Run Example App**
+
+Run an Example App with the `my_settings.conf`:
+
+**Model: UTXO**
+
+* For Windows:
+ ```
+    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.0.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+```
+* For Linux (Glibc):
+```
+    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.0.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+```
+* For Linux (Jemalloc):
+```
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.0.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+```
+
+**Model: Account**
+
+* For Windows:
+ ```
+    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.0.jar;./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+```
+* For Linux (Glibc):
+```
+    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.0.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+```
+* For Linux (Jemalloc):
+```
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.0.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+```
+
+
+- In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
+
+**Step 15: Blocks forging**
+
+By default, the SC node has forger logic disabled. There are two ways to enable automatic forging:
+* Setting the parameter in the configuration file and re-run the SC node:
+```
+    forger {
+        automaticForging = true
+    }
+```
+* Or if SC node is already running, send an API request `.../block/startForging`.
+
+For a list of supported API see:
+* https://docs.horizen.io/en/latest/reference/01-scnode-api-spec.html

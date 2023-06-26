@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration, SCForgerConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, \
-    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block
+    bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block, UtxoModel
 from httpCalls.block.forgingInfo import http_block_forging_info
 from httpCalls.transaction.openStake import createOpenStakeTransaction
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCointsToMultipleAddress, \
@@ -14,7 +14,7 @@ from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoi
 from httpCalls.wallet.allBoxes import http_wallet_allBoxes
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
 """
     Setup 1 SC Node with a closed list of forger.
@@ -32,8 +32,8 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
     number_of_forgers = 2
-    allowed_forger_propositions: List[Any] = generate_secrets("seed", number_of_forgers)
-    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers)
+    allowed_forger_propositions: List[Any] = generate_secrets("seed", number_of_forgers, UtxoModel)
+    allowed_forger_vrf_public_keys = generate_vrf_secrets("seed", number_of_forgers, UtxoModel)
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -117,14 +117,16 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
         forging_info = http_block_forging_info(sc_node1)
         assert_equal(2, forging_info["bestEpochNumber"])
 
-        # Generate block with unverified tx with low amount, it should fail to validate agains stake
+        # Generate block with unverified tx with low amount, it should fail to validate against stake
         low_amount_tx_bytes = sendCoinsToAddressDryRun(sc_node1, new_public_key, 0, 0)["transactionBytes"]
         try:
             generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True,
                                 forced_tx=[low_amount_tx_bytes])
-            assert_true(False, "Forced transaction should fail to verify agains stake")
         except Exception as e:
-            assert_true("There was an internal server error." in e.error)
+            logging.info("We had an exception as expected: {}".format(str(e)))
+            assert_true("semantically invalid" in str(e))
+        else:
+            fail("Forced transaction should fail to verify against stake")
 
         # Generate block with forced unverified openStakeTransaction, it should succeed and transaction be included
         forger0_box = self.find_box(allBoxes, self.allowed_forger_propositions[0].publicKey)
