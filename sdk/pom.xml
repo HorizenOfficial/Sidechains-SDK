@@ -538,6 +538,8 @@
             </executions>
           </plugin>
           <plugin>
+            <!-- TODO: replace with scaladoc to generate full documentation -->
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>3.2.0</version>
             <executions>
@@ -548,6 +550,12 @@
                 </goals>
               </execution>
             </executions>
+            <configuration>
+              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>
+              <sourceFileIncludes>
+                  <include>SidechainAppStopper.java</include>              
+              </sourceFileIncludes>
+            </configuration>
           </plugin>
         </plugins>
       </build>
