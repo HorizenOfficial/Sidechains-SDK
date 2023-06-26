@@ -8,6 +8,9 @@
 7. Deterministic key generation mechanism changed: all secret keys now deterministic. Ed25519 key generation algorithm modified.
 8. PeerToPeer and API rate limiting
 
+**0.6.1**
+1. Update zendoo-sc-cryptolib to final 0.6.0
+
 **0.6.0**
 1. Sidechain version 2 support with the new circuit type - threshold signature circuit with key rotation.
 2. Certificate key rotation API endpoints added. 
