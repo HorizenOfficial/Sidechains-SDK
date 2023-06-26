@@ -60,12 +60,12 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
       // deploy the Storage contract (EVM based)
       transition(stateView, processors, getMessage(null, data = deployCode ++ initialValue))
       // get deployed contract address
-      val contractAddress = Secp256k1.generateContractAddress(origin, 0)
+      val evmContractAddress = Secp256k1.generateContractAddress(origin, 0)
       // call a native contract and pass along the Storage contract address
       val returnData = transition(
         stateView,
         processors,
-        getMessage(NativeTestContract.contractAddress, data = contractAddress.toBytes)
+        getMessage(NativeTestContract.contractAddress, data = evmContractAddress.toBytes)
       )
       // verify that the NativeTestContract was able to call the retrieve() function on the EVM based contract
       assertArrayEquals("unexpected result", initialValue, returnData)
@@ -78,7 +78,7 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
       val returnDataTraced = transition(
         stateView,
         processors,
-        getMessage(NativeTestContract.contractAddress, data = contractAddress.toBytes)
+        getMessage(NativeTestContract.contractAddress, data = evmContractAddress.toBytes)
       )
       // verify that the result is still correct
       assertArrayEquals("unexpected result", initialValue, returnDataTraced)
@@ -93,13 +93,13 @@ class ContractInteropTest extends EvmMessageProcessorTestBase {
           "to": "${NativeTestContract.contractAddress}",
           "gas": "0x186a0",
           "gasUsed": "0xf6",
-          "input": "$contractAddress",
+          "input": "$evmContractAddress",
           "value": "0x0",
           "output": "0x400000000000000000000000000000000000000000000000000000000000002a",
           "calls": [{
             "type": "STATICCALL",
             "from": "${NativeTestContract.contractAddress}",
-            "to": "$contractAddress",
+            "to": "$evmContractAddress",
             "gas": "0x2710",
             "gasUsed": "0xf6",
             "input": "0x2e64cec1",

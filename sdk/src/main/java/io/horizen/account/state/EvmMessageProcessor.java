@@ -9,7 +9,7 @@ import scala.compat.java8.OptionConverters;
 import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
-    private static final Address[] nativeContractAddresses = new Address[] {
+    protected Address[] nativeContractAddresses = new Address[] {
         WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS(),
         WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS(),
     };
@@ -64,8 +64,10 @@ public class EvmMessageProcessor implements MessageProcessor {
             evmContext.externalContracts = nativeContractAddresses;
             evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer().orElse(null);
-            // TODO: off-by-one error? do we need to pass depth-1?
-            evmContext.initialDepth = context.depth();
+            // Minus one because the depth is incremented for the call to the EvmMessageProcessor itself.
+            // We want to ignore that as the EVM will increment depth immediately for the first call frame.
+            // Basically, the depth would be incremented twice for the first EVM-based call frame without this.
+            evmContext.initialDepth = context.depth() - 1;
 
             // transform to libevm Invocation type
             var evmInvocation = new io.horizen.evm.Invocation(
@@ -141,7 +143,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                         invocation.readOnly
                     ),
                     // advance call depth by the call depth processed by the EVM
-                    invocation.depth
+                    invocation.depth - 1
                 );
                 return new InvocationResult(returnData, gasPool.getGas(), "", false, null);
             } catch (ExecutionRevertedException e) {
