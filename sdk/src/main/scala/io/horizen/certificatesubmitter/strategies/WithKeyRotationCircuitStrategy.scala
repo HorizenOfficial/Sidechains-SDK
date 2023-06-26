@@ -7,7 +7,6 @@ import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase, Withdrawa
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignatures}
-import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import io.horizen.fork.Sc2ScFork
 import io.horizen.history.AbstractHistory
@@ -15,9 +14,6 @@ import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.sc2sc.{Sc2ScDataForCertificate, Sc2ScUtils}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.TimeToEpochUtils
-import io.horizen.utxo.storage.SidechainStateStorage
-import sparkz.core.utils.TimeProvider
 
 import java.util.Optional
 import scala.collection.JavaConverters._
@@ -31,10 +27,8 @@ class WithKeyRotationCircuitStrategy[
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
                                       params: NetworkParams,
-                                      circuit: ThresholdSignatureCircuitWithKeyRotation,
-                                      consensusEpochNumber: Int)
+                                      circuit: ThresholdSignatureCircuitWithKeyRotation)
   extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithKeyRotation](settings, params) with Sc2ScUtils[TX, H, PM, MS, HIS] {
-  val sc2ScFork: Sc2ScFork = Sc2ScFork.get(consensusEpochNumber)
   override def generateProof(certificateData: CertificateDataWithKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
     val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
@@ -83,10 +77,12 @@ class WithKeyRotationCircuitStrategy[
 
     val schnorrKeysSignatures = getSchnorrKeysSignatures(state, status.referencedEpoch)
 
+    val sc2ScFork: Sc2ScFork = Sc2ScFork.get(state.getCurrentConsensusEpochInfo._2.epoch)
     val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] =
-      sc2ScFork.sc2ScCanSend match {
-        case true => Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
-        case false => None
+      if (sc2ScFork.sc2ScCanSend) {
+        Some(getDataForCertificateCreation(status.referencedEpoch, state, history, params))
+      } else {
+        None
       }
 
     val signersPublicKeyWithSignatures = schnorrKeysSignatures.schnorrSigners.zipWithIndex.map {
@@ -123,9 +119,12 @@ class WithKeyRotationCircuitStrategy[
     val keysAndSignatures: SchnorrKeysSignatures = getSchnorrKeysSignatures(state, referencedWithdrawalEpochNumber)
     val keysRootHash: Array[Byte] = circuit.getSchnorrKeysHash(keysAndSignatures)
 
-    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = sc2ScFork.sc2ScCanSend match {
-      case true => Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
-      case false => None
+    val sc2ScFork: Sc2ScFork = Sc2ScFork.get(state.getCurrentConsensusEpochInfo._2.epoch)
+
+    val sc2ScDataForCertificate: Option[Sc2ScDataForCertificate] = if (sc2ScFork.sc2ScCanSend) {
+      Some(getDataForCertificateCreation(referencedWithdrawalEpochNumber, state, history, params))
+    } else {
+      None
     }
 
     val (previousCertificateBytes, messageTreeRootHash): (Array[Byte], Array[Byte]) = sc2ScDataForCertificate match {

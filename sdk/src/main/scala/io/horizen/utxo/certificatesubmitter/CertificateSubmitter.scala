@@ -13,11 +13,10 @@ import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
-import io.horizen.utxo.storage.{SidechainHistoryStorage, SidechainStateStorage}
+import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.utxo.wallet.SidechainWallet
 import io.horizen.websocket.client.MainchainNodeChannel
 import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.utils.TimeProvider
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
@@ -50,7 +49,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
 
 object CertificateSubmitterRef {
   def props(settings: SidechainSettings,
-            scStateStorage: SidechainStateStorage,
             sidechainNodeViewHolderRef: ActorRef,
             secureEnclaveApiClient: SecureEnclaveApiClient,
             params: NetworkParams,
@@ -64,25 +62,25 @@ object CertificateSubmitterRef {
     val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, _ <: CertificateData] = if (params.circuitType.equals(CircuitTypes.NaiveThresholdSignatureCircuit)) {
       new WithoutKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
     } else {
-      new WithKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation, scStateStorage.getConsensusEpochNumber.getOrElse(0))
+      new WithKeyRotationCircuitStrategy(settings, params, CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation)
     }
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy))
       .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
   }
 
-  def apply(settings: SidechainSettings, scStateStorage: SidechainStateStorage, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val ref = system.actorOf(props(settings, scStateStorage, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel))
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel))
     system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
     ref
 
   }
 
-  def apply(name: String, settings: SidechainSettings, scStateStorage: SidechainStateStorage, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, secureEnclaveApiClient: SecureEnclaveApiClient, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val ref = system.actorOf(props(settings, scStateStorage, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel), name)
+    val ref = system.actorOf(props(settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel), name)
     system.eventStream.subscribe(ref, SidechainAppEvents.SidechainApplicationStart.getClass)
     ref
 

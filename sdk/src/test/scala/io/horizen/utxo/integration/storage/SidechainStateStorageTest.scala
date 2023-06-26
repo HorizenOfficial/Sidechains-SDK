@@ -434,7 +434,7 @@ class SidechainStateStorageTest
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(getVersion, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), Seq(),
-        scTxsCommitmentHashes, consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+        scTxsCommitmentHashes, intToConsensusEpochNumber(5), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
 
     assertTrue(String.format("Storage expected to have scTxCommitmentHash %s", hashScTxsCommitment1),
       sidechainStateStorage.doesScTxCommitmentTreeRootExist(BytesUtils.fromHexString(hashScTxsCommitment1)))
@@ -453,7 +453,7 @@ class SidechainStateStorageTest
 
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(getVersion, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), crossChainMsgHashes,
-        Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+        Set(), intToConsensusEpochNumber(5), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
 
     assertTrue(String.format("Storage expected to have message hash %s", ccMsgHash1),
       sidechainStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash1))

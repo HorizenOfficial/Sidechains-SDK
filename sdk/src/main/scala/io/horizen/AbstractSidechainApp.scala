@@ -19,11 +19,10 @@ import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, Transa
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
 import io.horizen.proposition._
-import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory

@@ -15,7 +15,6 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.VersionTag
-import sparkz.core.utils.NetworkTimeProvider
 
 import java.math.BigInteger
 import scala.util.{Failure, Success}

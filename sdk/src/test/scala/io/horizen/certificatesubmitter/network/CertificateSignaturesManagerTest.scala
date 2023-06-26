@@ -16,9 +16,9 @@ import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network._
 import sparkz.core.network.message.{Message, MessageSerializer}
 import sparkz.core.network.peer.PenaltyType
-import sparkz.core.network._
 import sparkz.core.settings.NetworkSettings
 
 import java.net.InetSocketAddress

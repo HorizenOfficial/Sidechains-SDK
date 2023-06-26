@@ -56,7 +56,8 @@ class SidechainStateStorageTest
 
   val params: NetworkParams = MainNetParams()
 
-  val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+  val consensusEpochOne: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+  val consensusEpochFive: ConsensusEpochNumber = intToConsensusEpochNumber(5)
 
   val _temporaryFolder = new TemporaryFolder()
 
@@ -129,7 +130,7 @@ class SidechainStateStorageTest
       new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
 
     // consensus epoch
-    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpochOne))))
     val toRemove = java.util.Arrays.asList(storedBoxList(2).getKey)
 
     //forger list indexes
@@ -153,14 +154,14 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
-      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Set(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), Seq(), Seq(), Set(), consensusEpochOne,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
-      Seq(),  Seq(), Seq(), Set(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Seq(),  Seq(), Seq(), Set(), consensusEpochOne,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -227,7 +228,7 @@ class SidechainStateStorageTest
       new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
 
     // consensus epoch
-    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpochFive))))
     toRemove.add(storedBoxList(2).getKey)
 
     //forger list indexes
@@ -253,14 +254,14 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(),
-      crossChainMessages, Seq(), Set(), consensusEpoch, Seq((cert, mainChainHash)),  blockFeeInfo, None, false, new Array[Int](0), 0)
+      crossChainMessages, Seq(), Set(), consensusEpochFive, Seq((cert, mainChainHash)), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if (tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())),
-      Seq(), Seq(), Seq(), Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
+      Seq(), Seq(), Seq(), Set(), consensusEpochFive, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

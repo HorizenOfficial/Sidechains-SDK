@@ -3,7 +3,6 @@ package io.horizen.utxo
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActorRef, TestProbe}
 import akka.util.Timeout
-import io.horizen.{MempoolSettings, SidechainTypes}
 import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -18,6 +17,7 @@ import io.horizen.utxo.state.{SidechainState, UtxoMerkleTreeView}
 import io.horizen.utxo.transaction.RegularTransaction
 import io.horizen.utxo.utils.BlockFeeInfo
 import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.{MempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.times

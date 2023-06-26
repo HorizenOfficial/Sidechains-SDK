@@ -3,6 +3,7 @@ package io.horizen.utxo
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import io.horizen._
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
@@ -16,7 +17,7 @@ import io.horizen.sc2sc.Sc2ScProverRef
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{BytesUtils, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BytesUtils, Pair}
 import io.horizen.utxo.api.http
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.api.http.route._
@@ -35,7 +36,6 @@ import io.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProv
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
-import io.horizen._
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -210,7 +210,7 @@ class SidechainApp @Inject()
 
   // Init Certificate Submitter
   // Depends on params.isNonCeasing submitter will choose a proper strategy.
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, sidechainStateStorage, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager

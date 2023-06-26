@@ -26,7 +26,7 @@ trait Sc2ScUtils[
   var commonCircuitFunctions: CommonCircuit = CryptoLibProvider.commonCircuitFunctions
 
   /**
-   * Get all the the additional data to be inserted in a certificate for sidechain2sidechain pourpuses
+   * Get all the additional data to be inserted in a certificate for sidechain2sidechain purposes
    * Note: Certificates are searched in the history and not using state.certificate() because in the latter
    * we keep only the most recent ones.
    */

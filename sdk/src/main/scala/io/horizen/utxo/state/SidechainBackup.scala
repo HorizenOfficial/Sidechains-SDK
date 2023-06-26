@@ -3,18 +3,17 @@ package io.horizen.utxo.state
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen.SidechainTypes
-import io.horizen.fork.{ForkManager, Sc2ScFork}
+import io.horizen.fork.Sc2ScFork
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TimeToEpochUtils}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.box.BoxSerializer
 import io.horizen.utxo.companion.SidechainBoxesCompanion
 import io.horizen.utxo.storage.{BackupStorage, BoxBackupInterface, SidechainStateStorage}
 import org.apache.commons.io.FileUtils
-import sparkz.core.utils.TimeProvider
 import sparkz.util.SparkzLogging
 
 import java.io._

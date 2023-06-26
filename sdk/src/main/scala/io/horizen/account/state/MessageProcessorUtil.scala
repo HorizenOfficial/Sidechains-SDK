@@ -1,13 +1,10 @@
 package io.horizen.account.state
 
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor
-import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.Sc2ScUtils
-import io.horizen.utils.TimeToEpochUtils
-import sparkz.core.utils.TimeProvider
 
 object MessageProcessorUtil {
   def getMessageProcessorSeq(params: NetworkParams, customMessageProcessors: Seq[MessageProcessor], consensusEpochNumber: Int): Seq[MessageProcessor] = {

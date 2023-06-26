@@ -6,13 +6,11 @@ import io.horizen.fork.Sc2ScFork
 import io.horizen.params.NetworkParams
 import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.transaction.MC2SCAggregatedTransaction
-import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CrossChainMessageBox
 import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.storage.SidechainStateStorage
-import sparkz.core.utils.TimeProvider
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 

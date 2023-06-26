@@ -7,6 +7,7 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
+import io.horizen._
 import io.horizen.account.fixtures.BasicAuthenticationFixture
 import io.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -36,7 +37,6 @@ import io.horizen.utxo.csw.CswManager.Responses._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.node._
 import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction}
-import io.horizen._
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito

@@ -5,7 +5,7 @@ import io.horizen.block.{Ommer, SidechainBlockHeaderBase}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus._
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
-import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}

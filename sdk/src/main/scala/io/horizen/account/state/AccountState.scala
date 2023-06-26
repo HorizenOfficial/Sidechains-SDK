@@ -23,7 +23,6 @@ import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
-import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
 import java.math.BigInteger

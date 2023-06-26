@@ -73,12 +73,12 @@ class GoodOptionalForkConfigurator extends ForkConfigurator {
     ).asJava
 }
 
-class Sc2ScOptionalForkConfigurator extends ForkConfigurator {
-  override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 5)
+class Sc2ScOptionalForkConfigurator() extends ForkConfigurator {
+  override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(5, 5, 5)
 
   override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
     Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
-      new Pair(SidechainForkConsensusEpoch(0, 0, 0), Sc2ScFork(sc2ScCanSend = true, sc2ScCanReceive = true))
+      new Pair(fork1activation, Sc2ScFork(sc2ScCanSend = true, sc2ScCanReceive = true))
     ).asJava
 }
 
