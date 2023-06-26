@@ -269,30 +269,38 @@ abstract class AbstractCertificateSubmitter[
   }
 
   protected def calculateSignatures(messageToSign: Array[Byte], signersPublicKeys: Seq[SchnorrProposition]): Try[Seq[CertificateSignatureInfo]] = Try {
-    def getSignersPrivateKeys(sidechainNodeView: View): Seq[CertificateSignatureInfo] = {
+
+    def getSignersLocalPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault
-      val privateKeysWithIndexes = signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+      signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
         case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
       }
+   }
 
-      val remainingKeys = signersPublicKeys.zipWithIndex.filterNot(key_index => privateKeysWithIndexes.map(_._2).contains(key_index._2))
-      (signaturesFromEnclave(messageToSign, remainingKeys)
-        ++ privateKeysWithIndexes.map {
-        case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
-      })
-    }
+    val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersLocalPrivateKeys), timeoutDuration)
+      .asInstanceOf[Seq[(SchnorrSecret, Int)]]
+    val remainingKeys = signersPublicKeys.zipWithIndex.filterNot(key_index => privateKeysWithIndexes.map(_._2).contains(key_index._2))
+    (signaturesFromEnclave(messageToSign, remainingKeys)
+      ++ privateKeysWithIndexes.map {
+      case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
+    })
 
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
-      .asInstanceOf[Seq[CertificateSignatureInfo]]
   }
 
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
     if (!secureEnclaveApiClient.isEnabled) return Seq()
+//    val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
+//      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
+//      .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
+//      .map(Future.sequence(_))
+//      .flatten
+
     val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
       .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
       .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
       .map(Future.sequence(_))
       .flatten
+
 
     Try(Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten)
       .getOrElse(Seq())
