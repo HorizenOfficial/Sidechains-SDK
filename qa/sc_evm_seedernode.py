@@ -9,7 +9,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transacti
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo
 from SidechainTestFramework.scutil import generate_next_block, \
-    connect_sc_nodes, assert_equal, \
+    connect_sc_nodes, assert_equal, assert_false, \
     assert_true, bootstrap_sidechain_nodes, AccountModel, get_next_epoch_slot, generate_forging_request
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
@@ -30,7 +30,7 @@ Test:
     - Try to stop forging on seeder node. Verify that an error is returned
     - Try to create a block on seeder node. Verify that an error is returned
     - Check that wallet endpoints don't exist on seeder node.
-    - Check that Submitter endpoints don't exist on seeder node. 
+    - Check that Submitter endpoints exist on seeder node.
     - Check disabled Transaction APIs on seeder node. 
     - Check that read-write ETH RPC are not allowed on seeder node. 
     - On node 1 create some blocks containing txs and then revert them. Verify that in node 1 and node 3 the 
@@ -198,34 +198,22 @@ class SCEvmSeederNode(AccountChainSetup):
         else:
             fail("SCAPIException expected")
 
-        # Check that Submitter endpoints don't exist on seeder node
-        try:
-            sc_node_seeder.submitter_enableCertificateSubmitter()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        # Check that Submitter endpoints exist on seeder node
+        sc_node_seeder.submitter_enableCertificateSubmitter()
+        assert_true(sc_node_seeder.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+        "Failed to enabling certificate submitting on seeder node")
 
-        try:
-            sc_node_seeder.submitter_disableCertificateSubmitter()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_disableCertificateSubmitter()
+        assert_false(sc_node_seeder.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+        "Failed to disabling certificate submitting on seeder node")
 
-        try:
-            sc_node_seeder.submitter_enableCertificateSigner()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_enableCertificateSigner()
+        assert_true(sc_node_seeder.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+        "Failed to enabling certificate signing on seeder node")
 
-        try:
-            sc_node_seeder.submitter_disableCertificateSigner()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_disableCertificateSigner()
+        assert_false(sc_node_seeder.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+        "Failed to disabling certificate signing on seeder node")
 
         ##############################################################################
         # Check disabled Transaction APIs
