@@ -85,9 +85,14 @@ class ContractInteropStackTest extends EvmMessageProcessorTestBase {
     new BlockContext(Address.ZERO, 0, FeeUtils.INITIAL_BASE_FEE, 100000, 1, 1, 1, 1234, null, Hash.ZERO)
 
   private def transition(view: AccountStateView, processors: Seq[MessageProcessor], msg: Message) = {
-    // note: the gas limit has to be ridiculously high to reach the maximum call depth of 1024
-    val transition = new StateTransition(view, processors, new GasPool(1000000000000L), blockContext, msg)
-    transition.execute(Invocation.fromMessage(msg, new GasPool(1000000000000L)))
+    // note: the gas limit has to be ridiculously high to reach the maximum call depth of 1024 because of the 63/64 rule
+    // when passing gas to a nested call:
+    // - The remaining fraction of gas at depth 1024 is: (63/64)^1024
+    // - The lower limit to have 10k gas available at depth 1024 is: 10k / (63/64)^1024 = ~100 billion
+    // - Some gas is consumed along the way, so we give x10: 1 trillion
+    val gasLimit = BigInteger.TEN.pow(12)
+    val transition = new StateTransition(view, processors, new GasPool(gasLimit), blockContext, msg)
+    transition.execute(Invocation.fromMessage(msg, new GasPool(gasLimit)))
   }
 
   @Test
@@ -143,6 +148,10 @@ class ContractInteropStackTest extends EvmMessageProcessorTestBase {
     }
   }
 
+  /**
+   * TODO: This test is currently skipped because it causes a stack overflow in the libevm library after a few
+   * iterations, long before the call depth limit can be reached.
+   */
   @Test
   @Ignore
   def testInteropCallDepth(): Unit = {
@@ -158,12 +167,13 @@ class ContractInteropStackTest extends EvmMessageProcessorTestBase {
       // get deployed contract address
       val evmContractAddress = Secp256k1.generateContractAddress(origin, 0)
 
-      // call a native contract, make it call an EVM-based contract which calls the native contract again in a loop
+      // cause a call loop: native contract => EVM-based contract => native contract => ...
 //      val returnData = transition(
 //        stateView,
 //        processors,
 //        getMessage(NativeInteropStackContract.contractAddress, data = abiEncode(evmContractAddress, 0))
 //      )
+      // cause a call loop: EVM-based contract => native contract => EVM-based contract => ...
       val returnData = transition(
         stateView,
         processors,
