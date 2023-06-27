@@ -116,7 +116,8 @@ abstract class AbstractWallet[
       case None => 0
     }
     for (_ <- 0 to secretsNumber) {
-      nonce += 1
+      if (nonce > 0)
+        nonce += 1
       val seed = Blake2b256.hash(Bytes.concat(this.seed, Ints.toByteArray(nonce), salt))
       val secret: T = secretCreator.generateSecret(seed)
       if (!secretStorage.contains(secret)) {
