@@ -151,7 +151,7 @@ class StateTransition(
   @throws(classOf[ExecutionFailedException])
   def execute(invocation: Invocation): Array[Byte] = {
     // limit call depth to 1024
-    if (depth >= 1024) throw new ExecutionRevertedException("Maximum depth of call stack reached")
+    if (depth > 1024) throw new ExecutionRevertedException("max call depth exceeded")
     // get caller gas pool, for the top-level call this is empty
     // TODO: this will be wrong after a call to `executeDepth()` because it does not add a new invocation to the stack.
     //  As gas can only decrease, using a gaspool "too high" up the stack will only ever have "too much" gas, i.e.
