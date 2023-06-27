@@ -71,6 +71,7 @@ public class SimpleAppModule extends SidechainAppModule
 
         // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
         int consensusSecondsInSlot = 120;
+        String appVersion = "";
 
         // Here I can add my custom rest api and/or override existing one
         List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
@@ -159,5 +160,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))
                 .toInstance(consensusSecondsInSlot);
+
+        bind(String.class)
+                .annotatedWith(Names.named("AppVersion"))
+                .toInstance(appVersion);
     }
 }
