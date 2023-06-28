@@ -4,7 +4,6 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.getFunctionSignature
 import io.horizen.account.state._
 import io.horizen.evm.Address
-import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
@@ -15,8 +14,8 @@ trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
 
   val mcAddr = new MCPublicKeyHashProposition(randomBytes(20))
 
-  def getMessageProcessorTestImpl(networkParams: NetworkParams) : AbstractCrossChainMessageProcessor = {
-     new CrossChainMessageProcessorTestImpl(networkParams)
+  def getMessageProcessorTestImpl(sidechainId: Array[Byte]) : AbstractCrossChainMessageProcessor = {
+     new CrossChainMessageProcessorTestImpl(sidechainId)
   }
 
   def listOfCrosschainMessages(epochNun: Int): Message = {
@@ -26,7 +25,7 @@ trait CrossChainMessageProcessorFixture extends MessageProcessorFixture {
   }
 }
 
-class CrossChainMessageProcessorTestImpl(networkParams: NetworkParams)  extends AbstractCrossChainMessageProcessor(networkParams)  {
+class CrossChainMessageProcessorTestImpl(sidechainId: Array[Byte]) extends AbstractCrossChainMessageProcessor(sidechainId)  {
 
   override val contractAddress: Address = CrossChainMessageProcessorTestImpl.contractAddress
   override val contractCode: Array[Byte] =   CrossChainMessageProcessorTestImpl.contractCode

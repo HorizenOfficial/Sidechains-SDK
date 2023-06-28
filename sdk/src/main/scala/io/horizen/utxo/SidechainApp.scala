@@ -218,8 +218,8 @@ class SidechainApp @Inject()
 
   //Websocket server for the Explorer
   val websocketServerSettings: WebSocketServerSettings = sidechainSettings.websocketServer
-  if (websocketServerSettings.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef, sidechainSettings.websocketServer.wsServerPort)
+  if(websocketServerSettings.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   var sc2scProverRef: Option[ActorRef] = if (isSc2ScConfigured) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None

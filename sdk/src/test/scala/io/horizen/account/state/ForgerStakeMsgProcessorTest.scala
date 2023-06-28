@@ -16,7 +16,7 @@ import io.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
-import org.scalatestplus.junit.JUnitSuite
+import org.scalatest.Assertions.{assertThrows, intercept}
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
@@ -32,8 +32,7 @@ import java.util.{Optional, Random}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class ForgerStakeMsgProcessorTest
-  extends JUnitSuite
-    with MockitoSugar
+    extends MockitoSugar
     with MessageProcessorFixture
     with StoreFixture {
 
@@ -157,7 +156,6 @@ class ForgerStakeMsgProcessorTest
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
-
 
   @Test
   def testOpenStakeForgerList(): Unit = {

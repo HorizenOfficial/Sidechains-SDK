@@ -6,9 +6,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
+import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage}
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.Sc2scApiErrorResponse.GenericSc2ScApiError
-import io.horizen.api.http.Sc2scApiRouteRestScheme.{ReqCreateRedeemMessage, RespCreateRedeemMessage}
+import io.horizen.api.http.Sc2scApiRouteRestScheme.{ReqCreateAccountRedeemMessage, ReqCreateRedeemMessage, RespCreateRedeemMessage}
 import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.json.Views
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
@@ -28,7 +29,7 @@ import scala.util.{Failure, Success, Try}
 case class Sc2scApiRoute(override val settings: RESTApiSettings,
                          sidechainNodeViewHolderRef: ActorRef,
                          sc2scProver: ActorRef
-                         )
+                        )
                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
     SidechainTypes#SCBT,
@@ -45,27 +46,53 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
   override implicit lazy val timeout: Timeout = akka.util.Timeout.create(Duration.ofSeconds(60))
 
   override val route: Route = pathPrefix("sc2sc") {
-    createRedeemMessage
+    createRedeemMessage ~ createAccountRedeemMessage
   }
 
   /**
-    * Return a redeem message from  a previously posted CrossChainMessage
-    */
+   * Return a redeem message from  a previously posted CrossChainMessage
+   */
   def createRedeemMessage: Route = (post & path("createRedeemMessage")) {
     withBasicAuth {
       _ =>
-      entity(as[ReqCreateRedeemMessage]) { body =>
+        entity(as[ReqCreateRedeemMessage]) { body =>
 
-          val crossChainMessage = new CrossChainMessage(
-            CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
+        val crossChainMessage = new CrossChainMessage(
+          CrossChainProtocolVersion.fromShort(body.message.protocolVersion),
+          body.message.messageType,
+          BytesUtils.fromHexString(body.message.senderSidechain),
+          BytesUtils.fromHexString(body.message.sender),
+          BytesUtils.fromHexString(body.message.receiverSidechain),
+          BytesUtils.fromHexString(body.message.receiver),
+          BytesUtils.fromHexString(body.message.payload)
+        )
+
+          val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
+          Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
+            case Success(ret) => {
+              ApiResponseUtil.toResponse(RespCreateRedeemMessage(ret))
+            }
+            case Failure(e) =>
+              ApiResponseUtil.toResponse(GenericSc2ScApiError("Failed to create redeem message", JOptional.of(e)))
+          }
+        }
+    }
+  }
+
+  def createAccountRedeemMessage: Route = (post & path("createAccountRedeemMessage")) {
+    withBasicAuth {
+      _ =>
+        entity(as[ReqCreateAccountRedeemMessage]) { body =>
+
+          val accountCcMsg = AccountCrossChainMessage(
             body.message.messageType,
-            BytesUtils.fromHexString(body.message.senderSidechain),
             BytesUtils.fromHexString(body.message.sender),
             BytesUtils.fromHexString(body.message.receiverSidechain),
             BytesUtils.fromHexString(body.message.receiver),
             BytesUtils.fromHexString(body.message.payload)
           )
 
+          val crossChainMessage = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accountCcMsg, BytesUtils.fromHexString(body.scId))
           val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
           Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
             case Success(ret) => {
@@ -95,8 +122,25 @@ object Sc2scApiRouteRestScheme {
                                                 receiverSidechain: String,
                                                 receiver: String,
                                                 payload: String
-                                              ) {
+  ){
     require(senderSidechain != null, "Empty sender Sidechain")
+    require(sender != null, "Empty sender address")
+    require(receiverSidechain != null, "Empty receiver Sidechain")
+    require(receiver != null, "Empty receiver address")
+    require(payload != null, "Empty payload ")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateAccountRedeemMessage(message: AccountCrossChainMessageEle, scId: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class AccountCrossChainMessageEle(
+                                                messageType: Int,
+                                                sender: String,
+                                                receiverSidechain: String,
+                                                receiver: String,
+                                                payload: String
+                                              ) {
     require(sender != null, "Empty sender address")
     require(receiverSidechain != null, "Empty receiver Sidechain")
     require(receiver != null, "Empty receiver address")
@@ -109,6 +153,3 @@ object Sc2scApiErrorResponse {
     override val code: String = "0700"  //TODO: define proper error codes
   }
 }
-
-
-

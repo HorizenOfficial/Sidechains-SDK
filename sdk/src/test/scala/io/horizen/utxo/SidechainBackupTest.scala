@@ -1,7 +1,6 @@
 package io.horizen.utxo
 
 import io.horizen.SidechainTypes
-import io.horizen.consensus.TimeProviderFixture
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import io.horizen.fork.{ForkManagerUtil, Sc2ScFork, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -29,7 +28,6 @@ class SidechainBackupTest
   extends StoreFixture
   with SecretFixture
   with TransactionFixture
-  with TimeProviderFixture
   {
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
@@ -69,6 +67,7 @@ class SidechainBackupTest
 
   val _temporaryFolder = new TemporaryFolder()
   @Rule  def temporaryFolder = _temporaryFolder
+
   @Before
   def setup(): Unit = {
     boxListFirstModifier ++= getZenBoxList(5).asScala.toList

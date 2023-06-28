@@ -18,11 +18,10 @@ import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.{AccountMempoolSettings, SidechainSettings}
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, LocallyGeneratedTransaction, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}
@@ -36,8 +35,7 @@ import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class AccountSidechainNodeViewHolderTest extends JUnitSuite
-  with MockedAccountSidechainNodeViewHolderFixture
+class AccountSidechainNodeViewHolderTest extends MockedAccountSidechainNodeViewHolderFixture
   with AccountBlockFixture
   with CompanionsFixture
   with SparkzEncoding

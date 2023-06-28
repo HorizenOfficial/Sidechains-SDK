@@ -10,8 +10,8 @@ import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.sc2sc.CrossChainMessage
-import io.horizen.utils.ByteArrayWrapper
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -89,7 +89,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
   }
 
   @Test
-  def testCrosschainMessages(): Unit = {
+  def testCrossChainMessages(): Unit = {
     val epochNum = 102
 
     // No messages
@@ -108,8 +108,10 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     // With some cross chain messages from different providers
     var fakeMessages: List[CrossChainMessage] = List()
+    val senderSidechain = BytesUtils.fromHexString("7a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb623")
     (0 until 3).foreach(index => {
-      fakeMessages = fakeMessages :+ AbstractCrossChainMessageProcessor.buildCrosschainMessageFromAccount(getRandomAccountCrossMessage(index), mockNetworkParams)
+      // TODO: here bad sidechainId
+      fakeMessages = fakeMessages :+ AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(getRandomAccountCrossMessage(index), senderSidechain)
     })
 
     Mockito
@@ -125,7 +127,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     (0 until 3).foreach(index => {
       val wr: CrossChainMessage = res(index)
       assertEquals("wrong address", fakeMessages(index).getMessageType, wr.getMessageType)
-      assertEquals("wrong payload", fakeMessages(index).getPayload, wr.getPayload)
+      assertEquals("wrong payload", fakeMessages(index).getPayloadHash, wr.getPayloadHash)
     })
 
     val messageHash = res(1).getCrossChainMessageHash

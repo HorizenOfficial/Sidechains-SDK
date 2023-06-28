@@ -152,12 +152,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
       case Some(baw) =>
         WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-          case Success(certificate) => Option(certificate)
+          case Success(certificate) =>
+            Option(certificate)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate information parsing.", exception)
             Option.empty
         }
-      case _ => Option.empty
+      case _ =>
+        Option.empty
     }
   }
 
@@ -367,7 +369,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           case _ => false
         }
         if (isWithdrawalEpochSwitched) {
-          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+          val certEpochNumberToRemove: Int = epochInfo.epoch - 8
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1

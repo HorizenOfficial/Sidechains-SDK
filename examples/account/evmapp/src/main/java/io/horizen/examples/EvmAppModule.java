@@ -7,9 +7,17 @@ import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
 import io.horizen.account.api.http.AccountApplicationApiGroup;
+import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
+import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
+import io.horizen.account.state.MessageProcessorUtil;
 import io.horizen.account.transaction.AccountTransaction;
+import io.horizen.cryptolibprovider.Sc2scCircuit;
+import io.horizen.cryptolibprovider.implementations.Sc2scImplZendoo;
+import io.horizen.examples.api.VoteController;
+import io.horizen.examples.messageprocessor.VoteMessageProcessor;
+import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proof.Proof;
 import io.horizen.proposition.Proposition;
@@ -17,6 +25,7 @@ import io.horizen.secret.Secret;
 import io.horizen.secret.SecretSerializer;
 import io.horizen.settings.SettingsReader;
 import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
 
 import java.util.ArrayList;
@@ -48,6 +57,7 @@ public class EvmAppModule extends AccountAppModule {
 
         // Here I can add my custom rest api and/or override existing one
         List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
+        customApiGroups.add(new VoteController());
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"
@@ -56,8 +66,14 @@ public class EvmAppModule extends AccountAppModule {
 
         ChainInfo chainInfo = new ChainInfo(regTestId, testNetId, mainNetId);
 
+        byte[] scId = BytesUtils.fromHexString(sidechainSettings.genesisData().scId());
+        Sc2scCircuit circuit = new Sc2scImplZendoo();
         // Here I can add my custom logic to manage EthereumTransaction content.
+        // NOTE: the ordering is important, since we want the EvmMessageProcessor to be the last one
+        ScTxCommitmentTreeRootHashMessageProcessor$ scTxMsgProc = MessageProcessorUtil.getScTxMsgProc();
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+        customMessageProcessors.add(new VoteMessageProcessor(scId));
+        customMessageProcessors.add(new VoteRedeemMessageProcessor(scId, sidechainSettings.sc2sc().sc2ScVerificationKeyFilePath(), circuit, scTxMsgProc));
         customMessageProcessors.add(new EvmMessageProcessor());
 
         // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.

@@ -71,8 +71,24 @@ public class  CommonCircuit {
         );
     }
 
-    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
-        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
+    // NOTE: this method refers to the mainchain issue reported here https://github.com/HorizenOfficial/Sidechains-SDK/blob/dev/sdk/src/main/scala/io/horizen/block/SidechainCommitmentTree.scala#L74
+    // when we need to create a WithdrawalCertificate from a WithdrawalEpochCertificate created in mainchain, use this function to not double swap the two parameters
+    public static WithdrawalCertificate createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        return new WithdrawalCertificate(
+                FieldElement.deserialize(cert.sidechainId()),
+                cert.epochNumber(),
+                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs())
+                        .stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                cert.quality(),
+                FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
+                cert.btrFee(),
+                cert.ftMinAmount(),
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+        );
+    }
+
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        try(WithdrawalCertificate wc = createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
             return hashFe.serializeFieldElement();
         }
     }

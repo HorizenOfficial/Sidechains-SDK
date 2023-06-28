@@ -38,7 +38,6 @@ class SidechainStateIntegrationTest
     with StoreFixture
     with MockitoSugar
     with SidechainTypesTestsExtension
-    with TimeProviderFixture
 {
   val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap(), false)
   val applicationState = new DefaultApplicationState()
@@ -170,7 +169,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def closedBoxes(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState, timeProvider).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
 
     // Test that initial boxes list present in the State
     for (box <- boxList) {
@@ -185,7 +184,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def currentConsensusEpochInfo(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState, timeProvider).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
 
     // Test that initial currentConsensusEpochInfo is valid
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
@@ -217,7 +216,7 @@ class SidechainStateIntegrationTest
   @Test
   def feePayments(): Unit = {
     // Create sidechainState with initial block applied.
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState, timeProvider).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
@@ -348,7 +347,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def applyModifierWithCSWEnabled(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState, timeProvider).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
 
     val transactionList = new collection.mutable.ListBuffer[RegularTransaction]()
     transactionList.append(getRegularTransaction(2, 1))
@@ -389,7 +388,7 @@ class SidechainStateIntegrationTest
   @Test
   def applyModifierWithCSWDisabled(): Unit = {
     val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage,
-      SidechainUtxoMerkleTreeProviderCSWDisabled(), MainNetParams(isCSWEnabled = false), applicationState, timeProvider).get
+      SidechainUtxoMerkleTreeProviderCSWDisabled(), MainNetParams(isCSWEnabled = false), applicationState).get
 
     val transactionList = new collection.mutable.ListBuffer[RegularTransaction]()
     transactionList.append(getRegularTransaction(2, 1))

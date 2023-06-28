@@ -31,6 +31,7 @@ import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
+import scala.Option;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.io.BufferedReader;
@@ -942,7 +943,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             case 1: // testnet
                 return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10, FiniteDuration.apply(2, TimeUnit.SECONDS));
+                // TODO: these values are just temporary and will be discarded once SDK-1143 (Fork manager for sc2sc) will be merged
+                Option<String> temporarySc2ScProvingKeyPath = Option.apply("tmpProvingPath");
+                Option<String> temporarySc2ScVerificationKeyPath = Option.apply("tmpVerificationPath");
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, temporarySc2ScProvingKeyPath, temporarySc2ScVerificationKeyPath, false, null, null, 11111111,true, false, 10, FiniteDuration.apply(2, TimeUnit.SECONDS));
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

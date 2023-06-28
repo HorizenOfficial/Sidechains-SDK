@@ -173,7 +173,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       btrFee = WithKeyRotationCircuitStrategyTest.btrFee,
       ftMinAmount = WithKeyRotationCircuitStrategyTest.ftMinAmount,
       schnorrKeyPairs = schnorrPropositionsAndSchnorrProofs,
-      schnorrKeysSignatures,
+      schnorrKeysSignatures = schnorrKeysSignatures,
       previousCertificateOption = Option.empty[WithdrawalEpochCertificate],
       genesisKeysRootHash = FieldElement.createRandom.serializeFieldElement()
     )
@@ -232,7 +232,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderF
       assertEquals(32, args.getArgument(3).asInstanceOf[Array[Byte]].length)
       assertEquals(0L, args.getArgument(4).asInstanceOf[Long])
       assertEquals(54L, args.getArgument(5).asInstanceOf[Long])
-      assertEquals(java.util.List.of(keysRootHash, Array.emptyByteArray, Array.emptyByteArray), args.getArgument(6).asInstanceOf[java.util.List[Array[Byte]]])
+      assertEquals(java.util.List.of(keysRootHash, Array.emptyByteArray, Array.emptyByteArray), args.getArgument(6).asInstanceOf[java.util.List[Byte]])
       msg.clone()
     })
 

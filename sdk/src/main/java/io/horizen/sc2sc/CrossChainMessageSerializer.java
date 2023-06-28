@@ -6,10 +6,10 @@ import sparkz.util.serialization.Writer;
 
 public class CrossChainMessageSerializer<T extends CrossChainMessage> implements SparkzSerializer<T> {
 
-    private static CrossChainMessageSerializer serializer;
+    private static final CrossChainMessageSerializer serializer;
 
     static {
-        serializer = new CrossChainMessageSerializer<CrossChainMessage>();
+        serializer = new CrossChainMessageSerializer<>();
     }
 
     @Override
@@ -22,8 +22,8 @@ public class CrossChainMessageSerializer<T extends CrossChainMessage> implements
         w.putBytes(s.getReceiverSidechain());
         w.putInt(s.getReceiver().length);
         w.putBytes(s.getReceiver());
-        w.putInt(s.getPayload().length);
-        w.putBytes(s.getPayload());
+        w.putInt(s.getPayloadHash().length);
+        w.putBytes(s.getPayloadHash());
     }
 
     @Override

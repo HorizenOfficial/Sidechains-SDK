@@ -479,8 +479,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         genesis_secrets += sc_node_config.initial_private_keys
 
     if (sc_node_config.forger_options.restrict_forgers and
-        bootstrap_info.genesis_vrf_account is not None and
-        bootstrap_info.genesis_account is not None):
+            bootstrap_info.genesis_vrf_account is not None and
+            bootstrap_info.genesis_account is not None):
         sc_node_config.forger_options.allowed_forgers.append(
             '{ blockSignProposition = "' + bootstrap_info.genesis_account.publicKey + '" NEW_LINE vrfPublicKey = "' + bootstrap_info.genesis_vrf_account.publicKey + '" }')
 
@@ -768,7 +768,7 @@ def get_sc_node_pids(sc_num=0):
 
 def connect_sc_nodes(from_connection, node_num, wait_for=25, sc_num=0):
     """
-    Connect a SC node, from_connection, to another one, specifying its node_num. 
+    Connect a SC node, from_connection, to another one, specifying its node_num.
     Method will attempt to create the connection for maximum wait_for seconds.
     """
     j = {"host": "127.0.0.1", \
@@ -1223,7 +1223,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError(errMsg)
 
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
-                                                                                       slotNumber=next_slot))
+                                                                                              slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 

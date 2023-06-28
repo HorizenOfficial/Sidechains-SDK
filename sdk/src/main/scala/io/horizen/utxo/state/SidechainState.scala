@@ -30,7 +30,6 @@ import io.horizen.utxo.utils.{BlockFeeInfo, FeePaymentsUtils}
 import io.horizen.{AbstractState, SidechainTypes}
 import sparkz.core._
 import sparkz.core.transaction.state._
-import sparkz.core.utils.TimeProvider
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
@@ -47,8 +46,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                       val params: NetworkParams,
                                       override val version: VersionTag,
-                                      val applicationState: ApplicationState,
-                                      timeProvider: TimeProvider)
+                                      val applicationState: ApplicationState)
   extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
     with TransactionValidation[SidechainTypes#SCBT]
     with ModifierValidation[SidechainBlock]
@@ -243,7 +241,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
       val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
       if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
-        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
+        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)} while real is ${BytesUtils.toHexString(mod.feePaymentsHash)}")
     } else {
       // No fee payments expected
       if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
@@ -515,7 +513,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
             if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
               closedCoinsBoxesAmount += box.value()
           }
-          case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
+          case None => throw new Exception(s"Box ${BytesUtils.toHexString(u.closedBoxId())} is not found in state")
         }
       }
 
@@ -717,9 +715,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           updatedUtxoMerkleTreeProvider,
           params,
           newVersion,
-          appState,
-          timeProvider
-        )
+          appState)
       case Failure(exception) => {
         log.error("call to onApplyChanges() method has failed: ", exception)
         throw exception
@@ -746,16 +742,14 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     val utxoMerkleTreeProviderNew = utxoMerkleTreeProvider.rollback(bawVersion).get
 
     applicationState.onRollback(version) match {
-      case Success(appState) => {
+      case Success(appState) =>
         new SidechainState(
           stateStorageNew,
           forgerBoxStorageNew,
           utxoMerkleTreeProviderNew,
           params,
           to,
-          appState,
-          timeProvider)
-      }
+          appState)
       case Failure(exception) => {
         log.error("call to applicationState.onRollback() method has failed: ", exception)
         throw exception
@@ -935,12 +929,11 @@ object SidechainState {
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
                                     utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
-                                    applicationState: ApplicationState,
-                                    timeProvider: TimeProvider): Option[SidechainState] = {
+                                    applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty) {
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
-        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, timeProvider)
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState)
       )
     } else
       None
@@ -952,13 +945,12 @@ object SidechainState {
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
-                                          genesisBlock: SidechainBlock,
-                                          timeProvider: TimeProvider): Try[SidechainState] = Try {
+                                          genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
       var state = new SidechainState(
         stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params,
-        idToVersion(genesisBlock.parentId), applicationState, timeProvider
+        idToVersion(genesisBlock.parentId), applicationState
       )
       if (!backupStorage.isEmpty) {
         state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get

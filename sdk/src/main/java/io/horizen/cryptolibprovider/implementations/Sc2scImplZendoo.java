@@ -14,7 +14,7 @@ import io.horizen.utils.BytesUtils;
 import java.util.Optional;
 
 public class Sc2scImplZendoo implements Sc2scCircuit {
-    private static final int SEGMENT_SIZE = 1 << 15;
+    public static final int SEGMENT_SIZE = 1 << 15;
     public static final int CUSTOM_FIELDS_NUM = 32;
 
     @Override

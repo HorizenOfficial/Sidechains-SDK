@@ -66,25 +66,25 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "fbd6024c4a516eb8774dee67c11fed07".getBytes()
         );
         CrossChainMessage msg2 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(StandardCharsets.UTF_8),
+                "senderSidechain2senderSidechain2".getBytes(StandardCharsets.UTF_8),
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
-                "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
+                "receiverSidechain2receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "fbd6024c4a516eb8774dee67c11fed07".getBytes()
         );
         CrossChainMessage notIncludedMsg = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
                 1,
-                "senderSidechain1senderSidechain1".getBytes(StandardCharsets.UTF_8),
+                "senderSidechain3senderSidechain3".getBytes(StandardCharsets.UTF_8),
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
-                "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
+                "receiverSidechain3receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "notIncludedPayload_notIncludedPa".getBytes()
         );
         List<CrossChainMessage> messages = List.of(msg1, msg2);
         Seq<CrossChainMessage> messagesSeq = JavaConverters.asScalaIteratorConverter(messages.iterator()).asScala().toSeq();
@@ -112,7 +112,7 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "fbd6024c4a516eb8774dee67c11fed07".getBytes()
         );
         CrossChainMessage msg2 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
@@ -121,7 +121,7 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "fbd6024c4a516eb8774dee67c11fed07".getBytes()
         );
         CrossChainMessage msg3 = new CrossChainMessage(
                 CrossChainProtocolVersion.VERSION_1,
@@ -130,7 +130,7 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "fbd6024c4a516eb8774dee67c11fed07".getBytes()
         );
         List<CrossChainMessage> messages = List.of(msg1, msg2, msg3);
         Seq<CrossChainMessage> messagesSeq = JavaConverters.asScalaIteratorConverter(messages.iterator()).asScala().toSeq();
@@ -162,7 +162,7 @@ public class Sc2scImplZendooTest {
 
         Sc2scImplZendoo circuit = new Sc2scImplZendoo();
 
-        ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, 1 << 18);
+        ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, Sc2scImplZendoo.SEGMENT_SIZE);
         assertTrue(circuit.generateSc2ScKeys(provingKeyPath, verificationKeyPath));
 
         try (
@@ -201,7 +201,7 @@ public class Sc2scImplZendooTest {
                 "9dd1078bdcef16a87a9d".getBytes(StandardCharsets.UTF_8),
                 "receiverSidechain1receiverSidech".getBytes(StandardCharsets.UTF_8),
                 "dcef16a87a9d9dd1078b".getBytes(StandardCharsets.UTF_8),
-                "payload1".getBytes()
+                "payloadHashpayloadHashpayloadHas".getBytes(StandardCharsets.UTF_8)
         );
 
         CrossChainMessageMerkleTree ccMsgMerkleTree = new CrossChainMessageMerkleTree();
@@ -262,7 +262,6 @@ public class Sc2scImplZendooTest {
         public byte[] nextScTxCommitmentsRoot;
         public byte[] currentScTxCommitmentsRoot;
         public byte[] msgHash;
-
         public byte[] proof;
 
         public RandomProofData(byte[] nextScTxCommitmentsRoot, byte[] currentScTxCommitmentsRoot,
