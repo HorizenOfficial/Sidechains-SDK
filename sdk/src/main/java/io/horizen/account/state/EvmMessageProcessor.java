@@ -3,6 +3,7 @@ package io.horizen.account.state;
 import io.horizen.account.utils.WellKnownAddresses;
 import io.horizen.evm.*;
 import io.horizen.utils.BytesUtils;
+import scala.Array;
 import scala.Option;
 import scala.compat.java8.OptionConverters;
 
@@ -138,7 +139,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                         invocation.caller,
                         Option.apply(invocation.callee),
                         invocation.value,
-                        invocation.input,
+                        Option.apply(invocation.input).getOrElse(Array::emptyByteArray),
                         gasPool,
                         invocation.readOnly
                     ),
