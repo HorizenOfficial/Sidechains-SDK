@@ -387,6 +387,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))
+    Mockito.when(state.getView.getConsensusEpochNumber).thenReturn(None)
     if (state.getView != null) {
       Mockito.when(state.getView.getBalance(any())).thenReturn(BigInteger.valueOf(99999999999999999L))
       Mockito

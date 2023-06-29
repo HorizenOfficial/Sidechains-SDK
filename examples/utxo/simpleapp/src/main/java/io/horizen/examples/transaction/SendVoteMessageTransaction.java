@@ -97,16 +97,4 @@ public final class SendVoteMessageTransaction extends AbstractRegularTransaction
     public byte[] customDataMessageToSign() {
         return new byte[0];
     }
-
-    @Override
-    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
-        super.transactionSemanticValidity();
-
-        ByteBuffer byteBuffer = ByteBuffer.wrap(outputMsgBoxData.getPayload());
-        int vote = byteBuffer.getInt();
-
-        if (vote < 0 || vote > 10) {
-            throw new IllegalArgumentException("Vote cannot be less than 0 or greater than 10");
-        }
-    }
 }

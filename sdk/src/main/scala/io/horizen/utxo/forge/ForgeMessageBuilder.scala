@@ -13,7 +13,7 @@ import io.horizen.secret.PrivateKey25519
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import io.horizen.utxo.box.Box
+import io.horizen.utxo.box.{Box, CrossChainMessageBox, WithdrawalRequestBox}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.history.SidechainHistory
@@ -164,10 +164,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val mempoolTx =
       if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled) {
-      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        val withdrawalBoxes = nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
-        val ccMsgBox = nodeView.pool.take(allowedCrossChainMessageBoxes)
-        withdrawalBoxes ++ ccMsgBox
+        // In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes and CrossChainMessageBox
+        // allowed to be mined in the current block.
+        nodeView.pool.takeWithdrawalAndCrossChainBoxesWithLimit(allowedWithdrawalRequestBoxes, allowedCrossChainMessageBoxes)
       } else
         nodeView.pool.take(nodeView.pool.size)
 

@@ -43,7 +43,7 @@ class CrossChainMessageValidator(
             allCrossMessagesHashes :+ currentHash
           }
         })
-        //crosschain messages validation: check max number of boxes per epoch
+        // check max number of boxes per epoch
         checkCrosschainMessagesBoxesAllowed(scBlock.mainchainBlockReferencesData.size, allCrossMessagesBox.size)
       }
     }

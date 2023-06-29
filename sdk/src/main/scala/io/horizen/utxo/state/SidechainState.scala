@@ -38,6 +38,7 @@ import java.math.{BigDecimal, MathContext}
 import java.util
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -530,6 +531,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
 
+      crossChainTxValidation(consensusEpochNumber, newBoxes)
+
       lazy val isForgerOpen = isForgingOpen()
       newBoxes
         .filter(box => box.isInstanceOf[ForgerBox])
@@ -545,6 +548,23 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     }
 
     applicationState.validate(this, tx)
+  }
+
+  private def crossChainTxValidation(consensusEpochNumber: ConsensusEpochNumber, newBoxes: mutable.Buffer[SidechainTypes#SCB]): Unit = {
+    val crossChainBoxes = newBoxes.exists { b => b.isInstanceOf[CrossChainMessageBox] }
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpochNumber).getOrElse(Sc2ScFork.DefaultSc2scFork)
+    if (crossChainBoxes) {
+      if (!sc2ScFork.sc2ScCanSend) {
+        throw new IllegalArgumentException("Cannot have a cross chain message box if Sc2Sc feature is not active")
+      }
+    }
+
+    val crossChainRedeemBoxes = newBoxes.exists { b => b.isInstanceOf[CrossChainRedeemMessageBox] }
+    if (crossChainRedeemBoxes) {
+      if (!sc2ScFork.sc2ScCanReceive) {
+        throw new IllegalArgumentException("Cannot have a cross chain redeem message box if Sc2Sc feature is not active")
+      }
+    }
   }
 
   //Check if the majority of the allowed forgers opened the stake to everyone

@@ -3,6 +3,7 @@ package io.horizen.examples;
 import io.horizen.account.fork.GasFeeFork;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.fork.OptionalSidechainFork;
+import io.horizen.fork.Sc2ScFork;
 import io.horizen.fork.SidechainForkConsensusEpoch;
 import io.horizen.utils.Pair;
 
@@ -36,6 +37,10 @@ public class AppForkConfigurator extends ForkConfigurator {
                     BigInteger.valueOf(8),
                     BigInteger.ZERO
                 )
+            ),
+            new Pair<>(
+                new SidechainForkConsensusEpoch(20, 20, 20),
+                new Sc2ScFork(true, true)
             )
         );
     }
