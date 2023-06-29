@@ -84,7 +84,7 @@ class AccountStateView(
       } catch {
         // any other exception will bubble up and invalidate the block
         case err: ExecutionFailedException =>
-          log.debug(s"applying message failed, tx id: ${ethTx.id}, reason: ${err.getMessage}")
+          log.debug(s"applying message failed, tx id: ${ethTx.id}, reason: ${err.getMessage}", err)
           ReceiptStatus.FAILED
       } finally {
         // finalize pending changes, clear the journal and reset refund counter
@@ -97,7 +97,7 @@ class AccountStateView(
       getLogs(txHash)
     )
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
-    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}, msg=$msg")
 
     consensusDataReceipt
   }
@@ -138,6 +138,8 @@ class AccountStateView(
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
+  override def setZenDaoInitDone(): Unit = metadataStorageView.setZenDaoInitDone()
+
   override def commit(version: VersionTag): Unit = {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView
     val rootHash = stateDb.commit()
@@ -151,6 +153,8 @@ class AccountStateView(
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
 
   override def hasCeased: Boolean = metadataStorageView.hasCeased
+
+  override def zenDaoInitDone: Boolean = metadataStorageView.zenDaoInitDone()
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 

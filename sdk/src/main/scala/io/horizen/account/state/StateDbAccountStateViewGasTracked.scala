@@ -112,9 +112,9 @@ class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq
   }
 
   @throws(classOf[OutOfGasException])
-  override def isSmartContractAccount(address: Address): Boolean = {
+  override def isEvmSmartContractAccount(address: Address): Boolean = {
     accountAccess(address)
-    super.isSmartContractAccount(address)
+    super.isEvmSmartContractAccount(address)
   }
 
   @throws(classOf[OutOfGasException])

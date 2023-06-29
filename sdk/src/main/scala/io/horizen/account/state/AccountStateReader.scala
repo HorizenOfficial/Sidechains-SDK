@@ -13,7 +13,8 @@ trait AccountStateReader {
 
   def accountExists(address: Address): Boolean
   def isEoaAccount(address: Address): Boolean
-  def isSmartContractAccount(address: Address): Boolean
+  def isEvmSmartContractAccount(address: Address): Boolean
+  def isNativeSmartContractAccount(address: Address): Boolean
 
   def getNonce(address: Address): BigInteger
   def getBalance(address: Address): BigInteger

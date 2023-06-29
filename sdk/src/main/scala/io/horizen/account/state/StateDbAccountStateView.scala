@@ -158,13 +158,16 @@ class StateDbAccountStateView(
   }
 
   override def isEoaAccount(address: Address): Boolean = {
-    !WellKnownAddresses.listOfNativeSmartContractAddresses.contains(address) &&
+    !isNativeSmartContractAccount(address) &&
     stateDb.isEoaAccount(address)
   }
 
-  override def isSmartContractAccount(address: Address): Boolean =
-    WellKnownAddresses.listOfNativeSmartContractAddresses.contains(address) ||
-    stateDb.isSmartContractAccount(address)
+  override def isEvmSmartContractAccount(address: Address): Boolean =
+    !isNativeSmartContractAccount(address) &&
+      stateDb.isSmartContractAccount(address)
+
+  override def isNativeSmartContractAccount(address: Address): Boolean =
+    WellKnownAddresses.listOfNativeSmartContractAddresses.contains(address)
 
   override def accountExists(address: Address): Boolean =
     !stateDb.isEmpty(address)

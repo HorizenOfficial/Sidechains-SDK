@@ -359,7 +359,11 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
+          .map(err => {
+              log.warn(s"Execution has been reverted: ${err.getMessage}", err)
+              RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData))
+            }
+          )
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }

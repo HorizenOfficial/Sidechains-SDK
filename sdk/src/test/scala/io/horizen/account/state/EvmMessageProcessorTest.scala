@@ -23,7 +23,7 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
     val processor = new EvmMessageProcessor()
 
     Mockito
-      .when(mockStateView.isSmartContractAccount(ArgumentMatchers.any[Address]()))
+      .when(mockStateView.isEvmSmartContractAccount(ArgumentMatchers.any[Address]()))
       .thenAnswer(args => {
         val address: Address = args.getArgument(0)
         assertNotNull("should not check the null address", address)

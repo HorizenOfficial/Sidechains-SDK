@@ -48,6 +48,8 @@ class AccountStateMetadataStorage(storage: Storage)
 
   override def hasCeased: Boolean = getView.hasCeased
 
+  override def zenDaoInitDone: Boolean = getView.zenDaoInitDone
+
   override def getHeight: Int = getView.getHeight
 
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot

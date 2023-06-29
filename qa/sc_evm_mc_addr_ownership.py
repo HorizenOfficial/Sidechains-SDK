@@ -6,11 +6,14 @@ from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_topic, encode_hex, \
     function_signature_to_4byte_selector, to_checksum_address
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import format_evm
+from SidechainTestFramework.account.ac_utils import format_evm, estimate_gas
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
+    createLegacyEIP155Transaction
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
-from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
+    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
@@ -122,7 +125,7 @@ def check_get_key_ownership(abiReturnValue, exp_dict):
     res = json.dumps(sc_associations_dict)
     assert_equal(res, json.dumps(dict(sorted(exp_dict.items()))))
 
-
+# The activation epoch of the zendao feature, as coded in the sdk
 ZENDAO_FORK_EPOCH = 7
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
@@ -160,6 +163,25 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         assert_true(taddr1 is not None)
 
+        # check the balance of native smart contract is null
+        nsc_bal = int(sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        assert_equal(nsc_bal, 0)
+
+        # try sending funds to native smart contract before the zendao fork is reached
+        tx_hash_eoa = createLegacyEIP155Transaction(sc_node2,
+                                                fromAddress=sc_address2,
+                                                toAddress=MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS,
+                                                value=100000
+                                                )
+        self.sc_sync_all()
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # get mempool contents and check tx has not been forged since the fork is not active yet
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash_eoa in response['transactionIds'])
+
         mc_signature1 = mc_node.signmessage(taddr1, sc_address_checksum_fmt)
         print("scAddr: " + sc_address_checksum_fmt)
         print("mcAddr: " + taddr1)
@@ -182,14 +204,26 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(tx_hash in response['transactionIds'])
 
         # reach the fork
-        bestEpoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
 
-        for i in range(0, ZENDAO_FORK_EPOCH - bestEpoch):
+        for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
+        # check the tx adding an ownership is included in the block and the receipt is succesful after fork activation
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr1)
 
+        # check also eoa tx has been reverted because it is sending a value to native smart contract address
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
+        status = int(receipt['result']['status'], 16)
+        assert_true(status == 0)
+        nsc_bal = int(sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        assert_equal(nsc_bal, 0)
+
+        # check that both tx (reverted or not) have been removed from mempool
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash not in response['transactionIds'])
+        assert_true(tx_hash_eoa not in response['transactionIds'])
 
         # get another address (note that mc recycles addresses)
         while True:
@@ -484,6 +518,43 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_equal(resultStringLength, 2 * exp_len)
 
         check_get_key_ownership(abiReturnValue, list_associations_sc_address['keysOwnership'])
+
+
+        # add one more association and check gas estimation
+        taddr_sc2_2 = mc_node.getnewaddress()
+        mc_signature_sc2 = mc_node.signmessage(taddr_sc2_2, sc_address2_checksum_fmt)
+        print("scAddr: " + sc_address2_checksum_fmt)
+        print("mcAddr: " + taddr_sc2_2)
+        print("mcSignature: " + mc_signature_sc2)
+
+        ret = sendKeysOwnership(sc_node2,
+                sc_address=sc_address2,
+                mc_addr=taddr_sc2_2,
+                mc_signature=mc_signature_sc2)
+        self.sc_sync_all()
+        tx_hash_check = ret['transactionId']
+
+        response = allTransactions(sc_node, True)
+        est_gas_nsc_data = response['transactions'][0]['data']
+
+        response = estimate_gas(sc_node2, sc_address2_checksum_fmt,
+                                to_address=to_checksum_address(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS),
+                                data="0x"+ est_gas_nsc_data,
+                                gasPrice='0x35a4e900',
+                                nonce=0)
+
+        est_gas_used = response['result']
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_check))
+        status = int(receipt['result']['status'], 16)
+        assert_true(status == 1)
+        gas_used = receipt['result']['gasUsed']
+        assert_equal(est_gas_used, gas_used)
+
+
 
 
 if __name__ == "__main__":

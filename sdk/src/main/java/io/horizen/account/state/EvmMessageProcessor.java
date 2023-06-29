@@ -27,7 +27,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         var to = msg.getTo();
         // contract deployment to a new account
         if (to.isEmpty()) return true;
-        return view.isSmartContractAccount(to.get());
+        return view.isEvmSmartContractAccount(to.get());
     }
 
     @Override

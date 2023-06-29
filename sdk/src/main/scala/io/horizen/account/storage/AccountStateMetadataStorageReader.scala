@@ -26,6 +26,8 @@ trait AccountStateMetadataStorageReader {
 
   def hasCeased: Boolean
 
+  def zenDaoInitDone: Boolean
+
   // tip height
   def getHeight: Int
 

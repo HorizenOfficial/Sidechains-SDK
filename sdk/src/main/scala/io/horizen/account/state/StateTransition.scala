@@ -43,7 +43,7 @@ class StateTransition(
       messageProcessors.find(_.canProcess(msg, view)) match {
         case None =>
           log.error(s"No message processor found for executing message $msg")
-          throw new IllegalArgumentException("Unable to process message.")
+          throw new IllegalArgumentException(s"No message processor found for executing message: $msg")
         case Some(processor) =>
           // increase the nonce by 1
           view.increaseNonce(msg.getFrom)

@@ -40,7 +40,9 @@ class WithdrawalMsgProcessorIntegrationTest
         WithdrawalMsgProcessor.contractCodeHash,
         view.getCodeHash(address)
       )
-      assertTrue(view.isSmartContractAccount(address))
+      assertFalse(view.isEvmSmartContractAccount(address))
+      assertFalse(view.isEoaAccount(address))
+      assertTrue(view.isNativeSmartContractAccount(address))
     }
   }
 

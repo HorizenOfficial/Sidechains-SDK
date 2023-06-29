@@ -28,10 +28,15 @@ object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
 
   def getOwnershipListItem(view: BaseAccountStateView, tip: Array[Byte]): (McAddrOwnershipData, Array[Byte]) = {
     if (!linkedListNodeRefIsNull(tip)) {
-      val node = findLinkedListNode(view, tip, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS).get
-      val ownershipData = findOwnershipData(view, node.dataKey).get
-      val listItem = McAddrOwnershipData(ownershipData.scAddress, ownershipData.mcTransparentAddress)
-      val prevNodeKey = node.previousNodeKey
+
+      val node = findLinkedListNode(view, tip, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)
+        .orElse(throw new ExecutionRevertedException("Could not find a valid node"))
+
+      val ownershipData = findOwnershipData(view, node.get.dataKey)
+        .orElse(throw new ExecutionRevertedException("Could not find valid data"))
+
+      val listItem = McAddrOwnershipData(ownershipData.get.scAddress, ownershipData.get.mcTransparentAddress)
+      val prevNodeKey = node.get.previousNodeKey
       (listItem, prevNodeKey)
     } else {
       throw new ExecutionRevertedException("Tip has the null value, no list here")
