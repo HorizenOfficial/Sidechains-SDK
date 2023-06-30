@@ -50,8 +50,8 @@ Test:
     - Create a keyRotationTransaction with sdk's default gas info and change the signer key 0 (SK4 -> SK5).
     - End the WE and verify that the certificates is added to the MC and SC.
     ######## WITHDRAWAL EPOCH 3 ##########
-    - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored for epoch 2.
-    - Call the getCertificateSigners endpoint and verify that the signers key 0 = SK4.
+    - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored for epoch 3.
+    - Call the getCertificateSigners endpoint and verify that the signers key 0 = SK5.
     - Update ALL the signing and master keys.
     - Call the getKeyRotationProof endpoint and verify that we have a KeyRotationProof for each signing and master keys.
     - End the WE and verify that the certificates is added to the MC and SC.
