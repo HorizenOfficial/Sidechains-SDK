@@ -42,7 +42,6 @@ case class SidechainSubmitterApiRoute[
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
   with ApiDirectives
-  with DisableApiRoute
 {
 
   val submitterPathPrefix = "submitter"
@@ -189,15 +188,6 @@ case class SidechainSubmitterApiRoute[
     }
   }
 
-  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
-    if (!params.isHandlingTransactionsEnabled) {
-      val error = Some(ErrorNotEnabledOnSeederNode.description)
-      Seq(
-        (submitterPathPrefix, "", error)
-      )
-    } else
-      Seq.empty
-  }
 }
 
 object SidechainDebugRestScheme {

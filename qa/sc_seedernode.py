@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConne
     SCCreationInfo
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import generate_next_block, \
-    connect_sc_nodes, assert_equal, \
+    connect_sc_nodes, assert_equal, assert_false,\
     assert_true, bootstrap_sidechain_nodes, AccountModel, get_next_epoch_slot, generate_forging_request, start_sc_nodes, \
     check_wallet_coins_balance
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -192,34 +192,22 @@ class SCSeederNode(SidechainTestFramework):
         else:
             fail("SCAPIException expected")
 
-        # Check that Submitter endpoints don't exist on seeder node
-        try:
-            sc_node_seeder.submitter_enableCertificateSubmitter()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        # Check that Submitter endpoints exist on seeder node
+        sc_node_seeder.submitter_enableCertificateSubmitter()
+        assert_true(sc_node_seeder.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+        "Failed to enabling certificate submitting on seeder node")
 
-        try:
-            sc_node_seeder.submitter_disableCertificateSubmitter()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_disableCertificateSubmitter()
+        assert_false(sc_node_seeder.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
+        "Failed to disabling certificate submitting on seeder node")
 
-        try:
-            sc_node_seeder.submitter_enableCertificateSigner()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_enableCertificateSigner()
+        assert_true(sc_node_seeder.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+        "Failed to enabling certificate signing on seeder node")
 
-        try:
-            sc_node_seeder.submitter_disableCertificateSigner()
-        except SCAPIException:
-            pass
-        else:
-            fail("expected exception when calling Submitter method")
+        sc_node_seeder.submitter_disableCertificateSigner()
+        assert_false(sc_node_seeder.submitter_isCertificateSignerEnabled()["result"]["enabled"],
+        "Failed to disabling certificate signing on seeder node")
 
         # Check that Transaction API are not accessible
 
