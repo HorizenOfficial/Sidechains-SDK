@@ -20,6 +20,5 @@ trait StateView[TX <: Transaction] extends BaseStateReader {
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit
   def updateNextBaseFee(baseFee: BigInteger): Unit
   def setCeased(): Unit
-  def setZenDaoInitDone(): Unit
   def commit(version: VersionTag): Unit
 }

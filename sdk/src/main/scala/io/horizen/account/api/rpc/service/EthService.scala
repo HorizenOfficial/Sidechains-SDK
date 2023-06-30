@@ -494,7 +494,7 @@ class EthService(
     )
   }
 
-  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (AccountStateView, BlockContext) => A): A = {
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, BlockContext) => A): A = {
     val (block, blockInfo) = getBlockByTag(nodeView, tag)
     val blockContext = getBlockContext(block, blockInfo, nodeView.history)
     if (tag == "pending") {

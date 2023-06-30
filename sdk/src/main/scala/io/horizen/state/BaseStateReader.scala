@@ -16,6 +16,5 @@ trait BaseStateReader {
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt]
   def getNextBaseFee: BigInteger //Contains the base fee to be used when forging the next block
   def hasCeased: Boolean
-  def zenDaoInitDone: Boolean
   def getAccountStateRoot: Array[Byte] // 32 bytes, keccak hash
 }

@@ -14,10 +14,11 @@ package io.horizen.account.state;
 public interface MessageProcessor {
     // Initialization is going to happen only once at genesis State creation.
     // Common pattern: declare a new native smart contract account in the View
-    void init(AccountStateView view) throws MessageProcessorInitializationException;
+    void init(BaseAccountStateView view, int consensusEpochNumber) throws MessageProcessorInitializationException;
 
-    // Checks if the processor is applicable to the Message
-    boolean canProcess(Message msg, AccountStateView view);
+    // Checks if the processor is applicable to the Message. Some message processor can support messages when reaching
+    // a fork point, therefore we pass along the consensus epoch number, which is not stored in stateDb
+    boolean canProcess(Message msg, BaseAccountStateView view, int consensusEpochNumber);
 
     /**
      * Apply message to the given view. Possible results:
@@ -30,12 +31,12 @@ public interface MessageProcessor {
      * @param msg message to apply to the state
      * @param view state view
      * @param gas available gas for the execution
-     * @param blockContext contextual information accessible during execution
+     * @param blockContext contextual information accessible during execution. It contains also the consensus epoch number
      * @return return data on successful execution
      * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
      * @throws ExecutionFailedException revert-and-consume-all-gas, also mark the message as "failed"
      * @throws RuntimeException any other exceptions are consideres as "invalid message"
      */
-    byte[] process(Message msg, AccountStateView view, GasPool gas, BlockContext blockContext)
+    byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
             throws ExecutionFailedException;
 }

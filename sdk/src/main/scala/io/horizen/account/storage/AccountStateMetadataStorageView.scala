@@ -46,10 +46,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   //Contains the base fee to be used when forging the next block
   private[horizen] var nextBaseFeeOpt: Option[BigInteger] = None
 
-  // this flag is set here in order to avoid getting smart contract address/attributes in stateDB thus consuming gas
-  private[horizen] val zenDaoIDoneStateKey = calculateKey("zenDaoIDoneStateKey".getBytes(StandardCharsets.UTF_8))
-  private[horizen] var zenDaoInitDoneOpt: Option[Boolean] = None
-
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
@@ -172,8 +168,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
-  override def zenDaoInitDone(): Boolean = zenDaoInitDoneOpt.getOrElse(storage.get(zenDaoIDoneStateKey).isPresent)
-
   override def getHeight: Int = {
     storage.get(heightKey).asScala.map(baw => Ints.fromByteArray(baw.data)).getOrElse(0)
   }
@@ -249,7 +243,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   def setCeased(): Unit = hasCeasedOpt = Some(true)
-  def setZenDaoInitDone(): Unit = zenDaoInitDoneOpt = Some(true)
 
   // update the database with "dirty" records new values
   // also increment the height value directly
@@ -277,7 +270,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt = None
     receiptsOpt = None
     nextBaseFeeOpt = None
-    zenDaoInitDoneOpt = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -374,9 +366,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     })
 
     nextBaseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
-
-    // If zendao native smart contract has been initialized, set the flag
-    zenDaoInitDoneOpt.foreach(_ => updateList.add(new JPair(zenDaoIDoneStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
 
     storage.update(version, updateList, removeList)
 

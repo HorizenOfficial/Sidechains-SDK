@@ -45,8 +45,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
 
-  override def init(view: AccountStateView): Unit = {
-    super.init(view)
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
+    super.init(view, consensusEpochNumber)
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
@@ -339,7 +339,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: AccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)

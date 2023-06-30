@@ -50,8 +50,9 @@ class AccountState(
   // Used once on genesis AccountState creation
   private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
     using(getView) { view =>
+      val consensusEpochNumber = view.getConsensusEpochNumberAsInt
       for (processor <- messageProcessors) {
-        processor.init(view)
+        processor.init(view, consensusEpochNumber)
       }
 
       try {
@@ -341,8 +342,8 @@ class AccountState(
   }
 
   // get a view over state db which is built with the given state root
-  def getStateDbViewFromRoot(stateRoot: Array[Byte]): AccountStateView =
-    new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, new Hash(stateRoot)), messageProcessors)
+  def getStateDbViewFromRoot(stateRoot: Array[Byte]): StateDbAccountStateView =
+    new StateDbAccountStateView(new StateDB(stateDbStorage, new Hash(stateRoot)), messageProcessors)
 
   // Base getters
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
@@ -518,8 +519,6 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
-
-  override def zenDaoInitDone: Boolean = stateMetadataStorage.zenDaoInitDone
 
 }
 

@@ -6,11 +6,11 @@ import sparkz.util.SparkzLogging
 import java.math.BigInteger
 
 class StateTransition(
-    view: AccountStateView,
+    view: StateDbAccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
-) extends SparkzLogging {
+                     ) extends SparkzLogging {
 
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
@@ -40,7 +40,7 @@ class StateTransition(
       // reset and prepare account access list
       view.setupAccessList(msg)
       // find and execute the first matching processor
-      messageProcessors.find(_.canProcess(msg, view)) match {
+      messageProcessors.find(_.canProcess(msg, view, blockContext.consensusEpochNumber)) match {
         case None =>
           log.error(s"No message processor found for executing message $msg")
           throw new IllegalArgumentException(s"No message processor found for executing message: $msg")

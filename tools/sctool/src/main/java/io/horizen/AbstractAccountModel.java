@@ -142,7 +142,7 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
             // init all the message processors
             Iterator<MessageProcessor> iter = messageProcessorSeq.iterator();
             while (iter.hasNext()) {
-                iter.next().init(view);
+                iter.next().init(view, 0);
             }
 
             // apply sc creation output, this will call forger stake msg processor

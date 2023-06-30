@@ -5,7 +5,7 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
-import io.horizen.account.state.McAddrOwnershipMsgProcessor._
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, LinkedListNullValue, LinkedListTipKey, RemoveOwnershipCmd, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -21,6 +21,7 @@ import org.bouncycastle.asn1.x9.X9ECParameters
 import org.web3j.crypto.{Keys, Sign}
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
+import sparkz.util.SparkzLogging
 import sparkz.util.encode.Base64
 
 import java.math.BigInteger
@@ -39,29 +40,20 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   override val contractAddress: Address = MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("McAddrOwnershipSmartContractCode")
 
-  private def isForkActive(view: AccountStateView) :  Boolean = {
-    val epochNumber = view.getConsensusEpochNumberAsInt
-    val forkIsActive = ZenDAOFork.get(epochNumber).active
-    val strVal = if (forkIsActive) {"YES"} else {"NO"}
-    log.trace(s"Epoch $epochNumber: ZenDAO fork active=$strVal")
-    forkIsActive
-  }
-
-  override def init(view: AccountStateView): Unit = {
-    if (!isForkActive(view)) {
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
+    if (!isForkActive(consensusEpochNumber)) {
       log.warn(s"Can not perform ${getClass.getName} initialization, fork is not active")
       return
     }
     else {
-      if (view.zenDaoInitDone) {
+      if (initDone(view)) {
         throw new MessageProcessorInitializationException("McAddrOwnership msg processor already initialized")
       }
     }
 
     // this creates the native smart contract address in stateDB
-    // we do not call the parent method because the initialization does not happen at genesis state, and someone might
+    // We do not call the parent method because in our case the initialization does not happen at genesis state, and someone might
     // (on purpose or not) already have created the account, maybe from a deployed solidity smart contract
-    //super.init(view)
     if (!view.accountExists(contractAddress)) {
       view.addAccount(contractAddress, contractCode)
       log.debug(s"created Message Processor account $contractAddress")
@@ -90,16 +82,15 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
-
-    // we completed the initialization, write this attribute to the state (meta data storage)
-    view.setZenDaoInitDone()
   }
 
-  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    if (isForkActive(view)) {
-      if (!view.zenDaoInitDone)
-        init(view)
-      super.canProcess(msg, view)
+  override def canProcess(msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
+    if (isForkActive(consensusEpochNumber)) {
+      // the gas cost of these calls is not taken into account in this case, we are not tracking gas consumption (and
+      // there is not an account to charge anyway)
+      if (!initDone(view))
+        init(view, consensusEpochNumber)
+      super.canProcess(msg, view, consensusEpochNumber)
     } else {
       // we can not handle anything before fork activation, but just warn if someone is trying to use it
       if (msg.getTo.isPresent && msg.getTo.get.equals(contractAddress))
@@ -370,13 +361,16 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: AccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(gas)
-    if (!isForkActive(view))
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+    if (!isForkActive(blockContext.consensusEpochNumber)) {
       throw new ExecutionRevertedException(s"zenDao fork not active")
+    }
 
-    if (!view.zenDaoInitDone)
+    val gasView = view.getGasTrackedView(gas)
+    if (!initDone(gasView)) {
+      // should not happen since if the fork is active we should have perform the init at this point
       throw new ExecutionRevertedException(s"zenDao native smart contract init not done")
+    }
 
     // this handles eoa2eoa too
     if (msg.getData.length == 0)
@@ -394,7 +388,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
 }
 
-object McAddrOwnershipMsgProcessor {
+object McAddrOwnershipMsgProcessor extends SparkzLogging {
 
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
@@ -430,6 +424,20 @@ object McAddrOwnershipMsgProcessor {
     val s: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 33, 65))
 
     new SignatureSecp256k1(v, r, s)
+  }
+
+  def initDone(view: BaseAccountStateView) : Boolean = {
+    // depending on whether this is a warm or a cold access, this read op costs WarmStorageReadCostEIP2929 or ColdSloadCostEIP2929
+    // gas units (currently defined as 100 ans 2100 resp.)
+    val initialTip = view.getAccountStorage(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
+    !initialTip.sameElements(NULL_HEX_STRING_32)
+  }
+
+  def isForkActive(consensusEpochNumber: Integer): Boolean = {
+    val forkIsActive = ZenDAOFork.get(consensusEpochNumber).active
+    val strVal = if (forkIsActive) {"YES"} else {"NO"}
+    log.trace(s"Epoch $consensusEpochNumber: ZenDAO fork active=$strVal")
+    forkIsActive
   }
 }
 

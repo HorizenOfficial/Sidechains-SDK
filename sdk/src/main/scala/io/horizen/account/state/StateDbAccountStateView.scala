@@ -1,9 +1,12 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
-import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
+import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
@@ -16,9 +19,11 @@ import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
+
 import java.math.BigInteger
 import java.util.Optional
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.util.Try
 
 class StateDbAccountStateView(
     stateDb: StateDB,
@@ -156,6 +161,76 @@ class StateDbAccountStateView(
       // sort the resulting sequence by decreasing stake amount
       .sorted(Ordering[ForgingStakeInfo].reverse)
   }
+
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
+  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
+  }
+
+  /**
+   * Possible outcomes:
+   *   - tx applied succesfully => Receipt with status success
+   *   - tx execution failed => Receipt with status failed
+   *     - if any ExecutionFailedException was thrown, including but not limited to:
+   *     - OutOfGasException (not intrinsic gas, see below!)
+   *     - EvmException (EVM reverted) / native contract exception
+   *   - tx could not be applied => throws an exception (this will lead to an invalid block)
+   *     - any of the preChecks fail
+   *     - not enough gas for intrinsic gas
+   *     - block gas limit reached
+   */
+  def applyTransaction(
+                  tx: SidechainTypes#SCAT,
+                  txIndex: Int,
+                  blockGasPool: GasPool,
+                  blockContext: BlockContext
+                ): Try[EthereumConsensusDataReceipt] = Try {
+    if (!tx.isInstanceOf[EthereumTransaction])
+      throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
+
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
+
+    // It should never happen if the tx has been accepted in mempool.
+    // In some negative test scenario this can happen when forcing an unsigned tx to be forged in a block.
+    // In this case the 'from' attribute in the msg would not be
+    // set, and it would be difficult to rootcause the reason why gas and nonce checks would fail
+    if (!ethTx.isSigned)
+      throw new IllegalArgumentException(s"Transaction is not signed: ${ethTx.id}")
+
+    val txHash = BytesUtils.fromHexString(ethTx.id)
+    val msg = ethTx.asMessage(blockContext.baseFee)
+
+    // Tx context for stateDB, to know where to keep EvmLogs
+    setupTxContext(txHash, txIndex)
+
+    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
+    // apply message to state
+    val status =
+      try {
+        applyMessage(msg, blockGasPool, blockContext)
+        ReceiptStatus.SUCCESSFUL
+      } catch {
+        // any other exception will bubble up and invalidate the block
+        case err: ExecutionFailedException =>
+          log.debug(s"applying message failed, tx id: ${ethTx.id}, reason: ${err.getMessage}")
+          ReceiptStatus.FAILED
+      } finally {
+        // finalize pending changes, clear the journal and reset refund counter
+        stateDb.finalizeChanges()
+      }
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(
+      ethTx.version(),
+      status.id,
+      blockGasPool.getUsedGas,
+      getLogs(txHash)
+    )
+    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
+
+    consensusDataReceipt
+  }
+
 
   override def isEoaAccount(address: Address): Boolean = {
     !isNativeSmartContractAccount(address) &&

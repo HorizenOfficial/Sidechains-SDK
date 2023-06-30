@@ -31,7 +31,7 @@ class WithdrawalMsgProcessorIntegrationTest
   def testInit(): Unit = {
     val address = WithdrawalMsgProcessor.contractAddress
     usingView(WithdrawalMsgProcessor) { view =>
-      WithdrawalMsgProcessor.init(view)
+      WithdrawalMsgProcessor.init(view, 0)
       assertTrue("Account doesn't exist after init", view.accountExists(address))
       assertEquals("Wrong initial balance", BigInteger.ZERO, view.getBalance(address))
       assertEquals("Wrong initial nonce", BigInteger.ZERO, view.getNonce(address))
@@ -49,7 +49,7 @@ class WithdrawalMsgProcessorIntegrationTest
   @Test
   def testWithdrawalRequestProcessorIntegration(): Unit = {
     usingView(WithdrawalMsgProcessor) { view =>
-      WithdrawalMsgProcessor.init(view)
+      WithdrawalMsgProcessor.init(view, 0)
 
       val withdrawalEpoch = 102
       val blockContext = new BlockContext(

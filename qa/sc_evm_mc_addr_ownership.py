@@ -12,8 +12,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Tran
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
-from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
@@ -33,17 +32,18 @@ Test:
     Do some negative tests     
 """
 
+
 def get_address_with_balance(input_list):
-    '''
+    """
     Assumes the list in input is obtained via the RPC cmd listaddressgroupings()
-    '''
+    """
     for group in input_list:
         for record in group:
             addr = record[0]
-            val  = record[1]
+            val = record[1]
             if val > 0:
-                return (addr, val)
-    return (None, 0)
+                return addr, val
+    return None, 0
 
 
 def check_add_ownership_event(event, sc_addr, mc_addr, op="add"):
@@ -69,25 +69,26 @@ def check_add_ownership_event(event, sc_addr, mc_addr, op="add"):
     assert_equal(mc_addr, evt_mc_addr, "Wrong mc_addr string in topics")
 
 
-def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None, evt_op="add"):
+def forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None,
+                            evt_op="add"):
     generate_next_block(sc_node, "first node")
     self.sc_sync_all()
 
     check_receipt(sc_node, tx_hash, expected_receipt_status, sc_addr, mc_addr, evt_op)
 
-def check_receipt(sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None, evt_op="add"):
 
+def check_receipt(sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_addr=None, evt_op="add"):
     # check receipt
     receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
-    if not 'result' in receipt or receipt['result'] == None:
+    if 'result' not in receipt or receipt['result'] is None:
         raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(receipt, indent=2)))
 
     status = int(receipt['result']['status'], 16)
     assert_true(status == expected_receipt_status)
 
     # if we have a succesful receipt and valid func parameters, check the event
-    if (expected_receipt_status == 1):
-        if (sc_addr is not None) and (mc_addr is not None) :
+    if expected_receipt_status == 1:
+        if (sc_addr is not None) and (mc_addr is not None):
             assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
             event = receipt['result']['logs'][0]
             check_add_ownership_event(event, sc_addr, mc_addr, evt_op)
@@ -95,23 +96,24 @@ def check_receipt(sc_node, tx_hash, expected_receipt_status=1, sc_addr=None, mc_
         assert_equal(0, len(receipt['result']['logs']), "No events should be in receipt")
 
 
-def check_get_key_ownership(abiReturnValue, exp_dict):
-    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes from the start
-    # of the return data block. In this case 32 (0x20)
-    start_data_offset = decode(['uint32'], hex_str_to_bytes(abiReturnValue[0:64]))[0]*2
+def check_get_key_ownership(abi_return_value, exp_dict):
+    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes
+    # from the start of the return data block. In this case 32 (0x20)
+    start_data_offset = decode(['uint32'], hex_str_to_bytes(abi_return_value[0:64]))[0] * 2
     assert_equal(start_data_offset, 64)
 
-    end_offset = start_data_offset + 64 # read 32 bytes
-    list_size = decode(['uint32'], hex_str_to_bytes(abiReturnValue[start_data_offset:end_offset]))[0]
+    end_offset = start_data_offset + 64  # read 32 bytes
+    list_size = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_data_offset:end_offset]))[0]
 
     sc_associations_dict = {}
     for i in range(list_size):
         start_offset = end_offset
-        end_offset = start_offset + 192 # read (32 + 32 + 32) bytes
-        (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'], hex_str_to_bytes(abiReturnValue[start_offset:end_offset]))
+        end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
+        (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'],
+                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
         sc_address_checksum_fmt = to_checksum_address(address_pref)
         print("sc addr=" + sc_address_checksum_fmt)
-        if sc_associations_dict.get(sc_address_checksum_fmt) is not None:
+        if sc_address_checksum_fmt in sc_associations_dict:
             mc_addr_list = sc_associations_dict.get(sc_address_checksum_fmt)
         else:
             sc_associations_dict[sc_address_checksum_fmt] = []
@@ -125,13 +127,15 @@ def check_get_key_ownership(abiReturnValue, exp_dict):
     res = json.dumps(sc_associations_dict)
     assert_equal(res, json.dumps(dict(sorted(exp_dict.items()))))
 
+
 # The activation epoch of the zendao feature, as coded in the sdk
 ZENDAO_FORK_EPOCH = 7
+
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2,
-                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME  * ZENDAO_FORK_EPOCH)
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * ZENDAO_FORK_EPOCH)
 
     def run_test(self):
         ft_amount_in_zen = Decimal('500.0')
@@ -140,7 +144,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         sc_node = self.sc_nodes[0]
         mc_node = self.nodes[0]
-        
+
         sc_node2 = self.sc_nodes[1]
         sc_address2 = sc_node2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
@@ -164,15 +168,16 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(taddr1 is not None)
 
         # check the balance of native smart contract is null
-        nsc_bal = int(sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        nsc_bal = int(
+            sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
         assert_equal(nsc_bal, 0)
 
         # try sending funds to native smart contract before the zendao fork is reached
         tx_hash_eoa = createLegacyEIP155Transaction(sc_node2,
-                                                fromAddress=sc_address2,
-                                                toAddress=MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS,
-                                                value=100000
-                                                )
+                                                    fromAddress=sc_address2,
+                                                    toAddress=MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS,
+                                                    value=100000
+                                                    )
         self.sc_sync_all()
 
         generate_next_block(sc_node, "first node")
@@ -189,9 +194,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         # add sc/mc ownership sending a transaction with data invoking native smart contract
         ret = sendKeysOwnership(sc_node, nonce=0,
-                                 sc_address=sc_address,
-                                 mc_addr=taddr1,
-                                 mc_signature=mc_signature1)
+                                sc_address=sc_address,
+                                mc_addr=taddr1,
+                                mc_signature=mc_signature1)
 
         tx_hash = ret['transactionId']
         self.sc_sync_all()
@@ -217,7 +222,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
         status = int(receipt['result']['status'], 16)
         assert_true(status == 0)
-        nsc_bal = int(sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        nsc_bal = int(
+            sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
         assert_equal(nsc_bal, 0)
 
         # check that both tx (reverted or not) have been removed from mempool
@@ -238,9 +244,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         # add a second owned mc address linked to the same sc address
         ret = sendKeysOwnership(sc_node, nonce=1,
-                                 sc_address=sc_address,
-                                 mc_addr=taddr2,
-                                 mc_signature=mc_signature2)
+                                sc_address=sc_address,
+                                mc_addr=taddr2,
+                                mc_signature=mc_signature2)
 
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2)
@@ -257,8 +263,8 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(taddr2 in ret['keysOwnership'][sc_address_checksum_fmt])
 
         ret = removeKeysOwnership(sc_node,
-                                 sc_address=sc_address,
-                                 mc_addr=taddr2)
+                                  sc_address=sc_address,
+                                  mc_addr=taddr2)
         pprint.pprint(ret)
 
         tx_hash = ret['transactionId']
@@ -283,41 +289,39 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # 1. try to add the an ownership already there
         try:
             sendKeysOwnership(sc_node,
-                                     sc_address=sc_address,
-                                     mc_addr=taddr1,
-                                     mc_signature=mc_signature1)
+                              sc_address=sc_address,
+                              mc_addr=taddr1,
+                              mc_signature=mc_signature1)
         except RuntimeError as err:
             print("Expected exception thrown: {}".format(err))
-            assert_true("already linked" in str(err) )
+            assert_true("already linked" in str(err))
         else:
             fail("duplicate association should not work")
-
 
         # 2. try to add a not owned ownership. The tx is executed but the receipt has a failed status
         taddr3 = mc_node.getnewaddress()
 
         ret = sendKeysOwnership(sc_node, nonce=3,
-                                 sc_address=sc_address,
-                                 mc_addr=taddr3,
-                                 mc_signature=mc_signature1)
+                                sc_address=sc_address,
+                                mc_addr=taddr3,
+                                mc_signature=mc_signature1)
         tx_hash = ret['transactionId']
 
         forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=0)
 
         # 3. try to use invalid parameters
         # 3.1 illegal sc address
-        invalidScAddr = "1234h"
+        invalid_sc_addr = "1234h"
         try:
             sendKeysOwnership(sc_node,
-                              sc_address=invalidScAddr,
+                              sc_address=invalid_sc_addr,
                               mc_addr=taddr2,
                               mc_signature=mc_signature2)
         except Exception as err:
             print("Expected exception thrown: {}".format(str(err)))
-            assert_true("Account " + invalidScAddr + " is invalid " in str(err))
+            assert_true("Account " + invalid_sc_addr + " is invalid " in str(err))
         else:
             fail("invalid sc address should not work")
-
 
         # 3.2 illegal mc address
         try:
@@ -330,7 +334,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             assert_true("Invalid input parameters" in str(err))
         else:
             fail("invalid mc address should not work")
-
 
         # 3.3 illegal mc signature
         try:
@@ -347,37 +350,37 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # 4. try to remove an ownership not stored in db.
         try:
             removeKeysOwnership(sc_node,
-                            sc_address=sc_address,
-                            mc_addr=taddr3)
+                                sc_address=sc_address,
+                                mc_addr=taddr3)
         except Exception as err:
             print("Expected exception thrown: {}".format(err))
-            assert_true("not linked" in str(err) )
+            assert_true("not linked" in str(err))
         else:
             fail("duplicate association should not work")
 
         # 5. try to remove an ownership passing a null mc addr (not yet supported).
         try:
             removeKeysOwnership(sc_node,
-                            sc_address=sc_address,
-                            mc_addr=None)
+                                sc_address=sc_address,
+                                mc_addr=None)
         except SCAPIException as err:
             print("Expected exception thrown: {}".format(err))
-            assert_true("MC address must be specified" in str(err.error) )
+            assert_true("MC address must be specified" in str(err.error))
         else:
             fail("duplicate association should not work")
 
         # re-add the mc address we removed
         ret = sendKeysOwnership(sc_node, nonce=4,
-                                 sc_address=sc_address,
-                                 mc_addr=taddr2,
-                                 mc_signature=mc_signature2)
+                                sc_address=sc_address,
+                                mc_addr=taddr2,
+                                mc_signature=mc_signature2)
 
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2)
 
         # try adding 10 mc addresses and forge a block after that
         taddr_list = []
-        txHash_list = []
+        tx_hash_list = []
         for i in range(10):
             taddr = mc_node.getnewaddress()
             taddr_list.append(taddr)
@@ -386,16 +389,16 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             print("mcAddr: " + taddr)
             print("mcSignature: " + mc_signature)
 
-            txHash_list.append(sendKeysOwnership(sc_node, nonce= 5 + i,
-                                    sc_address=sc_address,
-                                    mc_addr=taddr,
-                                    mc_signature=mc_signature)['transactionId'])
+            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=5 + i,
+                                                  sc_address=sc_address,
+                                                  mc_addr=taddr,
+                                                  mc_signature=mc_signature)['transactionId'])
             self.sc_sync_all()
 
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
 
-        for i, txHash in enumerate(txHash_list):
+        for i, txHash in enumerate(tx_hash_list):
             print("Index = ", i)
             check_receipt(sc_node, txHash, sc_addr=sc_address, mc_addr=taddr_list[i])
 
@@ -407,7 +410,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(len(list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt]) == 12)
         for taddr in taddr_list:
             assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt])
-
 
         # remove an mc addr and check we have 11 of them
         taddr_rem = taddr_list[4]
@@ -441,9 +443,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcSignature: " + mc_signature_sc2)
 
         ret = sendKeysOwnership(sc_node2,
-                sc_address=sc_address2,
-                mc_addr=taddr_sc2_1,
-                mc_signature=mc_signature_sc2)
+                                sc_address=sc_address2,
+                                mc_addr=taddr_sc2_1,
+                                mc_signature=mc_signature_sc2)
         self.sc_sync_all()
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address2, mc_addr=taddr_sc2_1)
@@ -456,9 +458,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcSignature: " + mc_signature_sc2)
 
         ret = sendKeysOwnership(sc_node2,
-                sc_address=sc_address2,
-                mc_addr=taddr1,
-                mc_signature=mc_signature_sc2)
+                                sc_address=sc_address2,
+                                mc_addr=taddr1,
+                                mc_signature=mc_signature_sc2)
         self.sc_sync_all()
         tx_hash = ret['transactionId']
         # check the receipt has a status failed
@@ -487,14 +489,14 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             "data": encode_hex(abi_str)
         }
         response = sc_node2.rpc_eth_call(req, 'latest')
-        abiReturnValue = remove_0x_prefix(response['result'])
-        print(abiReturnValue)
-        resultStringLength = len(abiReturnValue)
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
         # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + 12*(3*32)
-        assert_equal(resultStringLength, 2*exp_len)
+        exp_len = 32 + 32 + 12 * (3 * 32)
+        assert_equal(result_string_length, 2 * exp_len)
 
-        check_get_key_ownership(abiReturnValue, list_all_associations['keysOwnership'])
+        check_get_key_ownership(abi_return_value, list_all_associations['keysOwnership'])
 
         # execute native smart contract for getting sc address associations
         method = 'getKeyOwnerships(address)'
@@ -507,18 +509,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             "gasLimit": 2300000,
             "gasPrice": 850000000,
             "value": 0,
-            "data": encode_hex(abi_str)+addr_padded_str
+            "data": encode_hex(abi_str) + addr_padded_str
         }
         response = sc_node2.rpc_eth_call(req, 'latest')
-        abiReturnValue = remove_0x_prefix(response['result'])
-        print(abiReturnValue)
-        resultStringLength = len(abiReturnValue)
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
         # we have an offset of 64 bytes and 11 records with 3 chunks of 32 bytes
         exp_len = 32 + 32 + 11 * (3 * 32)
-        assert_equal(resultStringLength, 2 * exp_len)
+        assert_equal(result_string_length, 2 * exp_len)
 
-        check_get_key_ownership(abiReturnValue, list_associations_sc_address['keysOwnership'])
-
+        check_get_key_ownership(abi_return_value, list_associations_sc_address['keysOwnership'])
 
         # add one more association and check gas estimation
         taddr_sc2_2 = mc_node.getnewaddress()
@@ -528,9 +529,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcSignature: " + mc_signature_sc2)
 
         ret = sendKeysOwnership(sc_node2,
-                sc_address=sc_address2,
-                mc_addr=taddr_sc2_2,
-                mc_signature=mc_signature_sc2)
+                                sc_address=sc_address2,
+                                mc_addr=taddr_sc2_2,
+                                mc_signature=mc_signature_sc2)
         self.sc_sync_all()
         tx_hash_check = ret['transactionId']
 
@@ -539,7 +540,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         response = estimate_gas(sc_node2, sc_address2_checksum_fmt,
                                 to_address=to_checksum_address(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS),
-                                data="0x"+ est_gas_nsc_data,
+                                data="0x" + est_gas_nsc_data,
                                 gasPrice='0x35a4e900',
                                 nonce=0)
 
@@ -553,8 +554,6 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(status == 1)
         gas_used = receipt['result']['gasUsed']
         assert_equal(est_gas_used, gas_used)
-
-
 
 
 if __name__ == "__main__":

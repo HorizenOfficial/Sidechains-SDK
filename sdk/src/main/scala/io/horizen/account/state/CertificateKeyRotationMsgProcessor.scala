@@ -37,7 +37,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: AccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
       case SubmitKeyRotationReqCmdSig =>
