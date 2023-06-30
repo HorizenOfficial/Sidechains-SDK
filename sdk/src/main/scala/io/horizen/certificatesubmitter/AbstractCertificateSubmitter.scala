@@ -26,12 +26,11 @@ import io.horizen.transaction.Transaction
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.BytesUtils
 import io.horizen.wallet.Wallet
-import io.horizen.websocket.client.CertificateAlreadyPresentException
-import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.transaction.MemoryPool
+import sparkz.util.SparkzLogging
 
 import java.io.File
 import java.util
@@ -72,6 +71,8 @@ abstract class AbstractCertificateSubmitter[
   type View = CurrentView[HIS, MS, VL, MP]
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
+  val secureEnclaveRequestTimeout: FiniteDuration = settings.remoteKeysManagerSettings.requestTimeout
+  val numOfParallelRequests: Int = settings.remoteKeysManagerSettings.numOfParallelRequests
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   protected var provingFileAbsolutePath: String = _
@@ -289,21 +290,24 @@ abstract class AbstractCertificateSubmitter[
 
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
     if (!secureEnclaveApiClient.isEnabled) return Seq()
-//    val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
-//      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
-//      .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
-//      .map(Future.sequence(_))
-//      .flatten
+    val keysFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
+    val listOfKeys = Try(Await.result(keysFromEnclaveFuture, secureEnclaveRequestTimeout))
+      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1))).getOrElse(Seq())
 
-    val signaturesFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
-      .map(managedKeys => indexedPublicKeys.filter(key_index => managedKeys.contains(key_index._1)))
-      .map(_.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _)))
-      .map(Future.sequence(_))
-      .flatten
+    val steps = listOfKeys.grouped(numOfParallelRequests)
+    val listOfSignatures = for (step <- steps) yield {
+      val listOfSignaturesFutures = step.map(secureEnclaveApiClient.signWithEnclave(messageToSign, _))
 
-
-    Try(Await.result(signaturesFromEnclaveFuture, timeoutDuration).flatten)
-      .getOrElse(Seq())
+      Try(Await.result(Future.sequence(listOfSignaturesFutures), secureEnclaveRequestTimeout).flatten)
+        .getOrElse {
+          val signaturesOpt = for {
+            sigFutureResult <- listOfSignaturesFutures
+            if sigFutureResult.isCompleted && sigFutureResult.value.get.isSuccess
+          } yield sigFutureResult.value.get.get
+          signaturesOpt.flatten
+        }
+    }
+    listOfSignatures.toSeq.flatten
   }
 
   protected def locallyGeneratedSignature: Receive = {

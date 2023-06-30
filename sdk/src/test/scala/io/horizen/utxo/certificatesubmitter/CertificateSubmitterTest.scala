@@ -83,6 +83,8 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       when(mockedWithdrawalEpochCertificateSettings.certificateSigningIsEnabled).thenReturn(signerIsEnabled)
       mockedWithdrawalEpochCertificateSettings
     })
+    when(mockedSidechainSettings.remoteKeysManagerSettings).thenReturn(RemoteKeysManagerSettings())
+
     mockedSidechainSettings
   }
 
@@ -1100,4 +1102,144 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
     }
   }
+
+  @Test
+  def signaturesFromEnclave(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
+    when(mockedSettings.remoteKeysManagerSettings).thenReturn(RemoteKeysManagerSettings(requestTimeout = 100 milliseconds))
+    val mockedSidechainNodeViewHolder = TestProbe()
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+    val mockedSecureEnclaveApiClient = mock[SecureEnclaveApiClient]
+
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, _ <: CertificateData] = new WithoutKeyRotationCircuitStrategy(mockedSettings, params, CryptoLibProvider.sigProofThresholdCircuitFunctions)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[CertificateDataWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings,
+        mockedSidechainNodeViewHolderRef,
+        mockedSecureEnclaveApiClient,
+        mock[NetworkParams],
+        mock[MainchainNodeChannel], mock[CertificateSubmissionStrategy], keyRotationStrategy)))
+
+    val submitter: CertificateSubmitter[CertificateDataWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
+
+    val keyGenerator = SchnorrKeyGenerator.getInstance()
+    val indexedPublicKeys: Seq[(SchnorrProposition, Int)] = Seq(
+      (keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8)).publicImage(), 0),
+      (keyGenerator.generateSecret("seed2".getBytes(StandardCharsets.UTF_8)).publicImage(), 2),
+      (keyGenerator.generateSecret("seed3".getBytes(StandardCharsets.UTF_8)).publicImage(), 3),
+      (keyGenerator.generateSecret("seed4".getBytes(StandardCharsets.UTF_8)).publicImage(), 4),
+      (keyGenerator.generateSecret("seed5".getBytes(StandardCharsets.UTF_8)).publicImage(), 5),
+    )
+
+    val messageToSign = FieldElementFixture.generateFieldElement()
+
+
+    //Test 1: secureEnclaveApiClient.isEnabled = false
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(false)
+    assertEquals("List of signatures is not empty when enclave is disabled", Seq(),
+      submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys))
+
+    //Test 2: listPublicKeys() fails
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future[Seq[SchnorrProposition]]( throw new Exception()))
+    assertEquals("List of signatures is not empty when enclave returns an exception when retrieving keys", Seq(),
+      submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys))
+
+    //Test 3: listPublicKeys() time out
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn (Future{
+        Thread.sleep(1 + mockedSettings.remoteKeysManagerSettings.requestTimeout.length);
+        indexedPublicKeys.map(_._1)
+      }
+    )
+
+    assertEquals("List of signatures is not empty when time out occurs when retrieving keys", Seq(),
+      submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys))
+
+    //Test 4: returns list of signatures
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    var remoteKeysList = indexedPublicKeys.map(_._1)
+    remoteKeysList = keyGenerator.generateSecret("seed11".getBytes(StandardCharsets.UTF_8)).publicImage() +: remoteKeysList
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future(remoteKeysList))
+
+    val secureEnclaveManagedSecret = keyGenerator.generateSecret("seed1".getBytes(StandardCharsets.UTF_8))
+
+    when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
+      .thenAnswer { request =>
+        val message = request.getArgument(0).asInstanceOf[Array[Byte]]
+        val pk_index = request.getArgument(1).asInstanceOf[(SchnorrProposition, Int)]
+        Future(Some(CertificateSignatureInfo(pk_index._2, secureEnclaveManagedSecret.sign(message))))
+      }
+
+    var listOfSignatures = submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys)
+    assertEquals("Wrong number of signatures", indexedPublicKeys.size, listOfSignatures.size)
+    assertEquals("Wrong pub key index", indexedPublicKeys.head._2, listOfSignatures.head.pubKeyIndex)
+
+    //Test 5: 1 signature fails
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    remoteKeysList = indexedPublicKeys.map(_._1)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn (Future(remoteKeysList))
+
+    when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
+      .thenAnswer { request =>
+        val message = request.getArgument(0).asInstanceOf[Array[Byte]]
+        val pk_index = request.getArgument(1).asInstanceOf[(SchnorrProposition, Int)]
+        if (pk_index._2 == 5)
+          Future(throw new Exception())
+        else
+          Future(Some(CertificateSignatureInfo(pk_index._2, secureEnclaveManagedSecret.sign(message))))
+      }
+    listOfSignatures = submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys)
+    assertEquals("Wrong number of signatures", 4, listOfSignatures.size)
+    assertTrue(listOfSignatures.find(x => x.pubKeyIndex == 5).isEmpty)
+
+    //Test 6: 1 signature time out
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    remoteKeysList = indexedPublicKeys.map(_._1)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future(remoteKeysList))
+
+
+    when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
+      .thenAnswer { request =>
+        val message = request.getArgument(0).asInstanceOf[Array[Byte]]
+        val pk_index = request.getArgument(1).asInstanceOf[(SchnorrProposition, Int)]
+        if (pk_index._2 == 0)
+          Future {
+            Thread.sleep(2 * mockedSettings.remoteKeysManagerSettings.requestTimeout.length);
+            Some(CertificateSignatureInfo(pk_index._2, secureEnclaveManagedSecret.sign(message)))
+          }
+        else
+          Future(Some(CertificateSignatureInfo(pk_index._2, secureEnclaveManagedSecret.sign(message))))
+      }
+    listOfSignatures = submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys)
+    assertEquals("Wrong number of signatures", 4, listOfSignatures.size)
+    assertTrue(listOfSignatures.find(x => x.pubKeyIndex == 0).isEmpty)
+
+    //Test 7: 1 no signature
+    reset(mockedSecureEnclaveApiClient)
+    when(mockedSecureEnclaveApiClient.isEnabled).thenReturn(true)
+    remoteKeysList = indexedPublicKeys.map(_._1)
+    when(mockedSecureEnclaveApiClient.listPublicKeys()).thenReturn(Future(remoteKeysList))
+
+    when(mockedSecureEnclaveApiClient.signWithEnclave(any(), any()))
+      .thenAnswer { request =>
+        val message = request.getArgument(0).asInstanceOf[Array[Byte]]
+        val pk_index = request.getArgument(1).asInstanceOf[(SchnorrProposition, Int)]
+        if (pk_index._2 == 4)
+          Future(None)
+        else
+          Future(Some(CertificateSignatureInfo(pk_index._2, secureEnclaveManagedSecret.sign(message))))
+      }
+    listOfSignatures = submitter.signaturesFromEnclave(messageToSign, indexedPublicKeys)
+    assertEquals("Wrong number of signatures", 4, listOfSignatures.size)
+    assertTrue(listOfSignatures.find(x => x.pubKeyIndex == 4).isEmpty)
+
+  }
+
+
 }

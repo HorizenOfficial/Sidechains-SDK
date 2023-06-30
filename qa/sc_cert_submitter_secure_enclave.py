@@ -18,7 +18,7 @@ Configuration:
     Start 1 MC node and 1 SC node.
     Enable Secure Enclave.
     SC node manages keys 0,1,2.
-    Secure Enclave manages keys 4,5,6
+    Secure Enclave manages keys the remaining keys (from 3 up to MAX_NUMBER_OF_KEYS)
     SC Node together with secure enclave has enough keys to produce certificate signatures.
 
 Test:
@@ -37,6 +37,8 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
     sc_withdrawal_epoch_length = 10
     sc_creation_amount = 100  # Zen
 
+    MAX_NUMBER_OF_KEYS = 47
+
     def setup_nodes(self):
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
@@ -54,7 +56,8 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length,
+                           cert_max_keys=self.MAX_NUMBER_OF_KEYS, csw_enabled=True),
             sc_node_1_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
@@ -101,7 +104,7 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
                 logging.info("sc_node1 generating certificate now.")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
-        assert_equal(6, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1)['cert']['quality'],
+        assert_equal(self.MAX_NUMBER_OF_KEYS - 1, mc_node.getrawtransaction(mc_node.getrawmempool()[0], 1)['cert']['quality'],
                      "Certificate has wrong quality")
         logging.info("Node with Secure Enclave was able to sign, collect signatures and emit certificate.")
 
