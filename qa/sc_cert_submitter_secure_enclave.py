@@ -97,7 +97,7 @@ class ScCertSubmitterSecureEnclave(SidechainTestFramework):
         self.sc_sync_all()  # Sync SC nodes
 
         # Wait for Certificates appearance
-        time.sleep(10)
+        time.sleep(20)
         while mc_node.getmempoolinfo()["size"] < 1 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
             logging.info("Wait for certificates in the MC mempool...")
             if sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
