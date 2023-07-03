@@ -543,14 +543,13 @@ class SidechainHistoryTest extends JUnitSuite
 
     // Test 5: Append history1.bestblock to history2 , but don't make it best.
     // compare history1 syncInfo with history2, they have fork on lasts block, height is the same.
-    // Expected to be equal, but history2 will try to provide hist best block inside continuation ids
     history2.append(history1blockSeq.last) match {
       case Success((hist, _)) =>
         history2 = hist
       case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
     }
     comparisonResult = history2.compare(history1SyncInfo)
-    assertEquals("History 1 chain expected to be equal then history 2 chain", History.Equal, comparisonResult)
+    assertEquals("History 1 chain expected to be equal then history 2 chain", History.Fork, comparisonResult)
     // Verify history2 continuationIds for history1 info
     continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)

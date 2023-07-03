@@ -306,7 +306,6 @@ abstract class AbstractHistory[
       return Seq()
 
     var indexes: Seq[Int] = Seq()
-
     var step: Int = 1
     // Start at the top of the chain and work backwards.
     var index: Int = height
@@ -320,6 +319,28 @@ abstract class AbstractHistory[
     // Push the genesis block index.
     indexes :+ 1
   }
+
+  // calculate the other node approximate height knowing that the sequence was created using the method knownBlocksHeightToSync
+  protected def calculateOtherNodeApproxHeight(startingHeight: Int, sequenceSize: Int): Int = {
+    if (startingHeight == 1) {
+      -1 // it is not possible to calculate the other node best block approximate height in this case
+    } else {
+      var currentHeight = startingHeight
+      var currentSequencePosition = sequenceSize - 1
+      var step = 1 // step used in case the input sequence size is > 10
+      while (currentSequencePosition > 0) {
+        if (currentSequencePosition < 10) {
+          currentHeight += 1
+        } else {
+          step *= 2
+          currentHeight += step
+        }
+        currentSequencePosition -= 1
+      }
+      currentHeight
+    }
+  }
+
 
   override def syncInfo: SidechainSyncInfo = {
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
@@ -357,7 +378,6 @@ abstract class AbstractHistory[
    */
   override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = {
     val dSuffix = divergentSuffix(other.knownBlockIds)
-
     dSuffix.size match {
       case 0 =>
         // log.warn(Nonsence situation..._)
@@ -368,20 +388,14 @@ abstract class AbstractHistory[
         else
           Younger
       case _ =>
-        val otherBestKnownBlockIndex = dSuffix.size - 1 - dSuffix.reverse.indexWhere(id => storage.heightOf(id).isDefined)
-        val otherBestKnownBlockHeight = storage.heightOf(dSuffix(otherBestKnownBlockIndex)).get
-        // other node height can be approximatly calculated as height of other KNOWN best block height + size of rest unknown blocks after it.
-        // why approximately? see knownBlocksHeightToSync algorithm: blocks to sync step increasing.
-        // to do: need to discuss
-        val otherBestBlockApproxHeight = otherBestKnownBlockHeight + (dSuffix.size - 1 - otherBestKnownBlockIndex)
-        if (storage.height < otherBestBlockApproxHeight)
+        val otherBestKnownBlockHeight = storage.heightOf(dSuffix.head).get
+        val otherBestBlockApproxHeight = calculateOtherNodeApproxHeight(otherBestKnownBlockHeight, dSuffix.size)
+        if(otherBestBlockApproxHeight == -1)
+          Unknown
+        else if (storage.height < otherBestBlockApproxHeight)
           Older
-        else if (storage.height == otherBestBlockApproxHeight) {
-          if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
-            Equal // UPDATE: FORK in both cases
-          else
-            Fork
-        }
+        else if (storage.height == otherBestBlockApproxHeight)
+          Fork
         else
           Younger
     }
