@@ -11,22 +11,25 @@ import io.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, SchnorrKeysSignatures}
 import io.horizen.certificatesubmitter.strategies.WithKeyRotationCircuitStrategyTest.{certifiersKeys, signing}
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo}
+import io.horizen.consensus.{ConsensusEpochInfo, TimeProviderFixture}
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
+import io.horizen.sc2sc.CrossChainMessage
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.WithdrawalRequestBox
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.wallet.SidechainWallet
-import org.junit.Assert.{assertArrayEquals, assertEquals}
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertNotNull}
 import org.junit.{Before, Test}
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.{assertResult, fail}
@@ -44,11 +47,10 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
+class WithKeyRotationCircuitStrategyTest extends MockitoSugar with TimeProviderFixture {
 
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = _
-  var sc2scConfig_noSc2sc: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
 
   @Before
   def init(): Unit = {
@@ -66,7 +68,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
       signersThreshold = signersThreshold
     )
 
-    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator(), "regtest")
   }
 
   @Test
@@ -81,7 +83,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
     )
 
     val mockedCryptolibCircuit = mock[ThresholdSignatureCircuitWithKeyRotation]
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val certificateDataWithKeyRotation: CertificateDataWithKeyRotation =
       keyRotationStrategy.buildCertificateData(sidechainNodeView().history, sidechainNodeView().state, signaturesStatus)
 
@@ -100,6 +102,32 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
     assert(certificateDataWithKeyRotation.referencedEpochNumber == WithKeyRotationCircuitStrategyTest.epochNumber)
     assert(certificateDataWithKeyRotation.previousCertificateOption == null)
     assert(certificateDataWithKeyRotation.ftMinAmount == 54)
+    assertEquals(None, certificateDataWithKeyRotation.sc2ScDataForCertificate)
+  }
+
+  @Test
+  def buildCertificateDataTestWithSc2ScForkActive(): Unit = {
+    val certificateSignatureInfo = CertificateSignatureInfo(pubKeyIndex = 3,
+      signature = new SchnorrProof(signing.signMessage(signing.getPublicKey.getHash).serializeSignature()))
+    val signaturesStatus = SignaturesStatus(
+      referencedEpoch = WithKeyRotationCircuitStrategyTest.epochNumber,
+      messageToSign = Array(135.toByte),
+      knownSigs = ArrayBuffer(certificateSignatureInfo),
+      params.signersPublicKeys
+    )
+
+    val mockedCryptolibCircuit = mock[ThresholdSignatureCircuitWithKeyRotation]
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
+    val mockStateView = sidechainNodeView().state
+    val consensusEpochInfo = mock[ConsensusEpochInfo]
+    when(consensusEpochInfo.epoch).thenReturn(consensus.ConsensusEpochNumber(5))
+    when(mockStateView.getCurrentConsensusEpochInfo).thenAnswer(_ => (ModifierId, consensusEpochInfo))
+    when(mockStateView.getTopCertificateMainchainHash(anyInt())).thenReturn(None)
+    val certificateDataWithKeyRotation: CertificateDataWithKeyRotation =
+      keyRotationStrategy.buildCertificateData(sidechainNodeView().history, mockStateView, signaturesStatus)
+
+    assertNotNull(certificateDataWithKeyRotation.sc2ScDataForCertificate)
+    assertEquals(BytesUtils.toHexString(certificateDataWithKeyRotation.sc2ScDataForCertificate.get.messagesTreeRoot), "eb048a74f62689868e02cbf0713836ecfb98960adb407feb8930ca3271e7412e")
   }
 
   @Test
@@ -177,7 +205,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
       assertResult(true)(answer.getArgument(14).asInstanceOf[Boolean])
       new io.horizen.utils.Pair(key, 429L)
     })
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 429L)
     info.foreach(element => {
@@ -208,7 +236,7 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
       msg.clone()
     })
 
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithKeyRotation] = new WithKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithKeyRotationCircuitStrategyTest.epochNumber) match {
       case Success((resMsg: Array[Byte], resPubKeys: Seq[SchnorrProposition])) =>
         assertArrayEquals("Invalid message to sign.", msg, resMsg)
@@ -250,6 +278,9 @@ class WithKeyRotationCircuitStrategyTest extends MockitoSugar {
     when(sidechainState.getCrossChainMessages(ArgumentMatchers.anyInt())) thenAnswer (_ => Seq[CrossChainMessage]())
     when(sidechainState.withdrawalRequests(ArgumentMatchers.anyInt())) thenAnswer (_ => Seq[WithdrawalRequestBox]())
     when(sidechainState.certifiersKeys(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(certifiersKeys))
+    val consensusEpochInfo = mock[ConsensusEpochInfo]
+    when(consensusEpochInfo.epoch).thenReturn(consensus.ConsensusEpochNumber(0))
+    when(sidechainState.getCurrentConsensusEpochInfo).thenAnswer(_ => (ModifierId, consensusEpochInfo))
     val mainchainBlockReferenceInfo = mock[MainchainBlockReferenceInfo]
     when(mainchainBlockReferenceInfo.getMainchainHeaderHash).thenAnswer(_ => Array(13.toByte))
     when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(mainchainBlockReferenceInfo).asJava)

@@ -8,10 +8,10 @@ import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.{NetworkParams, NetworkParamsUtils}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -38,6 +38,7 @@ import java.math.{BigDecimal, MathContext}
 import java.util
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -45,7 +46,6 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
                                       forgerBoxStorage: SidechainStateForgerBoxStorage,
                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                       val params: NetworkParams,
-                                      val sc2scConfig: Sc2ScConfigurator,
                                       override val version: VersionTag,
                                       val applicationState: ApplicationState)
   extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
@@ -59,7 +59,7 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   private lazy val crossChainValidators: Seq[CrossChainValidator[SidechainBlock]] = Seq(
-    new CrossChainMessageValidator(sc2scConfig, this, params),
+    new CrossChainMessageValidator(stateStorage, this, params),
     new CrossChainRedeemMessageValidator(stateStorage, CryptoLibProvider.sc2scCircuitFunctions, params)
   )
 
@@ -107,11 +107,15 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
   }
 
   override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
-    if (sc2scConfig.canSendMessages) stateStorage.getCrossChainMessagesPerEpoch(withdrawalEpoch) else Seq()
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
+
+    if (sc2ScFork.sc2ScCanSend) stateStorage.getCrossChainMessagesPerEpoch(withdrawalEpoch) else Seq()
   }
 
   override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] = {
-    if (sc2scConfig.canSendMessages) stateStorage.getCrossChainMessageHashEpoch(messageHash) else None
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
+
+    if (sc2ScFork.sc2ScCanSend) stateStorage.getCrossChainMessageHashEpoch(messageHash) else None
   }
 
   override def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] = {
@@ -365,7 +369,9 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     }
 
     //sc2sc validation
-    if (sc2scConfig.canSendMessages) {
+    val sc2ScFork = Sc2ScFork.get(stateStorage.getConsensusEpochNumber.getOrElse(0))
+
+    if (sc2ScFork.sc2ScCanSend) {
       validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
     }
 
@@ -525,6 +531,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
 
+      crossChainTxValidation(consensusEpochNumber, newBoxes)
+
       lazy val isForgerOpen = isForgingOpen()
       newBoxes
         .filter(box => box.isInstanceOf[ForgerBox])
@@ -540,6 +548,23 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     }
 
     applicationState.validate(this, tx)
+  }
+
+  private def crossChainTxValidation(consensusEpochNumber: ConsensusEpochNumber, newBoxes: mutable.Buffer[SidechainTypes#SCB]): Unit = {
+    val crossChainBoxes = newBoxes.exists { b => b.isInstanceOf[CrossChainMessageBox] }
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpochNumber).getOrElse(Sc2ScFork.DefaultSc2scFork)
+    if (crossChainBoxes) {
+      if (!sc2ScFork.sc2ScCanSend) {
+        throw new IllegalArgumentException("Cannot have a cross chain message box if Sc2Sc feature is not active")
+      }
+    }
+
+    val crossChainRedeemBoxes = newBoxes.exists { b => b.isInstanceOf[CrossChainRedeemMessageBox] }
+    if (crossChainRedeemBoxes) {
+      if (!sc2ScFork.sc2ScCanReceive) {
+        throw new IllegalArgumentException("Cannot have a cross chain redeem message box if Sc2Sc feature is not active")
+      }
+    }
   }
 
   //Check if the majority of the allowed forgers opened the stake to everyone
@@ -709,10 +734,8 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           updatedUtxoMerkleTreeProvider,
           params,
-          sc2scConfig,
           newVersion,
-          appState
-        )
+          appState)
       case Failure(exception) => {
         log.error("call to onApplyChanges() method has failed: ", exception)
         throw exception
@@ -739,16 +762,14 @@ class SidechainState private[horizen](stateStorage: SidechainStateStorage,
     val utxoMerkleTreeProviderNew = utxoMerkleTreeProvider.rollback(bawVersion).get
 
     applicationState.onRollback(version) match {
-      case Success(appState) => {
+      case Success(appState) =>
         new SidechainState(
           stateStorageNew,
           forgerBoxStorageNew,
           utxoMerkleTreeProviderNew,
           params,
-          sc2scConfig,
           to,
           appState)
-      }
       case Failure(exception) => {
         log.error("call to applicationState.onRollback() method has failed: ", exception)
         throw exception
@@ -928,12 +949,11 @@ object SidechainState {
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
                                     utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
-                                    sc2scConfig: Sc2ScConfigurator,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty) {
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
-        params, sc2scConfig, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState)
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState)
       )
     } else
       None
@@ -944,13 +964,13 @@ object SidechainState {
                                           utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
-                                          sc2scConfig: Sc2ScConfigurator,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
       var state = new SidechainState(
-        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, sc2scConfig, idToVersion(genesisBlock.parentId), applicationState
+        stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params,
+        idToVersion(genesisBlock.parentId), applicationState
       )
       if (!backupStorage.isEmpty) {
         state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get

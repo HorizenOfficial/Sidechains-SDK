@@ -24,7 +24,7 @@ public class VoteMessageProcessorTest {
                 BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"),
                 BytesUtils.fromHexString("7a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb623"),
                 BytesUtils.fromHexString("00c8f107a09cd4f463afc2f1e6e5bf6022ad4600"),
-                "1234".getBytes(StandardCharsets.UTF_8)
+                BytesUtils.fromHexString("7a03386bd56e577d5b99a40e61278d35ef455bd67f6ccc2825d9c1e834ddb623")
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteMessageProcessor.SEND_VOTE), ccMsg.encode());
 

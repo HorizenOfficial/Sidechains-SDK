@@ -8,7 +8,6 @@ import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Database
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import io.horizen.params.MainNetParams
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -16,7 +15,6 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.VersionTag
-import sparkz.core.utils.NetworkTimeProvider
 
 import java.math.BigInteger
 import scala.util.{Failure, Success}
@@ -30,7 +28,6 @@ class AccountStateTest
       with SidechainTypesTestsExtension {
 
   val params: MainNetParams = MainNetParams()
-  val sc2ScConfigurator: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -40,12 +37,9 @@ class AccountStateTest
 
     val stateDbStorege: Database = mock[Database]
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
-    val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
     state = new AccountState(
       params,
-      sc2ScConfigurator,
-      mockedTimeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       metadataStorage,

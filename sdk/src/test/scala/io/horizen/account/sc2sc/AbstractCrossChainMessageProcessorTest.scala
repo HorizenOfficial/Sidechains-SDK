@@ -4,14 +4,12 @@ import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.state.{AccountStateView, ExecutionFailedException, MessageProcessorFixture}
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
-import io.horizen.params.MainNetParams
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertArrayEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
-import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger

@@ -22,6 +22,7 @@ import io.horizen.block._
 import io.horizen.consensus._
 import io.horizen.evm.{Address, Hash}
 import io.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgeSuccess, MainchainSynchronizer}
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -95,7 +96,7 @@ class AccountForgeMessageBuilder(
       stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
-    if (Sc2ScUtils.isActive(params)) {
+    if (Sc2ScUtils.isActive(ForkManager.getOptionalSidechainFork[Sc2ScFork](stateView.getConsensusEpochNumber.getOrElse(0)))) {
       mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
     }
 

@@ -14,7 +14,7 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
-import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -81,6 +81,8 @@ class AccountForgeMessageBuilderTest
     )
 
     usingView { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       val transaction = createLegacyTransaction(
         BigInteger.TEN,
         gasLimit = BigInteger.valueOf(10000000)
@@ -133,6 +135,8 @@ class AccountForgeMessageBuilderTest
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       stateView.addBalance(
         invalidTx.getFrom.address(),
         BigInteger.valueOf(100000000010L)
@@ -186,6 +190,8 @@ class AccountForgeMessageBuilderTest
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       stateView.addBalance(
         invalidTx.getFrom.address(),
         BigInteger.valueOf(1000000000)

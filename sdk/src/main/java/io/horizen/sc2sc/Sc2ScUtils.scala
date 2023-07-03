@@ -6,6 +6,7 @@ import io.horizen.AbstractState
 import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase, WithdrawalEpochCertificate}
 import io.horizen.crosschain.CrossChainMessageMerkleTree
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, Sc2scCircuit}
+import io.horizen.fork.Sc2ScFork
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.transaction.Transaction
@@ -25,7 +26,7 @@ trait Sc2ScUtils[
   var commonCircuitFunctions: CommonCircuit = CryptoLibProvider.commonCircuitFunctions
 
   /**
-   * Get all the the additional data to be inserted in a certificate for sidechain2sidechain pourpuses
+   * Get all the additional data to be inserted in a certificate for sidechain2sidechain purposes
    * Note: Certificates are searched in the history and not using state.certificate() because in the latter
    * we keep only the most recent ones.
    */
@@ -152,9 +153,13 @@ trait Sc2ScUtils[
     }
   }
 }
+
 object Sc2ScUtils {
-  def isActive(networkParams: NetworkParams): Boolean = {
-    networkParams.sc2ScProvingKeyFilePath.nonEmpty || networkParams.sc2ScVerificationKeyFilePath.nonEmpty
+  def isActive(sc2ScForkOption: Option[Sc2ScFork]): Boolean = {
+    sc2ScForkOption match {
+      case Some(sc2ScFork) => sc2ScFork.sc2ScCanSend || sc2ScFork.sc2ScCanReceive
+      case _ => false
+    }
   }
 }
 

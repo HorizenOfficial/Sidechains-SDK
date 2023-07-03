@@ -9,7 +9,6 @@ import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.transaction.Transaction
 
 import java.util.Optional
@@ -23,10 +22,9 @@ class WithoutKeyRotationCircuitStrategy[
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS]](settings: SidechainSettings,
-                                      sc2scConfig: Sc2ScConfigurator,
                                       params: NetworkParams,
                                       circuit: ThresholdSignatureCircuit)
-  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, sc2scConfig, params) {
+  extends CircuitStrategy[TX, H, PM, HIS, MS, CertificateDataWithoutKeyRotation](settings, params) {
 
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =

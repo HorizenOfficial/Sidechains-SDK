@@ -25,11 +25,11 @@ import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.evm.LevelDBDatabase
-import io.horizen.fork.ForkConfigurator
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
-import io.horizen.sc2sc.{Sc2ScConfigurator, Sc2ScProverRef}
+import io.horizen.sc2sc.Sc2ScProverRef
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -56,7 +56,6 @@ class AccountSidechainApp @Inject()
    @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
-   @Named("Sc2ScConfiguration") override val sc2scConfigurator : Sc2ScConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
    @Named("ConsensusSecondsInSlot") secondsInSlot: Int
   )
@@ -66,7 +65,6 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    sc2scConfigurator,
     chainInfo,
     secondsInSlot
   )
@@ -129,7 +127,6 @@ class AccountSidechainApp @Inject()
     customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,
-    sc2scConfigurator,
     timeProvider,
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
@@ -156,7 +153,7 @@ class AccountSidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, sc2scConfigurator, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, secureEnclaveApiClient, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init Sync Status actor
@@ -184,7 +181,13 @@ class AccountSidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }
 
-  var sc2scProverRef: Option[ActorRef] = if (sc2scConfigurator.canSendMessages) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
+  val sc2ScFork: Sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
+    .getOrElse(Sc2ScFork.DefaultSc2scFork)
+
+  var sc2scProverRef: Option[ActorRef] =
+    if (sc2ScFork.sc2ScCanSend)
+      Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params))
+    else None
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
@@ -199,7 +202,7 @@ class AccountSidechainApp @Inject()
       route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
     )
 
-    if (sc2scConfigurator.canSendMessages) {
+    if (sc2ScFork.sc2ScCanSend) {
       ret = ret :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
     }
 

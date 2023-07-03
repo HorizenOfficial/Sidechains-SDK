@@ -2,18 +2,20 @@ package io.horizen.utxo.crosschain.validation.sender
 
 import io.horizen.SidechainTypes
 import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.fork.Sc2ScFork
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessageHash, Sc2ScConfigurator}
+import io.horizen.sc2sc.CrossChainMessageHash
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CrossChainMessageBox
 import io.horizen.utxo.crosschain.CrossChainValidator
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.storage.SidechainStateStorage
 
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class CrossChainMessageValidator(
-                                  sc2ScConfig: Sc2ScConfigurator,
+                                  scStateStorage: SidechainStateStorage,
                                   scState: SidechainState,
                                   networkParams: NetworkParams
                                 ) extends CrossChainValidator[SidechainBlock] {
@@ -26,7 +28,9 @@ class CrossChainMessageValidator(
   private def validateNoMoreThanOneMessagePerBlock(scBlock: SidechainBlock): Unit = {
     val allCrossMessagesBox = scBlock.transactions.flatMap(tx => tx.newBoxes().asScala.filter(box => box.isInstanceOf[CrossChainMessageBox]))
     if (allCrossMessagesBox.nonEmpty) {
-      if (!sc2ScConfig.canSendMessages) {
+      val sc2ScFork = Sc2ScFork.get(scStateStorage.getConsensusEpochNumber.getOrElse(0))
+
+      if (!sc2ScFork.sc2ScCanSend) {
         throw new IllegalArgumentException("CrossChainMessages not allowed in this sidechain")
       } else {
         val allCrossMessagesHashes = scala.collection.mutable.Seq[CrossChainMessageHash]()
@@ -39,7 +43,7 @@ class CrossChainMessageValidator(
             allCrossMessagesHashes :+ currentHash
           }
         })
-        //crosschain messages validation: check max number of boxes per epoch
+        // check max number of boxes per epoch
         checkCrosschainMessagesBoxesAllowed(scBlock.mainchainBlockReferencesData.size, allCrossMessagesBox.size)
       }
     }
@@ -58,8 +62,9 @@ class CrossChainMessageValidator(
     // Do we really need this check since we're filtering the boxes instances of CrossChainMessageBox??
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
       val ccBoxes = tx.newBoxes().asScala.filter(box => box.isInstanceOf[CrossChainMessageBox])
+      val sc2ScFork = Sc2ScFork.get(scStateStorage.getConsensusEpochNumber.getOrElse(0))
 
-      if (!sc2ScConfig.canSendMessages && ccBoxes.nonEmpty) {
+      if (!sc2ScFork.sc2ScCanSend && ccBoxes.nonEmpty) {
         throw new Exception(s"CrossChainMessages not allowed in this sidechain")
       } else {
         ccBoxes.foreach(cmBox => {

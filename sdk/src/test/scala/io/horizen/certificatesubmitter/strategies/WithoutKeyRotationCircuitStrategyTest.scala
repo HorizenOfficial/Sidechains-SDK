@@ -16,7 +16,7 @@ import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.{CrossChainMessage, Sc2ScConfigurator}
+import io.horizen.sc2sc.CrossChainMessage
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
@@ -45,7 +45,6 @@ import scala.util.{Failure, Success}
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = RegTestParams()
-  var sc2scConfig_noSc2sc = Sc2ScConfigurator(false, false)
 
   @Before
   def init(): Unit = {
@@ -76,7 +75,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       knownSigs = ArrayBuffer(certificateSignatureInfo),
       params.signersPublicKeys
     )
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mock[ThresholdSignatureCircuit])
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mock[ThresholdSignatureCircuit])
     val certificateDataWithoutKeyRotation: CertificateDataWithoutKeyRotation = keyRotationStrategy.buildCertificateData(sidechainNodeView().history, sidechainNodeView().state, signaturesStatus)
     assert(certificateDataWithoutKeyRotation.utxoMerkleTreeRoot.isDefined)
     assertResult(10)(certificateDataWithoutKeyRotation.referencedEpochNumber)
@@ -149,7 +148,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       assertResult(true)(answer.getArgument(12).asInstanceOf[Boolean]) // compressProof
       new io.horizen.utils.Pair(key, 425L)
     })
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     val pair: utils.Pair[Array[Byte], lang.Long] = keyRotationStrategy.generateProof(certificateData, provingFileAbsolutePath = "filePath")
     assert(pair.getValue == 425L)
     info.foreach(element => {
@@ -176,7 +175,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
       msg.clone
     })
 
-    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), sc2scConfig_noSc2sc, params, mockedCryptolibCircuit)
+    val keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, CertificateDataWithoutKeyRotation] = new WithoutKeyRotationCircuitStrategy(settings(), params, mockedCryptolibCircuit)
     keyRotationStrategy.getMessageToSignAndPublicKeys(sidechainNodeView().history, sidechainNodeView().state, WithoutKeyRotationCircuitStrategyTest.epochNumber) match {
       case Success((resMsg: Array[Byte], resPubKeys: Seq[SchnorrProposition])) =>
         assertArrayEquals("Invalid message to sign.", msg, resMsg)

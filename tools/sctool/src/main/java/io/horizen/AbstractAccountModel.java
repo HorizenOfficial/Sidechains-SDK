@@ -32,6 +32,7 @@ import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.transaction.mainchain.SidechainCreation;
 import io.horizen.utils.MerklePath;
+import io.horizen.utils.TimeToEpochUtils;
 import io.horizen.vrf.VrfOutput;
 import scala.collection.Iterator;
 import scala.collection.JavaConverters;
@@ -133,8 +134,13 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
         MainchainHeader mcHeader = mcRef.header();
 
         List<MessageProcessor> customMessageProcessors = getCustomMessageProcessors(params);
+        int consensusEpochAtGenesisBlock = 0;
 
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, JavaConverters.asScalaBuffer(customMessageProcessors));
+        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(
+                params,
+                JavaConverters.asScalaBuffer(customMessageProcessors),
+                consensusEpochAtGenesisBlock
+        );
 
         AccountStateView view = getStateView(messageProcessorSeq);
         try (view) {

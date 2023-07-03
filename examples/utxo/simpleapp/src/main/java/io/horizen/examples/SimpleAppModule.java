@@ -9,7 +9,6 @@ import io.horizen.examples.transaction.RedeemVoteMessageTransactionSerializer;
 import io.horizen.examples.transaction.SendVoteMessageTransactionSerializer;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proposition.Proposition;
-import io.horizen.sc2sc.Sc2ScConfigurator;
 import io.horizen.secret.Secret;
 import io.horizen.secret.SecretSerializer;
 import io.horizen.settings.SettingsReader;
@@ -174,8 +173,5 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))
                 .toInstance(consensusSecondsInSlot);
-        bind(Sc2ScConfigurator.class)
-                .annotatedWith(Names.named("Sc2ScConfiguration"))
-                .toInstance(new Sc2ScConfigurator(true, true));
     }
 }

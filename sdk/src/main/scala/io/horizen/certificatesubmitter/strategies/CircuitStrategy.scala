@@ -10,7 +10,6 @@ import io.horizen.fork.ForkManager
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.transaction.Transaction
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.util.SparkzLogging
@@ -24,7 +23,7 @@ abstract class CircuitStrategy[
   PM <: SidechainBlockBase[TX, H],
   HIS <: AbstractHistory[TX, H, PM, _, _, _],
   MS <: AbstractState[TX, H, PM, MS],
-  T <: CertificateData](settings: SidechainSettings, sc2scConfig: Sc2ScConfigurator, params: NetworkParams) extends SparkzLogging {
+  T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends SparkzLogging {
   
   def generateProof(certificateData: T, provingFileAbsolutePath: String): io.horizen.utils.Pair[Array[Byte], java.lang.Long]
 

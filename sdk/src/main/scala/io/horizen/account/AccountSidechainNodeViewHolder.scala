@@ -16,7 +16,6 @@ import io.horizen.consensus._
 import io.horizen.evm.Database
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import sparkz.core.idToVersion
@@ -29,7 +28,6 @@ import scala.util.{Failure, Success}
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
-                                     sc2ScConfig: Sc2ScConfigurator,
                                      timeProvider: NetworkTimeProvider,
                                      historyStorage: AccountHistoryStorage,
                                      consensusDataStorage: ConsensusDataStorage,
@@ -51,7 +49,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
-    MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
+    val consensusEpoch = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
+    MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors, consensusEpoch)
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
@@ -128,7 +127,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val restoredData = for {
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, sc2ScConfig, timeProvider, blockHashProvider)
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(),
         () => minimalState(),
@@ -142,7 +141,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, sc2ScConfig, timeProvider, blockHashProvider, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider, genesisBlock)
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
@@ -214,10 +213,9 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
-            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
-    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, sc2scConfig, timeProvider, historyStorage,
+    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
       consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
@@ -228,12 +226,11 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
-            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, sc2scConfig, timeProvider, genesisBlock))
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -244,11 +241,10 @@ object AccountNodeViewHolderRef {
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
-            sc2scConfig: Sc2ScConfigurator,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, sc2scConfig, timeProvider, genesisBlock), name)
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
 }

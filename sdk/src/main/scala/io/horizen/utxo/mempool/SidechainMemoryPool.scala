@@ -1,6 +1,6 @@
 package io.horizen.utxo.mempool
 
-import io.horizen.utxo.box.{Box, WithdrawalRequestBox}
+import io.horizen.utxo.box.{Box, CrossChainMessageBox, WithdrawalRequestBox}
 import io.horizen.utxo.node.NodeMemoryPool
 import io.horizen.utxo.transaction.BoxTransaction
 import io.horizen.{MempoolSettings, SidechainTypes}
@@ -60,13 +60,20 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     unconfirmed.values.toSeq.sortWith(sortFunc).take(limit).map(tx => tx.getUnconfirmedTx())
   }
 
-  def takeWithWithdrawalBoxesLimit(allowedWithdrawalBoxes: Int): Iterable[SidechainTypes#SCBT] = {
+  def takeWithdrawalAndCrossChainBoxesWithLimit(allowedWithdrawalBoxes: Int, allowedCrossChainBoxes: Int): Iterable[SidechainTypes#SCBT] = {
     val filteredTxs: JArrayList[SidechainTypes#SCBT] = new JArrayList[SidechainTypes#SCBT]()
     var newWithdrawalBoxes = 0
+    var newCrossChainBoxes = 0
     take(size).foreach(tx => {
       val txWithdrawalBoxes = tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
-      if (txWithdrawalBoxes + newWithdrawalBoxes <= allowedWithdrawalBoxes) {
+      val txCrossChainBoxes = tx.newBoxes().asScala.count(box => box.isInstanceOf[CrossChainMessageBox])
+
+      if (
+        txWithdrawalBoxes + newWithdrawalBoxes <= allowedWithdrawalBoxes &&
+          txCrossChainBoxes + newCrossChainBoxes <= allowedCrossChainBoxes
+      ) {
         newWithdrawalBoxes += txWithdrawalBoxes
+        newCrossChainBoxes += txCrossChainBoxes
         filteredTxs.add(tx)
       }
     })
@@ -236,7 +243,6 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
       case None => null
     })
   }
-
 
 }
 

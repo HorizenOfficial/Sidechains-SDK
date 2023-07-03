@@ -14,12 +14,11 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
 import io.horizen.proposition._
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
@@ -54,7 +53,6 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val sc2scConfigurator: Sc2ScConfigurator,
    val chainInfo : ChainInfo,
    val consensusSecondsInSlot: Int
   )
@@ -247,27 +245,6 @@ abstract class AbstractSidechainApp
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
-  if (!isCSWEnabled) {
-    val sc2scIsActive = sc2scConfigurator.canSendMessages || sc2scConfigurator.canReceiveMessages
-    if (sc2scIsActive) {
-      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc proving key path")
-      )
-      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
-        throw new IllegalArgumentException("Sc2Sc protocol is active: you must set a sc2sc verification key path")
-      )
-      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
-      if (keyFilesDontExist) {
-        log.info("Generating Sc2Sc snark keys. It may take some time.")
-        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
-
-        if (!keysCreated) {
-          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
-        }
-      }
-    }
-  }
-
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
@@ -294,6 +271,26 @@ abstract class AbstractSidechainApp
   // Init ForkManager
   // We need to have it initializes before the creation of the SidechainState
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
+
+  if (!isCSWEnabled) {
+    if (ForkManager.hasOptionalForkOfType[Sc2ScFork]()) {
+      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc proving key path")
+      )
+      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc verification key path")
+      )
+      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
+      if (keyFilesDontExist) {
+        log.info("Generating Sc2Sc snark keys. It may take some time.")
+        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
+
+        if (!keysCreated) {
+          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
+        }
+      }
+    }
+  }
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

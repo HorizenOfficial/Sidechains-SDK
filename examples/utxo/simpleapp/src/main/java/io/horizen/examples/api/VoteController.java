@@ -29,7 +29,6 @@ import io.horizen.utxo.node.NodeMemoryPool;
 import io.horizen.utxo.node.SidechainNodeView;
 import io.horizen.utxo.transaction.BoxTransaction;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 
 public class VoteController extends SidechainApplicationApiGroup {
@@ -59,16 +58,13 @@ public class VoteController extends SidechainApplicationApiGroup {
             PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer()
                     .parseBytes(BytesUtils.fromHexString(request.getProposition()));
 
-            ByteBuffer bb = ByteBuffer.allocate(4);
-            bb.putInt(request.getVote());
-
             CrossChainMessageBoxData ccMsgBoxData = new CrossChainMessageBoxData(
                     proposition,
                     CrossChainProtocolVersion.VERSION_1,
                     VOTING_MESSAGE_TYPE,
                     BytesUtils.fromHexString(request.getReceivingSidechain()),
                     BytesUtils.fromHexString(request.getReceivingAddress()),
-                    bb.array()
+                    BytesUtils.fromHexString(request.getVote())
             );
 
             // Try to collect regular boxes to pay fee
@@ -158,7 +154,7 @@ public class VoteController extends SidechainApplicationApiGroup {
                     BytesUtils.fromHexString(request.getSender()),
                     BytesUtils.fromHexString(request.getReceiverSidechain()),
                     BytesUtils.fromHexString(request.getReceiver()),
-                    BytesUtils.fromHexString(request.getPayload())
+                    BytesUtils.fromHexString(request.getPayloadHash())
             );
 
             CrossChainRedeemMessage redeemMessage = new CrossChainRedeemMessageImpl(

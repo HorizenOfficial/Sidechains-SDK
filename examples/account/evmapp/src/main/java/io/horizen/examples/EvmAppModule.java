@@ -8,6 +8,7 @@ import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
 import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
+import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
 import io.horizen.account.state.MessageProcessorUtil;
@@ -20,7 +21,6 @@ import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proof.Proof;
 import io.horizen.proposition.Proposition;
-import io.horizen.sc2sc.Sc2ScConfigurator;
 import io.horizen.secret.Secret;
 import io.horizen.secret.SecretSerializer;
 import io.horizen.settings.SettingsReader;
@@ -117,10 +117,6 @@ public class EvmAppModule extends AccountAppModule {
         bind(new TypeLiteral<List<MessageProcessor>>() {})
                 .annotatedWith(Names.named("CustomMessageProcessors"))
                 .toInstance(customMessageProcessors);
-
-        bind(Sc2ScConfigurator.class)
-                .annotatedWith(Names.named("Sc2ScConfiguration"))
-                .toInstance(new Sc2ScConfigurator(true, true) );
 
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))

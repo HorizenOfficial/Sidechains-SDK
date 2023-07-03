@@ -51,7 +51,6 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
     list
   }
 
-
   override private[horizen] def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Option[Int] = {
     val data = view.getAccountStorage(contractAddress, messageHash.getValue)
     if (data.sameElements(NULL_HEX_STRING_32)) {

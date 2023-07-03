@@ -2,7 +2,7 @@ package io.horizen.examples.api.model;
 
 public final class SendVoteMessageToSidechainRequest {
     private String proposition;
-    private int vote;
+    private String vote;
     private String receivingSidechain;
     private String receivingAddress;
     private long fee;
@@ -11,7 +11,7 @@ public final class SendVoteMessageToSidechainRequest {
         return proposition;
     }
 
-    public int getVote() {
+    public String getVote() {
         return vote;
     }
 
@@ -25,26 +25,6 @@ public final class SendVoteMessageToSidechainRequest {
 
     public long getFee() {
         return fee;
-    }
-
-    public void setProposition(String proposition) {
-        this.proposition = proposition;
-    }
-
-    public void setVote(int vote) {
-        this.vote = vote;
-    }
-
-    public void setReceivingSidechain(String receivingSidechain) {
-        this.receivingSidechain = receivingSidechain;
-    }
-
-    public void setReceivingAddress(String receivingAddress) {
-        this.receivingAddress = receivingAddress;
-    }
-
-    public void setFee(long fee) {
-        this.fee = fee;
     }
 
     @Override

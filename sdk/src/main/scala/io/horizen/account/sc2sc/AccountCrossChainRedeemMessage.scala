@@ -1,12 +1,10 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
-import io.horizen.utils.BytesUtils
-import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Bytes4, Uint32}
-import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import io.horizen.sc2sc.CrossChainRedeemMessageSemanticValidator
-import org.web3j.abi.datatypes.generated.Bytes32
-import org.web3j.abi.datatypes.{DynamicBytes, StaticStruct}
+import io.horizen.utils.BytesUtils
+import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
+import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 

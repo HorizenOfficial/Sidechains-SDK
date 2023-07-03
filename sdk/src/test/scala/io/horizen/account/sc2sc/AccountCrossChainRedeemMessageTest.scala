@@ -2,7 +2,7 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.receiverSidechain
 import io.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AccountCrossChainRedeemMessageTest {

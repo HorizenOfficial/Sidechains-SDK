@@ -22,7 +22,6 @@ import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, LocallyGeneratedTransaction, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}

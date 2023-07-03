@@ -18,7 +18,7 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                     state: SidechainState,
                                     wallet: SidechainWallet,
                                     var mempool: SidechainMemoryPool)
-  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) {
+  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null,  null,null, null, null, null ) {
 
   override def dumpStorages: Unit = {}
 

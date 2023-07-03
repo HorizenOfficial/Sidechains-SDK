@@ -12,7 +12,6 @@ import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.fixtures.{CompanionsFixture, StoreFixture}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
-import io.horizen.sc2sc.Sc2ScConfigurator
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
@@ -114,7 +113,6 @@ trait SidechainNodeViewHolderFixture
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
   val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
   val backupStorage = new BackupStorage(getStorage(), sidechainBoxesCompanion)
-  val sc2scConfig: Sc2ScConfigurator = Sc2ScConfigurator(false, false)
 
   // Append genesis secrets if we start the node first time
   if (sidechainSecretStorage.isEmpty) {
@@ -136,7 +134,6 @@ trait SidechainNodeViewHolderFixture
     cswDataProvider,
     backupStorage,
     params,
-    sc2scConfig,
     timeProvider,
     defaultApplicationWallet,
     defaultApplicationState,

@@ -27,8 +27,8 @@ public final class CrossChainMessageBoxDataSerializer implements BoxDataSerializ
         writer.putBytes(boxData.getReceiverSidechain());
         writer.putInt(boxData.getReceiverAddress().length);
         writer.putBytes(boxData.getReceiverAddress());
-        writer.putInt(boxData.getPayload().length);
-        writer.putBytes(boxData.getPayload());
+        writer.putInt(boxData.getPayloadHash().length);
+        writer.putBytes(boxData.getPayloadHash());
     }
 
     @Override

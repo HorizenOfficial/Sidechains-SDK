@@ -16,13 +16,13 @@ import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm._
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, Sc2ScConfigurator}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
-import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
 import java.math.BigInteger
@@ -33,8 +33,6 @@ import scala.util.{Failure, Success, Try}
 
 class AccountState(
                     val params: NetworkParams,
-                    val sc2scConfig: Sc2ScConfigurator,
-                    timeProvider: NetworkTimeProvider,
                     blockHashProvider: HistoryBlockHashProvider,
                     override val version: VersionTag,
                     stateMetadataStorage: AccountStateMetadataStorage,
@@ -233,8 +231,6 @@ class AccountState(
 
       new AccountState(
         params,
-        sc2scConfig,
-        timeProvider,
         blockHashProvider,
         idToVersion(mod.id),
         stateMetadataStorage,
@@ -316,8 +312,13 @@ class AccountState(
         }
     }
     //sc2sc validation
-    if (sc2scConfig.canSendMessages) {
-      validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
+        }
+      case _ =>
     }
   }
 
@@ -332,7 +333,7 @@ class AccountState(
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-    new AccountState(params, sc2scConfig, timeProvider, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
+    new AccountState(params, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
   } recoverWith { case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -363,11 +364,26 @@ class AccountState(
       .map(wr => new BackwardTransfer(wr.proposition.bytes(), wr.valueInZennies))
 
   override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
-    if (sc2scConfig.canSendMessages) using(getView)(_.getCrossChainMessages(withdrawalEpoch)) else Seq()
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.getCrossChainMessages(withdrawalEpoch))
+        } else Seq()
+      case _ => Seq()
+    }
   }
 
-  override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] =
-    if (sc2scConfig.canSendMessages) using(getView)(_.getCrossChainMessageHashEpoch(messageHash)) else None
+  override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] = {
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.getCrossChainMessageHashEpoch(messageHash))
+        } else None
+      case _ => None
+    }
+  }
 
   def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] =
     using(getView)(_.getTopCertificateMainchainHash(withdrawalEpoch))
@@ -533,8 +549,16 @@ class AccountState(
     None
   }
 
-  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean =
-    if (sc2scConfig.canSendMessages) using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash)) else false
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean = {
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash))
+        } else false
+      case _ => false
+    }
+  }
 }
 
 object AccountState extends SparkzLogging {
@@ -543,8 +567,6 @@ object AccountState extends SparkzLogging {
                                      stateDbStorage: Database,
                                      messageProcessors: Seq[MessageProcessor],
                                      params: NetworkParams,
-                                     sc2ScConfigurator: Sc2ScConfigurator,
-                                     timeProvider: NetworkTimeProvider,
                                      blockHashProvider: HistoryBlockHashProvider
                                    ): Option[AccountState] = {
 
@@ -554,8 +576,6 @@ object AccountState extends SparkzLogging {
       Some(
         new AccountState(
           params,
-          sc2ScConfigurator,
-          timeProvider,
           blockHashProvider,
           bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
           stateMetadataStorage,
@@ -571,8 +591,6 @@ object AccountState extends SparkzLogging {
                                            stateDbStorage: Database,
                                            messageProcessors: Seq[MessageProcessor],
                                            params: NetworkParams,
-                                           sc2ScConfigurator: Sc2ScConfigurator,
-                                           timeProvider: NetworkTimeProvider,
                                            blockHashProvider: HistoryBlockHashProvider,
                                            genesisBlock: AccountBlock
                                          ): Try[AccountState] = Try {
@@ -581,8 +599,6 @@ object AccountState extends SparkzLogging {
 
     new AccountState(
       params,
-      sc2ScConfigurator,
-      timeProvider,
       blockHashProvider,
       idToVersion(genesisBlock.parentId),
       stateMetadataStorage,

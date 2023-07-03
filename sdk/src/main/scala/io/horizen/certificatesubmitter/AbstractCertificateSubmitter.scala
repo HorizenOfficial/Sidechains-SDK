@@ -44,7 +44,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Random, Success, Try}
 
 /**
- * Certificate submitter listens to the State changes and takes care of of certificate signatures managing (generation, storing and broadcasting)
+ * Certificate submitter listens to the State changes and takes care of certificate signatures managing (generation, storing and broadcasting)
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
