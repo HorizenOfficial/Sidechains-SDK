@@ -360,7 +360,7 @@ class EthService(
       if (!success) {
         val error = reverted
           .map(err => {
-              log.warn(s"Execution has been reverted: ${err.getMessage}", err)
+              log.debug(s"Execution has been reverted: ${err.getMessage}", err)
               RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData))
             }
           )
