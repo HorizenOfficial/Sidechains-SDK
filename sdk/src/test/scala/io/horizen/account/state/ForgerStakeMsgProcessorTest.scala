@@ -126,7 +126,7 @@ class ForgerStakeMsgProcessorTest
       assertFalse(view.accountExists(contractAddress))
       forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
       assertTrue(view.accountExists(contractAddress))
-      assertTrue(view.isNativeSmartContractAccount(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
       view.commit(bytesToVersion(getVersion.data()))
     }
   }

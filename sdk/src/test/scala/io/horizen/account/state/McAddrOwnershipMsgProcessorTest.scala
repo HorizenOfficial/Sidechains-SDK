@@ -3,8 +3,7 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.fork.ZenDAOFork
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, LinkedListTipKey, RemoveOwnershipCmd, getOwnershipId}
-import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, RemoveOwnershipCmd, getOwnershipId}
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.ZenWeiConverter
@@ -158,8 +157,7 @@ class McAddrOwnershipMsgProcessorTest
 
       assertTrue(view.accountExists(contractAddress))
       assertFalse(view.isEoaAccount(contractAddress))
-      assertFalse(view.isEvmSmartContractAccount(contractAddress))
-      assertTrue(view.isNativeSmartContractAccount(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
       assertTrue(McAddrOwnershipMsgProcessor.initDone(view))
 
       view.commit(bytesToVersion(getVersion.data()))
@@ -229,9 +227,8 @@ class McAddrOwnershipMsgProcessorTest
 
       // check initialization took place
       assertTrue(view.accountExists(contractAddress))
-      assertFalse(view.isEvmSmartContractAccount(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
       assertFalse(view.isEoaAccount(contractAddress))
-      assertTrue(view.isNativeSmartContractAccount(contractAddress))
 
       // call a second time for checking it does not do init twice (would assert)
       assertTrue(messageProcessor.canProcess(getMessage(messageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))

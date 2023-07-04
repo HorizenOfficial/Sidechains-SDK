@@ -51,17 +51,18 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       }
     }
 
-    // this creates the native smart contract address in stateDB
-    // We do not call the parent method because in our case the initialization does not happen at genesis state, and someone might
-    // (on purpose or not) already have created the account, maybe from a deployed solidity smart contract
+    // We do not call the parent init() method because it would throw an exception if the account already exists.
+    // In our case the initialization does not happen at genesis state, and someone might
+    // (on purpose or not) already have sent funds to the account, maybe from a deployed solidity smart contract or by means
+    // of an eoa transaction before fork activation
     if (!view.accountExists(contractAddress)) {
-      view.addAccount(contractAddress, contractCode)
-      log.debug(s"created Message Processor account $contractAddress")
+      log.debug(s"creating Message Processor account $contractAddress")
     } else {
-      val errorMsg = s"Account $contractAddress already exists!! "
+      // TODO maybe we can check the balance at this point and transfer the amount somewhere
+      val errorMsg = s"Account $contractAddress already exists!! Overwriting account with contract code ${BytesUtils.toHexString(contractCode)}..."
       log.warn(errorMsg)
-      // TODO maybe we can check if there is any balance at this point and transfer it somewhere
     }
+    view.addAccount(contractAddress, contractCode)
 
     // set the initial value for the linked list last element (null hash)
     //-------

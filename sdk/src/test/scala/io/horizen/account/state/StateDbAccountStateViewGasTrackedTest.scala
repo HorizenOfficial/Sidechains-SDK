@@ -87,7 +87,7 @@ class StateDbAccountStateViewGasTrackedTest
       // cold account access
       (2600, Seq(_.accountExists(origin))),
       (2600, Seq(_.isEoaAccount(origin))),
-      (2600, Seq(_.isEvmSmartContractAccount(origin))),
+      (2600, Seq(_.isSmartContractAccount(origin))),
       (2600, Seq(_.getNonce(origin))),
       (2600, Seq(_.getBalance(origin))),
       (2600, Seq(_.getCodeHash(origin))),

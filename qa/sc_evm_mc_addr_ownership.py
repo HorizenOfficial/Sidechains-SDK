@@ -172,27 +172,38 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
         assert_equal(nsc_bal, 0)
 
-        # try sending funds to native smart contract before the zendao fork is reached
+        # send funds to native smart contract before the zendao fork is reached
+        eoa_nsc_amount = 123456
         tx_hash_eoa = createLegacyEIP155Transaction(sc_node2,
                                                     fromAddress=sc_address2,
                                                     toAddress=MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS,
-                                                    value=100000
+                                                    value=eoa_nsc_amount
                                                     )
         self.sc_sync_all()
 
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
 
-        # get mempool contents and check tx has not been forged since the fork is not active yet
+        # get mempool contents and check tx has been forged even if the fork is not active yet. Check the receipt
         response = allTransactions(sc_node, False)
-        assert_true(tx_hash_eoa in response['transactionIds'])
+        assert_true(tx_hash_eoa not in response['transactionIds'])
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
+        status = int(receipt['result']['status'], 16)
+        assert_true(status == 1)
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        assert_equal(gas_used, 21000)
+
+        # check the address has the expected balance
+        nsc_bal = int(
+            sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        assert_equal(nsc_bal, eoa_nsc_amount)
 
         mc_signature1 = mc_node.signmessage(taddr1, sc_address_checksum_fmt)
         print("scAddr: " + sc_address_checksum_fmt)
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature1)
 
-        # add sc/mc ownership sending a transaction with data invoking native smart contract
+        # try adding sc/mc ownership sending a transaction with data invoking native smart contract before fork point
         ret = sendKeysOwnership(sc_node, nonce=0,
                                 sc_address=sc_address,
                                 mc_addr=taddr1,
@@ -204,9 +215,15 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
 
-        # get mempool contents and check tx has not been forged since the fork is not active yet
+        # get mempool contents and check tx has been forged even if the fork is not active yet since it is processed
+        # by the eoa msg processor. Check also the receipt and gas used greater than an eoa (due to contract code)
         response = allTransactions(sc_node, False)
-        assert_true(tx_hash in response['transactionIds'])
+        assert_true(tx_hash not in response['transactionIds'])
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+        status = int(receipt['result']['status'], 16)
+        assert_true(status == 1)
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        assert_true(gas_used > 21000)
 
         # reach the fork
         current_best_epoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
@@ -215,21 +232,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
+        # add the same sc/mc ownership , as abovesending a transaction with data invoking native smart contract
+        ret = sendKeysOwnership(sc_node, nonce=1,
+                                sc_address=sc_address,
+                                mc_addr=taddr1,
+                                mc_signature=mc_signature1)
+
+        tx_hash = ret['transactionId']
+        self.sc_sync_all()
+
         # check the tx adding an ownership is included in the block and the receipt is succesful after fork activation
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr1)
-
-        # check also eoa tx has been reverted because it is sending a value to native smart contract address
-        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
-        status = int(receipt['result']['status'], 16)
-        assert_true(status == 0)
-        nsc_bal = int(
-            sc_node.rpc_eth_getBalance(format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(nsc_bal, 0)
-
-        # check that both tx (reverted or not) have been removed from mempool
-        response = allTransactions(sc_node, False)
-        assert_true(tx_hash not in response['transactionIds'])
-        assert_true(tx_hash_eoa not in response['transactionIds'])
 
         # get another address (note that mc recycles addresses)
         while True:
@@ -243,7 +256,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcSignature: " + mc_signature2)
 
         # add a second owned mc address linked to the same sc address
-        ret = sendKeysOwnership(sc_node, nonce=1,
+        ret = sendKeysOwnership(sc_node, nonce=2,
                                 sc_address=sc_address,
                                 mc_addr=taddr2,
                                 mc_signature=mc_signature2)
@@ -301,7 +314,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # 2. try to add a not owned ownership. The tx is executed but the receipt has a failed status
         taddr3 = mc_node.getnewaddress()
 
-        ret = sendKeysOwnership(sc_node, nonce=3,
+        ret = sendKeysOwnership(sc_node, nonce=4,
                                 sc_address=sc_address,
                                 mc_addr=taddr3,
                                 mc_signature=mc_signature1)
@@ -370,7 +383,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             fail("duplicate association should not work")
 
         # re-add the mc address we removed
-        ret = sendKeysOwnership(sc_node, nonce=4,
+        ret = sendKeysOwnership(sc_node, nonce=5,
                                 sc_address=sc_address,
                                 mc_addr=taddr2,
                                 mc_signature=mc_signature2)
@@ -389,7 +402,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             print("mcAddr: " + taddr)
             print("mcSignature: " + mc_signature)
 
-            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=5 + i,
+            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=6 + i,
                                                   sc_address=sc_address,
                                                   mc_addr=taddr,
                                                   mc_signature=mc_signature)['transactionId'])
@@ -418,7 +431,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         taddr_list.remove(taddr_rem)
         assert_true(len(taddr_list) == 9)
 
-        removeKeysOwnership(sc_node, nonce=15,
+        removeKeysOwnership(sc_node, nonce=16,
                             sc_address=sc_address,
                             mc_addr=taddr_rem)
 

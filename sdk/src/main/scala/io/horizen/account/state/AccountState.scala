@@ -450,9 +450,7 @@ class AccountState(
 
   override def isEoaAccount(address: Address): Boolean = using(getView)(_.isEoaAccount(address))
 
-  override def isEvmSmartContractAccount(address: Address): Boolean = using(getView)(_.isEvmSmartContractAccount(address))
-
-  override def isNativeSmartContractAccount(address: Address): Boolean = using(getView)(_.isNativeSmartContractAccount(address))
+  override def isSmartContractAccount(address: Address): Boolean = using(getView)(_.isSmartContractAccount(address))
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
 

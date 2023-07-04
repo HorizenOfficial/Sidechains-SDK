@@ -18,10 +18,15 @@ object MessageProcessorUtil {
       case NaiveThresholdSignatureCircuitWithKeyRotation => Some(CertificateKeyRotationMsgProcessor(params))
     }
     Seq(
+      // Since fork dependant native smart contract are not initialized at genesis state, their msg 
+      // processor must be placed before the Eoa msg processor.
+      // This is for having the initialization performed as soon as the fork point is reached, otherwise
+      // the Eoa msg processor would preempt it
+      McAddrOwnershipMsgProcessor(params),
+      //--
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
-      McAddrOwnershipMsgProcessor(params),
     ) ++ maybeKeyRotationMsgProcessor.toSeq ++ customMessageProcessors
   }
 
