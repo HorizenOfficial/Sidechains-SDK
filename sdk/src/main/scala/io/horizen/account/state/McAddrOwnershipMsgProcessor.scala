@@ -86,16 +86,19 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   override def canProcess(msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
-    if (isForkActive(consensusEpochNumber)) {
-      // the gas cost of these calls is not taken into account in this case, we are not tracking gas consumption (and
-      // there is not an account to charge anyway)
-      if (!initDone(view))
-        init(view, consensusEpochNumber)
-      super.canProcess(msg, view, consensusEpochNumber)
+    if (super.canProcess(msg, view, consensusEpochNumber)) {
+      if (isForkActive(consensusEpochNumber)) {
+        // the gas cost of these calls is not taken into account in this case, we are not tracking gas consumption (and
+        // there is not an account to charge anyway)
+        if (!initDone(view))
+          init(view, consensusEpochNumber)
+        true
+      } else {
+        // we can not handle anything before fork activation, but just warn if someone is trying to use it
+        log.warn(s"Can not process message in ${getClass.getName}, fork is not active: msg = $msg")
+        false
+      }
     } else {
-      // we can not handle anything before fork activation, but just warn if someone is trying to use it
-      if (msg.getTo.isPresent && msg.getTo.get.equals(contractAddress))
-          log.warn(s"Can not process message in ${getClass.getName}, fork is not active: msg = $msg")
       false
     }
   }

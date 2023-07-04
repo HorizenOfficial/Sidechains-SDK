@@ -29,7 +29,6 @@ public class AppForkConfigurator extends ForkConfigurator {
                             BigInteger.ZERO
                     )
             ),
-            // an analogous fork must be included in bootstrapping tool fork configurator
             new Pair<>(
                     new SidechainForkConsensusEpoch(7, 7, 7),
                     new ZenDAOFork(true)

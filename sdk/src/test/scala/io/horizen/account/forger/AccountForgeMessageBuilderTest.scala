@@ -407,7 +407,7 @@ class AccountForgeMessageBuilderTest
       .when(
         mockMsgProcessor.process(
           ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[AccountStateView],
+          ArgumentMatchers.any[BaseAccountStateView],
           ArgumentMatchers.any[GasPool],
           ArgumentMatchers.any[BlockContext]
         )
