@@ -47,17 +47,13 @@ Test:
     - End the WE and verify that the certificates is added to the MC and SC.
     ######## WITHDRAWAL EPOCH 2 ##########
     - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored for epoch 2.
-    - Create a keyRotationTransaction with sdk's default gas info and change the signer key 0 (SK4 -> SK5).
-    - End the WE and verify that the certificates is added to the MC and SC.
-    ######## WITHDRAWAL EPOCH 3 ##########
-    - Call the getKeyRotationProof endpoint and verify that we don't have any key rotation proof stored for epoch 3.
-    - Call the getCertificateSigners endpoint and verify that the signers key 0 = SK5.
+    - Call the getCertificateSigners endpoint and verify that the signers key 0 = SK4.
     - Update ALL the signing and master keys.
     - Call the getKeyRotationProof endpoint and verify that we have a KeyRotationProof for each signing and master keys.
     - End the WE and verify that the certificates is added to the MC and SC.
-     ######## WITHDRAWAL EPOCH 4 ##########
+     ######## WITHDRAWAL EPOCH 3 ##########
     - Call the getCertificateSigners endpoint and verify that all the signing and master keys are updated.
-     ######## WITHDRAWAL EPOCH 5 ##########
+     ######## WITHDRAWAL EPOCH 4 ##########
     - Verify that certificate was created using all new keys
 """
 
@@ -148,8 +144,6 @@ class SCKeyRotationTest(AccountChainSetup):
         new_public_key_3 = new_master_key.publicKey
         new_signing_key_4 = generate_cert_signer_secrets("random_seed4", 1, self.model)[0]
         new_public_key_4 = new_signing_key_4.publicKey
-        new_signing_key_5 = generate_cert_signer_secrets("random_seed5_default_gas", 1, self.model)[0]
-        new_public_key_5 = new_signing_key_5.publicKey
 
         private_master_keys.append(new_signing_key.secret)
         public_master_keys.append(new_public_key)
@@ -159,8 +153,6 @@ class SCKeyRotationTest(AccountChainSetup):
         public_master_keys.append(new_public_key_3)
         private_master_keys.append(new_signing_key_4.secret)
         public_master_keys.append(new_public_key_4)
-        private_master_keys.append(new_signing_key_5.secret)
-        public_master_keys.append(new_public_key_5)
 
         # Change ALL the signing keys and ALL tee master keys
         new_signing_keys = []
@@ -373,19 +365,40 @@ class SCKeyRotationTest(AccountChainSetup):
         new_key_signature_3 = self.secure_enclave_create_signature(message_to_sign=signing_key_message_3,
                                                                    key=new_master_key.secret)["signature"]
 
-        # Change the master key 0
+        # CASE NEGATIVE - Try to change the master key 0 wit low gas_limit which is not enough
+        gas_limit = 100000
         response = http_create_key_rotation_transaction_evm(sc_node,
                                                             key_type=1,
                                                             key_index=0,
                                                             new_key=new_public_key_3,
                                                             signing_key_signature=signing_signature_3,
                                                             master_key_signature=master_signature_3,
-                                                            new_key_signature=new_key_signature_3)
+                                                            new_key_signature=new_key_signature_3,
+                                                            gas_limit=gas_limit)
+        assert_false("error" in response)
+        generate_next_blocks(sc_node, "first node", 1)
+        receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
+        assert_equal(0, status, "Wrong tx status in receipt")
+        assert_true(int(receipt['result']['gasUsed'], 16) == gas_limit, "Gas limit not used")
+        self.sc_sync_all()
+
+        # Change the master key 0
+        gas_limit = 299999
+        response = http_create_key_rotation_transaction_evm(sc_node,
+                                                            key_type=1,
+                                                            key_index=0,
+                                                            new_key=new_public_key_3,
+                                                            signing_key_signature=signing_signature_3,
+                                                            master_key_signature=master_signature_3,
+                                                            new_key_signature=new_key_signature_3,
+                                                            gas_limit=gas_limit)
         assert_false("error" in response)
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status, "Wrong tx status in receipt")
+        assert_true(int(receipt['result']['gasUsed'], 16) <= gas_limit, "Gas limit exceeded")
         check_key_rotation_event(receipt['result']['logs'][0], 1, 0, new_public_key_3, 0)
         self.sc_sync_all()
 
@@ -477,7 +490,6 @@ class SCKeyRotationTest(AccountChainSetup):
 
         # ******************** WITHDRAWAL EPOCH 2 START ********************
         logging.info("******************** WITHDRAWAL EPOCH 2 START ********************")
-
         # Generate first mc block of the next epoch
         mc_node.generate(1)
         epoch_mc_blocks_left = self.withdrawalEpochLength - 1
@@ -511,80 +523,6 @@ class SCKeyRotationTest(AccountChainSetup):
             assert_equal(signer_key_rotation_proof, {})
             assert_equal(master_key_rotation_proof, {})
 
-        # Update again the signing key 0 (SK4 -> SK5)
-        epoch = get_withdrawal_epoch(sc_node)
-        signing_key_message_5 = http_get_key_rotation_message_to_sign_for_signing_key(sc_node, new_public_key_5, epoch)[
-            "keyRotationMessageToSign"]
-
-        # Sign the new signing key with the old keys
-        master_signature_5 = self.secure_enclave_create_signature(message_to_sign=signing_key_message_5, # current master key
-                                                                  key=new_master_key.secret)["signature"]
-        signing_signature_5 = self.secure_enclave_create_signature(message_to_sign=signing_key_message_5, # current signing key
-                                                                   key=new_signing_key_4.secret)["signature"]
-        new_key_signature_5 = self.secure_enclave_create_signature(message_to_sign=signing_key_message_5, # new signing key
-                                                                   key=new_signing_key_5.secret)["signature"]
-
-        # Create the key rotation transaction with sdk's default gas info
-        response = http_create_key_rotation_transaction_evm(sc_node,
-                                                            key_type=0,
-                                                            key_index=0,
-                                                            new_key=new_public_key_5,
-                                                            signing_key_signature=signing_signature_5,
-                                                            master_key_signature=master_signature_5,
-                                                            new_key_signature=new_key_signature_5,
-                                                            include_gas_info=False)
-        assert_false("error" in response)
-
-        self.sc_sync_all()
-        generate_next_blocks(sc_node, "first node", 1)
-        self.sc_sync_all()
-
-        # Generate enough MC blocks to reach the end of the withdrawal epoch
-        we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[0]
-        sc_block_id = generate_next_block(sc_node, "first node")
-
-        check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
-
-        # Verify that we have the updated key
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 2)
-        epoch_three_keys_root_hash = certificate_signers_keys["keysRootHash"]
-        assert_equal(certificate_signers_keys["certifiersKeys"]["signingKeys"][0]["publicKey"], new_public_key_5)
-
-        # ******************** WITHDRAWAL EPOCH 3 START ********************
-        logging.info("******************** WITHDRAWAL EPOCH 3 START ********************")
-        # Generate first mc block of the next epoch
-        mc_node.generate(1)
-        epoch_mc_blocks_left = self.withdrawalEpochLength - 1
-        generate_next_blocks(sc_node, "first node", 1)
-
-        # Wait until Certificate will appear in MC node mempool
-        time.sleep(10)
-        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
-            time.sleep(2)
-            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
-        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
-        cert_hash = mc_node.getrawmempool()[0]
-        cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
-        assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
-                     "Certificate Keys Root Hash incorrect")
-        assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
-
-        # Generate MC and SC blocks with Cert
-        we1_2_mcblock_hash = mc_node.generate(1)[0]
-        epoch_mc_blocks_left -= 1
-
-        # Generate SC block and verify that certificate is synced back
-        scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
-        check_mcreference_presence(we1_2_mcblock_hash, scblock_id, sc_node)
-
-        # Verify that we don't have any key rotation in this epoch
-        for i in range(self.cert_max_keys):
-            signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 3, i, 0)["result"]
-            master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 3, i, 1)["result"]
-            assert_equal(signer_key_rotation_proof, {})
-            assert_equal(master_key_rotation_proof, {})
-
         epoch = get_withdrawal_epoch(sc_node)
         for i in range(self.cert_max_keys):
             new_signing_key = new_signing_keys[i]
@@ -602,7 +540,7 @@ class SCKeyRotationTest(AccountChainSetup):
                 new_sign_master_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_hash,
                                                                                  key=new_master_key.secret)["signature"]
                 new_sign_signing_signature = self.secure_enclave_create_signature(message_to_sign=new_signing_key_hash,
-                                                                                  key=new_signing_key_5.secret)[
+                                                                                  key=new_signing_key_4.secret)[
                     "signature"]
 
                 # Master key signatures
@@ -610,7 +548,7 @@ class SCKeyRotationTest(AccountChainSetup):
                                                                                    key=new_master_key.secret)[
                     "signature"]
                 new_master_signing_signature = self.secure_enclave_create_signature(message_to_sign=new_master_key_hash,
-                                                                                    key=new_signing_key_5.secret)[
+                                                                                    key=new_signing_key_4.secret)[
                     "signature"]
 
             else:
@@ -660,12 +598,12 @@ class SCKeyRotationTest(AccountChainSetup):
 
         # Verify that we changed all the signing keys
         for i in range(self.cert_max_keys):
-            signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 3, i, 0)["result"]["keyRotationProof"]
+            signer_key_rotation_proof = http_get_key_rotation_proof(sc_node, 2, i, 0)["result"]["keyRotationProof"]
             assert_equal(signer_key_rotation_proof["index"], i)
             assert_equal(signer_key_rotation_proof["keyType"]["value"], "SigningKeyRotationProofType")
             assert_equal(signer_key_rotation_proof["newKey"]["publicKey"], new_signing_keys[i].publicKey)
 
-            master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 3, i, 1)["result"]["keyRotationProof"]
+            master_key_rotation_proof = http_get_key_rotation_proof(sc_node, 2, i, 1)["result"]["keyRotationProof"]
             assert_equal(master_key_rotation_proof["index"], i)
             assert_equal(master_key_rotation_proof["keyType"]["value"], "MasterKeyRotationProofType")
             assert_equal(master_key_rotation_proof["newKey"]["publicKey"], new_master_keys[i].publicKey)
@@ -677,14 +615,14 @@ class SCKeyRotationTest(AccountChainSetup):
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
 
         # Verify that we have all the singing keys updated
-        certificate_signers_keys = http_get_certifiers_keys(sc_node, 4)["certifiersKeys"]
+        certificate_signers_keys = http_get_certifiers_keys(sc_node, 3)["certifiersKeys"]
         for i in range(len(certificate_signers_keys["signingKeys"])):
             assert_equal(certificate_signers_keys["signingKeys"][i]["publicKey"], new_signing_keys[i].publicKey)
             assert_equal(certificate_signers_keys["masterKeys"][i]["publicKey"], new_master_keys[i].publicKey)
-        epoch_four_keys_root_hash = http_get_certifiers_keys(sc_node, 4)['keysRootHash']
+        epoch_three_keys_root_hash = http_get_certifiers_keys(sc_node, 3)['keysRootHash']
 
-        # ******************** WITHDRAWAL EPOCH 4 START ********************
-        logging.info("******************** WITHDRAWAL EPOCH 4 START ********************")
+        # ******************** WITHDRAWAL EPOCH 3 START ********************
+        logging.info("******************** WITHDRAWAL EPOCH 3 START ********************")
 
         # Generate first mc block of the next epoch
         mc_node.generate(1)
@@ -700,7 +638,7 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
         cert_hash = mc_node.getrawmempool()[0]
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
-        assert_equal(epoch_four_keys_root_hash, cert['vFieldElementCertificateField'][0],
+        assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
         assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
@@ -714,8 +652,8 @@ class SCKeyRotationTest(AccountChainSetup):
         mc_node.generate(epoch_mc_blocks_left - 1)
         generate_next_block(sc_node, "first node")
 
-        # ******************** WITHDRAWAL EPOCH 5 START ********************
-        logging.info("******************** WITHDRAWAL EPOCH 5 START ********************")
+        # ******************** WITHDRAWAL EPOCH 4 START ********************
+        logging.info("******************** WITHDRAWAL EPOCH 4 START ********************")
 
         # Generate first mc block of the next epoch
         mc_node.generate(1)
@@ -730,7 +668,7 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
         cert_hash = mc_node.getrawmempool()[0]
         cert = mc_node.getrawtransaction(cert_hash, 1)['cert']
-        assert_equal(epoch_four_keys_root_hash, cert['vFieldElementCertificateField'][0],
+        assert_equal(epoch_three_keys_root_hash, cert['vFieldElementCertificateField'][0],
                      "Certificate Keys Root Hash incorrect")
         assert_equal(self.cert_max_keys, cert['quality'], "Certificate quality is wrong.")
 
