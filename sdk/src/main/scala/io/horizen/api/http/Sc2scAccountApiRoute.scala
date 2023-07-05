@@ -6,7 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
-import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage}
+import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage, AccountCrossChainRedeemMessage}
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.Sc2ScAccountApiErrorResponse.GenericSc2ScAccountApiError
@@ -14,8 +14,8 @@ import io.horizen.api.http.Sc2ScAccountApiRouteRestScheme.{ReqCreateAccountRedee
 import io.horizen.api.http.route.SidechainApiRoute
 import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.json.Views
-import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.sc2sc.{CrossChainRedeemMessage, Sc2ScUtils}
+import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
@@ -81,9 +81,6 @@ case class Sc2scAccountApiRoute(override val settings: RESTApiSettings,
 }
 
 object Sc2ScAccountApiRouteRestScheme {
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateRedeemMessage(message: CrossChainMessageEle)
-
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
 

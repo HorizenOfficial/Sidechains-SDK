@@ -90,7 +90,7 @@ object Sc2scApiRouteRestScheme {
   private[api] case class ReqCreateRedeemMessage(message: CrossChainMessageEle)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
+   case class RespCreateRedeemMessage(redeemMessage: CrossChainRedeemMessage) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class CrossChainMessageEle(
@@ -103,23 +103,6 @@ object Sc2scApiRouteRestScheme {
                                                 payload: String
   ){
     require(senderSidechain != null, "Empty sender Sidechain")
-    require(sender != null, "Empty sender address")
-    require(receiverSidechain != null, "Empty receiver Sidechain")
-    require(receiver != null, "Empty receiver address")
-    require(payload != null, "Empty payload ")
-  }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateAccountRedeemMessage(message: AccountCrossChainMessageEle, scId: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class AccountCrossChainMessageEle(
-                                                messageType: Int,
-                                                sender: String,
-                                                receiverSidechain: String,
-                                                receiver: String,
-                                                payload: String
-                                              ) {
     require(sender != null, "Empty sender address")
     require(receiverSidechain != null, "Empty receiver Sidechain")
     require(receiver != null, "Empty receiver address")

@@ -1,18 +1,20 @@
-package io.horizen.api.http
+package io.horizen.api.http.route
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import io.horizen.account.sc2sc.CrossChainMessageProcessorFixture
+import io.horizen.account.sc2sc.{AccountCrossChainRedeemMessage, CrossChainMessageProcessorFixture}
+import io.horizen.account.storage.AccountStateMetadataStorage
+import io.horizen.api.http.Sc2ScAccountApiRouteRestScheme.{AccountCrossChainMessageEle, ReqCreateAccountRedeemMessage}
+import io.horizen.api.http.Sc2scAccountApiRoute
 import io.horizen.api.http.Sc2scApiRouteRestScheme.{CrossChainMessageEle, ReqCreateRedeemMessage}
-import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.consensus.ConsensusEpochNumber
-import io.horizen.fork.{ForkManager, ForkManagerUtil, Sc2ScOptionalForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.json.SerializationUtil
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage, CrossChainRedeemMessageImpl, Sc2ScException}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.storage.SidechainStateStorage
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -22,22 +24,20 @@ import sparkz.core.NodeViewHolder.CurrentView
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
 import scala.util.{Failure, Success}
 
-class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProcessorFixture {
+class Sc2ScAccountApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProcessorFixture {
   override val basePath = "/sc2sc/"
   type NodeView = CurrentView[Any, Any, Any, Any]
   var mockSc2scProver: ActorRef = getMockSc2ScProver()
-  val mockSidechainStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
-  val sc2scApiRoute: Route = Sc2scApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolder.ref, mockSc2scProver, mockSidechainStateStorage).route
-
+  val mockMetadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
+  val sc2scApiRoute: Route = Sc2scAccountApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolder.ref, mockSc2scProver, mockMetadataStorage).route
+  val scId: String = BytesUtils.toHexString(getRandomBytes(32))
   var simulateEnError = false
 
   ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
-  Mockito.when(mockSidechainStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(5)))
+  Mockito.when(mockMetadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(5)))
 
-  val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
-    CrossChainProtocolVersion.VERSION_1.getVal,
+  val testCrossChainMessage: AccountCrossChainMessageEle = AccountCrossChainMessageEle(
     1,
-    BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
@@ -54,19 +54,20 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "createRedeemMessage").withEntity("maybe_a_json") ~> sc2scApiRoute ~> check {
+      Post(basePath + "createAccountRedeemMessage").withEntity("maybe_a_json") ~> sc2scApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
     }
 
-    "reply at /createRedeemMessage" in {
-      Post(basePath + "createRedeemMessage").addCredentials(credentials)
+    "reply at /createAccountRedeemMessage" in {
+      Post(basePath + "createAccountRedeemMessage").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(
-          ReqCreateRedeemMessage(testCrossChainMessage)
+          ReqCreateAccountRedeemMessage(testCrossChainMessage, scId)
         )) ~> sc2scApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        val result = mapper.readTree(entityAs[String]).get("result")
+        val node = mapper.readTree(entityAs[String])
+        val result = node.get("result")
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
         assertEquals(1, result.elements().asScala.length)
@@ -77,11 +78,11 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
       }
     }
 
-    "reply with error at /createRedeemMessage" in {
+    "reply with error at /createAccountRedeemMessage" in {
       simulateEnError = true
-      Post(basePath + "createRedeemMessage").addCredentials(credentials)
+      Post(basePath + "createAccountRedeemMessage").addCredentials(credentials)
         .withEntity(SerializationUtil.serialize(
-          ReqCreateRedeemMessage(testCrossChainMessage)
+          ReqCreateAccountRedeemMessage(testCrossChainMessage, scId)
         )) ~> sc2scApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -93,7 +94,6 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
         assertTrue(result.get("description").asText().equals("Failed to create redeem message"))
         assertTrue(result.get("detail").isTextual)
         assertTrue(result.get("detail").asText().equals(anErrorDetail))
-
       }
     }
   }
@@ -106,18 +106,16 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
 
   def getMockSc2ScProver() = {
     val mockProver = TestProbe()
-    mockProver.setAutoPilot(new testkit.TestActor.AutoPilot {
-      override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
-        msg match {
-          case BuildRedeemMessage(message: CrossChainMessage) =>
-            simulateEnError match {
-              case true => sender ! Failure(new Sc2ScException(anErrorDetail))
-              case false => sender ! Success(redeemMessage)
-            }
+    mockProver.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case BuildRedeemMessage(_: CrossChainMessage) =>
+          simulateEnError match {
+            case true => sender ! Failure(new Sc2ScException(anErrorDetail))
+            case false => sender ! Success(redeemMessage)
+          }
 
-        }
-        TestActor.KeepRunning
       }
+      TestActor.KeepRunning
     })
     mockProver.ref
   }
