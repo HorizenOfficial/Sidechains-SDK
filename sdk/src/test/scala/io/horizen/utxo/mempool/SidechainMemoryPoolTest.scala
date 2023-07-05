@@ -2,9 +2,7 @@ package io.horizen.utxo.mempool
 
 import io.horizen.MempoolSettings
 import io.horizen.fixtures._
-import io.horizen.proposition.Proposition
 import io.horizen.utils.FeeRate
-import io.horizen.utxo.box.{Box, CrossChainMessageBox, WithdrawalRequestBox}
 import io.horizen.utxo.transaction.RegularTransaction
 import org.junit.Assert._
 import org.junit.Test

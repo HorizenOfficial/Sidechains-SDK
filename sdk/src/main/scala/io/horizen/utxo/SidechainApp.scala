@@ -222,13 +222,13 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
-  var sc2scProverRef: Option[ActorRef] = if (isSc2ScConfigured) Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)) else None
+  var sc2scProverRef: ActorRef = Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override lazy val coreApiRoutes: Seq[ApiRoute] = {
-    var routes = Seq(
+  override lazy val coreApiRoutes: Seq[ApiRoute] =
+    Seq(
       MainchainBlockApiRoute[TX,
         SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](settings.restApi, nodeViewHolderRef),
       SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
@@ -237,15 +237,9 @@ class SidechainApp @Inject()
       SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
       SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
       SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-      SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
+      SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params),
+      Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef, sidechainStateStorage)
     )
-
-    if (isSc2ScConfigured) {
-      routes = routes :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
-    }
-
-    routes
-  }
 
   val nodeViewProvider: NodeViewProvider[
     TX,

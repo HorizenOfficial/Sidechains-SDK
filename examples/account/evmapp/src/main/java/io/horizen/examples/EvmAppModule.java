@@ -8,7 +8,6 @@ import io.horizen.SidechainSettings;
 import io.horizen.account.AccountAppModule;
 import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.sc2sc.ScTxCommitmentTreeRootHashMessageProcessor$;
-import io.horizen.account.api.http.AccountApplicationApiGroup;
 import io.horizen.account.state.EvmMessageProcessor;
 import io.horizen.account.state.MessageProcessor;
 import io.horizen.account.state.MessageProcessorUtil;

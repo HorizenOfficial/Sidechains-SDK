@@ -265,7 +265,9 @@ class SidechainInfo(object):
                  # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
                  # If no value for given Node N index is present then the default value is assigned later: range(7)
                  submitters_private_keys_indexes=[],
-                 magic_bytes=None
+                 magic_bytes=None,
+                 sc2sc_proving_key_file_name=None,
+                 sc2sc_verification_key_file_name=None
                  ):
 
         super().__init__()
@@ -302,6 +304,8 @@ class SidechainInfo(object):
         self.cert_sig_threshold = cert_sig_threshold
         self.submitters_private_keys_indexes = submitters_private_keys_indexes
         self.magic_bytes = magic_bytes if magic_bytes is not None else list(os.urandom(4))
+        self.sc2sc_proving_key_file_name=sc2sc_proving_key_file_name
+        self.sc2sc_verification_key_file_name=sc2sc_verification_key_file_name
 
     def sc_setup_nodes_configuration(self, mc_node):
         sc_nodes_configuration = []
@@ -321,7 +325,9 @@ class SidechainInfo(object):
                 cert_submitter_enabled=(x == 0),  # last first is a submitter
                 submitter_private_keys_indexes=self.submitters_private_keys_indexes[x]
                 if len(self.submitters_private_keys_indexes) > x else None,
-                magic_bytes=self.magic_bytes
+                magic_bytes=self.magic_bytes,
+                sc2sc_proving_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_proving_key_file_name) if self.sc2sc_proving_key_file_name is not None else None,
+                sc2sc_verification_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_verification_key_file_name) if self.sc2sc_verification_key_file_name is not None else None
             ))
 
         return sc_nodes_configuration
@@ -494,6 +500,8 @@ class AccountSidechainInfo(SidechainInfo):
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
                  max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
                  tx_lifetime=DEFAULT_TX_LIFETIME,
+                 sc2sc_proving_key_file_name=None,
+                 sc2sc_verification_key_file_name=None
                  ):
 
         super().__init__(
@@ -515,7 +523,10 @@ class AccountSidechainInfo(SidechainInfo):
                          cert_max_keys,
                          cert_sig_threshold,
                          submitters_private_keys_indexes,
-                         magic_bytes)
+                         magic_bytes,
+                         sc2sc_proving_key_file_name,
+                         sc2sc_verification_key_file_name
+        )
         self.allow_unprotected_txs = allow_unprotected_txs
         self.max_nonce_gap = max_nonce_gap
         self.max_account_slots = max_account_slots

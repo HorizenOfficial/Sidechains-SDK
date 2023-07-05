@@ -8,24 +8,31 @@ import akka.testkit.{TestActor, TestProbe}
 import io.horizen.account.sc2sc.CrossChainMessageProcessorFixture
 import io.horizen.api.http.Sc2scApiRouteRestScheme.{CrossChainMessageEle, ReqCreateRedeemMessage}
 import io.horizen.api.http.route.SidechainApiRouteTest
+import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.fork.{ForkManager, Sc2ScOptionalForkConfigurator}
 import io.horizen.json.SerializationUtil
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
 import io.horizen.utils.BytesUtils
+import io.horizen.utxo.storage.SidechainStateStorage
 import org.junit.Assert.{assertEquals, assertTrue}
+import org.mockito.Mockito
 import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
 import scala.util.{Failure, Success}
 
-
 class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProcessorFixture {
   override val basePath = "/sc2sc/"
   type NodeView = CurrentView[Any, Any, Any, Any]
   var mockSc2scProver: ActorRef = getMockSc2ScProver()
-  val sc2scApiRoute: Route = Sc2scApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolder.ref, mockSc2scProver).route
+  val mockSidechainStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+  val sc2scApiRoute: Route = Sc2scApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolder.ref, mockSc2scProver, mockSidechainStateStorage).route
 
   var simulateEnError = false
+
+  ForkManager.init(new Sc2ScOptionalForkConfigurator, "regtest")
+  Mockito.when(mockSidechainStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(5)))
 
   val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
     CrossChainProtocolVersion.VERSION_1.getVal,

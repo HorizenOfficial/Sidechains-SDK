@@ -12,7 +12,7 @@ from SidechainTestFramework.account.httpCalls.transaction.simpleapp.redeemVoteMe
 from SidechainTestFramework.account.httpCalls.transaction.simpleapp.sendVoteMessage import \
     sendVoteMessage
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
-from SidechainTestFramework.scutil import generate_next_block
+from SidechainTestFramework.scutil import generate_next_block, generate_next_blocks
 from httpCalls.sc2sc.createAccountRedeemMessage import createAccountRedeemMessage
 from test_framework.util import forward_transfer_to_sidechain, assert_true
 
@@ -65,6 +65,11 @@ class CrossChainEvmToBeDeleted(AccountChainSetup):
         self.sc_sync_all()
 
         sc_node.block_best()
+
+        ## REACH THE SC2SC FORK CONSENSUS EPOCH
+        for _ in range(18):
+            generate_next_blocks(sc_node, "fist_node", 5)
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
 
         sc_id = self.sc_nodes_bootstrap_info.sidechain_id
         tx_data = sendVoteMessage(sc_node, 1, hex_evm_addr, sc_id, hex_evm_addr, 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130')

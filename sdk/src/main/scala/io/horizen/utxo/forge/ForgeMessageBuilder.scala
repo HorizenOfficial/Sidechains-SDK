@@ -13,7 +13,7 @@ import io.horizen.secret.PrivateKey25519
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import io.horizen.utxo.box.{Box, CrossChainMessageBox, WithdrawalRequestBox}
+import io.horizen.utxo.box.Box
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.history.SidechainHistory

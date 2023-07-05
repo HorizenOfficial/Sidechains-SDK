@@ -3,7 +3,6 @@ package io.horizen.examples.transaction;
 import io.horizen.proof.Signature25519;
 import io.horizen.proposition.Proposition;
 import io.horizen.transaction.TransactionSerializer;
-import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.data.BoxData;
 import io.horizen.utxo.box.data.CrossChainMessageBoxData;
@@ -14,7 +13,6 @@ import sparkz.core.NodeViewModifier$;
 import sparkz.util.serialization.Reader;
 import sparkz.util.serialization.Writer;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

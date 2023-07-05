@@ -10,7 +10,6 @@ import io.horizen.utils.BytesUtils;
 import org.junit.Test;
 
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static io.horizen.account.abi.ABIUtil.getArgumentsFromData;

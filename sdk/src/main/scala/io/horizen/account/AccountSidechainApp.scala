@@ -25,7 +25,7 @@ import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.evm.LevelDBDatabase
-import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
+import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
@@ -181,33 +181,21 @@ class AccountSidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
   }
 
-  val sc2ScFork: Sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
-    .getOrElse(Sc2ScFork.DefaultSc2scFork)
-
-  var sc2scProverRef: Option[ActorRef] =
-    if (sc2ScFork.sc2ScCanSend)
-      Some(Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params))
-    else None
+  var sc2scProverRef: ActorRef = Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override lazy val coreApiRoutes: Seq[ApiRoute] = {
-    var ret = Seq[ApiRoute](
+  override lazy val coreApiRoutes: Seq[ApiRoute] =
+    Seq[ApiRoute](
       MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool, AccountNodeView](settings.restApi, nodeViewHolderRef),
       AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
       SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
       AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
       AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
       SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-      route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
+      route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor),
+      Sc2scAccountApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef, stateMetadataStorage)
     )
-
-    if (sc2ScFork.sc2ScCanSend) {
-      ret = ret :+ Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef.get)
-    }
-
-    ret
-  }
 
   val nodeViewProvider: NodeViewProvider[
     TX,
