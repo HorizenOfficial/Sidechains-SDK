@@ -272,7 +272,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>libevm</artifactId>
-      <version>0.1.0-20230307.142852-1</version>
+      <version>0.1.0</version>
     </dependency>
     <dependency>
       <groupId>at.favre.lib</groupId>
@@ -538,6 +538,8 @@
             </executions>
           </plugin>
           <plugin>
+            <!-- TODO: replace with scaladoc to generate full documentation -->
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>3.2.0</version>
             <executions>
@@ -549,8 +551,10 @@
               </execution>
             </executions>
             <configuration>
-              <sourcepath>${project.basedir}/src/main/java</sourcepath>
-              <excludePackageNames>io.horizen:io.horizen.*</excludePackageNames>
+              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>
+              <sourceFileIncludes>
+                  <include>SidechainAppStopper.java</include>              
+              </sourceFileIncludes>
             </configuration>
           </plugin>
         </plugins>
