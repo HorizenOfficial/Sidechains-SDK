@@ -111,7 +111,6 @@ class MCSCForging1(SidechainTestFramework):
         check_mcreferencedata_amount(0, scblock_id0, sc_node1)
         check_ommers_amount(0, scblock_id0, sc_node1)
 
-
         # Test 2: Generate SC block, when new MC blocks following the same Tip appear.
         # Generate 1 MC block on the first MC node
         mcblock_hash1 = mc_node1.generate(1)[0]
@@ -142,13 +141,13 @@ class MCSCForging1(SidechainTestFramework):
         # Connect and synchronize MC node 1 to MC node 2
         connect_nodes_bi(self.nodes, 0, 1)
         self.sync_nodes([mc_node1, mc_node2])
-        # MC Node 1 should replace mcblock_hash1 Tip with [fork_mcblock_hash1, fork_mcblock_hash2]
+        # MC Node 1 should replace mcblock_hash1 Tip with [fork_mcblock_hash1, fork_mcblock_hash2, fork_mcblock_hash3]
         assert_equal(fork_mcblock_hash3, mc_node1.getbestblockhash())
 
         # Generate 1 SC block
         scblock_id3 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id1, scblock_id3, sc_node1)
-        # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
+        # Verify that SC block contains newly created MC blocks has a MainchainHeaders and no MainchainRefData
         check_mcheaders_amount(2, scblock_id3, sc_node1)
         check_mcreferencedata_amount(0, scblock_id3, sc_node1)
         check_mcheader_presence(fork_mcblock_hash1, scblock_id3, sc_node1)

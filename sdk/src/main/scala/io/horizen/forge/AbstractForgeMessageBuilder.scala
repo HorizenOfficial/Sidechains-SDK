@@ -187,7 +187,7 @@ abstract class AbstractForgeMessageBuilder[
             throw ex
       }
 
-    newHeaderHashes = if(newHeaderHashes.size >= 1) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
+    newHeaderHashes = if(newHeaderHashes.size != 0 && newHeaderHashes.size > params.mcBlockRefDelay) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
     if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
