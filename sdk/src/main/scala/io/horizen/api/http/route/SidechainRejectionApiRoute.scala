@@ -21,17 +21,21 @@ import sparkz.core.settings.RESTApiSettings
   * These rejection routes should be concatenated as first.
   */
 case class SidechainRejectionApiRoute(basePath: String, path: String,
-                                      override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                      override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
+                                      errorDetailOpt: Option[String] = None)
                                      (implicit val context: ActorRefFactory)
   extends ApiRoute with ApiDirectives {
 
-  override def route: Route =
+
+  override def route: Route = {
+
     if (path.isEmpty)
       pathPrefix(basePath) {
-        SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
+        SidechainApiError(StatusCodes.NotFound, "NotFound").complete(errorDetailOpt.getOrElse("The requested resource could not be found."))
       }
     else (pathPrefix(basePath) & path(path)) {
-      SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
+      SidechainApiError(StatusCodes.NotFound, "NotFound").complete(errorDetailOpt.getOrElse("The requested resource could not be found."))
     }
+  }
 
 }

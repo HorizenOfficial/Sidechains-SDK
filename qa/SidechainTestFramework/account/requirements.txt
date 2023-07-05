@@ -1,4 +1,4 @@
-eth_abi
+eth_abi>=4.0.0
 pycryptodome
 rlp
 eth_utils

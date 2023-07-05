@@ -83,7 +83,7 @@ def launch_signing_tool(json_parameters):
 
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK", "..")
-                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.7.0.jar",
+                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.7.1-SNAPSHOT.jar",
                                 "createSignature", json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:

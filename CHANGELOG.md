@@ -1,3 +1,13 @@
+**0.7.1**
+1. Seeder nodes support
+2. PeerToPeer and API rate limiting - tx rebroadcast feature
+3. Sparkz dependency updated to 2.0.2
+4. Minor fixes:
+-- expose app version in  node/info rest api
+-- Account model: fixes in debug_traceTransaction and eth_feeHistory rpc commands
+-- improved logs in certificate submission process
+
+
 **0.7.0**
 1. Account model introduced. EvmApp application example added.
 2. Base package renamed from `com.horizen` to `io.horizen`

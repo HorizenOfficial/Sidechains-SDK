@@ -157,4 +157,9 @@ case class SidechainSettings(
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
     apiRateLimiter: ApiRateLimiterSettings,
-)
+){
+  require(sparkzSettings.network.handlingTransactionsEnabled || !forger.automaticForging,
+    s"Node that does not support transaction handling cannot be a forger node: " +
+      s"automaticForging: ${forger.automaticForging}")
+
+}   
