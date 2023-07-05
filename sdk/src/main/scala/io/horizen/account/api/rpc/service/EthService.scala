@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.horizen.EthServiceSettings
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
@@ -916,7 +917,12 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        blockContext.getEvmResult.tracerResult
+        if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
+          blockContext.getEvmResult.tracerResult
+        else {
+          logger.warn("Unable to get tracer result from EVM")
+          JsonNodeFactory.instance.objectNode()
+        }
       }
     }
   }
@@ -940,7 +946,12 @@ class EthService(
           tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
           // return the tracer result from the evm
-          blockContext.getEvmResult.tracerResult
+          if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
+            blockContext.getEvmResult.tracerResult
+          else {
+            logger.warn("Unable to get tracer result from EVM")
+            JsonNodeFactory.instance.objectNode()
+          }
       }
     }
   }
