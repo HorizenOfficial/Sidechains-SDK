@@ -184,6 +184,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
         parser.add_option("--parallel", dest="parallel", type=int, default=0, action="store",
                           help="Stores parallel process integer assigned to current test")
+        parser.add_option("--mcblockdelay", dest="mcblockdelay", type=int, default=0, action="store",
+                          help="Stores mainchain block delay reference parameter")
 
         self.add_options(parser)
         self.sc_add_options(parser)

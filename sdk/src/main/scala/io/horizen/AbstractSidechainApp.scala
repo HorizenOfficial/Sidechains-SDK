@@ -258,8 +258,11 @@ abstract class AbstractSidechainApp
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
   } else {
-    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params) - 1 || params.mcBlockRefDelay > maxMcBlockRefDelay)
-      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than submission window length and less than %d".format(maxMcBlockRefDelay))
+    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params) - 1)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than submission window length")
+
+    if (params.mcBlockRefDelay > maxMcBlockRefDelay)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than %d".format(maxMcBlockRefDelay))
 
     log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }

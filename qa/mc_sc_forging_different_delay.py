@@ -13,7 +13,7 @@ from SidechainTestFramework.sc_forging_util import *
 Check node interaction with different MC Block Reference delay:
 
 Configuration:
-    Start 2 MC nodes and 2 SC node (with default websocket configuration).
+    Start 1 MC node and 2 SC node (with default websocket configuration).
     First SC delay is 1 block.
     Second SC delay is 0 block
 
@@ -32,8 +32,9 @@ Test:
 
 
 class MCSCForgingDifferentDelay(SidechainTestFramework):
-    number_of_mc_nodes = 2
+    number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
+    # mc_block_delay = self.options.mcblockdelay
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -41,7 +42,6 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
     def setup_network(self, split=False):
         # Setup nodes and connect them
         self.nodes = self.setup_nodes()
-        connect_nodes_bi(self.nodes, 0, 1)
         self.sync_all()
 
     def setup_nodes(self):
@@ -62,18 +62,15 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, extra_args=[['-mc_block_delay_ref', '1'], []])
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, extra_args=[['-mc_block_delay_ref', str(self.options.mcblockdelay)], []])
 
     def run_test(self):
         mc_node1 = self.nodes[0]
-        mc_node2 = self.nodes[1]
         sc_node1 = self.sc_nodes[0]
         sc_node2 = self.sc_nodes[1]
 
         # Synchronize mc_node1 and mc_node2
         self.sync_all()
-
-        # genesis_sc_block_id = sc_node1.block_best()["result"]
 
         # Do FT of 500 Zen to SC Node 2
         sc_node2_address = sc_node2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -90,7 +87,7 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         assert_equal(1, mc_node1.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
-        mcblock_hash1 = mc_node1.generate(2)[0]
+        mcblock_hash1 = mc_node1.generate(1 + self.options.mcblockdelay)[0]
         scblock_id0 = generate_next_block(sc_node1, "first node")
         check_mcreference_presence(mcblock_hash1, scblock_id0, sc_node1)
         connect_sc_nodes(self.sc_nodes[0], 1)
@@ -124,7 +121,6 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
 
         self.sc_sync_all()
         generate_next_block(sc_node1, "first node")
-        # generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
         generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
@@ -143,17 +139,15 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         check_mcreferencedata_amount(0, scblock_id0, sc_node1)
         check_ommers_amount(0, scblock_id0, sc_node1)
 
-        # Generate 1 MC block on the first MC node
+        # Generate 1 MC block
         mcblock_hash1 = mc_node1.generate(1)[0]
         # Synchronize mc_node1 and mc_node2, then disconnect them.
         self.sync_all()
-        disconnect_nodes_bi(self.nodes, 0, 1)
 
-        # Generate 1 more MC block on the first MC node
-        mcblock_hash2 = mc_node1.generate(1)[0]
+        # Generate more MC blocks to include previous block
+        mcblock_hash2 = mc_node1.generate(self.options.mcblockdelay)
 
-        # Generate 1 SC block, that should put 2 MC blocks inside
-        # SC block contains MC `mcblock_hash1` that is common for MC Nodes 1,2 and `mcblock_hash2` that is known only by MC Node 1.
+        # Generate 1 SC block, that should put 1 MC blocks inside
         scblock_id1 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id0, scblock_id1, sc_node1)
         # Verify that SC block contains MC block as a MainchainReference
@@ -173,13 +167,15 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         # Generate another 2 MC blocks on the second MC node
         mcblock_hash3 = mc_node1.generate(1)[0]
         mcblock_hash4 = mc_node1.generate(1)[0]
+        sc_node1.block_best()  # just a ping to SC node.
 
         scblock_id2 = generate_next_blocks(sc_node2, "second node", 1)[0]
         check_scparent(scblock_id1, scblock_id2, sc_node2)
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(3, scblock_id2, sc_node2)
-        check_mcreferencedata_amount(3, scblock_id2, sc_node2)
-        check_mcreference_presence(mcblock_hash2, scblock_id2, sc_node2)
+        check_mcheaders_amount(2 + self.options.mcblockdelay, scblock_id2, sc_node2)
+        check_mcreferencedata_amount(2 + self.options.mcblockdelay, scblock_id2, sc_node2)
+        for mc_hash in mcblock_hash2:
+            check_mcreference_presence(mc_hash, scblock_id2, sc_node2)
         check_mcreference_presence(mcblock_hash3, scblock_id2, sc_node2)
         check_mcreference_presence(mcblock_hash4, scblock_id2, sc_node2)
         check_ommers_amount(0, scblock_id2, sc_node2)
@@ -188,9 +184,10 @@ class MCSCForgingDifferentDelay(SidechainTestFramework):
         self.sc_sync_all()
 
         # Verify that SC block contains MC block as a MainchainReference
-        check_mcheaders_amount(3, scblock_id2, sc_node1)
-        check_mcreferencedata_amount(3, scblock_id2, sc_node1)
-        check_mcreference_presence(mcblock_hash2, scblock_id2, sc_node1)
+        check_mcheaders_amount(2 + self.options.mcblockdelay, scblock_id2, sc_node1)
+        check_mcreferencedata_amount(2 + self.options.mcblockdelay, scblock_id2, sc_node1)
+        for mc_hash in mcblock_hash2:
+            check_mcreference_presence(mc_hash, scblock_id2, sc_node2)
         check_mcreference_presence(mcblock_hash3, scblock_id2, sc_node1)
         check_mcreference_presence(mcblock_hash4, scblock_id2, sc_node1)
         check_ommers_amount(0, scblock_id2, sc_node1)
