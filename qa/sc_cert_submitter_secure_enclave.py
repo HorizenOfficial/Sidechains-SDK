@@ -17,8 +17,8 @@ Check Certificate submission behaviour with enabled Secure Enclave.
 Configuration:
     Start 1 MC node and 1 SC node.
     Enable Secure Enclave.
-    SC node manages keys 0,1,2.
-    Secure Enclave manages keys the remaining keys (from 3 up to MAX_NUMBER_OF_KEYS)
+    SC node manages keys 0, 1, 2.
+    Secure Enclave manages keys from 4 up to MAX_NUMBER_OF_KEYS (key 3 is skipped).
     SC Node together with secure enclave has enough keys to produce certificate signatures.
 
 Test:

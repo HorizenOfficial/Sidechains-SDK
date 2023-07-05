@@ -288,6 +288,10 @@ abstract class AbstractCertificateSubmitter[
 
   }
 
+  /** * Gets signatures from Secure Enclave for given public keys.
+   * Ensures that no more than `numOfParallelRequests` are sent to Enclave at the same time.
+   * If a batch fails to produce a response in `secureEnclaveRequestTimeout`, takes what we have and continues.
+   * */
   def signaturesFromEnclave(messageToSign: Array[Byte], indexedPublicKeys: Seq[(SchnorrProposition, Int)]): Seq[CertificateSignatureInfo] = {
     if (!secureEnclaveApiClient.isEnabled) return Seq()
     val keysFromEnclaveFuture = secureEnclaveApiClient.listPublicKeys()
@@ -300,11 +304,11 @@ abstract class AbstractCertificateSubmitter[
 
       Try(Await.result(Future.sequence(listOfSignaturesFutures), secureEnclaveRequestTimeout).flatten)
         .getOrElse {
-          val signaturesOpt = for {
-            sigFutureResult <- listOfSignaturesFutures
-            if sigFutureResult.isCompleted && sigFutureResult.value.get.isSuccess
-          } yield sigFutureResult.value.get.get
-          signaturesOpt.flatten
+          val successfulSignatures =
+            listOfSignaturesFutures
+              .map(_.value) // turns Future into Option[Try[Option[CertificateSignatureInfo]]]
+              .collect { case Some(Success(Some(sigResult))) => sigResult }
+          successfulSignatures
         }
     }
     listOfSignatures.toSeq.flatten
