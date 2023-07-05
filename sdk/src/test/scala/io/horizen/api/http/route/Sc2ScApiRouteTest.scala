@@ -9,7 +9,7 @@ import io.horizen.account.sc2sc.CrossChainMessageProcessorFixture
 import io.horizen.api.http.Sc2scApiRouteRestScheme.{CrossChainMessageEle, ReqCreateRedeemMessage}
 import io.horizen.api.http.route.SidechainApiRouteTest
 import io.horizen.consensus.ConsensusEpochNumber
-import io.horizen.fork.{ForkManager, Sc2ScOptionalForkConfigurator}
+import io.horizen.fork.{ForkManager, ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.json.SerializationUtil
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
@@ -31,7 +31,7 @@ class Sc2ScApiRouteTest extends SidechainApiRouteTest with CrossChainMessageProc
 
   var simulateEnError = false
 
-  ForkManager.init(new Sc2ScOptionalForkConfigurator, "regtest")
+  ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
   Mockito.when(mockSidechainStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(5)))
 
   val testCrossChainMessage: CrossChainMessageEle = CrossChainMessageEle(
