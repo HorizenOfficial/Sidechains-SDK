@@ -609,7 +609,7 @@ class SidechainHistoryTest extends JUnitSuite
     // retrieve history2 sync info and check against history1, a Younger status is expected
     var history2SyncInfo: SidechainSyncInfo = history2.syncInfo
     comparisonResult = history1.compare(history2SyncInfo)
-    assertEquals("History 2 chain expected to be younger then history 1 chain", History.Younger, comparisonResult) // TODO update comment
+    assertEquals("History 2 chain expected to be younger then history 1 chain", History.Younger, comparisonResult)
 
     // -----------------------------------------------------------------------------------------------------------------
     // update history2 with 50 more blocks (introduce a fork)
