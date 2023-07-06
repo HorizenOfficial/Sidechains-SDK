@@ -364,7 +364,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(30637, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
