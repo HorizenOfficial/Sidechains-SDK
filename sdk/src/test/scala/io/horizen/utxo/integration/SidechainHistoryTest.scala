@@ -534,14 +534,14 @@ class SidechainHistoryTest extends JUnitSuite
 
     // Test 4: compare history1 syncInfo with history2, they have fork on lasts block, height is the same.
     comparisonResult = history2.compare(history1SyncInfo)
-    assertEquals("History 1 chain expected to be younger then history 2 chain", History.Fork, comparisonResult)
+    assertEquals("History 1 chain expected to be a fork related to history 2 chain", History.Fork, comparisonResult)
     // Verify history2 continuationIds for history1 info
     continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
     assertEquals("History 1 continuation Ids for history 2 should contain different data.", history2blockSeq.last.id, continuationIds.head._2)
 
 
-    // Test 5: Append history1.bestblock to history2 , but don't make it best.
+    // Test 5: Append history1.bestblock to history2, but don't make it best.
     // compare history1 syncInfo with history2, they have fork on lasts block, height is the same.
     history2.append(history1blockSeq.last) match {
       case Success((hist, _)) =>
@@ -549,11 +549,122 @@ class SidechainHistoryTest extends JUnitSuite
       case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
     }
     comparisonResult = history2.compare(history1SyncInfo)
-    assertEquals("History 1 chain expected to be equal then history 2 chain", History.Fork, comparisonResult)
+    assertEquals("History 1 chain expected to be a fork related to history 2 chain", History.Fork, comparisonResult)
     // Verify history2 continuationIds for history1 info
     continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
     assertEquals("History 1 continuation Ids for history 2 should contain different data.", history2blockSeq.last.id, continuationIds.head._2)
+  }
+
+  @Test
+  def synchronizationTestWithHighBlockNumber(): Unit = {
+    // -----------------------------------------------------------------------------------------------------------------
+    // Create first history object
+    val sidechainHistoryStorage1 = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
+    val consensusDataStorage1 = new ConsensusDataStorage(getStorage())
+    val history1Try = SidechainHistory.createGenesisHistory(sidechainHistoryStorage1, consensusDataStorage1, params, genesisBlock, Seq(new SidechainBlockSemanticValidator[SidechainTypes#SCBT, SidechainBlock](params)), Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L))
+    var history1: SidechainHistory = history1Try.get
+
+    // Init history1 with 299 more blocks
+    var history1blockSeq = Seq[SidechainBlock](genesisBlock)
+    var blocksToAppend = 299
+    while (blocksToAppend > 0) {
+      val block = generateNextSidechainBlock(history1blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 443356L)
+      history1.append(block) match {
+        case Success((hist, _)) =>
+          history1 = hist
+        case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
+      }
+      history1 = history1.reportModifierIsValid(block).get
+      history1blockSeq = history1blockSeq :+ block
+      blocksToAppend -= 1
+    }
+    assertEquals("Expected to have different height", 300, history1.height)
+
+    // Create second history object
+    val sidechainHistoryStorage2 = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
+    val consensusDataStorage2 = new ConsensusDataStorage(getStorage())
+    val history2Try = SidechainHistory.createGenesisHistory(sidechainHistoryStorage2, consensusDataStorage2, params, genesisBlock, Seq(new SidechainBlockSemanticValidator[SidechainTypes#SCBT, SidechainBlock](params)), Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L))
+    assertTrue("Genesis history2 creation expected to be successful. ", history2Try.isSuccess)
+    var history2: SidechainHistory = history2Try.get
+
+    // Init history2 with 150 blocks taken from history1
+    var history2blockSeq = history1blockSeq.take(150)
+    for (block <- history2blockSeq.tail) { // without genesis
+      history2.append(block) match {
+        case Success((hist, _)) =>
+          history2 = hist
+        case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
+      }
+      history2 = history2.reportModifierIsValid(block).get
+    }
+    assertEquals("Expected to have different height", 150, history2.height)
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Test 1:
+    // retrieve history1 sync info and check against history2, a Older status is expected
+    var history1SyncInfo: SidechainSyncInfo = history1.syncInfo
+    var comparisonResult: History.HistoryComparisonResult = history2.compare(history1SyncInfo)
+    assertEquals("History 1 chain expected to be older then history 2 chain", History.Older, comparisonResult)
+    // retrieve history2 sync info and check against history1, a Younger status is expected
+    var history2SyncInfo: SidechainSyncInfo = history2.syncInfo
+    comparisonResult = history1.compare(history2SyncInfo)
+    assertEquals("History 2 chain expected to be younger then history 1 chain", History.Younger, comparisonResult) // TODO update comment
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // update history2 with 50 more blocks (introduce a fork)
+    blocksToAppend = 50
+    while (blocksToAppend > 0) {
+      val block = generateNextSidechainBlock(history2blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 334456L)
+      history2.append(block) match {
+        case Success((hist, _)) =>
+          history2 = hist
+        case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
+      }
+      history2 = history2.reportModifierIsValid(block).get
+      history2blockSeq = history2blockSeq :+ block
+      blocksToAppend -= 1
+    }
+    assertEquals("Expected to have different height", 200, history2.height)
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Test 2:
+    // retrieve history1 sync info and check against history2, a Fork status is expected
+    history1SyncInfo = history1.syncInfo
+    comparisonResult = history2.compare(history1SyncInfo)
+    assertEquals("History 1 chain expected to be a fork related to history 2 chain", History.Fork, comparisonResult)
+    // retrieve history2 sync info and check against history1, a Fork status is expected
+    history2SyncInfo = history2.syncInfo
+    comparisonResult = history1.compare(history2SyncInfo)
+    assertEquals("History 2 chain expected to be a fork related to history 1 chain", History.Fork, comparisonResult)
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // update history2 with 150 more blocks
+    blocksToAppend = 150
+    while (blocksToAppend > 0) {
+      val block = generateNextSidechainBlock(history2blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 334456L)
+      history2.append(block) match {
+        case Success((hist, _)) =>
+          history2 = hist
+        case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
+      }
+      // notify history that appended block is valid
+      history2 = history2.reportModifierIsValid(block).get
+      history2blockSeq = history2blockSeq :+ block
+      blocksToAppend -= 1
+    }
+    assertEquals("Expected to have different height", 350, history2.height)
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Test 3:
+    // retrieve history1 sync info and check against history2, a Fork status is expected
+    history1SyncInfo = history1.syncInfo
+    comparisonResult = history2.compare(history1SyncInfo)
+    assertEquals("History 1 chain expected to be a fork related to history 2 chain", History.Fork, comparisonResult)
+    // retrieve history2 sync info and check against history1, a Fork status is expected
+    history2SyncInfo = history2.syncInfo
+    comparisonResult = history1.compare(history2SyncInfo)
+    assertEquals("History 2 chain expected to be a fork related to history 1 chain", History.Fork, comparisonResult)
   }
 
   @Test

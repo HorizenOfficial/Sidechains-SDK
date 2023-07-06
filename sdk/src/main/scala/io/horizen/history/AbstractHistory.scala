@@ -321,7 +321,7 @@ abstract class AbstractHistory[
   }
 
   // calculate the other node approximate height knowing that the sequence was created using the method knownBlocksHeightToSync
-  protected def calculateOtherNodeApproxHeight(startingHeight: Int, sequenceSize: Int): Int = {
+  private def calculateOtherNodeApproxHeight(startingHeight: Int, sequenceSize: Int): Int = {
     if (startingHeight == 1) {
       -1 // it is not possible to calculate the other node best block approximate height in this case
     } else {
@@ -339,6 +339,25 @@ abstract class AbstractHistory[
       }
       currentHeight
     }
+  }
+
+  // check the presence of a block on the current history at the second divergent suffix sequence height
+  // it is used to check the presence of forks
+  private def checkForkAtPreviousIndexBlock(dSuffixSize: Int, otherBestBlockApproxHeight: Int): Boolean = {
+    var currentSequencePosition = 0
+    var heightAtIndex = otherBestBlockApproxHeight
+    var step = 1 // step used in case the input sequence size is > 10
+    while(currentSequencePosition < (dSuffixSize-1)) {
+      if(currentSequencePosition < 10) {
+        heightAtIndex -= 1
+      } else {
+        step *= 2
+        heightAtIndex -= step
+      }
+      currentSequencePosition += 1
+    }
+    if(heightAtIndex < storage.height)
+      true else false
   }
 
 
@@ -390,14 +409,18 @@ abstract class AbstractHistory[
       case _ =>
         val otherBestKnownBlockHeight = storage.heightOf(dSuffix.head).get
         val otherBestBlockApproxHeight = calculateOtherNodeApproxHeight(otherBestKnownBlockHeight, dSuffix.size)
-        if(otherBestBlockApproxHeight == -1)
-          Unknown
-        else if (storage.height < otherBestBlockApproxHeight)
-          Older
-        else if (storage.height == otherBestBlockApproxHeight)
-          Fork
+        if(otherBestBlockApproxHeight > 0) {
+          // other node older than the current one
+          if(otherBestBlockApproxHeight > storage.height) {
+            if(checkForkAtPreviousIndexBlock(dSuffix.size, otherBestBlockApproxHeight))
+              Fork
+            else
+              Older
+          } // default case Fork with other best block height defined
+          else Fork
+        }
         else
-          Younger
+          Unknown
     }
   }
 
