@@ -304,10 +304,10 @@ class McAddrOwnershipMsgProcessorTest
         randomNonce,
         scAddressObj1
       )
-      val expectedOwnershipId = Keccak256.hash(Bytes.concat(scAddressObj1.toBytes, mcAddrStr1.getBytes(StandardCharsets.UTF_8)))
+      val expectedOwnershipId = Keccak256.hash(mcAddrStr1.getBytes(StandardCharsets.UTF_8))
 
       // positive case, verify we can add the data to view
-      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
@@ -342,7 +342,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val returnData2 = assertGas(198737, msg2, view, messageProcessor, defaultBlockContext)
+      val returnData2 = assertGas(189837, msg2, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
       println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
@@ -364,7 +364,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(30637, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
@@ -629,7 +629,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
 
@@ -668,7 +668,7 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("already exists"))
+      assertTrue(ex.getMessage.contains("already associated"))
 
       // try using a wrong sender
       createSenderAccount(view, initialAmount, origin)
@@ -766,7 +766,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
       val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddrStr1))
@@ -821,24 +821,12 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      var ownershipIdStr = BytesUtils.toHexString(getOwnershipId(origin, mcAddrStr1))
-      assertTrue(ex.getMessage.contains("Ownership " + ownershipIdStr + " does not exists"))
-
-      // should fail because there is not that association between sender and mc addr
-      var removeCmdInputBad = RemoveOwnershipCmdInput(Some(mcAddrStr1))
-      msgBad = getMessage(contractAddress, BigInteger.ZERO,
-        BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInputBad.encode(),
-        randomNonce, origin
-      )
-      ex = intercept[ExecutionRevertedException] {
-        withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
-      }
-      ownershipIdStr = BytesUtils.toHexString(getOwnershipId(origin, mcAddrStr1))
-      assertTrue(ex.getMessage.contains("Ownership " + ownershipIdStr + " does not exists"))
+      val ownershipIdStr = BytesUtils.toHexString(getOwnershipId(mcAddrStr1))
+      assertTrue(ex.getMessage.contains("is not the owner"))
 
       // should fail because mc address in not legal (we take a shorter BTC address)
       val btcAddr = "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
-      removeCmdInputBad = RemoveOwnershipCmdInput(Some(btcAddr))
+      val removeCmdInputBad = RemoveOwnershipCmdInput(Some(btcAddr))
       val ex2 = intercept[IllegalArgumentException] {
         msgBad = getMessage(contractAddress, BigInteger.ZERO,
           BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInputBad.encode(),
@@ -916,7 +904,7 @@ class McAddrOwnershipMsgProcessorTest
     // try processing the removal of ownership, should succeed
     val returnData = withGas(messageProcessor.process(msg, stateView, _, defaultBlockContext))
     assertNotNull(returnData)
-    assertArrayEquals(getOwnershipId(scAddress, mcTransparentAddress), returnData)
+    assertArrayEquals(getOwnershipId(mcTransparentAddress), returnData)
   }
 
   def getAllOwnershipList(stateView: AccountStateView): Array[Byte] = {

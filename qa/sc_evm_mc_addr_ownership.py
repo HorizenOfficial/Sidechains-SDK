@@ -307,7 +307,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
                               mc_signature=mc_signature1)
         except RuntimeError as err:
             print("Expected exception thrown: {}".format(err))
-            assert_true("already linked" in str(err))
+            assert_true("already associated" in str(err))
         else:
             fail("duplicate association should not work")
 
@@ -470,14 +470,16 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcAddr: " + taddr1)
         print("mcSignature: " + mc_signature_sc2)
 
-        ret = sendKeysOwnership(sc_node2,
-                                sc_address=sc_address2,
-                                mc_addr=taddr1,
-                                mc_signature=mc_signature_sc2)
-        self.sc_sync_all()
-        tx_hash = ret['transactionId']
-        # check the receipt has a status failed
-        forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=0)
+        try:
+            sendKeysOwnership(sc_node2,
+                                    sc_address=sc_address2,
+                                    mc_addr=taddr1,
+                                    mc_signature=mc_signature_sc2)
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            assert_true("is already associated" in str(err))
+        else:
+            fail("duplicate association should not work")
 
         list_all_associations = getKeysOwnership(sc_node)
         pprint.pprint(list_all_associations)
