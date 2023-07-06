@@ -344,14 +344,12 @@ abstract class AbstractHistory[
   // check the presence of a block on the current history at the second divergent suffix sequence height
   // it is used to check the presence of forks
   private def checkForkAtPreviousIndexBlock(otherBestKnownBlockHeight: Int, dSuffixSize: Int): Boolean = {
-    var heightAtPreviousIndex = 0
-    if (dSuffixSize > 10) {
-      heightAtPreviousIndex = otherBestKnownBlockHeight + math.pow(2, dSuffixSize-10).toInt
+    val heightAtPreviousIndex = if (dSuffixSize > 10) {
+      otherBestKnownBlockHeight + math.pow(2, dSuffixSize-10).toInt
     } else {
-      heightAtPreviousIndex = otherBestKnownBlockHeight + dSuffixSize
+      otherBestKnownBlockHeight + dSuffixSize
     }
-    if (heightAtPreviousIndex < storage.height)
-      true else false
+    heightAtPreviousIndex < storage.height
   }
 
   override def syncInfo: SidechainSyncInfo = {
