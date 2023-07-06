@@ -343,23 +343,16 @@ abstract class AbstractHistory[
 
   // check the presence of a block on the current history at the second divergent suffix sequence height
   // it is used to check the presence of forks
-  private def checkForkAtPreviousIndexBlock(dSuffixSize: Int, otherBestBlockApproxHeight: Int): Boolean = {
-    var currentSequencePosition = 0
-    var heightAtIndex = otherBestBlockApproxHeight
-    var step = 1 // step used in case the input sequence size is > 10
-    while(currentSequencePosition < (dSuffixSize-1)) {
-      if(currentSequencePosition < 10) {
-        heightAtIndex -= 1
-      } else {
-        step *= 2
-        heightAtIndex -= step
-      }
-      currentSequencePosition += 1
+  private def checkForkAtPreviousIndexBlock(otherBestKnownBlockHeight: Int, dSuffixSize: Int): Boolean = {
+    var heightAtPreviousIndex = 0
+    if (dSuffixSize > 10) {
+      heightAtPreviousIndex = otherBestKnownBlockHeight + math.pow(2, dSuffixSize-10).toInt
+    } else {
+      heightAtPreviousIndex = otherBestKnownBlockHeight + dSuffixSize
     }
-    if(heightAtIndex < storage.height)
+    if (heightAtPreviousIndex < storage.height)
       true else false
   }
-
 
   override def syncInfo: SidechainSyncInfo = {
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
@@ -367,7 +360,6 @@ abstract class AbstractHistory[
       // return a sequence of block ids for given blocks height backward starting from blockId
       knownBlocksHeightToSync().map(height => storage.activeChainBlockId(height).get)
     )
-
   }
 
   // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlockIds.
@@ -412,7 +404,7 @@ abstract class AbstractHistory[
         if(otherBestBlockApproxHeight > 0) {
           // other node older than the current one
           if(otherBestBlockApproxHeight > storage.height) {
-            if(checkForkAtPreviousIndexBlock(dSuffix.size, otherBestBlockApproxHeight))
+            if(checkForkAtPreviousIndexBlock(otherBestKnownBlockHeight, dSuffix.size))
               Fork
             else
               Older
