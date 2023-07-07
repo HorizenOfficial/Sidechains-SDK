@@ -5,7 +5,7 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, LinkedListNullValue, LinkedListTipKey, RemoveOwnershipCmd, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -67,7 +67,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // set the initial value for the linked list last element (null hash)
     //-------
     // check if we have this key set to any value
-    val initialTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
+    val initialTip = view.getAccountStorage(contractAddress, OwnershipsLinkedListTipKey)
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
     // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead)
@@ -82,7 +82,16 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       log.warn(errorMsg)
     }
 
-    view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
+    view.updateAccountStorage(contractAddress, OwnershipsLinkedListTipKey, OwnershipLinkedListNullValue)
+/**/
+    // set the initial value for the linked list last element (null hash)
+    //-------
+    if (!view.getAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey).sameElements(NULL_HEX_STRING_32)) {
+      val errorMsg = s"Sc Initial tip already set, overwriting it!! "
+      log.warn(errorMsg)
+    }
+    view.updateAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey, ScAddressRefsLinkedListNullValue)
+ /**/
   }
 
   override def canProcess(msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
@@ -106,6 +115,43 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
 
     // add a new node to the linked list pointing to this obj data
+    McAddrOwnershipLinkedList.addNewNode(view, ownershipId, contractAddress)
+
+    val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
+
+    // store the ownership data
+    view.updateAccountStorageBytes(contractAddress, ownershipId,
+      McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
+
+/**/
+    // create new tip/null value for this specific list
+    val newSpecificListTip: Array[Byte] = Blake2b256.hash(scAddress.toStringNoPrefix+"Tip")
+    val newSpecificListNull: Array[Byte] = Blake2b256.hash(scAddress.toStringNoPrefix+"ListNull")
+
+    val scRefId = Blake2b256.hash(scAddress.toStringNoPrefix)
+
+    // store the tip of the new list
+    view.updateAccountStorageBytes(contractAddress, scRefId, newSpecificListTip)
+    ScAddressRefsLinkedList.addNewNode(view, scRefId, contractAddress)
+
+
+    val newScList = new ScAddrOwnershipLinkedList(newSpecificListTip, newSpecificListNull)
+    view.updateAccountStorage(contractAddress, newSpecificListTip, newSpecificListNull)
+
+    val dataId = Blake2b256.hash(scAddress.toStringNoPrefix+mcTransparentAddress)
+    newScList.addNewNode(view, dataId, contractAddress)
+
+    // store the mc addr data
+    view.updateAccountStorageBytes(contractAddress, dataId,
+      McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
+/**/
+
+  }
+
+
+  private def addMcAddrOwnership2(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
+
+    // add a new node to the linked list pointing to this obj data
     addNewNode(view, ownershipId, contractAddress)
 
     val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
@@ -121,7 +167,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val nodeToRemoveId = Blake2b256.hash(ownershipId)
 
     // remove the data from the linked list
-    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
+    McAddrOwnershipLinkedList.uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
 
     // remove the ownership association
     view.removeAccountStorageBytes(contractAddress, ownershipId)
@@ -294,7 +340,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val cmdInput = GetOwnershipsCmdInputDecoder.decode(inputParams)
 
-    val ownershipList = getListOfMcAddrOwnerships(view, Some(cmdInput.scAddress.toStringNoPrefix))
+    //val ownershipList = getListOfMcAddrOwnerships(view, Some(cmdInput.scAddress.toStringNoPrefix))
+    val ownershipList = getScAddrListOfMcAddrOwnerships(view, cmdInput.scAddress.toStringNoPrefix)
     McAddrOwnershipDataListEncoder.encode(ownershipList.asJava)
 
   }
@@ -318,7 +365,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView, scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = {
     var ownershipsList = Seq[McAddrOwnershipData]()
 
-    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+    var nodeReference = view.getAccountStorage(contractAddress, OwnershipsLinkedListTipKey)
     if (nodeReference.sameElements(NULL_HEX_STRING_32))
       return ownershipsList
 
@@ -333,6 +380,39 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
           ownershipsList = item +: ownershipsList
       }
       nodeReference = prevNodeReference
+    }
+    ownershipsList
+  }
+
+  def getScAddrListOfMcAddrOwnerships(view: BaseAccountStateView, scAddress: String): Seq[McAddrOwnershipData] = {
+    var ownershipsList = Seq[McAddrOwnershipData]()
+
+    var nodeReference = view.getAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey)
+    if (nodeReference.sameElements(NULL_HEX_STRING_32))
+      return ownershipsList
+
+    // find the right sc addr linked list
+    val scRefId = Blake2b256.hash(scAddress)
+    val newSpecificListTip: Array[Byte] = Blake2b256.hash(scAddress+"Tip")
+    val newSpecificListNull: Array[Byte] = Blake2b256.hash(scAddress+"ListNull")
+
+    var found = false
+    while (!ScAddressRefsLinkedList.linkedListNodeRefIsNull(nodeReference) && !found) {
+      val (item: Array[Byte], prevNodeReference: Array[Byte]) = ScAddressRefsLinkedList.getScAddresRefsListItem(view, nodeReference)
+      if (item.sameElements(newSpecificListTip)) {
+        found = true
+        var nodeReference2 = view.getAccountStorage(contractAddress, newSpecificListTip)
+        // retrieve all associations
+        val newScList = new ScAddrOwnershipLinkedList(newSpecificListTip, newSpecificListNull)
+        while (!newScList.linkedListNodeRefIsNull(nodeReference2)) {
+          val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = newScList.getScAddressListItem(view, nodeReference2)
+          ownershipsList = item +: ownershipsList
+          nodeReference2 = prevNodeReference
+        }
+      } else {
+        nodeReference = prevNodeReference
+      }
+
     }
     ownershipsList
   }
@@ -383,8 +463,10 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
 object McAddrOwnershipMsgProcessor extends SparkzLogging {
 
-  val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
-  val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
+  val OwnershipsLinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
+  val ScAddressRefsLinkedListTipKey: Array[Byte] = Blake2b256.hash("ScAddrRefsTip")
+  val OwnershipLinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipLinkedListNull")
+  val ScAddressRefsLinkedListNullValue: Array[Byte] = Blake2b256.hash("ScAddressRefsLinkedListNull")
 
   val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(bytes3,bytes32,bytes24,bytes32,bytes32)")
   val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(bytes3,bytes32)")
@@ -425,7 +507,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
   def initDone(view: BaseAccountStateView) : Boolean = {
     // depending on whether this is a warm or a cold access, this read op costs WarmStorageReadCostEIP2929 or ColdSloadCostEIP2929
     // gas units (currently defined as 100 ans 2100 resp.)
-    val initialTip = view.getAccountStorage(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
+    val initialTip = view.getAccountStorage(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, OwnershipsLinkedListTipKey)
     !initialTip.sameElements(NULL_HEX_STRING_32)
   }
 

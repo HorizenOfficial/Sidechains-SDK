@@ -28,7 +28,7 @@ object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
 
   def getStakeListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
     if (!linkedListNodeRefIsNull(tip)) {
-      val node = findLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
+      val node = getLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
         node.dataKey,

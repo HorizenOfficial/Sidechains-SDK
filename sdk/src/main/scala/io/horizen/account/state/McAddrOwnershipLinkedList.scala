@@ -7,8 +7,8 @@ import scala.util.{Failure, Success}
 
 object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
 
-  override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.LinkedListTipKey
-  override val listNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.LinkedListNullValue
+  override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipsLinkedListTipKey
+  override val listNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipLinkedListNullValue
 
   def findOwnershipData(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[McAddrOwnershipData] = {
     val data = view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, ownershipId)
@@ -26,10 +26,10 @@ object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
     }
   }
 
-  def getOwnershipListItem(view: BaseAccountStateView, tip: Array[Byte]): (McAddrOwnershipData, Array[Byte]) = {
-    if (!linkedListNodeRefIsNull(tip)) {
+  def getOwnershipListItem(view: BaseAccountStateView, nodeRef: Array[Byte]): (McAddrOwnershipData, Array[Byte]) = {
+    if (!linkedListNodeRefIsNull(nodeRef)) {
 
-      val node = findLinkedListNode(view, tip, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)
+      val node = getLinkedListNode(view, nodeRef, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)
         .orElse(throw new ExecutionRevertedException("Could not find a valid node"))
 
       val ownershipData = findOwnershipData(view, node.get.dataKey)

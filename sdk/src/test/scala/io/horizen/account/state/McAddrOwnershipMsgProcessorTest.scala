@@ -580,10 +580,12 @@ class McAddrOwnershipMsgProcessorTest
       }
 
       val ownershipList = getAllOwnershipList(view)
+      val ownershipList2 = getOwnershipList(view, scAddressObj1)
 
       //Check getListOfForgers
       val expectedListData = McAddrOwnershipDataListEncoder.encode(listOfExpectedData)
       assertArrayEquals(expectedListData, ownershipList)
+      assertArrayEquals(expectedListData, ownershipList2)
 
       // remove in the middle of the list
       checkRemoveItemFromList(view, listOfExpectedData, 2)
@@ -944,4 +946,45 @@ class McAddrOwnershipMsgProcessorTest
     returnData
   }
 
+  @Test
+  def testSimple(): Unit = {
+
+    usingView(messageProcessor) { view =>
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      // create sender account with some fund in it
+      val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
+      createSenderAccount(view, initialAmount, scAddressObj1)
+
+      val listOfExpectedData = new util.ArrayList[McAddrOwnershipData]()
+      val numOfOwnerships = 1
+
+      for (i <- 0 until numOfOwnerships) {
+        val mcAddr = listOfMcAddrSign1.get(i)._1
+        val mcSignature = listOfMcAddrSign1.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
+
+        val data: Array[Byte] = cmdInput.encode()
+        val msg = getMessage(contractAddress, BigInteger.ZERO,
+          BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj1)
+
+        listOfExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+
+        val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
+        assertNotNull(returnData)
+      }
+
+      val ownershipList = getAllOwnershipList(view)
+
+      val expectedListData = McAddrOwnershipDataListEncoder.encode(listOfExpectedData)
+      assertArrayEquals(expectedListData, ownershipList)
+
+      val ownershipList2 = getOwnershipList(view, scAddressObj1)
+      assertArrayEquals(expectedListData, ownershipList2)
+
+
+      view.commit(bytesToVersion(getVersion.data()))
+    }
+  }
 }

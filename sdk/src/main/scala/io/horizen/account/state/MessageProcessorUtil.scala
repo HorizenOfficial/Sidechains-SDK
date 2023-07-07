@@ -117,7 +117,7 @@ object MessageProcessorUtil {
     val listTipKey: Array[Byte]
     val listNullValue: Array[Byte]
 
-    def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address): Option[LinkedListNode] = {
+    def getLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address): Option[LinkedListNode] = {
       val data = view.getAccountStorageBytes(contract_address, nodeId)
       if (data.length == 0) {
         // getting a not existing key from state DB using RAW strategy
@@ -158,7 +158,7 @@ object MessageProcessorUtil {
     ): Option[Unit] = {
       if (linkedListNodeRefIsNull(nodeId)) return None
       // find original node
-      findLinkedListNode(view, nodeId, contract_address)
+      getLinkedListNode(view, nodeId, contract_address)
         // if the node was not found we want to revert execution
         .orElse(throw new ExecutionRevertedException(s"Failed to update node: ${Numeric.toHexString(nodeId)}"))
         // modify node
@@ -174,7 +174,7 @@ object MessageProcessorUtil {
 
       // we assume that the caller have checked that the data really exists in the stateDb.
       // in this case we must necessarily have a linked list node
-      val nodeToRemove = findLinkedListNode(view, nodeToRemoveId, contract_address).get
+      val nodeToRemove = getLinkedListNode(view, nodeToRemoveId, contract_address).get
 
       // modify previous node if any
       modifyNode(view, nodeToRemove.previousNodeKey, contract_address) { previousNode =>
@@ -194,7 +194,7 @@ object MessageProcessorUtil {
     }
 
     def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
-      BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(listNullValue))
+      ref.sameElements(listNullValue)
 
   }
 }

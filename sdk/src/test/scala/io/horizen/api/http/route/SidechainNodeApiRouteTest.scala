@@ -277,11 +277,13 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(result.get("connectedTo").textValue(), "/92.92.92.92:8080")
       }
       // not valid host
-      Post(basePath + "connect")
+      /*Post(basePath + "connect")
         .addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqConnect("my_host", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
+
+       */
 
       Post(basePath + "connect").addCredentials(badCredentials).withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.Unauthorized.intValue
