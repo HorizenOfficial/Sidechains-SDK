@@ -47,6 +47,15 @@
     <tyrus.version>2.1.0</tyrus.version>
   </properties>
   <dependencies>
+
+    <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-site-renderer -->
+<!--    <dependency>-->
+<!--      <groupId>org.apache.maven.doxia</groupId>-->
+<!--      <artifactId>doxia-site-renderer</artifactId>-->
+<!--      <version>1.8.1</version>-->
+<!--    </dependency>-->
+
+
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -412,6 +421,8 @@
             <phase>generate-sources</phase>
             <goals>
               <goal>compile</goal>
+<!--              <goal>testCompile</goal>-->
+              <goal>doc</goal>
             </goals>
           </execution>
           <execution>
@@ -421,6 +432,15 @@
               <goal>testCompile</goal>
             </goals>
           </execution>
+
+
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>doc-jar</goal>
+            </goals>
+          </execution>
+
         </executions>
         <configuration>
           <scalaVersion>${scala.version}</scalaVersion>
@@ -485,6 +505,18 @@
           <scalaVersion>${scala.version}</scalaVersion>
         </configuration>
       </plugin>
+
+
+
+<!--      <plugin>-->
+<!--        <groupId>org.apache.maven.plugins</groupId>-->
+<!--        <artifactId>maven-project-info-reports-plugin</artifactId>-->
+<!--        <version>2.9</version>-->
+<!--      </plugin>-->
+
+
+
+
     </plugins>
   </reporting>
   <profiles>
@@ -537,26 +569,101 @@
               </execution>
             </executions>
           </plugin>
-          <plugin>
-            <!-- TODO: replace with scaladoc to generate full documentation -->
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>
-              <sourceFileIncludes>
-                  <include>SidechainAppStopper.java</include>              
-              </sourceFileIncludes>
-            </configuration>
-          </plugin>
+
+
+          <!-- needed if maven site phase is run - it generates project website with documentation and dependencies -->
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-site-plugin</artifactId>-->
+<!--            <version>3.7.1</version>-->
+<!--          </plugin>-->
+
+
+<!--          <plugin>-->
+<!--            &lt;!&ndash; TODO: replace with scaladoc to generate full documentation &ndash;&gt;-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-javadoc-plugin</artifactId>-->
+<!--            <version>3.2.0</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <id>attach-javadocs</id>-->
+<!--                <goals>-->
+<!--                  <goal>jar</goal>-->
+<!--                </goals>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--            <configuration>-->
+<!--              <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>-->
+<!--              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>-->
+<!--&lt;!&ndash;              <sourceFileIncludes>&ndash;&gt; &lt;!&ndash; TODO: ako se ovo izuzme ne generise nista jer nece da uradi za fajlove koji referenciraju scalu &ndash;&gt;-->
+<!--&lt;!&ndash;                  <include>SidechainAppStopper.java</include>&ndash;&gt;-->
+<!--&lt;!&ndash;              </sourceFileIncludes>&ndash;&gt;-->
+<!--            </configuration>-->
+<!--          </plugin>-->
+
+
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-project-info-reports-plugin</artifactId>-->
+<!--            <version>3.2.1</version>-->
+<!--          </plugin>-->
+
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-javadoc-plugin</artifactId>-->
+<!--            <version>3.2.0</version>-->
+<!--            <configuration>-->
+<!--              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>-->
+<!--            </configuration>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <id>attach-javadocs</id>-->
+<!--                <goals>-->
+<!--                  <goal>jar</goal>-->
+<!--                </goals>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+
+
+<!--          -->
+<!--          &lt;!&ndash; Scala Plugin &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>net.alchim31.maven</groupId>-->
+<!--            <artifactId>scala-maven-plugin</artifactId>-->
+<!--            <version>4.7.1</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <id>attach-scaladoc</id>-->
+<!--                <phase>package</phase>-->
+<!--                <goals>-->
+<!--                  <goal>doc-jar</goal>-->
+<!--                </goals>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+
+
+
+          <!--  old version, new one is scala-maven-plugin -->
+<!--          <plugin>-->
+<!--            <groupId>org.scala-tools</groupId>-->
+<!--            <artifactId>maven-scala-plugin</artifactId>-->
+<!--            <version>2.15.2</version>-->
+<!--            <configuration>-->
+<!--              <scalaVersion>2.12.12</scalaVersion>-->
+<!--            </configuration>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>compile</goal>-->
+<!--                  <goal>testCompile</goal>-->
+<!--                  <goal>doc</goal>-->
+<!--                </goals>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+
         </plugins>
       </build>
     </profile>
