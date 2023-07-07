@@ -8,7 +8,7 @@ import scala.util.{Failure, Success}
 object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
 
   override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipsLinkedListTipKey
-  override val listNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipLinkedListNullValue
+  override val listTipNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipLinkedListNullValue
 
   def findOwnershipData(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[McAddrOwnershipData] = {
     val data = view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, ownershipId)

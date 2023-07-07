@@ -115,7 +115,7 @@ object MessageProcessorUtil {
   trait NativeSmartContractLinkedList {
 
     val listTipKey: Array[Byte]
-    val listNullValue: Array[Byte]
+    val listTipNullValue: Array[Byte]
 
     def getLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address): Option[LinkedListNode] = {
       val data = view.getAccountStorageBytes(contract_address, nodeId)
@@ -150,7 +150,7 @@ object MessageProcessorUtil {
       // store the new node
       view.updateAccountStorageBytes(contract_address, newTip,
         LinkedListNodeSerializer.toBytes(
-          LinkedListNode(dataId, oldTip, listNullValue)))
+          LinkedListNode(dataId, oldTip, listTipNullValue)))
     }
 
     def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte], contract_address: Address)(
@@ -194,7 +194,7 @@ object MessageProcessorUtil {
     }
 
     def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
-      ref.sameElements(listNullValue)
+      ref.sameElements(listTipNullValue)
 
   }
 }

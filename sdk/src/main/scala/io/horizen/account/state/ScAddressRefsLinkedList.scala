@@ -8,7 +8,7 @@ import scala.util.{Failure, Success}
 object ScAddressRefsLinkedList extends NativeSmartContractLinkedList {
 
   override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.ScAddressRefsLinkedListTipKey
-  override val listNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.ScAddressRefsLinkedListNullValue
+  override val listTipNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.ScAddressRefsLinkedListNullValue
 
   def getScAddressRefData(view: BaseAccountStateView, scRefId: Array[Byte]): Array[Byte] = {
     view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, scRefId)

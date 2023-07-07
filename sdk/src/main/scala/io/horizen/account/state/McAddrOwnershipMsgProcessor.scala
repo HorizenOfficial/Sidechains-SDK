@@ -118,47 +118,23 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     McAddrOwnershipLinkedList.addNewNode(view, ownershipId, contractAddress)
 
     val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
+    val serializedData = McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData)
 
     // store the ownership data
-    view.updateAccountStorageBytes(contractAddress, ownershipId,
-      McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
+    view.updateAccountStorageBytes(contractAddress, ownershipId, serializedData)
 
-/**/
-    // create new tip/null value for this specific list
-    val newSpecificListTip: Array[Byte] = Blake2b256.hash(scAddress.toStringNoPrefix+"Tip")
-    val newSpecificListNull: Array[Byte] = Blake2b256.hash(scAddress.toStringNoPrefix+"ListNull")
+    // add the info to the dynamic list of sc addresses in order to be able to retrieve association based on
+    // sc address without having to loop on the whole associations list
+    //--
+    // get the sc address linked list (and init if this is a brand new association for this sc address)
+    val scAddrList = ScAddrOwnershipLinkedList(view, scAddress.toStringNoPrefix)
 
-    val scRefId = Blake2b256.hash(scAddress.toStringNoPrefix)
+    val dataId = scAddrList.getOwnershipId(mcTransparentAddress)
+    scAddrList.addNewNode(view, dataId, contractAddress)
 
-    // store the tip of the new list
-    view.updateAccountStorageBytes(contractAddress, scRefId, newSpecificListTip)
-    ScAddressRefsLinkedList.addNewNode(view, scRefId, contractAddress)
-
-
-    val newScList = new ScAddrOwnershipLinkedList(newSpecificListTip, newSpecificListNull)
-    view.updateAccountStorage(contractAddress, newSpecificListTip, newSpecificListNull)
-
-    val dataId = Blake2b256.hash(scAddress.toStringNoPrefix+mcTransparentAddress)
-    newScList.addNewNode(view, dataId, contractAddress)
-
-    // store the mc addr data
-    view.updateAccountStorageBytes(contractAddress, dataId,
-      McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
-/**/
-
-  }
-
-
-  private def addMcAddrOwnership2(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
-
-    // add a new node to the linked list pointing to this obj data
-    addNewNode(view, ownershipId, contractAddress)
-
-    val mcAddrOwnershipData = McAddrOwnershipData(scAddress.toStringNoPrefix, mcTransparentAddress)
-
-    // store the ownership data
-    view.updateAccountStorageBytes(contractAddress, ownershipId,
-      McAddrOwnershipDataSerializer.toBytes(mcAddrOwnershipData))
+    // store the real data contents in state db
+    // TODO we might as well use mc addr info only
+    view.updateAccountStorageBytes(contractAddress, dataId, serializedData)
   }
 
   private def uncheckedRemoveMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]) : Unit =
@@ -392,22 +368,19 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       return ownershipsList
 
     // find the right sc addr linked list
-    val scRefId = Blake2b256.hash(scAddress)
-    val newSpecificListTip: Array[Byte] = Blake2b256.hash(scAddress+"Tip")
-    val newSpecificListNull: Array[Byte] = Blake2b256.hash(scAddress+"ListNull")
+    val newScList = ScAddrOwnershipLinkedList(view, scAddress)
 
     var found = false
     while (!ScAddressRefsLinkedList.linkedListNodeRefIsNull(nodeReference) && !found) {
       val (item: Array[Byte], prevNodeReference: Array[Byte]) = ScAddressRefsLinkedList.getScAddresRefsListItem(view, nodeReference)
-      if (item.sameElements(newSpecificListTip)) {
+      if (item.sameElements(newScList.listTipKey)) {
         found = true
-        var nodeReference2 = view.getAccountStorage(contractAddress, newSpecificListTip)
+        var nodeReference2 = view.getAccountStorage(contractAddress, newScList.listTipKey)
         // retrieve all associations
-        val newScList = new ScAddrOwnershipLinkedList(newSpecificListTip, newSpecificListNull)
         while (!newScList.linkedListNodeRefIsNull(nodeReference2)) {
-          val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = newScList.getScAddressListItem(view, nodeReference2)
-          ownershipsList = item +: ownershipsList
-          nodeReference2 = prevNodeReference
+          val (item2: McAddrOwnershipData, prevNodeReference2: Array[Byte]) = newScList.getScAddrOwnershipListItem(view, nodeReference2)
+          ownershipsList = item2 +: ownershipsList
+          nodeReference2 = prevNodeReference2
         }
       } else {
         nodeReference = prevNodeReference
