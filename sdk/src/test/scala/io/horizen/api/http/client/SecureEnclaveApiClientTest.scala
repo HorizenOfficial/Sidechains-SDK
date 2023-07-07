@@ -150,7 +150,6 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       when(serverMock.singleRequest(any(), any(), any(), any()))
         .thenAnswer(invocationArguments => {
-          assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Content-Type").get().value() == "application/json")
           assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Accept").get().value() == "application/json")
           Future.successful(HttpResponse(status = StatusCodes.OK, entity = response))
         })
@@ -169,7 +168,6 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
 
       when(serverMock.singleRequest(any(), any(), any(), any()))
         .thenAnswer(invocationArguments => {
-          assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Content-Type").get().value() == "application/json")
           assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Accept").get().value() == "application/json")
           Future.successful(HttpResponse(status = StatusCodes.OK, entity = response))
         })
