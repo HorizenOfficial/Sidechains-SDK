@@ -2,9 +2,10 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
-import io.horizen.account.state.McAddrOwnershipMsgProcessor._
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, LinkedListNullValue, LinkedListTipKey, RemoveOwnershipCmd, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -20,6 +21,7 @@ import org.bouncycastle.asn1.x9.X9ECParameters
 import org.web3j.crypto.{Keys, Sign}
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.{Blake2b256, Keccak256}
+import sparkz.util.SparkzLogging
 import sparkz.util.encode.Base64
 
 import java.math.BigInteger
@@ -38,22 +40,67 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   override val contractAddress: Address = MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("McAddrOwnershipSmartContractCode")
 
-  // ecdsa curve y^2 mod p = (x^3 + 7) mod p
-  val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
+    if (!isForkActive(consensusEpochNumber)) {
+      log.warn(s"Can not perform ${getClass.getName} initialization, fork is not active")
+      return
+    }
+    else {
+      if (initDone(view)) {
+        throw new MessageProcessorInitializationException("McAddrOwnership msg processor already initialized")
+      }
+    }
 
-  override def init(view: BaseAccountStateView): Unit = {
-    super.init(view)
+    // We do not call the parent init() method because it would throw an exception if the account already exists.
+    // In our case the initialization does not happen at genesis state, and someone might
+    // (on purpose or not) already have sent funds to the account, maybe from a deployed solidity smart contract or by means
+    // of an eoa transaction before fork activation
+    if (!view.accountExists(contractAddress)) {
+      log.debug(s"creating Message Processor account $contractAddress")
+    } else {
+      // TODO maybe we can check the balance at this point and transfer the amount somewhere
+      val errorMsg = s"Account $contractAddress already exists!! Overwriting account with contract code ${BytesUtils.toHexString(contractCode)}..."
+      log.warn(errorMsg)
+    }
+    view.addAccount(contractAddress, contractCode)
+
     // set the initial value for the linked list last element (null hash)
-
-    // check we do not have this key set to any value yet
+    //-------
+    // check if we have this key set to any value
     val initialTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
     // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead)
-    if (!initialTip.sameElements(NULL_HEX_STRING_32))
-      throw new MessageProcessorInitializationException("initial tip already set")
+    if (!initialTip.sameElements(NULL_HEX_STRING_32)) {
+
+      // This should not happen, unless someone managed to write to the context of this address.
+      // This should not be possible from a solidity smart contract, but could be from a different native smart contract.
+      // Since the initialization is not done at genesis block, to be on the safe side, we chose not to throw an exception
+      // but just log a warning and then overwrite the value.
+
+      val errorMsg = s"Initial tip already set, overwriting it!! "
+      log.warn(errorMsg)
+    }
 
     view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
+  }
+
+  override def canProcess(msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
+    if (super.canProcess(msg, view, consensusEpochNumber)) {
+      if (isForkActive(consensusEpochNumber)) {
+        // the gas cost of these calls is not taken into account in this case, we are not tracking gas consumption (and
+        // there is not an account to charge anyway)
+        if (!initDone(view))
+          init(view, consensusEpochNumber)
+        true
+      } else {
+        // we can not handle anything before fork activation, but just warn if someone is trying to use it
+        log.warn(s"Can not process message in ${getClass.getName}, fork is not active: msg = $msg")
+        false
+      }
+    } else {
+      false
+    }
   }
 
   private def addMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte], scAddress: Address, mcTransparentAddress: String): Unit = {
@@ -123,17 +170,23 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
-      throw new ExecutionRevertedException("Call must include a nonce")
+      val errMsg = s"Call must include a nonce: msg = $msg"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
     }
 
     // check that msg.value is zero
     if (msg.getValue.signum() != 0) {
-      throw new ExecutionRevertedException("Value must be zero")
+      val errMsg = s"Value must be zero: msg = $msg"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
     }
 
     // check that sender account exists
     if (!view.accountExists(msg.getFrom) ) {
-      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom}")
+      val errMsg = s"Sender account does not exist: msg = $msg"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
@@ -148,21 +201,26 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
     if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1)) {
-      throw new ExecutionRevertedException(s"Ownership ${BytesUtils.toHexString(newOwnershipId)} has not a valid mc signature")
+      val errMsg = s"Invalid mc signature $mcSignature: msg = $msg"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
     }
 
     // check we do not already have this obj in the db
     if (ownershipDataExist(view, newOwnershipId)) {
-      throw new ExecutionRevertedException(
-        s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists")
+      val errMsg = s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists: msg = $msg"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
     }
 
     // check mc address is not yet associated to any sc address. This could happen by mistake or even if a malicious voter wants
     // to use many times a mc address he really owns
     isMcAddrAlreadyAssociated(view, mcTransparentAddress) match {
       case Some(scAddrStr) =>
-        throw new ExecutionRevertedException(s"MC address $mcTransparentAddress is already associated to sc address $scAddrStr")
-      case None =>
+        val errMsg = s"MC address $mcTransparentAddress is already associated to sc address $scAddrStr: msg = $msg"
+        log.warn(errMsg)
+        throw new ExecutionRevertedException(errMsg)
+      case None => // do nothing
     }
 
     // add the obj to stateDb
@@ -256,12 +314,14 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     val ownershipList = getListOfMcAddrOwnerships(view)
     McAddrOwnershipDataListEncoder.encode(ownershipList.asJava)
-
   }
 
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView, scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = {
     var ownershipsList = Seq[McAddrOwnershipData]()
+
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+    if (nodeReference.sameElements(NULL_HEX_STRING_32))
+      return ownershipsList
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
@@ -284,10 +344,17 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // getting a not existing key from state DB using RAW strategy
     // gives an array of 32 bytes filled with 0, while using CHUNK strategy
     // gives an empty array instead
-    !data.sameElements(NULL_HEX_STRING_32)  }
+    !data.sameElements(NULL_HEX_STRING_32)
+  }
 
+  // TODO as an alternative we could maintain a key/value pair mcAddr/scAddr for quickly telling if a mc addr is in use
+  // pros: we would be fast since no list would be looped into -> save also gas
+  // cons: we should also remove an entry when clearing an association -> more gas
   private def isMcAddrAlreadyAssociated(view: BaseAccountStateView, mcAddress: String): Option[String] = {
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+    if (nodeReference.sameElements(NULL_HEX_STRING_32))
+      return None
+
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
       if (item.mcTransparentAddress.equals(mcAddress))
@@ -299,7 +366,20 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+    if (!isForkActive(blockContext.consensusEpochNumber)) {
+      throw new ExecutionRevertedException(s"zenDao fork not active")
+    }
+
     val gasView = view.getGasTrackedView(gas)
+    if (!initDone(gasView)) {
+      // should not happen since if the fork is active we should have perform the init at this point
+      throw new ExecutionRevertedException(s"zenDao native smart contract init not done")
+    }
+
+    // this handles eoa2eoa too
+    if (msg.getData.length == 0)
+      throw new ExecutionRevertedException(s"No data in msg = $msg")
+
     getFunctionSignature(msg.getData) match {
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(msg, gasView)
       case RemoveOwnershipCmd => doRemoveOwnershipCmd(msg, gasView)
@@ -312,7 +392,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
 }
 
-object McAddrOwnershipMsgProcessor {
+object McAddrOwnershipMsgProcessor extends SparkzLogging {
 
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipNull")
@@ -322,6 +402,9 @@ object McAddrOwnershipMsgProcessor {
   val GetListOfAllOwnershipsCmd: String = getABIMethodId("getAllKeyOwnerships()")
   val GetListOfOwnershipsCmd: String = getABIMethodId("getKeyOwnerships(address)")
 
+  // ecdsa curve y^2 mod p = (x^3 + 7) mod p
+  val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
+
   // ensure we have strings consistent with size of opcode
   require(
     AddNewOwnershipCmd.length == 2 * METHOD_ID_LENGTH &&
@@ -330,11 +413,9 @@ object McAddrOwnershipMsgProcessor {
     GetListOfOwnershipsCmd.length == 2 * METHOD_ID_LENGTH
   )
 
-
   def getOwnershipId(scAddress: Address, mcAddress: String): Array[Byte] = {
     Keccak256.hash(Bytes.concat(scAddress.toBytes, mcAddress.getBytes(StandardCharsets.UTF_8)))
   }
-
 
   def getMcSignature(mcSignatureString: String): SignatureSecp256k1 = {
 
@@ -347,6 +428,20 @@ object McAddrOwnershipMsgProcessor {
     val s: BigInteger = new BigInteger(1, util.Arrays.copyOfRange(decodedMcSignature, 33, 65))
 
     new SignatureSecp256k1(v, r, s)
+  }
+
+  def initDone(view: BaseAccountStateView) : Boolean = {
+    // depending on whether this is a warm or a cold access, this read op costs WarmStorageReadCostEIP2929 or ColdSloadCostEIP2929
+    // gas units (currently defined as 100 ans 2100 resp.)
+    val initialTip = view.getAccountStorage(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
+    !initialTip.sameElements(NULL_HEX_STRING_32)
+  }
+
+  def isForkActive(consensusEpochNumber: Integer): Boolean = {
+    val forkIsActive = ZenDAOFork.get(consensusEpochNumber).active
+    val strVal = if (forkIsActive) {"YES"} else {"NO"}
+    log.trace(s"Epoch $consensusEpochNumber: ZenDAO fork active=$strVal")
+    forkIsActive
   }
 }
 

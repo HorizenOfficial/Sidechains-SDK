@@ -45,8 +45,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
 
-  override def init(view: BaseAccountStateView): Unit = {
-    super.init(view)
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
+    super.init(view, consensusEpochNumber)
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet

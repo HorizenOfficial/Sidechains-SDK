@@ -50,8 +50,9 @@ class AccountState(
   // Used once on genesis AccountState creation
   private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
     using(getView) { view =>
+      val consensusEpochNumber = view.getConsensusEpochNumberAsInt
       for (processor <- messageProcessors) {
-        processor.init(view)
+        processor.init(view, consensusEpochNumber)
       }
 
       try {
