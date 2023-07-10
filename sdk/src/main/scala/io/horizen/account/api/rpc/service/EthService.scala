@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.horizen.EthServiceSettings
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
@@ -44,6 +45,7 @@ import sparkz.core.{NodeViewHolder, bytesToId, idToBytes}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -53,7 +55,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
@@ -73,17 +74,20 @@ class EthService(
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   implicit val timeout: Timeout = new Timeout(nvtimeout)
 
-  private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+
+  override def isNotAllowed(method: Method): Boolean = !networkParams.isHandlingTransactionsEnabled && super.isDisabledOnSeederNode(method)
+
+  private def applyOnAccountView[R](functionToBeApplied: NV => R,  fTimeout: FiniteDuration = nvtimeout): R  = {
     val res = scNodeViewHolderRef
       .ask {
         NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
           // wrap any exceptions
           Try(functionToBeApplied(nodeview))
         }
-      }
+      }(fTimeout)
       .asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
-    Await.result(res, nvtimeout) match {
+    Await.result(res, fTimeout) match {
       case Success(value) => value
       case Failure(exception) =>
         exception match {
@@ -104,6 +108,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_status")
+  @NotAllowedOnSeederNode
   def txpoolStatus(): TxPoolStatus = applyOnAccountView { nodeView =>
     new TxPoolStatus(
       nodeView.pool.getExecutableTransactions.size(),
@@ -112,6 +117,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_content")
+  @NotAllowedOnSeederNode
   def txpoolContent(): TxPoolContent = applyOnAccountView { nodeView =>
     new TxPoolContent(
       nodeView.pool.getExecutableTransactionsMap,
@@ -120,6 +126,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_contentFrom")
+  @NotAllowedOnSeederNode
   def txpoolContentFrom(from: Address): TxPoolContentFrom = applyOnAccountView { nodeView =>
     new TxPoolContentFrom(
       nodeView.pool.getExecutableTransactionsMapFrom(from),
@@ -128,6 +135,7 @@ class EthService(
   }
 
   @RpcMethod("txpool_inspect")
+  @NotAllowedOnSeederNode
   def txpoolInspect(): TxPoolInspect = applyOnAccountView { nodeView =>
     new TxPoolInspect(
       nodeView.pool.getExecutableTransactionsMapInspect,
@@ -221,6 +229,7 @@ class EthService(
 
   @RpcMethod("eth_call")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def call(params: TransactionArgs, input: Object): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val tag = getBlockTagByEip1898Input(nodeView, input)
@@ -231,12 +240,14 @@ class EthService(
 
 
   @RpcMethod("eth_sendTransaction")
+  @NotAllowedOnSeederNode
   def sendTransaction(params: TransactionArgs): Hash = {
     val tx = signTransaction(params)
     sendRawTransaction(tx)
   }
 
   @RpcMethod("eth_signTransaction")
+  @NotAllowedOnSeederNode
   def signTransaction(params: TransactionArgs): Array[Byte] = {
     applyOnAccountView { nodeView =>
       val unsignedTx =
@@ -257,6 +268,7 @@ class EthService(
    * gives context to the signed message and prevents signing of transactions.
    */
   @RpcMethod("eth_sign")
+  @NotAllowedOnSeederNode
   def sign(sender: Address, message: Array[Byte]): Array[Byte] = {
     val prefix = s"\u0019Ethereum Signed Message:\n${message.length}"
     val messageToSign = prefix.getBytes(StandardCharsets.UTF_8) ++ message
@@ -360,7 +372,11 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
+          .map(err => {
+              log.debug(s"Execution has been reverted: ${err.getMessage}", err)
+              RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData))
+            }
+          )
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }
@@ -370,6 +386,7 @@ class EthService(
 
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
+  @NotAllowedOnSeederNode
   def estimateGas(params: TransactionArgs, tag: String): BigInteger = {
     applyOnAccountView { nodeView =>
       doEstimateGas(nodeView, params, tag)
@@ -747,6 +764,7 @@ class EthService(
   }
 
   @RpcMethod("eth_sendRawTransaction")
+  @NotAllowedOnSeederNode
   def sendRawTransaction(signedTxData: Array[Byte]): Hash = {
     val tx = try {
       EthereumTransactionDecoder.decode(signedTxData)
@@ -902,7 +920,12 @@ class EthService(
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
         // return the tracer result from the evm
-        blockContext.getEvmResult.tracerResult
+        if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
+          blockContext.getEvmResult.tracerResult
+        else {
+          logger.warn("Unable to get tracer result from EVM")
+          JsonNodeFactory.instance.objectNode()
+        }
       }
     }
   }
@@ -926,7 +949,12 @@ class EthService(
           tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
 
           // return the tracer result from the evm
-          blockContext.getEvmResult.tracerResult
+          if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
+            blockContext.getEvmResult.tracerResult
+          else {
+            logger.warn("Unable to get tracer result from EVM")
+            JsonNodeFactory.instance.objectNode()
+          }
       }
     }
   }
@@ -999,7 +1027,7 @@ class EthService(
   ): EthereumFeeHistoryView = {
     val percentiles = sanitizePercentiles(rewardPercentiles)
     applyOnAccountView { nodeView =>
-      val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, newestBlock)
+      val (requestedBlock, requestedBlockInfo) = getBlockByTag(nodeView, if (newestBlock != "pending") newestBlock else "latest")
       // limit the range of blocks by the number of available blocks and cap at 1024
       val blocks = blockCount.intValueExact().min(requestedBlockInfo.height).min(1024)
       // geth comment: returning with no data and no error means there are no retrievable blocks
@@ -1054,58 +1082,46 @@ class EthService(
 
   @RpcMethod("eth_getLogs")
   def getLogs(query: FilterQuery): Seq[EthereumLogView] = {
-    applyOnAccountView { nodeView =>
-      using(nodeView.state.getView) { stateView =>
-        if (query.blockHash != null) {
-          // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
-          // geth retrieves all logs of a block by blockhash
-          val block = nodeView.history
-            .getStorageBlockById(bytesToId(query.blockHash.toBytes))
-            .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
-          RpcFilter.getBlockLogs(stateView, block, query)
-        } else {
-          val start = parseBlockTag(nodeView, query.fromBlock)
-          val end = parseBlockTag(nodeView, query.toBlock)
-          if (start > end) {
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
-          }
-
-          val timeout = networkParams.getLogsQueryTimeout
-          var resultCount = 0
-          // get the logs from all blocks in the range into one flat list
-          val result: Try[Seq[EthereumLogView]] = Try {
-            val future = Future {
-              (start to end).flatMap(blockNumber => {
-                val logs = nodeView.history
-                  .blockIdByHeight(blockNumber)
-                  .map(ModifierId(_))
-                  .flatMap(nodeView.history.getStorageBlockById)
-                  .map(RpcFilter.getBlockLogs(stateView, _, query))
-                  .get
-
-                resultCount += logs.length
-                if (resultCount > networkParams.getLogsSizeLimit)
-                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a " + networkParams.getLogsSizeLimit +  " response size. Limit some parameters and try again."))
-
-                logs
-              })
+    try {
+      applyOnAccountView({ nodeView =>
+        using(nodeView.state.getView) { stateView =>
+          if (query.blockHash != null) {
+            // we currently need to get the block by blockhash and then retrieve the receipt for each tx via tx-hash
+            // geth retrieves all logs of a block by blockhash
+            val block = nodeView.history
+              .getStorageBlockById(bytesToId(query.blockHash.toBytes))
+              .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "invalid block hash")))
+            RpcFilter.getBlockLogs(stateView, block, query)
+          } else {
+            val start = parseBlockTag(nodeView, query.fromBlock)
+            val end = parseBlockTag(nodeView, query.toBlock)
+            if (start > end) {
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
             }
 
-            Await.result(future, timeout)
-          }
+            var resultCount = 0
+            // get the logs from all blocks in the range into one flat list
+            (start to end).flatMap(blockNumber => {
+              val logs = nodeView.history
+                .blockIdByHeight(blockNumber)
+                .map(ModifierId(_))
+                .flatMap(nodeView.history.getStorageBlockById)
+                .map(RpcFilter.getBlockLogs(stateView, _, query))
+                .get
 
-          result match {
-            case Success(logs) => logs
-            case Failure(exception) =>
-              exception match {
-                case _: TimeoutException =>
-                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Query execution time exceeded. Query duration must not exceed 10 seconds. Limit some parameters and try again."))
-                case  _: RpcException =>
-                  throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a 10K response size. Limit some parameters and try again."))
-              }
+              resultCount += logs.length
+              if (resultCount > settings.getLogsSizeLimit)
+                throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Log response size exceeded. You can make eth_getLogs requests with up to a " + settings.getLogsSizeLimit + " response size. Limit some parameters and try again."))
+
+              logs
+            })
+
           }
         }
-      }
+      }, settings.getLogsQueryTimeout)
+    }catch {
+      case _: TimeoutException =>
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"Query execution time exceeded. Query duration must not exceed ${settings.getLogsQueryTimeout} seconds. Limit some parameters and try again."))
     }
   }
 

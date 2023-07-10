@@ -3,17 +3,13 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
+import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
-import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import io.horizen.block.{
-  MainchainBlockReferenceData,
-  MainchainTxForwardTransferCrosschainOutput,
-  MainchainTxSidechainCreationCrosschainOutput
-}
+import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -75,7 +71,6 @@ class StateDbAccountStateView(
 
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
-
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -186,11 +181,11 @@ class StateDbAccountStateView(
    *     - block gas limit reached
    */
   def applyTransaction(
-      tx: SidechainTypes#SCAT,
-      txIndex: Int,
-      blockGasPool: GasPool,
-      blockContext: BlockContext
-  ): Try[EthereumConsensusDataReceipt] = Try {
+                  tx: SidechainTypes#SCAT,
+                  txIndex: Int,
+                  blockGasPool: GasPool,
+                  blockContext: BlockContext
+                ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -236,11 +231,13 @@ class StateDbAccountStateView(
     consensusDataReceipt
   }
 
-  override def isEoaAccount(address: Address): Boolean =
+
+  override def isEoaAccount(address: Address): Boolean = {
     stateDb.isEoaAccount(address)
+  }
 
   override def isSmartContractAccount(address: Address): Boolean =
-    stateDb.isSmartContractAccount(address)
+      stateDb.isSmartContractAccount(address)
 
   override def accountExists(address: Address): Boolean =
     !stateDb.isEmpty(address)

@@ -84,7 +84,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
   @Test
   def testNullRecords(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // getting a not existing key from state DB using RAW strategy gives an array of 32 bytes filled with 0, while
       // using CHUNK strategy gives an empty array instead.

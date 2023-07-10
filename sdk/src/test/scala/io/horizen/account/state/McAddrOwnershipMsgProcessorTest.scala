@@ -1,22 +1,28 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
+import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, RemoveOwnershipCmd, getOwnershipId}
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
+import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.params.NetworkParams
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, Pair}
 import org.junit.Assert._
 import org.junit._
+import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
+
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util
@@ -28,6 +34,37 @@ class McAddrOwnershipMsgProcessorTest
     with MockitoSugar
     with MessageProcessorFixture
     with StoreFixture {
+
+  val ZENDAO_MOCK_FORK_POINT: Int = 100
+
+  class TestOptionalForkConfigurator extends ForkConfigurator {
+    override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 0)
+
+    override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+      Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
+        new Pair(SidechainForkConsensusEpoch(ZENDAO_MOCK_FORK_POINT, ZENDAO_MOCK_FORK_POINT, ZENDAO_MOCK_FORK_POINT), ZenDAOFork(true)),
+      ).asJava
+  }
+
+  override val defaultBlockContext = new BlockContext(
+    Address.ZERO,
+    0,
+    0,
+    DefaultGasFeeFork.blockGasLimit,
+    0,
+    /*consensusEpochNumber*/ ZENDAO_MOCK_FORK_POINT,
+    0,
+    1,
+    MockedHistoryBlockHashProvider,
+    new io.horizen.evm.Hash(new Array[Byte](32))
+  )
+
+  @Before
+  def init(): Unit = {
+    ForkManagerUtil.initializeForkManager(new TestOptionalForkConfigurator, "regtest")
+    // by default start with fork active
+    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(ZENDAO_MOCK_FORK_POINT)))
+  }
 
   val dummyBigInteger: BigInteger = BigInteger.ONE
   val negativeAmount: BigInteger = BigInteger.valueOf(-1)
@@ -98,7 +135,6 @@ class McAddrOwnershipMsgProcessorTest
 
   def randomNonce: BigInteger = randomU256
 
-
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calculated using this site: https://emn178.github.io/online-tools/keccak_256.html
@@ -110,28 +146,133 @@ class McAddrOwnershipMsgProcessorTest
 
   @Test
   def testInit(): Unit = {
+
     usingView(messageProcessor) { view =>
-      // we have to call init beforehand
+
+      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
       assertFalse(view.accountExists(contractAddress))
-      messageProcessor.init(view)
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
       assertTrue(view.accountExists(contractAddress))
+      assertFalse(view.isEoaAccount(contractAddress))
       assertTrue(view.isSmartContractAccount(contractAddress))
+      assertTrue(McAddrOwnershipMsgProcessor.initDone(view))
+
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
+
+
+  @Test
+  def testInitBeforeFork(): Unit = {
+
+    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(
+      Option(intToConsensusEpochNumber(ZENDAO_MOCK_FORK_POINT-1)))
+
+    usingView(messageProcessor) { view =>
+
+      assertFalse(view.accountExists(contractAddress))
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+
+      assertFalse(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      // assert no initialization took place
+      assertFalse(view.accountExists(contractAddress))
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+    }
+  }
+
+
+  @Test
+  def testDoubleInit(): Unit = {
+
+    usingView(messageProcessor) { view =>
+
+      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+
+      assertFalse(view.accountExists(contractAddress))
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      assertTrue(view.accountExists(contractAddress))
+      assertTrue(McAddrOwnershipMsgProcessor.initDone(view))
+
+      view.commit(bytesToVersion(getVersion.data()))
+
+      val ex = intercept[MessageProcessorInitializationException] {
+        messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+      }
+      assertTrue(ex.getMessage.contains("already init"))
+    }
+  }
+
 
   @Test
   def testCanProcess(): Unit = {
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      // assert no initialization took place yet
+      assertFalse(view.accountExists(contractAddress))
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+
+      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
 
       // correct contract address
-      assertTrue(messageProcessor.canProcess(getMessage(messageProcessor.contractAddress), view))
+      assertTrue(messageProcessor.canProcess(getMessage(messageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))
+
+      // check initialization took place
+      assertTrue(view.accountExists(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
+      assertFalse(view.isEoaAccount(contractAddress))
+
+      // call a second time for checking it does not do init twice (would assert)
+      assertTrue(messageProcessor.canProcess(getMessage(messageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))
+
       // wrong address
-      assertFalse(messageProcessor.canProcess(getMessage(randomAddress), view))
+      assertFalse(messageProcessor.canProcess(getMessage(randomAddress), view, view.getConsensusEpochNumberAsInt))
       // contract deployment: to == null
-      assertFalse(messageProcessor.canProcess(getMessage(null), view))
+      assertFalse(messageProcessor.canProcess(getMessage(null), view, view.getConsensusEpochNumberAsInt))
+
+      view.commit(bytesToVersion(getVersion.data()))
+    }
+  }
+
+  @Test
+  def testCanNotProcessBeforeFork(): Unit = {
+
+    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(
+      Option(intToConsensusEpochNumber(1)))
+
+    usingView(messageProcessor) { view =>
+
+      // create sender account with some fund in it
+      val initialAmount = BigInteger.valueOf(100).multiply(validWeiAmount)
+      val txHash1 = Keccak256.hash("tx")
+      view.setupTxContext(txHash1, 10)
+      createSenderAccount(view, initialAmount, scAddressObj1)
+      val cmdInput = AddNewOwnershipCmdInput(mcAddrStr1, mcSignatureStr1)
+      val data: Array[Byte] = cmdInput.encode()
+      val msg = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data,
+        randomNonce,
+        scAddressObj1
+      )
+
+      assertFalse(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+
+      // correct contract address and message but fork not yet reached
+      assertFalse(messageProcessor.canProcess(msg, view, view.getConsensusEpochNumberAsInt))
+
+      // the init did not take place
+      assertFalse(view.accountExists(contractAddress))
+      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -142,7 +283,7 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(100).multiply(validWeiAmount)
@@ -166,7 +307,7 @@ class McAddrOwnershipMsgProcessorTest
       val expectedOwnershipId = Keccak256.hash(Bytes.concat(scAddressObj1.toBytes, mcAddrStr1.getBytes(StandardCharsets.UTF_8)))
 
       // positive case, verify we can add the data to view
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
@@ -201,7 +342,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val returnData2 = assertGas(198637, msg2, view, messageProcessor, defaultBlockContext)
+      val returnData2 = assertGas(198737, msg2, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
       println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
@@ -223,7 +364,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(28437, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
@@ -244,7 +385,7 @@ class McAddrOwnershipMsgProcessorTest
         BytesUtils.fromHexString(GetListOfAllOwnershipsCmd),
         randomNonce
       )
-      val returnData4 = assertGas(18900, msg4, view, messageProcessor, defaultBlockContext)
+      val returnData4 = assertGas(19000, msg4, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData4)
 
       assertArrayEquals(McAddrOwnershipDataListEncoder.encode(listOfExpectedOwnerships), returnData4)
@@ -256,14 +397,15 @@ class McAddrOwnershipMsgProcessorTest
   @Test
   def testProcessShortOpCode(): Unit = {
     usingView(messageProcessor) { view =>
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
       val args: Array[Byte] = new Array[Byte](0)
       val opCode = BytesUtils.fromHexString("ac")
       val msg = getDefaultMessage(opCode, args, randomNonce)
 
       // should fail because op code is invalid (1 byte instead of 4 bytes)
       val ex = intercept[ExecutionRevertedException] {
-        assertGas(0, msg, view, messageProcessor, defaultBlockContext)
+        assertGas(2100, msg, view, messageProcessor, defaultBlockContext)
       }
       assertTrue(ex.getMessage.contains("Data length"))
 
@@ -274,14 +416,15 @@ class McAddrOwnershipMsgProcessorTest
   @Test
   def testProcessInvalidOpCode(): Unit = {
     usingView(messageProcessor) { view =>
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
       val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val opCode = BytesUtils.fromHexString("abadc0de")
       val msg = getDefaultMessage(opCode, args, randomNonce)
 
       // should fail because op code is invalid
       val ex = intercept[ExecutionRevertedException] {
-        assertGas(0, msg, view, messageProcessor, defaultBlockContext)
+        assertGas(2100, msg, view, messageProcessor, defaultBlockContext)
       }
       assertTrue(ex.getMessage.contains("op code not supported"))
       view.commit(bytesToVersion(getVersion.data()))
@@ -293,7 +436,7 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -306,7 +449,7 @@ class McAddrOwnershipMsgProcessorTest
         data, randomNonce, value = BigInteger.ZERO)
 
       val ex = intercept[ExecutionRevertedException] {
-        assertGas(0, msg, view, messageProcessor, defaultBlockContext)
+        assertGas(2100, msg, view, messageProcessor, defaultBlockContext)
       }
       assertTrue(ex.getMessage.contains("invalid msg data length"))
 
@@ -319,7 +462,7 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -365,6 +508,7 @@ class McAddrOwnershipMsgProcessorTest
         assertNotNull(returnData)
       }
 
+
       // get associations of each sc address
       val data1List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr1.toLowerCase()))
       val data2List = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr2.toLowerCase()))
@@ -393,13 +537,23 @@ class McAddrOwnershipMsgProcessorTest
     }
   }
 
+  @Test
+  def testProviderMethodsWithoutInit(): Unit = {
+    // check it is safe call these methods even if we did not init the smart contract
+    usingView(messageProcessor) { view =>
+      val listResult = messageProcessor.getListOfMcAddrOwnerships(view, Some(scAddrStr1.toLowerCase()))
+      assertTrue(listResult.isEmpty)
+      val boolRes = messageProcessor.ownershipDataExist(view, new Array[Byte](32))
+      assertFalse(boolRes)
+    }
+  }
 
   @Test
   def testOwnershipLinkedList(): Unit = {
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
@@ -458,7 +612,7 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
@@ -475,7 +629,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
 
@@ -527,7 +681,7 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("not a valid mc signature"))
+      assertTrue(ex.getMessage.contains("Invalid mc signature"))
 
       // try using a wrong signature
       var cmdInputBad = AddNewOwnershipCmdInput(mcAddrStr2, mcSignatureStr1)
@@ -542,7 +696,7 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("not a valid mc signature"))
+      assertTrue(ex.getMessage.contains("Invalid mc signature"))
 
       // try using a wrong signature
       cmdInputBad = AddNewOwnershipCmdInput(mcAddrStr2, mcSignatureStr1)
@@ -557,7 +711,7 @@ class McAddrOwnershipMsgProcessorTest
       ex = intercept[ExecutionRevertedException] {
         withGas(messageProcessor.process(msgBad, view, _, defaultBlockContext))
       }
-      assertTrue(ex.getMessage.contains("not a valid mc signature"))
+      assertTrue(ex.getMessage.contains("Invalid mc signature"))
 
       // try using an ill formed mc addr (we take a shorter BTC address)
       val btcAddr = "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
@@ -595,7 +749,7 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      messageProcessor.init(view)
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
@@ -612,7 +766,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(181037, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
       val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddrStr1))

@@ -187,7 +187,7 @@ class CertificateKeyRotationMsgProcessorTest
   @Test
   def testProcessShortOpCode(): Unit = {
     usingView(certificateKeyRotationMsgProcessor) { view =>
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = new Array[Byte](0)
       val opCode = BytesUtils.fromHexString("ac")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -205,7 +205,7 @@ class CertificateKeyRotationMsgProcessorTest
   @Test
   def testProcessInvalidOpCode(): Unit = {
     usingView(certificateKeyRotationMsgProcessor) { view =>
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val opCode = BytesUtils.fromHexString("abadc0de")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -232,7 +232,7 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
@@ -284,7 +284,7 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
@@ -347,7 +347,7 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey0, oldMasterKey1).map(_.publicImage()))
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey0, oldSigningKey1).map(_.publicImage()))
       //epoch 0

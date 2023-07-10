@@ -398,7 +398,8 @@ class AccountForgeMessageBuilderTest
       .when(
         mockMsgProcessor.canProcess(
           ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[BaseAccountStateView]
+          ArgumentMatchers.any[AccountStateView],
+          ArgumentMatchers.any[Int]
         )
       )
       .thenReturn(true)

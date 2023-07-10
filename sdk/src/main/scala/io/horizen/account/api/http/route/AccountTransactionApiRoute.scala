@@ -21,13 +21,14 @@ import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS}
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.TransactionBaseApiRoute
 import io.horizen.api.http.route.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, TransactionBaseApiRoute}
 import io.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.CryptoLibProvider
+import io.horizen.evm.Address
 import io.horizen.json.Views
 import io.horizen.node.NodeWalletBase
 import io.horizen.params.NetworkParams
@@ -35,9 +36,9 @@ import io.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
 import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.Address
 import org.web3j.crypto.Keys
 import sparkz.core.settings.RESTApiSettings
+
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -66,7 +67,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = pathPrefix("transaction") {
+  override val route: Route = pathPrefix(transactionPathPrefix) {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
@@ -960,6 +961,26 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     if (!newKeySignature.isValid(newKey, messageToSign))
       return Some(ErrorInvalidKeyRotationProof(s"Key rotation proof - self signature is invalid: $index"))
     None
+  }
+
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (transactionPathPrefix, "createLegacyEIP155Transaction", error),
+        (transactionPathPrefix, "createEIP1559Transaction", error),
+        (transactionPathPrefix, "createLegacyTransaction", error),
+        (transactionPathPrefix, "sendTransaction", error),
+        (transactionPathPrefix, "signTransaction", error),
+        (transactionPathPrefix, "makeForgerStake", error),
+        (transactionPathPrefix, "withdrawCoins", error),
+        (transactionPathPrefix, "spendForgingStake", error),
+        (transactionPathPrefix, "createSmartContract", error),
+        (transactionPathPrefix, "openForgerList", error),
+        (transactionPathPrefix, "createKeyRotationTransaction", error),
+      )
+    } else
+      Seq.empty
   }
 
 }

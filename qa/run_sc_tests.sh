@@ -83,6 +83,7 @@ testScriptsEvm=(
     'sc_evm_closed_forger.py'
     'sc_evm_forging_fee_payments.py'
     'sc_evm_fee_payments_rpc.py'
+    'sc_evm_feeHistory.py'
     'sc_evm_gasPrice.py'
     'sc_evm_mempool.py'
     'sc_evm_mempool_invalid_txs.py'
@@ -111,6 +112,7 @@ testScriptsEvm=(
     'sc_evm_block_size_limit.py'
     'sc_evm_mempool_size.py'
     'sc_evm_mempool_timeout.py'
+    'sc_evm_multiple_cert_submitters.py'
     'sc_evm_sync_status.py'
     'sc_evm_sync_status_forger_nodes.py'
     'sc_evm_txpool.py'
@@ -119,6 +121,7 @@ testScriptsEvm=(
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
+    'sc_evm_seedernode.py'
 );
 
 testScriptsUtxo=(
@@ -180,6 +183,7 @@ testScriptsUtxo=(
     'sc_mempool_min_fee_rate.py'
     'sc_multiple_certs.py'
     'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
+    'sc_multiple_cert_submitters.py'
     'sc_multiple_pending_certs_non_ceasing.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
@@ -197,6 +201,7 @@ testScriptsUtxo=(
     'sc_ft_limit_fork.py'
     'sc_fork_one_forced_tx.py'
     'sc_big_block.py'
+    'sc_seedernode.py'
 );
 
 testScriptsNetworking=(
