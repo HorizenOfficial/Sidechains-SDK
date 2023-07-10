@@ -105,12 +105,16 @@ def check_get_key_ownership(abi_return_value, exp_dict):
     end_offset = start_data_offset + 64  # read 32 bytes
     list_size = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_data_offset:end_offset]))[0]
 
+    abi_list = abi_return_value[end_offset:]
+    start_offset = 0
+
     sc_associations_dict = {}
     for i in range(list_size):
-        start_offset = end_offset
-        end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
-        (address_pref, mca3, mca32) = decode(['address', 'bytes3', 'bytes32'],
-                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+        # read offset of the i-dynamic struct
+        dyn_str_offset = (decode(['uint32'], hex_str_to_bytes(abi_list[start_offset:start_offset + 64]))[0])*2
+        start_offset = start_offset + 64
+        (address_pref, mc_addr) = decode(['address', 'string'], hex_str_to_bytes(abi_list[dyn_str_offset:dyn_str_offset+(5*64)]))
+
         sc_address_checksum_fmt = to_checksum_address(address_pref)
         print("sc addr=" + sc_address_checksum_fmt)
         if sc_address_checksum_fmt in sc_associations_dict:
@@ -118,7 +122,6 @@ def check_get_key_ownership(abi_return_value, exp_dict):
         else:
             sc_associations_dict[sc_address_checksum_fmt] = []
             mc_addr_list = []
-        mc_addr = (mca3 + mca32).decode('utf-8')
         mc_addr_list.append(mc_addr)
         print("mc addr=" + mc_addr)
         sc_associations_dict[sc_address_checksum_fmt] = mc_addr_list
@@ -504,10 +507,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         response = sc_node2.rpc_eth_call(req, 'latest')
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
-        result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + 12 * (3 * 32)
-        assert_equal(result_string_length, 2 * exp_len)
+        resultStringLength = len(abi_return_value)
+        # we have:
+        #  - an offset of 64 bytes (byte alignment and list size)
+        #  - 12 offsets (32 bytes) pointing to the dynamic structs
+        #  - 12 dynamic structs:
+        #     - offset (32 bytes) pointing to dynamic part (string)
+        #     - address (20 bytes padded to 32)
+        #     - string length (padded to 32)
+        #     - 35 string bytes (2 * 32 bytes chunks)
+        exp_len = (32 + 32) + 12 * 32 + 12*(5 * 32)
+        assert_equal(resultStringLength, 2*exp_len)
 
         check_get_key_ownership(abi_return_value, list_all_associations['keysOwnership'])
 
@@ -527,10 +537,17 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         response = sc_node2.rpc_eth_call(req, 'latest')
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
-        result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes and 11 records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + 11 * (3 * 32)
-        assert_equal(result_string_length, 2 * exp_len)
+        resultStringLength = len(abi_return_value)
+        # we have:
+        #  - an offset of 64 bytes (byte alignment and list size)
+        #  - 11 offset (32 bytes) pointing to the dynamic structs
+        #  - 11 dynamic structs:
+        #     - offset (32 bytes) pointing to dynamic part (string)
+        #     - address (20 bytes padded to 32)
+        #     - string length (padded to 32)
+        #     - 35 string bytes (2 * 32 bytes chunks)
+        exp_len = (32 + 32) + 11 * 32 + 11*(5 * 32)
+        assert_equal(resultStringLength, 2 * exp_len)
 
         check_get_key_ownership(abi_return_value, list_associations_sc_address['keysOwnership'])
 
