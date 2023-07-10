@@ -326,7 +326,7 @@ abstract class AbstractHistory[
       // It is not possible to calculate the other node best block approximate height in this case.
       // If the only common block is the genesis one (height 1) it is not possible to correctly calculate the other node
       // best block because the method knownBlocksHeightToSync used to create the other node sequence always push the
-      // genesis block index at the end of the list and in this way we don't know how much block separate the genesis
+      // genesis block index at the end of the list and in this way we don't know how many blocks separate the genesis
       // from the second last sequence index height.
       -1
     } else {
