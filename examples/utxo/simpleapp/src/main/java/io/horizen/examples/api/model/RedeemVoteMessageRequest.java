@@ -12,7 +12,7 @@ public final class RedeemVoteMessageRequest {
     private String sender;
     private String receiverSidechain;
     private String receiver;
-    private String payloadHash;
+    private String payload;
     private long fee;
 
     public String getProposition() {
@@ -59,8 +59,8 @@ public final class RedeemVoteMessageRequest {
         return receiver;
     }
 
-    public String getPayloadHash() {
-        return payloadHash;
+    public String getPayload() {
+        return payload;
     }
 
     public long getFee() {

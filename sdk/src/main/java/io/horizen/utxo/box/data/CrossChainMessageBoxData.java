@@ -16,24 +16,24 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
     private final int messageType;
     private final byte[]  receiverSidechain;
     private final byte[]  receiverAddress;
-    private final byte[] payloadHash;
+    private final byte[] payload;
 
     public CrossChainMessageBoxData(PublicKey25519Proposition proposition,
                                     CrossChainProtocolVersion protocolVersion,
                                     int messageType,
                                     byte[] receiverSidechain,
                                     byte[] receiverAddress,
-                                    byte[] payloadHash) {
+                                    byte[] payload) {
         super(proposition, 0);
         Objects.requireNonNull(protocolVersion, "protocol version must be defined");
         Objects.requireNonNull(receiverSidechain, "receiverSidechain must be defined");
         Objects.requireNonNull(receiverAddress, "receiverAddress must be defined");
-        Objects.requireNonNull(payloadHash, "payload must be defined");
+        Objects.requireNonNull(payload, "payload must be defined");
         this.protocolVersion = protocolVersion;
         this.messageType = messageType;
         this.receiverSidechain = receiverSidechain;
         this.receiverAddress = receiverAddress;
-        this.payloadHash = payloadHash;
+        this.payload = payload;
     }
 
     public CrossChainProtocolVersion getProtocolVersion() {
@@ -52,8 +52,8 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
         return receiverAddress;
     }
 
-    public byte[] getPayloadHash() {
-        return payloadHash;
+    public byte[] getPayload() {
+        return payload;
     }
 
     @Override
@@ -69,7 +69,7 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
     @Override
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Bytes.concat(Shorts.toByteArray(protocolVersion.getVal()),
-                new byte[]{(byte)messageType}, receiverSidechain, receiverAddress, payloadHash));
+                new byte[]{(byte)messageType}, receiverSidechain, receiverAddress, payload));
     }
 
     @Override
@@ -79,7 +79,7 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
                 ", messageType=" + messageType +
                 ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
                 ", receiverAddress=" + BytesUtils.toHexString(receiverAddress) +
-                ", payload=" + BytesUtils.toHexString(payloadHash) +
+                ", payload=" + BytesUtils.toHexString(payload) +
                 '}';
     }
 }

@@ -23,7 +23,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
   protected def processRedeemMessage(accCcRedeemMessage: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Array[Byte] = {
     val accCcMsg = AccountCrossChainMessage(
-      accCcRedeemMessage.messageType, accCcRedeemMessage.sender, accCcRedeemMessage.receiverSidechain, accCcRedeemMessage.receiver, accCcRedeemMessage.payloadHash
+      accCcRedeemMessage.messageType, accCcRedeemMessage.sender, accCcRedeemMessage.receiverSidechain, accCcRedeemMessage.receiver, accCcRedeemMessage.payload
     )
     val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(
       accCcMsg,
@@ -45,7 +45,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
       accCcRedeemMessage.messageType,
       accCcRedeemMessage.receiverSidechain,
       accCcRedeemMessage.receiver,
-      accCcRedeemMessage.payloadHash,
+      accCcRedeemMessage.payload,
       accCcRedeemMessage.certificateDataHash,
       accCcRedeemMessage.nextCertificateDataHash,
       accCcRedeemMessage.scCommitmentTreeRoot,
@@ -116,7 +116,7 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateProof(ccRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
     val accCcMsg = AccountCrossChainMessage(
-      ccRedeemMessage.messageType, ccRedeemMessage.sender, ccRedeemMessage.receiverSidechain, ccRedeemMessage.receiver, ccRedeemMessage.payloadHash
+      ccRedeemMessage.messageType, ccRedeemMessage.sender, ccRedeemMessage.receiverSidechain, ccRedeemMessage.receiver, ccRedeemMessage.payload
     )
     val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accCcMsg, scId)
     val ccMsgHash = ccMsg.getCrossChainMessageHash

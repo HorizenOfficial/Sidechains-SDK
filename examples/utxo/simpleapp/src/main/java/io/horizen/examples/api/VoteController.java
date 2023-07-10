@@ -154,7 +154,7 @@ public class VoteController extends SidechainApplicationApiGroup {
                     BytesUtils.fromHexString(request.getSender()),
                     BytesUtils.fromHexString(request.getReceiverSidechain()),
                     BytesUtils.fromHexString(request.getReceiver()),
-                    BytesUtils.fromHexString(request.getPayloadHash())
+                    BytesUtils.fromHexString(request.getPayload())
             );
 
             CrossChainRedeemMessage redeemMessage = new CrossChainRedeemMessageImpl(

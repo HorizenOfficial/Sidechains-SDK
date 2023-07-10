@@ -120,7 +120,7 @@ public class CrossChainMessageSemanticValidatorTest {
     }
 
     @Test
-    public void whenPayloadHashIsNotCorrectSize_IllegalArgumentExceptionIsThrown() {
+    public void whenPayloadIsNotCorrectSize_IllegalArgumentExceptionIsThrown() {
         // Arrange
         CrossChainMessage ccMsg = mock(CrossChainMessage.class);
         when(ccMsg.getMessageType()).thenReturn(1);
@@ -128,7 +128,7 @@ public class CrossChainMessageSemanticValidatorTest {
         when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
         when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
-        when(ccMsg.getPayloadHash())
+        when(ccMsg.getPayload())
                 .thenReturn(Array.emptyByteArray())
                 .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
                 .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
@@ -154,7 +154,7 @@ public class CrossChainMessageSemanticValidatorTest {
         when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
         when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
-        when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
+        when(ccMsg.getPayload()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
 
         CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
@@ -175,7 +175,7 @@ public class CrossChainMessageSemanticValidatorTest {
         when(ccMsg.getReceiverSidechain()).thenReturn(BytesUtils.fromHexString("b20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be23220fe4de48a0f"));
         when(ccMsg.getSender()).thenReturn(BytesUtils.fromHexString("20fe4de48a0fb20d20770fb9e06be23220fe4de48a0fb20d20770fb9e06be232"));
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e"));
-        when(ccMsg.getPayloadHash()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
+        when(ccMsg.getPayload()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
 
         CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 

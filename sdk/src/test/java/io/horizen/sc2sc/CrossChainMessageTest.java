@@ -18,7 +18,7 @@ public class CrossChainMessageTest {
     private byte[] sender;
     private byte[] receiverSidechain;
     private byte[] receiver;
-    private byte[] payloadHash;
+    private byte[] payload;
 
     private byte[] randomHash;
 
@@ -30,7 +30,7 @@ public class CrossChainMessageTest {
         sender = getRandomBytes(PublicKey25519Proposition.getLength());
         receiverSidechain = getRandomBytes(Constants.SIDECHAIN_ID_SIZE());
         receiver = getRandomBytes(AddressProposition.LENGTH);
-        payloadHash = getRandomBytes(Constants.Sc2Sc$.MODULE$.PAYLOAD_HASH());
+        payload = getRandomBytes(Constants.Sc2Sc$.MODULE$.PAYLOAD());
 
         randomHash = getRandomBytes(32);
     }
@@ -44,7 +44,7 @@ public class CrossChainMessageTest {
                 sender,
                 receiverSidechain,
                 receiver,
-                payloadHash
+            payload
         );
         byte[] val = cm.bytes();
         CrossChainMessage cm2 =  CrossChainMessageSerializer.getSerializer().parseBytes(val);
@@ -54,7 +54,7 @@ public class CrossChainMessageTest {
         assertArrayEquals(cm.getReceiverSidechain(), receiverSidechain);
         assertArrayEquals(cm.getSender(), sender);
         assertArrayEquals(cm.getReceiver(), receiver);
-        assertArrayEquals(cm.getPayloadHash(), payloadHash);
+        assertArrayEquals(cm.getPayload(), payload);
     }
 
     @Test
@@ -66,7 +66,7 @@ public class CrossChainMessageTest {
                 sender,
                 receiverSidechain,
                 receiver,
-                payloadHash
+            payload
         ));
 
         assertThrows(IllegalArgumentException.class, () -> new CrossChainMessage(
@@ -76,7 +76,7 @@ public class CrossChainMessageTest {
                 sender,
                 receiverSidechain,
                 receiver,
-                payloadHash
+            payload
         ));
 
         assertThrows(IllegalArgumentException.class, () -> new CrossChainMessage(
@@ -86,7 +86,7 @@ public class CrossChainMessageTest {
                 getRandomBytes(5),
                 receiverSidechain,
                 receiver,
-                payloadHash
+            payload
         ));
 
         assertThrows(IllegalArgumentException.class, () -> new CrossChainMessage(
@@ -96,7 +96,7 @@ public class CrossChainMessageTest {
                 sender,
                 getRandomBytes(5),
                 receiver,
-                payloadHash
+            payload
         ));
 
         assertThrows(IllegalArgumentException.class, () -> new CrossChainMessage(
@@ -106,7 +106,7 @@ public class CrossChainMessageTest {
                 sender,
                 receiverSidechain,
                 getRandomBytes(5),
-                payloadHash
+            payload
         ));
 
         assertThrows(IllegalArgumentException.class, () -> new CrossChainMessage(

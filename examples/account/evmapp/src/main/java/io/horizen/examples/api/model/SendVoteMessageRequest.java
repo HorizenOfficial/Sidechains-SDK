@@ -5,7 +5,7 @@ public final class SendVoteMessageRequest {
     private String sender;
     private String receiverSidechain;
     private String receiver;
-    private String payloadHash;
+    private String payload;
 
     public int getMessageType() {
         return messageType;
@@ -39,11 +39,11 @@ public final class SendVoteMessageRequest {
         this.receiver = receiver;
     }
 
-    public String getPayloadHash() {
-        return payloadHash;
+    public String getPayload() {
+        return payload;
     }
 
-    public void setPayloadHash(String payloadHash) {
-        this.payloadHash = payloadHash;
+    public void setPayload(String payload) {
+        this.payload = payload;
     }
 }

@@ -14,7 +14,7 @@ case class AccountCrossChainMessage
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
-  payloadHash: Array[Byte]
+  payload: Array[Byte]
 ) extends BytesSerializable with ABIEncodable[StaticStruct] {
 
   override type M = AccountCrossChainMessage
@@ -33,7 +33,7 @@ case class AccountCrossChainMessage
       senderAddressABI,
       new Bytes32(receiverSidechain),
       receiverAddressABI,
-      new Bytes32(payloadHash)
+      new Bytes32(payload)
     )
   }
 
@@ -44,7 +44,7 @@ case class AccountCrossChainMessage
       case that: AccountCrossChainMessage =>
         messageType == that.messageType && sender.sameElements(that.sender) &&
           receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
-          payloadHash.sameElements(that.payloadHash)
+          payload.sameElements(that.payload)
 
       case _ => false
     }
@@ -57,7 +57,7 @@ object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossC
     writeBytes(writer, obj.sender)
     writeBytes(writer, obj.receiverSidechain)
     writeBytes(writer, obj.receiver)
-    writeBytes(writer, obj.payloadHash)
+    writeBytes(writer, obj.payload)
   }
 
   override def parse(reader: Reader): AccountCrossChainMessage = {

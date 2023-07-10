@@ -6,6 +6,6 @@ object Constants {
   val SC_COMMITMENT_TREE_ROOT_SIZE = 32
 
   object Sc2Sc {
-    val PAYLOAD_HASH = 32
+    val PAYLOAD = 32
   }
 }

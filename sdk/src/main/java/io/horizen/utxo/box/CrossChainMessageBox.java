@@ -30,7 +30,7 @@ public final class CrossChainMessageBox
     }
 
     public byte[] getPayload() {
-        return boxData.getPayloadHash();
+        return boxData.getPayload();
     }
 
     @Override

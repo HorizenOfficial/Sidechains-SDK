@@ -38,7 +38,7 @@ public class VoteController extends AccountApplicationApiGroup {
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                BytesUtils.fromHexString(request.getPayloadHash())
+                BytesUtils.fromHexString(request.getPayload())
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteMessageProcessor.SEND_VOTE), ccMsg.encode());
         return new SuccessResponseTx(BytesUtils.toHexString(data));
@@ -50,7 +50,7 @@ public class VoteController extends AccountApplicationApiGroup {
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                BytesUtils.fromHexString(request.getPayloadHash()),
+                BytesUtils.fromHexString(request.getPayload()),
                 BytesUtils.fromHexString(request.getCertificateDataHash()),
                 BytesUtils.fromHexString(request.getNextCertificateDataHash()),
                 BytesUtils.fromHexString(request.getScCommitmentTreeRoot()),

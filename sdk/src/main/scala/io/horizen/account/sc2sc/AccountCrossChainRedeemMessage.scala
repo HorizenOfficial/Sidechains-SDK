@@ -14,7 +14,7 @@ case class AccountCrossChainRedeemMessage
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
-  payloadHash: Array[Byte],
+  payload: Array[Byte],
   certificateDataHash: Array[Byte],
   nextCertificateDataHash: Array[Byte],
   scCommitmentTreeRoot: Array[Byte],
@@ -32,7 +32,7 @@ case class AccountCrossChainRedeemMessage
       new Bytes20(sender),
       new Bytes32(receiverSidechain),
       new Bytes20(receiver),
-      new Bytes32(payloadHash),
+      new Bytes32(payload),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),
@@ -48,7 +48,7 @@ case class AccountCrossChainRedeemMessage
       case that: AccountCrossChainRedeemMessage =>
         messageType == that.messageType && sender.sameElements(that.sender) &&
           receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
-          payloadHash.sameElements(that.payloadHash) && certificateDataHash.sameElements(that.certificateDataHash) &&
+          payload.sameElements(that.payload) && certificateDataHash.sameElements(that.certificateDataHash) &&
           nextCertificateDataHash.sameElements(that.nextCertificateDataHash) && scCommitmentTreeRoot.sameElements(scCommitmentTreeRoot) &&
           nextScCommitmentTreeRoot.sameElements(that.nextScCommitmentTreeRoot) && proof.sameElements(that.proof)
 
@@ -63,7 +63,7 @@ object AccountCrossChainRedeemMessageSerializer extends SparkzSerializer[Account
     writeBytes(w, redeemMsg.sender)
     writeBytes(w, redeemMsg.receiverSidechain)
     writeBytes(w, redeemMsg.receiver)
-    writeBytes(w, redeemMsg.payloadHash)
+    writeBytes(w, redeemMsg.payload)
     writeBytes(w, redeemMsg.certificateDataHash)
     writeBytes(w, redeemMsg.nextCertificateDataHash)
     writeBytes(w, redeemMsg.scCommitmentTreeRoot)

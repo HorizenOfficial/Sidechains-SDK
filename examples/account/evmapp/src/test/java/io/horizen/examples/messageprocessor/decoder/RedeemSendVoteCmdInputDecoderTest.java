@@ -35,7 +35,7 @@ public class RedeemSendVoteCmdInputDecoderTest {
             assertEquals(accCcRedeemMsg.messageType(), decoded.messageType());
             assertArrayEquals(accCcRedeemMsg.sender(), decoded.sender());
             assertArrayEquals(accCcRedeemMsg.receiver(), decoded.receiver());
-            assertArrayEquals(accCcRedeemMsg.payloadHash(), decoded.payloadHash());
+            assertArrayEquals(accCcRedeemMsg.payload(), decoded.payload());
             assertArrayEquals(accCcRedeemMsg.receiverSidechain(), decoded.receiverSidechain());
             assertArrayEquals(accCcRedeemMsg.certificateDataHash(), decoded.certificateDataHash());
             assertArrayEquals(accCcRedeemMsg.nextCertificateDataHash(), decoded.nextCertificateDataHash());

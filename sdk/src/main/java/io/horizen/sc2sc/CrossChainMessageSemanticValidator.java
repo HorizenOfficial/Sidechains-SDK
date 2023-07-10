@@ -19,7 +19,7 @@ public final class CrossChainMessageSemanticValidator {
         validateSidechainId(msg.getReceiverSidechain(), RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE);
         validateAddress(msg.getSender(), SENDER_ADDRESS_ERROR_MESSAGE);
         validateAddress(msg.getReceiver(), RECEIVER_ADDRESS_ERROR_MESSAGE);
-        validatePayloadHash(msg.getPayloadHash());
+        validatePayload(msg.getPayload());
     }
 
     public void validateMessage(AccountCrossChainMessage accMsg) {
@@ -47,8 +47,8 @@ public final class CrossChainMessageSemanticValidator {
         }
     }
 
-    private void validatePayloadHash(byte[] payload) {
-        if (payload.length != Constants.Sc2Sc$.MODULE$.PAYLOAD_HASH()) {
+    private void validatePayload(byte[] payload) {
+        if (payload.length != Constants.Sc2Sc$.MODULE$.PAYLOAD()) {
             throw new IllegalArgumentException(PAYLOAD_ERROR_MESSAGE);
         }
     }

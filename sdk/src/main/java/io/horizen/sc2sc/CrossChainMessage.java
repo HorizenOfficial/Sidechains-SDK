@@ -21,16 +21,16 @@ public final class CrossChainMessage implements BytesSerializable {
     private final byte[] sender;
     private final byte[] receiverSidechain;
     private final byte[] receiver;
-    private final byte[] payloadHash;
+    private final byte[] payload;
 
-    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payloadHash) {
+    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
         this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;
         this.sender = sender;
         this.receiverSidechain = receiverSidechain;
         this.receiver = receiver;
-        this.payloadHash = payloadHash;
+        this.payload = payload;
 
         ccMsgValidator.validateMessage(this);
     }
@@ -59,8 +59,8 @@ public final class CrossChainMessage implements BytesSerializable {
         return receiver;
     }
 
-    public byte[] getPayloadHash() {
-        return payloadHash;
+    public byte[] getPayload() {
+        return payload;
     }
 
     @Override
@@ -100,7 +100,7 @@ public final class CrossChainMessage implements BytesSerializable {
         CrossChainMessage that = (CrossChainMessage) o;
         return messageType == that.messageType && version == that.version && Arrays.equals(senderSidechain, that.senderSidechain)
                 && Arrays.equals(sender, that.sender) && Arrays.equals(receiverSidechain, that.receiverSidechain)
-                && Arrays.equals(receiver, that.receiver) && Arrays.equals(payloadHash, that.payloadHash);
+                && Arrays.equals(receiver, that.receiver) && Arrays.equals(payload, that.payload);
     }
 
     @Override
@@ -110,7 +110,7 @@ public final class CrossChainMessage implements BytesSerializable {
         result = 31 * result + Arrays.hashCode(sender);
         result = 31 * result + Arrays.hashCode(receiverSidechain);
         result = 31 * result + Arrays.hashCode(receiver);
-        result = 31 * result + Arrays.hashCode(payloadHash);
+        result = 31 * result + Arrays.hashCode(payload);
         return result;
     }
 }
