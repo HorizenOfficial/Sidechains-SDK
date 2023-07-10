@@ -43,7 +43,10 @@ case class SidechainSubmitterApiRoute[
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV]
   with ApiDirectives
 {
-  override val route: Route = pathPrefix("submitter") {
+
+  val submitterPathPrefix = "submitter"
+
+  override val route: Route = pathPrefix(submitterPathPrefix) {
     isCertGenerationActive ~ isCertificateSubmitterEnabled ~ enableCertificateSubmitter ~ disableCertificateSubmitter ~
       isCertificateSignerEnabled ~ enableCertificateSigner ~ disableCertificateSigner ~ getKeyRotationProof ~
       getSigningKeyRotationMessageToSign ~ getMasterKeyRotationMessageToSign ~ getCertifiersKeys
@@ -184,6 +187,7 @@ case class SidechainSubmitterApiRoute[
       case e: Throwable => SidechainApiError(e)
     }
   }
+
 }
 
 object SidechainDebugRestScheme {

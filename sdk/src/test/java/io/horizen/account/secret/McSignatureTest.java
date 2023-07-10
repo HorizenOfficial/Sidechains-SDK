@@ -12,7 +12,6 @@ import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
-import scala.concurrent.duration.FiniteDuration;
 import sparkz.util.encode.Base58;
 import sparkz.util.encode.Base64;
 import java.math.BigInteger;
@@ -247,7 +246,7 @@ public class McSignatureTest {
                         null, null, null,
                         null, null, false, null,
                         null, 0,false, false,
-                        10, FiniteDuration.Zero()));
+                        false));
 
         assertEquals(taddr, computedTaddr);
 

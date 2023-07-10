@@ -86,6 +86,7 @@ class NetPeersStoragePersistence(SidechainTestFramework):
         start_sc_node(0, self.options.tmpdir)
         wait_for_sc_node_initialization(self.sc_nodes)
 
+        time.sleep(10)
         all_peers_after = get_all_peers(sc_nodes[0])['result']['peers']
         assert_true(len(all_peers_before) == len(all_peers_after))
 

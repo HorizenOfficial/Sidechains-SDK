@@ -7,10 +7,9 @@ import time
 import socket
 from contextlib import closing
 from decimal import Decimal
-from eth_utils import add_0x_prefix
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     AccountKey, VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
     NO_KEY_ROTATION_CIRCUIT
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
@@ -544,7 +543,9 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
-        'TX_LIFETIME': sc_node_config.tx_lifetime
+        'TX_LIFETIME': sc_node_config.tx_lifetime,
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")

@@ -32,6 +32,15 @@ public class RpcService {
         return rpcMethods.containsKey(method);
     }
 
+    public boolean isDisabledOnSeederNode(Method method) {
+        return method.getAnnotation(NotAllowedOnSeederNode.class) != null;
+    }
+
+    public boolean isNotAllowed(Method method) {
+        return false;
+    }
+
+
     private Object[] convertArgs(Method method, JsonNode args) throws RpcException {
         var optionalAnnotation = method.getAnnotation(RpcOptionalParameters.class);
         var optionalParameters = optionalAnnotation == null ? 0 : optionalAnnotation.value();
@@ -64,6 +73,8 @@ public class RpcService {
     public Object execute(RpcRequest req) throws Throwable {
         var method = rpcMethods.get(req.method);
         if (method == null) throw new RpcException(RpcError.fromCode(RpcCode.MethodNotFound));
+        if (isNotAllowed(method)) throw new RpcException(RpcError.fromCode(RpcCode.ActionNotAllowed));
+
         var args = convertArgs(method, req.params);
         try {
             return method.invoke(this, args);
