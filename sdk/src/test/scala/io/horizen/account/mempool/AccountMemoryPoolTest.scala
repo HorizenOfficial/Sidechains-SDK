@@ -22,9 +22,6 @@ class AccountMemoryPoolTest
       with SidechainTypes
       with MockitoSugar {
 
-  @Before
-  def setUp(): Unit = {}
-
   @Test
   def testTakeExecutableTxs(): Unit = {
 
@@ -56,7 +53,7 @@ class AccountMemoryPoolTest
       gasFee = BigInteger.valueOf(3),
       priorityGasFee = BigInteger.valueOf(3)
     )
-    assertTrue(accountMemoryPool.put(account1ExecTransaction0).isSuccess)
+    accountMemoryPool.put(account1ExecTransaction0).get
 
     var listOfExecTxs = accountMemoryPool.takeExecutableTxs()
     assertEquals("Wrong tx list size ", 1, listOfExecTxs.size)

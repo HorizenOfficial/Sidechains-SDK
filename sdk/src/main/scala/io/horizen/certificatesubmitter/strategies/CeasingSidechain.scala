@@ -32,6 +32,8 @@ class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkPa
         case Success(currentCertificateTopQuality) =>
           if (status.knownSigs.size > currentCertificateTopQuality)
             return true
+          else
+            log.info(s"Submission not needed. Certificate of equal or higher quality already present in epoch " + status.referencedEpoch)
         case Failure(e) => e match {
           // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
           case ex: WebsocketErrorResponseException =>
@@ -68,12 +70,12 @@ class CeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkPa
           case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
           // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
           case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.epoch)
           // case we have chain cert for the given epoch return its quality.
           case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
           // case the chain certificate epoch is a newer than submitter epoch thrown an exception
           case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.epoch)
           // no known certs
           case _ => 0
         }

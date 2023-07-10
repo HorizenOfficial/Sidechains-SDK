@@ -47,7 +47,9 @@ abstract class BlockBaseApiRoute[
                                   forgerRef: ActorRef,
                                   params: NetworkParams)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
+
+  val blockPathPrefix: String = "block"
 
   /**
    * The sidechain block by its id.
@@ -210,7 +212,6 @@ abstract class BlockBaseApiRoute[
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]) { body =>
-
       if (body.transactionsBytes.nonEmpty && !params.isInstanceOf[RegTestParams]) {
         ApiResponseUtil.toResponse(ErrorBlockNotCreated(
           s"Block was not created: transactionsBytes parameter can be used only in regtest", JOptional.empty()))
@@ -234,6 +235,19 @@ abstract class BlockBaseApiRoute[
       }
     }
   }
+
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (blockPathPrefix, "startForging", error),
+        (blockPathPrefix, "stopForging", error),
+        (blockPathPrefix, "generate", error)
+      )
+    } else
+      Seq.empty
+  }
+
 }
 
 
@@ -362,4 +376,5 @@ object BlockBaseErrorResponse {
   case class ErrorGetForgingInfo(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0108"
   }
+
 }

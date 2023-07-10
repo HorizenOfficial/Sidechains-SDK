@@ -110,10 +110,10 @@ class MempoolMapTest
     )
 
     expectedNumOfTxs += 1
-    var res = mempoolMap.add(account1ExecTransaction0)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get._1
-    var listOfPromotedTxs = res.get._2
+    // Adding transaction should work
+    var res = mempoolMap.add(account1ExecTransaction0).get
+    mempoolMap = res._1
+    var listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 1, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -148,10 +148,10 @@ class MempoolMapTest
     assertEquals("Wrong number of exec txs", expectedNumOfTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", 0, mempoolMap.mempoolTransactions(false).size)
 
-    res = mempoolMap.add(account1ExecTransaction0)
-    assertTrue("Adding twice the same tx should not fail", res.isSuccess)
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding twice the same tx should not fail
+    res = mempoolMap.add(account1ExecTransaction0).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 0, listOfPromotedTxs.size)
     assertEquals(
       "Wrong number of total transactions",
@@ -167,13 +167,10 @@ class MempoolMapTest
 
     expectedNumOfTxs += 1
 
-    res = mempoolMap.add(account1ExecTransaction1)
-    assertTrue(
-      "Adding second transaction to same account failed",
-      res.isSuccess
-    )
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding second transaction to same account
+    res = mempoolMap.add(account1ExecTransaction1).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 1, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -222,11 +219,10 @@ class MempoolMapTest
       .when(accountStateViewMock.getNonce(account2ExecTransaction0.getFrom.address()))
       .thenReturn(account2InitialStateNonce)
     expectedNumOfTxs += 1
-    res = mempoolMap.add(account2ExecTransaction0)
-
-    assertTrue("Adding transaction to account 2 failed", res.isSuccess)
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding transaction to account 2
+    res = mempoolMap.add(account2ExecTransaction0).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 1, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -275,10 +271,9 @@ class MempoolMapTest
     val account1NonExecTransaction0 = createEIP1559Transaction(value, BigInteger.TWO, account1KeyOpt)
 
     expectedNumOfTxs += 1
-    var res = mempoolMap.add(account1NonExecTransaction0)
-    assertTrue("Adding transaction failed", res.isSuccess)
-    mempoolMap = res.get._1
-    var listOfPromotedTxs = res.get._2
+    var res = mempoolMap.add(account1NonExecTransaction0).get
+    mempoolMap = res._1
+    var listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 0, listOfPromotedTxs.size)
 
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
@@ -309,28 +304,24 @@ class MempoolMapTest
     assertEquals("Wrong number of exec txs", expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", expectedNumOfTxs, mempoolMap.mempoolTransactions(false).size)
 
-
-    res = mempoolMap.add(account1NonExecTransaction0)
-    assertTrue("Adding twice the same tx should not fail", res.isSuccess)
+    // Adding twice the same tx should not fail
+    res = mempoolMap.add(account1NonExecTransaction0).get
     assertEquals("Wrong mem pool size in slots", 1, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 1, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", expectedNumOfExecutableTxs, mempoolMap.mempoolTransactions(true).size)
     assertEquals("Wrong number of non exec txs", expectedNumOfTxs, mempoolMap.mempoolTransactions(false).size)
 
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 0, listOfPromotedTxs.size)
 
     val account1NonExecTransaction1 = createEIP1559Transaction(value, BigInteger.ONE, account1KeyOpt)
     expectedNumOfTxs += 1
 
-    res = mempoolMap.add(account1NonExecTransaction1)
-    assertTrue(
-      "Adding second transaction to same account failed",
-      res.isSuccess
-    )
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding second transaction to same account should not fail
+    res = mempoolMap.add(account1NonExecTransaction1).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 0, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -367,9 +358,9 @@ class MempoolMapTest
     expectedNumOfTxs += 1
     expectedNumOfExecutableTxs = expectedNumOfTxs
 
-    res = mempoolMap.add(account1ExecTransaction0)
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    res = mempoolMap.add(account1ExecTransaction0).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", expectedNumOfExecutableTxs, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -426,10 +417,10 @@ class MempoolMapTest
     expectedNumOfTxs += 1
     expectedNumOfExecutableTxs += 1
 
-    res = mempoolMap.add(account1ExecTransaction1)
-    assertTrue("Adding third transaction to same account failed", res.isSuccess)
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding third transaction to same account should not fail
+    res = mempoolMap.add(account1ExecTransaction1).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 1, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -470,10 +461,10 @@ class MempoolMapTest
     )
     expectedNumOfTxs += 1
 
-    res = mempoolMap.add(account1NonExecTransaction2)
-    assertTrue("Adding transaction to same account failed", res.isSuccess)
-    mempoolMap = res.get._1
-    listOfPromotedTxs = res.get._2
+    // Adding transaction to same account should not fail
+    res = mempoolMap.add(account1NonExecTransaction2).get
+    mempoolMap = res._1
+    listOfPromotedTxs = res._2
     assertEquals("Wrong number of promoted txs", 0, listOfPromotedTxs.size)
     assertEquals("Wrong mem pool size", expectedNumOfTxs, mempoolMap.size)
     assertEquals(
@@ -1260,8 +1251,7 @@ class MempoolMapTest
     var mempoolMap = new MempoolMap(accountStateProvider, baseStateProvider, mempoolSettings)
 
     //Test 1: fill an account with exec txs of 1 slot each. Verify that adding an additional exec tx fails
-    (0 until MaxSlotsPerAccount).foreach(nonce => assertTrue("Adding transaction failed",
-      mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)).isSuccess))
+    (0 until MaxSlotsPerAccount).foreach(nonce => mempoolMap.add(createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt)).get)
     assertEquals("Wrong number of txs in mempool", MaxSlotsPerAccount, mempoolMap.size)
 
     var exceedingTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(MaxSlotsPerAccount), keyOpt = account1KeyOpt)
@@ -1387,10 +1377,10 @@ class MempoolMapTest
     // will evict the oldest already present
     val totalNumOfTxs = MaxMempoolSlots
     val listOfTxsAccount1 = (0 until 5).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account1KeyOpt))
-    listOfTxsAccount1.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+    listOfTxsAccount1.foreach(tx => mempoolMap.add(tx).get)
     val numOfTxsAccount3 = totalNumOfTxs - listOfTxsAccount1.size
     val listOfTxsAccount3 = (0 until numOfTxsAccount3).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = account3KeyOpt))
-    listOfTxsAccount3.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+    listOfTxsAccount3.foreach(tx => mempoolMap.add(tx).get)
 
     assertEquals("Wrong number of txs in mempool", totalNumOfTxs, mempoolMap.size)
     assertEquals("Wrong account 1 size in slots", listOfTxsAccount1.size, mempoolMap.getAccountSlots(account1KeyOpt.get.publicImage()))

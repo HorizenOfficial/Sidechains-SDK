@@ -18,6 +18,7 @@ public class RpcRequest {
 
     private static final List<String> mandatoryFields = List.of("jsonrpc", "id", "method");
     private static final List<String> stringFields = List.of("jsonrpc", "method");
+    private static final String JSON_RPC_VERSION = "2.0";
 
     public RpcRequest(JsonNode json) throws RpcException {
         for (var field : mandatoryFields) {
@@ -31,13 +32,20 @@ public class RpcRequest {
                 throw new RpcException(
                     RpcError.fromCode(RpcCode.InvalidRequest, String.format("field must be string: %s", field)));
             }
+
         }
         try {
             id = new RpcId(json.get("id"));
         } catch (IllegalArgumentException e) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidRequest, e.getMessage()));
         }
+
         jsonrpc = json.get("jsonrpc").asText();
+        // check if the jsonrpc value has the correct version
+        if(!jsonrpc.equals(JSON_RPC_VERSION)) {
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidRequest, "jsonrpc value is not valid"));
+        }
+
         method = json.get("method").asText();
         // params might be null, which is allowed
         params = json.get("params");
