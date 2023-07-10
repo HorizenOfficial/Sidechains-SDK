@@ -306,7 +306,6 @@ abstract class AbstractHistory[
       return Seq()
 
     var indexes: Seq[Int] = Seq()
-
     var step: Int = 1
     // Start at the top of the chain and work backwards.
     var index: Int = height
@@ -321,13 +320,52 @@ abstract class AbstractHistory[
     indexes :+ 1
   }
 
+  // calculate the other node approximate height knowing that the sequence was created using the method knownBlocksHeightToSync
+  private def calculateOtherNodeApproxHeight(startingHeight: Int, sequenceSize: Int): Int = {
+    if (startingHeight == 1) {
+      // It is not possible to calculate the other node best block approximate height in this case.
+      // If the only common block is the genesis one (height 1) it is not possible to correctly calculate the other node
+      // best block because the method knownBlocksHeightToSync used to create the other node sequence always push the
+      // genesis block index at the end of the list and in this way we don't know how many blocks separate the genesis
+      // from the second last sequence index height.
+      -1
+    } else {
+      var currentHeight = startingHeight
+      var currentSequencePosition = sequenceSize - 1
+      var step = 1 // step used in case the input sequence size is > 10
+      while (currentSequencePosition > 0) {
+        if (currentSequencePosition < 10) {
+          currentHeight += 1
+        } else {
+          step *= 2
+          currentHeight += step
+        }
+        currentSequencePosition -= 1
+      }
+      currentHeight
+    }
+  }
+
+  // the method is used to check the presence of forks between two nodes
+  // in this method:
+  //  - we calculate the height of the second last divergent suffix index knowing the other node best block and the divergent suffix sequence size
+  //  - we check that the second last divergent suffix index height is less than our best block
+  // if the height calculated is less than our best block it means that there is a fork between the two nodes
+  private def checkForkAtSecondToLastDivergentSuffixIndex(otherBestKnownBlockHeight: Int, dSuffixSize: Int): Boolean = {
+    val heightAtPreviousIndex = if (dSuffixSize > 10) {
+      otherBestKnownBlockHeight + math.pow(2, dSuffixSize-10).toInt
+    } else {
+      otherBestKnownBlockHeight + dSuffixSize
+    }
+    heightAtPreviousIndex < storage.height
+  }
+
   override def syncInfo: SidechainSyncInfo = {
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
       // return a sequence of block ids for given blocks height backward starting from blockId
       knownBlocksHeightToSync().map(height => storage.activeChainBlockId(height).get)
     )
-
   }
 
   // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlockIds.
@@ -357,7 +395,6 @@ abstract class AbstractHistory[
    */
   override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = {
     val dSuffix = divergentSuffix(other.knownBlockIds)
-
     dSuffix.size match {
       case 0 =>
         // log.warn(Nonsence situation..._)
@@ -368,22 +405,20 @@ abstract class AbstractHistory[
         else
           Younger
       case _ =>
-        val otherBestKnownBlockIndex = dSuffix.size - 1 - dSuffix.reverse.indexWhere(id => storage.heightOf(id).isDefined)
-        val otherBestKnownBlockHeight = storage.heightOf(dSuffix(otherBestKnownBlockIndex)).get
-        // other node height can be approximatly calculated as height of other KNOWN best block height + size of rest unknown blocks after it.
-        // why approximately? see knownBlocksHeightToSync algorithm: blocks to sync step increasing.
-        // to do: need to discuss
-        val otherBestBlockApproxHeight = otherBestKnownBlockHeight + (dSuffix.size - 1 - otherBestKnownBlockIndex)
-        if (storage.height < otherBestBlockApproxHeight)
-          Older
-        else if (storage.height == otherBestBlockApproxHeight) {
-          if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
-            Equal // UPDATE: FORK in both cases
-          else
-            Fork
+        val otherBestKnownBlockHeight = storage.heightOf(dSuffix.head).get
+        val otherBestBlockApproxHeight = calculateOtherNodeApproxHeight(otherBestKnownBlockHeight, dSuffix.size)
+        if(otherBestBlockApproxHeight > 0) {
+          // other node older than the current one
+          if(otherBestBlockApproxHeight > storage.height) {
+            if(checkForkAtSecondToLastDivergentSuffixIndex(otherBestKnownBlockHeight, dSuffix.size))
+              Fork
+            else
+              Older
+          } // default case Fork with other best block height defined
+          else Fork
         }
         else
-          Younger
+          Unknown
     }
   }
 
