@@ -618,9 +618,9 @@ class SidechainHistoryTest extends JUnitSuite
     // The node1 (at height 300) will send the node2 a list with the modifiers ID at the following height:
     // 300 - 299 - 298 - 297 - 296 - 295 - 294 - 293 - 292 - 291 - 289 - 285 - 277 - 261 - 229 - 165 - 37 - 1
     // The divergent suffix list will be the modifiers at the following height (size 17):
-    // 37 - 165 - 229 - 261 - 277 - 285 - 289 - 291 - 292 - 293 - 294 - 295 - 296 - 297 - 298 - 299 - 300
+    // 1 - 37 - 165 - 229 - 261 - 277 - 285 - 289 - 291 - 292 - 293 - 294 - 295 - 296 - 297 - 298 - 299 - 300
     // The internal logic will calculate the second divergent suffix height.
-    // The result (165) is less than the current height (110) and the final result will be an Older status
+    // The result (165) is greater than the current height (160) and the final result will be an Older status
     blocksToAppend = 10
     while (blocksToAppend > 0) {
       val block = generateNextSidechainBlock(history2blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 334456L)
