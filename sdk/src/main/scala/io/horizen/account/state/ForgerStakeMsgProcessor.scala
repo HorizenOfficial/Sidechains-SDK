@@ -94,10 +94,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   }
 
   private def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val nodeToRemoveId = Blake2b256.hash(stakeId)
-
     // remove the data from the linked list
-    uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
+    removeNode(view, stakeId, contractAddress)
 
     // remove the stake
     view.removeAccountStorageBytes(contractAddress, stakeId)

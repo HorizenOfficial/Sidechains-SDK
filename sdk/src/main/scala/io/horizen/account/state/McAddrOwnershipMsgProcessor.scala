@@ -137,13 +137,22 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     view.updateAccountStorageBytes(contractAddress, dataId, serializedData)
   }
 
-  private def uncheckedRemoveMcAddrOwnership(view: BaseAccountStateView, ownershipId: Array[Byte]) : Unit =
+  private def uncheckedRemoveMcAddrOwnership(
+                                              view: BaseAccountStateView,
+                                              ownershipId: Array[Byte],
+                                              scAddressStr: String,
+                                              mcTransparentAddress: String): Unit =
   {
     // we assume that the caller have checked that the address association really exists in the stateDb.
-    val nodeToRemoveId = Blake2b256.hash(ownershipId)
+    val scAddrList = ScAddrOwnershipLinkedList(view, scAddressStr)
+    val dataId = scAddrList.getOwnershipId(mcTransparentAddress)
+    // TODO in case the sc address is not associated to any mc address we should clean it up
+    scAddrList.removeNode(view, dataId, contractAddress)
+    view.removeAccountStorageBytes(contractAddress, dataId)
+
 
     // remove the data from the linked list
-    McAddrOwnershipLinkedList.uncheckedRemoveNode(view, nodeToRemoveId, contractAddress)
+    McAddrOwnershipLinkedList.removeNode(view, ownershipId, contractAddress)
 
     // remove the ownership association
     view.removeAccountStorageBytes(contractAddress, ownershipId)
@@ -289,7 +298,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
         }
 
         // remove the obj from stateDb
-        uncheckedRemoveMcAddrOwnership(view, ownershipId)
+        uncheckedRemoveMcAddrOwnership(view, ownershipId, msg.getFrom.toStringNoPrefix, mcTransparentAddress)
         log.debug(s"Removed ownership from stateDb: ownershipId=${BytesUtils.toHexString(ownershipId)}," +
           s" scAddress=${msg.getFrom}, mcPubKeyBytes=$mcTransparentAddress")
 

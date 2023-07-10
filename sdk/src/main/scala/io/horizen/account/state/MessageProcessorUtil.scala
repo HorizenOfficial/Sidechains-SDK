@@ -137,18 +137,18 @@ object MessageProcessorUtil {
                    contract_address: Address): Unit = {
       val oldTip = view.getAccountStorage(contract_address, listTipKey)
 
-      val newTip = Blake2b256.hash(dataId)
+      val nodeToAddId = Blake2b256.hash(dataId)
 
       // modify previous node (if any) to point at this one
       modifyNode(view, oldTip, contract_address) { previousNode =>
-        LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, newTip)
+        LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToAddId)
       }
 
       // update list tip, now it is this newly added one
-      view.updateAccountStorage(contract_address, listTipKey, newTip)
+      view.updateAccountStorage(contract_address, listTipKey, nodeToAddId)
 
       // store the new node
-      view.updateAccountStorageBytes(contract_address, newTip,
+      view.updateAccountStorageBytes(contract_address, nodeToAddId,
         LinkedListNodeSerializer.toBytes(
           LinkedListNode(dataId, oldTip, listTipNullValue)))
     }
@@ -169,11 +169,12 @@ object MessageProcessorUtil {
         .map(view.updateAccountStorageBytes(contract_address, nodeId, _))
     }
 
-    def uncheckedRemoveNode(view: BaseAccountStateView, nodeToRemoveId: Array[Byte],
-                            contract_address: Address): Unit = {
+    def removeNode(view: BaseAccountStateView, dataId: Array[Byte],
+                   contract_address: Address): Unit = {
 
       // we assume that the caller have checked that the data really exists in the stateDb.
-      // in this case we must necessarily have a linked list node
+      val nodeToRemoveId = Blake2b256.hash(dataId)
+
       val nodeToRemove = getLinkedListNode(view, nodeToRemoveId, contract_address).get
 
       // modify previous node if any

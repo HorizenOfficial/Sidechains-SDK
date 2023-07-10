@@ -364,7 +364,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(63437, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
@@ -958,22 +958,25 @@ class McAddrOwnershipMsgProcessorTest
       createSenderAccount(view, initialAmount, scAddressObj1)
 
       val listOfExpectedData = new util.ArrayList[McAddrOwnershipData]()
-      val numOfOwnerships = 1
 
-      for (i <- 0 until numOfOwnerships) {
-        val mcAddr = listOfMcAddrSign1.get(i)._1
-        val mcSignature = listOfMcAddrSign1.get(i)._2
-        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
 
-        val data: Array[Byte] = cmdInput.encode()
-        val msg = getMessage(contractAddress, BigInteger.ZERO,
-          BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj1)
+      val mcAddr = listOfMcAddrSign1.get(0)._1
+      val mcSignature = listOfMcAddrSign1.get(0)._2
+      val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
 
-        listOfExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+      val data: Array[Byte] = cmdInput.encode()
+      val msg = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data,
+        randomNonce, scAddressObj1
+      )
 
-        val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
-        assertNotNull(returnData)
-      }
+      listOfExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+
+      val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
+      assertNotNull(returnData)
+
 
       val ownershipList = getAllOwnershipList(view)
 
@@ -982,6 +985,20 @@ class McAddrOwnershipMsgProcessorTest
 
       val ownershipList2 = getOwnershipList(view, scAddressObj1)
       assertArrayEquals(expectedListData, ownershipList2)
+
+      // remove first ownership association
+      val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddr))
+      val msg2 = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInput.encode(),
+        randomNonce,
+        scAddressObj1
+      )
+
+      val returnData2 = withGas(messageProcessor.process(msg2, view, _, defaultBlockContext))
+      assertNotNull(returnData2)
+      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
 
       view.commit(bytesToVersion(getVersion.data()))

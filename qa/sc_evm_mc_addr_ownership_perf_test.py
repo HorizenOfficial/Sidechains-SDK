@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import pprint
 from decimal import Decimal
 from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, \
@@ -9,6 +10,7 @@ from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership impor
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.sc_boostrap_info import DEFAULT_MAX_NONCE_GAP
 from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 
 from test_framework.util import (assert_equal, assert_true, forward_transfer_to_sidechain)
@@ -57,15 +59,31 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         mc_node = self.nodes[0]
 
         sc_node2 = self.sc_nodes[1]
-        sc_address2 = sc_node2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
-        # transfer some fund from MC to SC2
-        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
-                                      self.nodes[0],
-                                      sc_address2,
-                                      ft_amount_in_zen,
-                                      self.mc_return_address)
-        self.sc_sync_all()
+        # it may take long time if these numbers are big
+        #num_of_sc_addresses = 50
+        #num_of_association_per_sc = 200
+        num_of_sc_addresses = 15
+        num_of_associations_per_sc = 10
+
+        # this test is meaningful if we have at least 2 associations per sc address
+        assert_true(num_of_sc_addresses > 1)
+
+        total_num_of_associations = num_of_sc_addresses * num_of_associations_per_sc
+        #num_of_sc_addresses = math.ceil(num_of_association/num_of_association_per_sc)
+        scaddr_list = []
+        ft_amount_in_zen_2 = Decimal('5.0')
+
+        for i in range(num_of_sc_addresses):
+            sc_address = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+            scaddr_list.append(sc_address)
+            forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                          self.nodes[0],
+                                          sc_address,
+                                          ft_amount_in_zen_2,
+                                          self.mc_return_address)
+            self.sc_sync_all()
+
 
         self.block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
@@ -84,25 +102,51 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
-        # try adding many mc addresses and forge a block after that
-
-        # this can take long time
-        # num_of_association = 10000
-
-        num_of_association = 200
-        num_of_tx_in_block = 16
         taddr_list = []
         tx_hash_list = []
-        for i in range(num_of_association):
+
+        # we perform a first loop on sc addresses, this is because the very first association has to initialize a
+        # linked list obj and it consumes slightly more gas than adding the other associations
+        for i in range(num_of_sc_addresses):
+            sc_address = scaddr_list[i]
+            sc_address_checksum_fmt = to_checksum_address(sc_address)
+
             taddr = mc_node.getnewaddress()
             taddr_list.append(taddr)
             mc_signature = mc_node.signmessage(taddr, sc_address_checksum_fmt)
 
-            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=i,
+            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=0,
                                                   sc_address=sc_address,
                                                   mc_addr=taddr,
                                                   mc_signature=mc_signature)['transactionId'])
             self.sc_sync_all()
+
+
+        print("Generating new block (i = {})...".format(i))
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # DEFAULT_MAX_NONCE_GAP is the default value of max difference between tx nonce and state nonce allowed by mempool.
+        num_of_tx_in_block = min(num_of_associations_per_sc-1, DEFAULT_MAX_NONCE_GAP)
+
+        nonce_count = 1
+        # this can take long time
+        for i in range(total_num_of_associations-num_of_sc_addresses):
+            if i % (num_of_associations_per_sc - 1) == 0:
+                sc_address = scaddr_list[int(i/(num_of_associations_per_sc-1))]
+                sc_address_checksum_fmt = to_checksum_address(sc_address)
+                nonce_count = 1
+
+            taddr = mc_node.getnewaddress()
+            taddr_list.append(taddr)
+            mc_signature = mc_node.signmessage(taddr, sc_address_checksum_fmt)
+
+            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=nonce_count,
+                                                  sc_address=sc_address,
+                                                  mc_addr=taddr,
+                                                  mc_signature=mc_signature)['transactionId'])
+            self.sc_sync_all()
+            nonce_count += 1
 
             if i % num_of_tx_in_block == 0:
                 print("Generating new block (i = {})...".format(i))
@@ -113,8 +157,8 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         self.sc_sync_all()
 
         # the very first tx uses slightly more gas because it performs the smart contact initialization, therefore we
-        # take the second one and compare it with the last one
-        tx_hash_first = tx_hash_list[1]
+        # take txes from the second round on and compare it with the last one
+        tx_hash_first = tx_hash_list[num_of_sc_addresses]
         tx_hash_last = tx_hash_list[-1]
 
         receipt_first = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_first))
@@ -127,14 +171,36 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
 
         assert_equal(gas_used_first, gas_used_last)
 
-        list_associations_sc_address = getKeysOwnership(sc_node, sc_address=sc_address)
+        method = 'getKeyOwnerships(address)'
+        abi_str = function_signature_to_4byte_selector(method)
 
-        # check we have just one sc address association
-        assert_true(len(list_associations_sc_address['keysOwnership']) == 1)
-        # check we have the expected associations
-        assert_true(len(list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt]) == num_of_association)
-        for taddr in taddr_list:
-            assert_true(taddr in list_associations_sc_address['keysOwnership'][sc_address_checksum_fmt])
+        for sc_addr in scaddr_list:
+            list_associations_sc_address = getKeysOwnership(sc_node, sc_address=sc_addr)
+
+            # check we have just one sc address association
+            assert_true(len(list_associations_sc_address['keysOwnership']) == 1)
+            # check we have the expected associations
+            assert_true(len(list_associations_sc_address['keysOwnership'][to_checksum_address(sc_addr)]) == num_of_associations_per_sc)
+
+            # execute native smart contract for getting sc address associations
+            addr_padded_str = "000000000000000000000000" + sc_addr
+            req = {
+                "from": format_evm(sc_addr),
+                "to": format_evm(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS),
+                "nonce": 3,
+                "gasLimit": 2300000,
+                "gasPrice": 850000000,
+                "value": 0,
+                "data": encode_hex(abi_str) + addr_padded_str
+            }
+            response = sc_node2.rpc_eth_call(req, 'latest')
+            abi_return_value = remove_0x_prefix(response['result'])
+            #print(abi_return_value)
+            result_string_length = len(abi_return_value)
+            # we have an offset of 64 bytes and 11 records with 3 chunks of 32 bytes
+            exp_len = 32 + 32 + num_of_associations_per_sc * (3 * 32)
+            assert_equal(result_string_length, 2 * exp_len)
+
 
         # execute native smart contract for getting all associations
         method = 'getAllKeyOwnerships()'
@@ -150,36 +216,43 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         }
         # currently it may fail with out of gas error if too many data are stored in the native smart contract
         response = sc_node2.rpc_eth_call(req, 'latest')
-        pprint.pprint(response)
-        abi_return_value = remove_0x_prefix(response['result'])
-        # print(abi_return_value)
-        result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes and 'num_of_association' records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + num_of_association * (3 * 32)
-        assert_equal(result_string_length, 2 * exp_len)
-
-        nonce = int(sc_node.rpc_eth_getTransactionCount(self.evm_address, 'latest')['result'], 16)
+        if "error" in response:
+            print("Could not get {} records".format(total_num_of_associations))
+            pprint.pprint(response)
+        else:
+            abi_return_value = remove_0x_prefix(response['result'])
+            # print(abi_return_value)
+            result_string_length = len(abi_return_value)
+            # we have an offset of 64 bytes and 'num_of_association' records with 3 chunks of 32 bytes
+            exp_len = 32 + 32 + total_num_of_associations * (3 * 32)
+            assert_equal(result_string_length, 2 * exp_len)
 
         tx_hash_list = []
-        for i in range(num_of_association):
 
-            tx_hash_list.append(removeKeysOwnership(sc_node, nonce=i + nonce,
-                                                    sc_address=sc_address,
-                                                    mc_addr=taddr_list[i])['transactionId'])
-            self.sc_sync_all()
+        for sc_addr in scaddr_list:
+            list_mc_addresses = getKeysOwnership(sc_node, sc_address=sc_addr)['keysOwnership'][to_checksum_address(sc_addr)]
+            nonce = int(sc_node.rpc_eth_getTransactionCount(to_checksum_address(sc_addr), 'latest')['result'], 16)
 
-            if i % num_of_tx_in_block == 0:
-                print("Generating new block (i = {})...".format(i))
-                generate_next_block(sc_node, "first node")
+            for i in range(len(list_mc_addresses)):
+
+                tx_hash_list.append(removeKeysOwnership(sc_node, nonce=i + nonce,
+                                                        sc_address=sc_addr,
+                                                        mc_addr=list_mc_addresses[i])['transactionId'])
                 self.sc_sync_all()
 
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
+                if i % num_of_tx_in_block == 0:
+                    print("Generating new block (i = {})...".format(i))
+                    generate_next_block(sc_node, "first node")
+                    self.sc_sync_all()
 
-        # the very last tx uses slightly less gas because it kdoes not modify any other element of the internal linked
-        # list, therefore we take the previous one and compare it with the last one
+            generate_next_block(sc_node, "first node")
+            self.sc_sync_all()
+
+        # the very last tx of each linked list uses slightly less gas because it does not modify any other node of the
+        # internal linked list. Moreover the last sc address is the last node of another linked list, therefore
+        # we skip the associations of the last sc address and compare it with the first one
         tx_hash_first = tx_hash_list[0]
-        tx_hash_last = tx_hash_list[-2]
+        tx_hash_last = tx_hash_list[-(num_of_associations_per_sc+1) - 1]
 
         receipt_first = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_first))
         assert_true(int(receipt_first['result']['status'], 16) == 1)
@@ -191,7 +264,7 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
 
         assert_equal(gas_used_first, gas_used_last)
 
-        # check that we really removed all relations
+        # check that we really removed all associations
         list_associations_sc_address = getKeysOwnership(sc_node, sc_address=sc_address)
         pprint.pprint(list_associations_sc_address)
         assert_true(len(list_associations_sc_address['keysOwnership']) == 0)
