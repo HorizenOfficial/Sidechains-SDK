@@ -41,8 +41,7 @@ case class RegTestParams(
                           override val chainId: Long = 1111111,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val getLogsSizeLimit: Int = 10,
-                          override val getLogsQueryTimeout: FiniteDuration = 2.seconds,
+                          override val isHandlingTransactionsEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

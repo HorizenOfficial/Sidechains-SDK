@@ -185,8 +185,8 @@ class AccountWalletTest
     storageList += secret1
     storageList += secret2
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
-    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
-    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeSecretAndNonceAtomic(ArgumentMatchers.any[Secret], ArgumentMatchers.anyInt(),
+      ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
     Mockito.when(mockedSecretStorage.getNonce(ArgumentMatchers.any())).thenReturn(Some(2))
     val privateKey25519Creator = PrivateKey25519Creator.getInstance()
@@ -209,8 +209,8 @@ class AccountWalletTest
   @Test
   def testGenerateSecretsOfDifferentDomainsIndependent(): Unit = {
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
-    Mockito.when(mockedSecretStorage.add(ArgumentMatchers.any[Secret])).thenReturn(Success(mockedSecretStorage))
-    Mockito.when(mockedSecretStorage.storeNonce(ArgumentMatchers.anyInt(), ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
+    Mockito.when(mockedSecretStorage.storeSecretAndNonceAtomic(ArgumentMatchers.any[Secret], ArgumentMatchers.anyInt(),
+      ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(mockedSecretStorage))
 
     val key25519_1 = getPrivateKey25519("seed1".getBytes(StandardCharsets.UTF_8))
     val schnorrKey_1 = getSchnorrKey("seed2".getBytes(StandardCharsets.UTF_8))
@@ -258,7 +258,7 @@ class AccountWalletTest
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storageList.toList)
 
     Assert.assertEquals("Total number of secrets must be 9", 9, storageList.size)
-    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 3, schnorrNonce)
-    Assert.assertEquals("After generating of schnorr secrets schnorr nonce must be 3", 4, key25519Nonce)
+    Assert.assertEquals("After generating schnorr secrets, schnorr nonce must be 3", 3, schnorrNonce)
+    Assert.assertEquals("After generating 25519 key secrets, 25519 key nonce must be 4", 4, key25519Nonce)
   }
 }

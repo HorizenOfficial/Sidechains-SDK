@@ -42,7 +42,7 @@ case class SidechainBlockApiRoute(
     NodeMemoryPool,
     SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params){
 
-  override val route: Route = pathPrefix("block") {
+  override val route: Route = pathPrefix(blockPathPrefix) {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~
       stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo ~ getCurrentHeight
   }
