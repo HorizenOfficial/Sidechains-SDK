@@ -15,6 +15,7 @@ import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
 import io.horizen.utxo.wallet.SidechainWallet
+import io.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
 import io.horizen.{MempoolSettings, SidechainSettings}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
@@ -26,6 +27,7 @@ import sparkz.util.ModifierId
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
 
 class NonCeasingSidechainTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
@@ -43,7 +45,8 @@ class NonCeasingSidechainTest extends JUnitSuite
   var mockedNodeViewHolder: CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool] = _
 
   private val params = MainNetParams(signersThreshold = 2)
-  private val nonCeasingSidechainStrategy = new NonCeasingSidechain(params)
+  private val mainchainChannel = mock[MainchainNodeChannel]
+  private val nonCeasingSidechainStrategy = new NonCeasingSidechain(mainchainChannel,params)
 
   @Before
   def setUp(): Unit = {
@@ -77,12 +80,142 @@ class NonCeasingSidechainTest extends JUnitSuite
 
     val signaturesStatusSuccess = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
 
+    // test - no certificate present
+    when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String])).thenAnswer(
+      _ => Try {
+        TopQualityCertificates(None, None)
+      }
+    )
     assertTrue("Quality check must be successful.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusSuccess))
 
     knownSigs.clear()
     knownSigs.append(CertificateSignatureInfo(0, schnorrSecret1.sign(messageToSign)))
     val signaturesStatusFail = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
     assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(signaturesStatusFail))
+
+    knownSigs.append(CertificateSignatureInfo(1, schnorrSecret2.sign(messageToSign)))
+
+    // test - previous epoch certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          None,
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber - 1, 2))
+        )
+      }
+    })
+    val status = SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs, signersPublicKeys)
+    assertTrue("Quality check must be successful.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - same quality certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          None,
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber, 2))
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - lower quality certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          None,
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber, 1))
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - higher quality certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          None,
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber, 3))
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - next epoch certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          None,
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber + 1, 1))
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    // test - previous epoch certificate present in mempool
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber - 1, 2, 0.0)),
+          None
+        )
+      }
+    })
+    assertTrue("Quality check must be successful.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - same quality certificate present in mempool
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber, 2, 0.0)),
+          None
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - lower quality certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber, 1, 0.0)),
+          None
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - higher quality certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber, 3, 0.0)),
+          None
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - next epoch certificate present
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber + 1, 1, 0.0)),
+          None
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
+
+    //test - next epoch certificate present in mempool, but not in chain
+    Mockito.when(mainchainChannel.getTopQualityCertificates(ArgumentMatchers.any())).thenAnswer(_ => {
+      Try {
+        TopQualityCertificates(
+          Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber + 1, 1, 0.0)),
+          Some(ChainTopQualityCertificateInfo("", referencedEpochNumber, 1))
+        )
+      }
+    })
+    assertFalse("Quality check must fail.", nonCeasingSidechainStrategy.checkQuality(status))
   }
 
   @Test

@@ -1,14 +1,18 @@
 package io.horizen.account.state
 
+import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.consensus.intToConsensusEpochNumber
-import io.horizen.evm.Database
-import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import io.horizen.params.MainNetParams
-import io.horizen.utils.BytesUtils
+import io.horizen.evm._
+import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
+import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.params.NetworkParams
+import io.horizen.utils
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -17,33 +21,50 @@ import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.VersionTag
 
 import java.math.BigInteger
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success}
 
 class AccountStateTest
     extends JUnitSuite
       with SecretFixture
-      with TransactionFixture
+      with EthereumTransactionFixture
       with StoreFixture
       with MockitoSugar
-      with SidechainTypesTestsExtension {
+      with SidechainTypesTestsExtension
+      with ClosableResourceHandler {
 
-  val params: MainNetParams = MainNetParams()
-  var state: AccountState = _
+  val stateDbStorage: Database = new MemoryDatabase
+  var params: NetworkParams = mock[NetworkParams]
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
+  var state: AccountState = _
+
+  private def addMockBalance(account: Address, value: BigInteger) = {
+    val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
+    stateDB.addBalance(account, value)
+    val root = stateDB.commit()
+    stateDB.close()
+    Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(root.toBytes)
+  }
 
   @Before
   def setUp(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+
+    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
     val messageProcessors: Seq[MessageProcessor] = Seq()
 
-    val stateDbStorege: Database = mock[Database]
-    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
+    Mockito.when(params.chainId).thenReturn(1997)
+    Mockito.when(params.consensusSecondsInSlot).thenReturn(120)
+    Mockito.when(params.consensusSlotsInEpoch).thenReturn(720)
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
+    Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
 
     state = new AccountState(
       params,
       MockedHistoryBlockHashProvider,
       versionTag,
       metadataStorage,
-      stateDbStorege,
+      stateDbStorage,
       messageProcessors
     )
   }
@@ -166,5 +187,79 @@ class AccountStateTest
       case Failure(_) =>
       case Success(_) => Assert.fail("Transaction with gas limit greater than block is expected to fail")
     }
+  }
+
+  def testTransactionMaxFeesBelowMinimum(
+      minimumBaseFee: BigInteger,
+      txGasLow: EthereumTransaction,
+      txGasHigh: EthereumTransaction
+  ): Unit = {
+    val activationEpoch = 5
+
+    class MinimumFeeTestFork extends SimpleForkConfigurator {
+      override def getOptionalSidechainForks
+          : java.util.List[utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = {
+        List(
+          new utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+            SidechainForkConsensusEpoch(activationEpoch, activationEpoch, activationEpoch),
+            new GasFeeFork(
+              BigInteger.valueOf(30000000),
+              BigInteger.valueOf(2),
+              BigInteger.valueOf(8),
+              minimumBaseFee
+            )
+          ),
+        ).asJava
+      }
+    }
+    ForkManagerUtil.initializeForkManager(new MinimumFeeTestFork(), "regtest")
+
+    // make sure sender has enough balance to not fail other validation checks
+    addMockBalance(txGasLow.getFromAddress, BigInteger.valueOf(1000000000L))
+    addMockBalance(txGasHigh.getFromAddress, BigInteger.valueOf(1000000000L))
+
+    // before the fork both TX should be valid
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
+    state.validate(txGasLow).get
+    state.validate(txGasHigh).get
+
+    // after the fork the TX with max fee lower than the minimum should be invalid
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(activationEpoch)))
+    assertThrows[IllegalArgumentException](state.validate(txGasLow).get)
+    state.validate(txGasHigh).get
+  }
+
+  @Test
+  def testTransactionMaxFeesBelowMinimumLegacy(): Unit = {
+    // minimum base fee required after fork (before the fork the default is zero)
+    val mininumBaseFee = BigInteger.valueOf(1000)
+
+    val txGasLow = createLegacyTransaction(
+      value = BigInteger.ONE,
+      gasPrice = mininumBaseFee.subtract(BigInteger.ONE),
+    )
+    val txGasHigh = createLegacyTransaction(
+      value = BigInteger.ONE,
+      gasPrice = mininumBaseFee,
+    )
+    testTransactionMaxFeesBelowMinimum(mininumBaseFee, txGasLow, txGasHigh)
+  }
+
+  @Test
+  def testTransactionMaxFeesBelowMinimumEIP1559(): Unit = {
+    // minimum base fee required after fork (before the fork the default is zero)
+    val mininumBaseFee = BigInteger.valueOf(1000)
+
+    val txGasLow = createEIP1559Transaction(
+      value = BigInteger.ONE,
+      gasFee = mininumBaseFee.subtract(BigInteger.ONE),
+      priorityGasFee = mininumBaseFee.divide(BigInteger.TWO)
+    )
+    val txGasHigh = createEIP1559Transaction(
+      value = BigInteger.ONE,
+      gasFee = mininumBaseFee,
+      priorityGasFee = mininumBaseFee.divide(BigInteger.TWO)
+    )
+    testTransactionMaxFeesBelowMinimum(mininumBaseFee, txGasLow, txGasHigh)
   }
 }

@@ -8,15 +8,16 @@ Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zend
 
 * The Cross-Chain Transfer Protocol (CCTP) implementation to support sidechain declaration, forward transfers, backward transfer requests, withdrawal certificates and ceased sidechain withdrawals
 * Basic zk-SNARK threshold signature verification circuit to authenticate withdrawal certificates. See [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
-* Full implementation of the [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)
+* Implementation based on the [Latus Sidechain Model](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf) with signers for certificate submission, and [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) proof of stake protocol
 * Built-in transactions enabling transfers of coins within the sidechain
 * Forging right delegation mechanism
 * HTTP API for basic node operations
-* Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+* Two model supported:
+    * UTXO Model, with extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
+    * Account Model, offering an Ethereum Virtual Machine compatible environment
 * Extensible node API interface
 * Command-line tool to interact with the sidechain node
 * Sidechain Bootstrapping Tool to create and configure a new sidechain network
-* Graphical Wallet allowing easy sidechain creations, forward transfers to sidechain, list of existing sidechains and more: [Sphere by Horizen](https://github.com/HorizenOfficial/Sphere_by_Horizen_Sidechain_Testnet/releases/tag/desktop-v2.0.0-beta-sidechain-testnet).
 
 **Supported platforms**
 
@@ -32,15 +33,16 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 * Maven
 
 On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
-While we keep monitoring the memory footprint of the proofs generation process, we have verified that using Jemalloc library (version 3.x only) instead of Glibc keeps the memory consumption in check. Glibc starting from version 2.26 is affected by this issue. To check and fix this issue on Linux OS follow these steps:
+While we keep monitoring the memory footprint of the proofs generation process, we have verified that using Jemalloc library instead of Glibc keeps the memory consumption in check. Glibc starting from version 2.26 is affected by this issue. To check and fix this issue on Linux OS follow these steps:
  - Check your version of Glibc. To check your version of Glibc on Ubuntu, run the command `ldd --version`
- - Install Jemalloc library. Please remember that only version 3.x of the Jemalloc library is tested and will solve the issue. Jemalloc is available as apt package, just execute the command line:
-	 - `sudo apt-get install libjemalloc1` (Ubuntu)
- - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
+ - Install Jemalloc library only in the case Glibc version is 2.26 or above. Please remember that only versions 3.x and above of the Jemalloc library are tested and will solve the issue. Jemalloc is available as apt package, which is different depending on the Ubuntu version you have. To check which Ubuntu version you have run `lsb_release -a`. Proceed with installing Jemalloc library by executing the command line:
+	 - `sudo apt-get install libjemalloc2` (for Ubuntu versions 20.x and above)
+	 - `sudo apt-get install libjemalloc1` (for Ubuntu versions less than 20.x)
+ - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`. Bear in mind that on Ubuntu 20.x and above the whole process is the same, but the file name should be `libjemalloc.so.2`
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.8.0-SNAPSHOT.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
@@ -99,4 +101,4 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 ## Backward Compatibility
 
 Version 0.7.0 is not backward compatible with any previous versions.
-Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.0 into a >=0.7.0
+Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.1 into a >=0.7.0

@@ -1,12 +1,29 @@
+**0.8.0**
+1. ZenDao native smart contracts
+2. Sidechain2Sidechain message transfers for both UTXO and Account model 
+
+**0.7.1**
+1. Seeder nodes support
+2. PeerToPeer and API rate limiting - tx rebroadcast feature
+3. Sparkz dependency updated to 2.0.2
+4. Minor fixes:
+-- expose app version in  node/info rest api
+-- Account model: fixes in debug_traceTransaction and eth_feeHistory rpc commands
+-- improved logs in certificate submission process
+
+
 **0.7.0**
 1. Account model introduced. EvmApp application example added.
 2. Base package renamed from `com.horizen` to `io.horizen`
 3. Packages overall refactoring, in particular UTXO specific classed moved to `io.horizen.utxo`, Account to `io.horizen.account`. 
 4. Change in the consensus protocol: forger eligibility rule. 
 5. zendoo-sc-cryptolib updated: certificate and CSW circuits were modified (backward incompatible to previous version). 
-6. Sparkz dependency updated from 2.0.0-RC9 to 2.0.0-RC11
+6. Sparkz dependency updated from 2.0.0-RC9 to 2.0.1
 7. Deterministic key generation mechanism changed: all secret keys now deterministic. Ed25519 key generation algorithm modified.
 8. PeerToPeer and API rate limiting
+
+**0.6.1**
+1. Update zendoo-sc-cryptolib to final 0.6.0
 
 **0.6.0**
 1. Sidechain version 2 support with the new circuit type - threshold signature circuit with key rotation.

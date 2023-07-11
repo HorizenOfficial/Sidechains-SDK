@@ -9,6 +9,7 @@ import io.horizen.websocket.client.MainchainNodeChannelImpl.MAX_SIDECHAINS_REQUE
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
+class CertificateAlreadyPresentException() extends Exception()
 
 case class GetBlockByHeightRequestPayload(height: Int) extends RequestPayload
 case class GetBlockByHashRequestPayload(hash: String) extends RequestPayload

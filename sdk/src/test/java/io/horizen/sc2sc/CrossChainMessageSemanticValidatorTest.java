@@ -5,6 +5,7 @@ import org.junit.Test;
 import scala.Array;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -130,13 +131,12 @@ public class CrossChainMessageSemanticValidatorTest {
         when(ccMsg.getReceiver()).thenReturn(BytesUtils.fromHexString("232eb60e9bf07702d02bf0a84ed4ef02232eb60e9bf07702d02bf0a84ed4ef02"));
         when(ccMsg.getPayload())
                 .thenReturn(Array.emptyByteArray())
-                .thenReturn("tooShort".getBytes(StandardCharsets.UTF_8))
-                .thenReturn("tooLongSidechainIdtooLongSidechainIdtooLongSidechainIdtooLongSidechainId".getBytes(StandardCharsets.UTF_8));
+                .thenReturn(getRandomBytes(10001));
 
         CrossChainMessageSemanticValidator validator = new CrossChainMessageSemanticValidator();
 
         // Act
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) {
             Exception exception = assertThrows(IllegalArgumentException.class, () -> validator.validateMessage(ccMsg));
 
             // Assert
@@ -185,5 +185,11 @@ public class CrossChainMessageSemanticValidatorTest {
         } catch (Exception e) {
             fail("Validator not expected to throw exception");
         }
+    }
+
+    public byte[] getRandomBytes(int length) {
+        byte[] val = new byte[length];
+        new Random().nextBytes(val);
+        return val;
     }
 }

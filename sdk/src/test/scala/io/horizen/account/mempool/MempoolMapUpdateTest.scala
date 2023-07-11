@@ -7,7 +7,9 @@ import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creato
 import io.horizen.account.state.{AccountStateReader, AccountStateReaderProvider, BaseStateReaderProvider}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Address
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.state.BaseStateReader
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert._
@@ -49,6 +51,8 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     Mockito.reset(rejectedBlock)
     Mockito.reset(appliedBlock)
 
+    Mockito.when(baseStateViewMock.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(0)))
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test
@@ -311,7 +315,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val listOfTxs = scala.collection.mutable.ListBuffer[SidechainTypes#SCAT](tx0, tx1, tx2, tx3, tx5, tx6)
 
     //initialize mem pool
-    listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
+    listOfTxs.foreach(tx => mempoolMap.add(tx).get)
     //Initial check
     assertEquals(expectedNumOfTxs, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", expectedNumOfTxs, mempoolMap.getMempoolSizeInSlots)
@@ -525,12 +529,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
         .thenReturn(tx14.getNonce)
 
       //Add txs to the mem pool
-      assertTrue(mempoolMap.add(tx14).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx15).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx16).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx18).isSuccess) //non exec
-      assertTrue(mempoolMap.add(tx19).isSuccess) //non exec
-      assertTrue(mempoolMap.add(tx20).isSuccess) //non exec
+      mempoolMap.add(tx14).get //exec
+      mempoolMap.add(tx15).get //exec
+      mempoolMap.add(tx16).get //exec
+      mempoolMap.add(tx18).get //non exec
+      mempoolMap.add(tx19).get //non exec
+      mempoolMap.add(tx20).get //non exec
       assertEquals(6, mempoolMap.size)
       mempoolMap
     }
@@ -745,12 +749,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
         .thenReturn(tx14.getNonce)
 
       //Add txs to the mem pool
-      assertTrue(mempoolMap.add(tx14).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx15).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx16).isSuccess) //exec
-      assertTrue(mempoolMap.add(tx18).isSuccess) //non exec
-      assertTrue(mempoolMap.add(tx19).isSuccess) //non exec
-      assertTrue(mempoolMap.add(tx20).isSuccess) //non exec
+      mempoolMap.add(tx14).get //exec
+      mempoolMap.add(tx15).get //exec
+      mempoolMap.add(tx16).get //exec
+      mempoolMap.add(tx18).get //non exec
+      mempoolMap.add(tx19).get //non exec
+      mempoolMap.add(tx20).get //non exec
       assertEquals(6, mempoolMap.size)
       mempoolMap
     }
@@ -820,9 +824,9 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .thenReturn(BigInteger.valueOf(5))
 
     //Add txs to the mem pool
-    assertTrue(mempoolMap.add(txA3).isSuccess) //exec
-    assertTrue(mempoolMap.add(txA4).isSuccess) //exec
-    assertTrue(mempoolMap.add(txB5).isSuccess) //exec
+    mempoolMap.add(txA3).get //exec
+    mempoolMap.add(txA4).get //exec
+    mempoolMap.add(txB5).get //exec
     assertEquals("Wrong account size in slots", 6, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong number of txs in the mempool", 3, mempoolMap.size)
 
@@ -859,7 +863,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     //Verify that the rejected txs are "younger" than the txs that were already in the mempool.
     //Fill again the mempool and check that the eviction order is the same as the expected age order.
     //First will be evicted the txs that were in the mempool, then the txs reinjected, in reverse order respect the nonce order
-    assertTrue(mempoolMap.add(txA5).isSuccess) //Add 2 slots
+    mempoolMap.add(txA5).get //Add 2 slots
     val orderedTxs: Array[ModifierId] = Array(ModifierId @@ txA4.id, ModifierId @@ txB5.id, ModifierId @@ txB4.id, ModifierId @@ txB3.id, ModifierId @@ txB2.id, ModifierId @@ txB1.id)
     val accountKeyCOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest3".getBytes()))
     (0 to 5).foreach { idx =>
@@ -910,7 +914,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     val listOfTxs = scala.collection.mutable.ListBuffer[SidechainTypes#SCAT](tx1, tx2, tx3, tx5, tx6, tx7, tx8)
 
     //initialize mem pool
-    listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
+    listOfTxs.foreach(tx => mempoolMap.add(tx).get)
     assertEquals("Wrong mempool size in slots", 7, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 3, mempoolMap.mempoolTransactions(true).size)
@@ -955,11 +959,11 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
 
     val accountKeyBOpt: Option[PrivateKeySecp256k1] = Some(PrivateKeySecp256k1Creator.getInstance().generateSecret("mempoolmaptest2".getBytes()))
     val oldestTx = createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.ZERO, keyOpt = accountKeyBOpt)
-    assertTrue("Adding transaction failed", mempoolMap.add(oldestTx).isSuccess)
+    mempoolMap.add(oldestTx).get
 
     //Note to my future self: I don't need to reset state nonce and balance because they are not checked in the add function.
     //initialize mem pool
-    listOfTxs.foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
+    listOfTxs.foreach(tx => mempoolMap.add(tx).get)
     assertEquals("Wrong mempool size in slots", 8, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 4, mempoolMap.getNonExecSubpoolSizeInSlots)
     assertEquals("Wrong number of exec txs", 4, mempoolMap.mempoolTransactions(true).size)
@@ -1000,7 +1004,7 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
       .thenReturn(ZenWeiConverter.MAX_MONEY_IN_WEI) // Has always enough balance
 
     //initialize mem pool
-    Seq(tx0, tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8).foreach(tx => assertTrue(s"Error while adding tx $tx", mempoolMap.add(tx).isSuccess))
+    Seq(tx0, tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8).foreach(tx => mempoolMap.add(tx).get)
     assertEquals("Wrong number of txs in the mempool", 9, mempoolMap.size)
     assertEquals("Wrong mempool size in slots", 9, mempoolMap.getMempoolSizeInSlots)
     assertEquals("Wrong non exec mempool size in slots", 0, mempoolMap.getNonExecSubpoolSizeInSlots)
@@ -1034,12 +1038,12 @@ class MempoolMapUpdateTest extends JUnitSuite with EthereumTransactionFixture wi
     // timed out txs
 
     val listOfTimedoutTxs = (0 to 5).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
-    listOfTimedoutTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+    listOfTimedoutTxs.foreach(tx => mempoolMap.add(tx).get)
 
     Thread.sleep(mempoolSettings.txLifetime.toMillis)
 
     val listOfValidTxs = (6 to 10).map(nonce => createEIP1559Transaction(value = BigInteger.ONE, nonce = BigInteger.valueOf(nonce), keyOpt = accountKeyOpt))
-    listOfValidTxs.foreach(tx => assertTrue("Adding transaction failed", mempoolMap.add(tx).isSuccess))
+    listOfValidTxs.foreach(tx => mempoolMap.add(tx).get)
 
     //initial check
     assertEquals("Wrong number of txs in the mempool", 11, mempoolMap.size)

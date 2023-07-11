@@ -1,6 +1,7 @@
 package io.horizen.account.sc2sc
 
 import io.horizen.account.abi.ABIEncodable
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.sc2sc.CrossChainRedeemMessageSemanticValidator
 import io.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
@@ -27,11 +28,16 @@ case class AccountCrossChainRedeemMessage
   override def serializer: SparkzSerializer[AccountCrossChainRedeemMessage] = AccountCrossChainRedeemMessageSerializer
 
   override def asABIType(): DynamicStruct = {
+    val senderAddressABI = if (sender.length == AddressProposition.LENGTH) new Bytes20(sender)
+    else new Bytes32(sender)
+    val receiverAddressABI = if (receiver.length == AddressProposition.LENGTH) new Bytes20(receiver)
+    else new Bytes32(receiver)
+
     new DynamicStruct(
       new Uint32(messageType),
-      new Bytes20(sender),
+      senderAddressABI,
       new Bytes32(receiverSidechain),
-      new Bytes20(receiver),
+      receiverAddressABI,
       new DynamicBytes(payload),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),

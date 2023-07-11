@@ -48,7 +48,7 @@ public final class CrossChainMessageSemanticValidator {
     }
 
     private void validatePayload(byte[] payload) {
-        if (payload.length > Constants.Sc2Sc$.MODULE$.PAYLOAD_MAX_SIZE()) {
+        if (payload.length == 0 || payload.length > Constants.Sc2Sc$.MODULE$.PAYLOAD_MAX_SIZE()) {
             throw new IllegalArgumentException(PAYLOAD_ERROR_MESSAGE);
         }
     }

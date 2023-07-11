@@ -6,8 +6,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.api.http.route.SidechainNodeRestSchema._
 import io.horizen.json.SerializationUtil
 import org.junit.Assert.{assertEquals, assertNotNull, assertTrue}
+import org.mockito.Mockito.when
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
 class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
@@ -15,6 +17,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
   override val basePath = "/node/"
 
   "The Api should to" should {
+    when(mockedRESTSettings.timeout).thenReturn(5.seconds)
 
     "reply at /info" in {
       Post(basePath + "info").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {

@@ -81,6 +81,7 @@ public class SimpleAppModule extends SidechainAppModule
 
         // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
         int consensusSecondsInSlot = 120;
+        String appVersion = "";
 
         // Create companions that will allow to serialize and deserialize any kind of core and custom types specified.
         SidechainTransactionsCompanion transactionsCompanion = new SidechainTransactionsCompanion(customTransactionSerializers, null);
@@ -173,5 +174,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Integer.class)
                 .annotatedWith(Names.named("ConsensusSecondsInSlot"))
                 .toInstance(consensusSecondsInSlot);
+
+        bind(String.class)
+                .annotatedWith(Names.named("AppVersion"))
+                .toInstance(appVersion);
     }
 }

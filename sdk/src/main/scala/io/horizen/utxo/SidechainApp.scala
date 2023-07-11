@@ -69,7 +69,8 @@ class SidechainApp @Inject()
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
-   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+   @Named("ConsensusSecondsInSlot") secondsInSlot: Int,
+   @Named("AppVersion") appVersion: String
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -197,7 +198,7 @@ class SidechainApp @Inject()
       SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
+  val sidechainBlockForgerActorRef: ActorRef = forge.ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = if (sidechainSettings.apiRateLimiter.enabled) {
@@ -227,19 +228,19 @@ class SidechainApp @Inject()
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  override lazy val coreApiRoutes: Seq[ApiRoute] =
-    Seq(
-      MainchainBlockApiRoute[TX,
-        SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](settings.restApi, nodeViewHolderRef),
-      SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
-      SidechainNodeApiRoute[TX, SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
-      SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
-      SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
-      SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-      SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-      SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params),
-      Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef, sidechainStateStorage)
-    )
+  override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
+    MainchainBlockApiRoute[TX,
+      SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
+    SidechainNodeApiRoute[TX,
+      SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
+    SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params),
+    Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef, sidechainStateStorage)
+  )
 
   val nodeViewProvider: NodeViewProvider[
     TX,

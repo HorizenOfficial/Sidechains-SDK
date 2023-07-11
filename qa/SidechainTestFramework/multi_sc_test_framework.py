@@ -440,7 +440,9 @@ class UTXOSidechainInfo(SidechainInfo):
                  cert_max_keys=7,
                  cert_sig_threshold=5,
                  submitters_private_keys_indexes=[],
-                 magic_bytes=None
+                 magic_bytes=None,
+                 sc2sc_proving_key_file_name=None,
+                 sc2sc_verification_key_file_name=None
                  ):
 
         super().__init__(
@@ -462,7 +464,10 @@ class UTXOSidechainInfo(SidechainInfo):
                          cert_max_keys,
                          cert_sig_threshold,
                          submitters_private_keys_indexes,
-                         magic_bytes)
+                         magic_bytes,
+                        sc2sc_proving_key_file_name,
+                        sc2sc_verification_key_file_name
+        )
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes,

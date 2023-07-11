@@ -155,6 +155,7 @@ class SCNodeConfiguration(object):
                  max_mempool_slots=DEFAULT_MAX_MEMPOOL_SLOTS,
                  max_nonexec_pool_slots=DEFAULT_MAX_NONEXEC_POOL_SLOTS,
                  tx_lifetime=DEFAULT_TX_LIFETIME,
+                 handling_txs_enabled=True,
                  magic_bytes=[12, 34, 56, 78],
                  sc2sc_proving_key_file_path=None,
                  sc2sc_verification_key_file_path=None
@@ -193,6 +194,7 @@ class SCNodeConfiguration(object):
         self.max_mempool_slots = max_mempool_slots
         self.max_nonexec_pool_slots = max_nonexec_pool_slots
         self.tx_lifetime = tx_lifetime
+        self.handling_txs_enabled=handling_txs_enabled
         self.magic_bytes = magic_bytes
         self.sc2sc_proving_key_file_path = sc2sc_proving_key_file_path
         self.sc2sc_verification_key_file_path = sc2sc_verification_key_file_path

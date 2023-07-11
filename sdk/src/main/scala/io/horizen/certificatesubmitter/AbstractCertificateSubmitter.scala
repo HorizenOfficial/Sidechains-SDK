@@ -26,6 +26,8 @@ import io.horizen.transaction.Transaction
 import io.horizen.transaction.mainchain.SidechainCreation
 import io.horizen.utils.BytesUtils
 import io.horizen.wallet.Wallet
+import io.horizen.websocket.client.CertificateAlreadyPresentException
+import sparkz.util.SparkzLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -408,13 +410,15 @@ abstract class AbstractCertificateSubmitter[
                   proofWithQuality.getValue
                 } try to send it to mainchain")
 
-                mainchainChannel.sendCertificate(certificateRequest) match {
-                  case Success(certificate) =>
-                    log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
+                if (submissionStrategy.checkQuality(status))
+                  mainchainChannel.sendCertificate(certificateRequest) match {
+                    case Success(certificate) =>
+                      log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
-                  case Failure(ex) =>
-                    log.error("Creation of backward transfer certificate had been failed.", ex)
-                }
+                    case Failure(ex) =>
+                      log.error("Creation of backward transfer certificate had been failed.", ex)
+                  }
+
                 context.system.eventStream.publish(CertificateSubmissionStopped)
               }
             }).start()

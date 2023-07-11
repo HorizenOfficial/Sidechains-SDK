@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.TransactionBaseApiRoute
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, TransactionBaseApiRoute}
 import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
@@ -55,7 +55,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
-  override val route: Route = pathPrefix("transaction") {
+  override val route: Route = pathPrefix(transactionPathPrefix) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
     sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~
       createOpenStakeTransaction ~ createOpenStakeTransactionSimplified ~ createKeyRotationTransaction
@@ -673,8 +673,25 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
 
+  override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+    if (!params.isHandlingTransactionsEnabled) {
+      val error = Some(ErrorNotEnabledOnSeederNode.description)
+      Seq(
+        (transactionPathPrefix, "createCoreTransaction", error),
+        (transactionPathPrefix, "createCoreTransactionSimplified", error),
+        (transactionPathPrefix, "sendCoinsToAddress", error),
+        (transactionPathPrefix, "sendTransaction", error),
+        (transactionPathPrefix, "withdrawCoins", error),
+        (transactionPathPrefix, "makeForgerStake", error),
+        (transactionPathPrefix, "spendForgingStake", error),
+        (transactionPathPrefix, "createOpenStakeTransactionSimplified", error),
+        (transactionPathPrefix, "createOpenStakeTransaction", error),
+        (transactionPathPrefix, "createKeyRotationTransaction", error),
+      )
+    } else
+      Seq.empty
+  }
 }
-
 
 object SidechainTransactionRestScheme {
 

@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.javadsl.Sink
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
-import io.horizen.api.http.route.SidechainRejectionApiRoute
+import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
@@ -161,6 +161,7 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.regtestId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
       sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
       sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
@@ -191,6 +192,7 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.testnetId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
       sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
       sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
@@ -221,6 +223,7 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.mainnetId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
       sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
       sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
@@ -329,10 +332,18 @@ abstract class AbstractSidechainApp
 
   val coreApiRoutes: Seq[ApiRoute]
 
+  // disabledApiRoutes is the list of endpoints from coreApiRoutes that may need to be disabled when certain criteria
+  // are met (e.g. seeder node)
+  lazy val disabledApiRoutes: Seq[SidechainRejectionApiRoute] = coreApiRoutes.flatMap{
+    case route: DisableApiRoute => route.listOfDisabledEndpoints(params).map{case (prefix, path, errOpt) =>
+      SidechainRejectionApiRoute(prefix, path, settings.restApi, nodeViewHolderRef, errOpt)}
+    case _ => Seq.empty[SidechainRejectionApiRoute]}
+
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
   lazy override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
     .union(rejectedApiRoutes)
+    .union(disabledApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
 

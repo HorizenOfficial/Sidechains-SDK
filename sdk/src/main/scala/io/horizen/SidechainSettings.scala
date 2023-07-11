@@ -94,6 +94,16 @@ case class EthServiceSettings(
      * might require more gas than is ever required during a transaction.
      */
     globalRpcGasCap: BigInteger = BigInteger.valueOf(50000000),
+
+    /**
+     * Size limit of the number of results returned by the RPC call eth_getLogs
+     */
+    getLogsSizeLimit: Int = 10000,
+
+    /**
+     * Timeout limit for the RPC call eth_getLogs
+     */
+    getLogsQueryTimeout: FiniteDuration = 10.seconds
 ) extends SensitiveStringer
 
 // Default values are the same as in Geth/Erigon
@@ -153,4 +163,8 @@ case class SidechainSettings(
     accountMempool: AccountMempoolSettings,
     apiRateLimiter: ApiRateLimiterSettings,
     sc2sc: Sc2ScSettings
-)
+){
+  require(sparkzSettings.network.handlingTransactionsEnabled || !forger.automaticForging,
+    s"Node that does not support transaction handling cannot be a forger node: " +
+      s"automaticForging: ${forger.automaticForging}")
+}

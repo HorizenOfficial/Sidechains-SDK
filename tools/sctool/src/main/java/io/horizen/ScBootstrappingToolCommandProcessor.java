@@ -939,14 +939,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, null, circuitType,0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, 10000, FiniteDuration.apply(10, TimeUnit.SECONDS));
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true);
             case 2: // regtest
-                // TODO: these values are just temporary and will be discarded once SDK-1143 (Fork manager for sc2sc) will be merged
-                Option<String> temporarySc2ScProvingKeyPath = Option.apply("tmpProvingPath");
-                Option<String> temporarySc2ScVerificationKeyPath = Option.apply("tmpVerificationPath");
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, temporarySc2ScProvingKeyPath, temporarySc2ScVerificationKeyPath, false, null, null, 11111111,true, false, 10, FiniteDuration.apply(2, TimeUnit.SECONDS));
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, null, circuitType, 0, null, null, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

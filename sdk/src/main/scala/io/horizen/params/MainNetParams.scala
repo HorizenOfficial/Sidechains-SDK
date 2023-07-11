@@ -42,8 +42,7 @@ case class MainNetParams(
                           override val chainId: Long = 33333333,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val getLogsSizeLimit: Int = 10000,
-                          override val getLogsQueryTimeout: FiniteDuration = 10.seconds,
+                          override val isHandlingTransactionsEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

@@ -278,9 +278,9 @@ class AccountState(
   }
 
   private def validateTopQualityCertificate(
-                                             topQualityCertificate: WithdrawalEpochCertificate,
-                                             stateView: AccountStateView
-                                           ): Unit = {
+      topQualityCertificate: WithdrawalEpochCertificate,
+      stateView: AccountStateView
+  ): Unit = {
 
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 
@@ -501,32 +501,34 @@ class AccountState(
     }
 
     ethTx.semanticValidity()
+    val sender = ethTx.getFrom.address()
 
     val feeFork = GasFeeFork.get(stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
     if (feeFork.blockGasLimit.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${feeFork.blockGasLimit}")
 
+    if (feeFork.baseFeeMinimum.compareTo(ethTx.getMaxFeePerGas) > 0)
+      throw new IllegalArgumentException(s"max fee per gas below minimum: address $sender, maxFeePerGas ${ethTx.getMaxFeePerGas}, minimum ${feeFork.baseFeeMinimum}")
+
     using(getView) { stateView =>
-      //Check the nonce
-      val sender = ethTx.getFrom.address()
-      val stateNonce = stateView.getNonce(sender)
-      if (stateNonce.compareTo(ethTx.getNonce) > 0) {
-        throw NonceTooLowException(sender, ethTx.getNonce, stateNonce)
+        // Check the nonce
+        val stateNonce = stateView.getNonce(sender)
+        if (stateNonce.compareTo(ethTx.getNonce) > 0) {
+          throw NonceTooLowException(sender, ethTx.getNonce, stateNonce)
+        }
+
+        // Check the balance
+        val maxTxCost = ethTx.maxCost
+        val currentBalance = stateView.getBalance(sender)
+        if (currentBalance.compareTo(maxTxCost) < 0) {
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
+        }
+
+        // Check that the sender is an EOA
+        if (!stateView.isEoaAccount(sender))
+          throw SenderNotEoaException(sender, stateView.getCodeHash(sender))
+
       }
-      //Check the balance
-
-      val maxTxCost = ethTx.maxCost()
-
-      val currentBalance = stateView.getBalance(sender)
-      if (currentBalance.compareTo(maxTxCost) < 0) {
-        throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost ${ethTx.maxCost}")
-      }
-
-      // Check that the sender is an EOA
-      if (!stateView.isEoaAccount(sender))
-        throw SenderNotEoaException(sender, stateView.getCodeHash(sender))
-
-    }
   } recoverWith { case t =>
     log.debug(s"Not valid transaction ${tx.id}", t)
     Failure(t)
