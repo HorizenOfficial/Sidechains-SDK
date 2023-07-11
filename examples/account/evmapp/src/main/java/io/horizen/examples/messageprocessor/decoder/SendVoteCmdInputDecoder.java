@@ -4,6 +4,7 @@ import io.horizen.account.abi.ABIDecoder;
 import io.horizen.account.sc2sc.AccountCrossChainMessage;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.Utils;
+import org.web3j.abi.datatypes.DynamicBytes;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.generated.Bytes20;
 import org.web3j.abi.datatypes.generated.Bytes32;
@@ -22,7 +23,7 @@ public class SendVoteCmdInputDecoder implements ABIDecoder<AccountCrossChainMess
                 new TypeReference<Bytes20>() {},
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes20>() {},
-                new TypeReference<Bytes32>() {}
+                new TypeReference<DynamicBytes>() {}
         ));
     }
 
@@ -32,7 +33,7 @@ public class SendVoteCmdInputDecoder implements ABIDecoder<AccountCrossChainMess
         byte[] sender = ((Bytes20) listOfParams.get(1)).getValue();
         byte[] receiverSidechain = ((Bytes32) listOfParams.get(2)).getValue();
         byte[] receiver = ((Bytes20) listOfParams.get(3)).getValue();
-        byte[] payload = ((Bytes32) listOfParams.get(4)).getValue();
+        byte[] payload = ((DynamicBytes) listOfParams.get(4)).getValue();
 
         return new AccountCrossChainMessage(messageType, sender, receiverSidechain, receiver, payload);
     }

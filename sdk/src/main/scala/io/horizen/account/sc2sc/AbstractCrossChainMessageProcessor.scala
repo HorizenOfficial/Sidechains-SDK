@@ -11,7 +11,7 @@ import io.horizen.evm.Address
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainProtocolVersion}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.Uint32
-import org.web3j.abi.datatypes.{StaticStruct, Type}
+import org.web3j.abi.datatypes.{DynamicStruct, StaticStruct, Type}
 import sparkz.crypto.hash.Keccak256
 
 import java.util
@@ -163,8 +163,8 @@ case class GetListOfCrosschainMessagesInputCmd(epochNum: Int) extends ABIEncodab
   }
 }
 
-object CrosschainMessagesListEncoder extends ABIListEncoder[AccountCrossChainMessage, StaticStruct]{
-  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
+object CrosschainMessagesListEncoder extends ABIListEncoder[AccountCrossChainMessage, DynamicStruct]{
+  override def getAbiClass: Class[DynamicStruct] = classOf[DynamicStruct]
 }
 
 abstract class CrossChainMessageProcessorConstants {

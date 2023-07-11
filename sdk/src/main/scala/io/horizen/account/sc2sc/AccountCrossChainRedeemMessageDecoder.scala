@@ -3,7 +3,7 @@ package io.horizen.account.sc2sc
 import io.horizen.account.abi.ABIDecoder
 import io.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
-import org.web3j.abi.datatypes.{Type, Utf8String}
+import org.web3j.abi.datatypes.{DynamicBytes, Type, Utf8String}
 import org.web3j.abi.{TypeReference, Utils}
 
 import java.util
@@ -15,7 +15,7 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
       new TypeReference[Bytes20]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes20]() {},
-      new TypeReference[Bytes32]() {},
+      new TypeReference[DynamicBytes]() {},
 
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {},
@@ -30,7 +30,7 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
     val sender = listOfParams.get(1).asInstanceOf[Bytes20].getValue
     val receiverSidechain = listOfParams.get(2).asInstanceOf[Bytes32].getValue
     val receiver = listOfParams.get(3).asInstanceOf[Bytes20].getValue
-    val payload = listOfParams.get(4).asInstanceOf[Bytes32].getValue
+    val payload = listOfParams.get(4).asInstanceOf[DynamicBytes].getValue
 
     val certificateDataHash = listOfParams.get(5).asInstanceOf[Bytes32].getValue
     val nextCertificateDataHash = listOfParams.get(6).asInstanceOf[Bytes32].getValue

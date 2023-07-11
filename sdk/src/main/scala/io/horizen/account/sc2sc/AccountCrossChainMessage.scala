@@ -3,7 +3,7 @@ package io.horizen.account.sc2sc
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.sc2sc.CrossChainMessageSemanticValidator
-import org.web3j.abi.datatypes.StaticStruct
+import org.web3j.abi.datatypes.{DynamicBytes, DynamicStruct, StaticStruct}
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -15,7 +15,7 @@ case class AccountCrossChainMessage
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
   payload: Array[Byte]
-) extends BytesSerializable with ABIEncodable[StaticStruct] {
+) extends BytesSerializable with ABIEncodable[DynamicStruct] {
 
   override type M = AccountCrossChainMessage
 
@@ -23,17 +23,17 @@ case class AccountCrossChainMessage
 
   override def serializer: SparkzSerializer[AccountCrossChainMessage] = AccountCrossChainMessageSerializer
 
-  private[horizen] def asABIType(): StaticStruct = {
+  private[horizen] def asABIType(): DynamicStruct = {
     val senderAddressABI = if (sender.length == AddressProposition.LENGTH) new Bytes20(sender)
                            else new Bytes32(sender)
     val receiverAddressABI = if (receiver.length == AddressProposition.LENGTH) new Bytes20(receiver)
                              else new Bytes32(receiver)
-    new StaticStruct(
+    new DynamicStruct(
       new Uint32(messageType),
       senderAddressABI,
       new Bytes32(receiverSidechain),
       receiverAddressABI,
-      new Bytes32(payload)
+      new DynamicBytes(payload)
     )
   }
 

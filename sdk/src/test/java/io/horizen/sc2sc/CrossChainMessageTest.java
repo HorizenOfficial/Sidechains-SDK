@@ -30,7 +30,7 @@ public class CrossChainMessageTest {
         sender = getRandomBytes(PublicKey25519Proposition.getLength());
         receiverSidechain = getRandomBytes(Constants.SIDECHAIN_ID_SIZE());
         receiver = getRandomBytes(AddressProposition.LENGTH);
-        payload = getRandomBytes(Constants.Sc2Sc$.MODULE$.PAYLOAD());
+        payload = getRandomBytes(Constants.Sc2Sc$.MODULE$.PAYLOAD_MAX_SIZE());
 
         randomHash = getRandomBytes(32);
     }

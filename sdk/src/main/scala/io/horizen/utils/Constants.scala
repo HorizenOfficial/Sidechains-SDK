@@ -6,6 +6,6 @@ object Constants {
   val SC_COMMITMENT_TREE_ROOT_SIZE = 32
 
   object Sc2Sc {
-    val PAYLOAD = 32
+    val PAYLOAD_MAX_SIZE = 10000
   }
 }

@@ -11,7 +11,7 @@ public final class CrossChainMessageSemanticValidator {
     public final static String RECEIVER_SIDECHAIN_ID_ERROR_MESSAGE = "Receiver sidechain id must be 32 bytes long";
     public final static String SENDER_ADDRESS_ERROR_MESSAGE = "Sender address length is not correct";
     public final static String RECEIVER_ADDRESS_ERROR_MESSAGE = "Receiver address length is not correct";
-    public final static String PAYLOAD_ERROR_MESSAGE = "Payload hash must be 32 bytes long";
+    public final static String PAYLOAD_ERROR_MESSAGE = "Payload must not be longer than 10K bytes";
 
     public void validateMessage(CrossChainMessage msg) {
         validateMsgType(msg.getMessageType());
@@ -48,7 +48,7 @@ public final class CrossChainMessageSemanticValidator {
     }
 
     private void validatePayload(byte[] payload) {
-        if (payload.length != Constants.Sc2Sc$.MODULE$.PAYLOAD()) {
+        if (payload.length > Constants.Sc2Sc$.MODULE$.PAYLOAD_MAX_SIZE()) {
             throw new IllegalArgumentException(PAYLOAD_ERROR_MESSAGE);
         }
     }
