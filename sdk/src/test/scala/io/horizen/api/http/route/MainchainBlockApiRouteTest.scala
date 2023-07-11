@@ -8,9 +8,11 @@ import io.horizen.chain.MainchainBlockReferenceInfo
 import io.horizen.json.SerializationUtil
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
+import org.mockito.Mockito.when
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.DurationInt
 
 class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 
@@ -45,6 +47,8 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /bestBlockReferenceInfo" in {
+      when(mockedRESTSettings.timeout).thenReturn(5.seconds)
+
       Post(basePath + "bestBlockReferenceInfo") ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
