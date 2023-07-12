@@ -121,7 +121,7 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
             generate_next_block(sc_utxo_node, "")
             time.sleep(15)
 
-        time.sleep(100)
+        time.sleep(40)
 
         redeem_message = \
             createRedeemMessage(sc_utxo_node, 1, 1, sc_utxo_id, public_key_user_x, sc_evm_id, hex_evm_addr_user_y.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130')["result"]["redeemMessage"]

@@ -5,7 +5,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.sc2sc.CrossChainRedeemMessageSemanticValidator
 import io.horizen.utils.BytesUtils
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
-import org.web3j.abi.datatypes.{DynamicBytes, DynamicStruct, Utf8String}
+import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -38,7 +38,7 @@ case class AccountCrossChainRedeemMessage
       senderAddressABI,
       new Bytes32(receiverSidechain),
       receiverAddressABI,
-      new DynamicBytes(payload),
+      new Utf8String(payload.map(_.toChar).mkString),
       new Bytes32(certificateDataHash),
       new Bytes32(nextCertificateDataHash),
       new Bytes32(scCommitmentTreeRoot),

@@ -23,7 +23,7 @@ public final class CrossChainMessage implements BytesSerializable {
     private final byte[] receiver;
     private final byte[] payload;
 
-    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[]  receiver, byte[] payload) {
+    public CrossChainMessage(CrossChainProtocolVersion version, int msgType, byte[] senderSidechain, byte[]  sender, byte[] receiverSidechain, byte[] receiver, byte[] payload) {
         this.version = version;
         this.messageType = msgType;
         this.senderSidechain = senderSidechain;

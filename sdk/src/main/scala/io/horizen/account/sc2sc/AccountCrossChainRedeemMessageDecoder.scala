@@ -6,6 +6,7 @@ import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
 import org.web3j.abi.datatypes.{DynamicBytes, Type, Utf8String}
 import org.web3j.abi.{TypeReference, Utils}
 
+import java.nio.charset.StandardCharsets
 import java.util
 
 object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChainRedeemMessage] {
@@ -15,7 +16,7 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
       new TypeReference[Bytes20]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes20]() {},
-      new TypeReference[DynamicBytes]() {},
+      new TypeReference[Utf8String]() {},
 
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes32]() {},
@@ -30,7 +31,8 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
     val sender = listOfParams.get(1).asInstanceOf[Bytes20].getValue
     val receiverSidechain = listOfParams.get(2).asInstanceOf[Bytes32].getValue
     val receiver = listOfParams.get(3).asInstanceOf[Bytes20].getValue
-    val payload = listOfParams.get(4).asInstanceOf[DynamicBytes].getValue
+    val payloadAsString = listOfParams.get(4).asInstanceOf[Utf8String].getValue
+    val payload = payloadAsString.getBytes(StandardCharsets.UTF_8)
 
     val certificateDataHash = listOfParams.get(5).asInstanceOf[Bytes32].getValue
     val nextCertificateDataHash = listOfParams.get(6).asInstanceOf[Bytes32].getValue

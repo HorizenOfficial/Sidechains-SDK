@@ -21,6 +21,7 @@ import io.horizen.utxo.node._
 import io.horizen.utxo.storage.SidechainStateStorage
 import sparkz.core.settings.RESTApiSettings
 
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
@@ -67,7 +68,7 @@ case class Sc2scApiRoute(override val settings: RESTApiSettings,
               BytesUtils.fromHexString(body.message.sender),
               BytesUtils.fromHexString(body.message.receiverSidechain),
               BytesUtils.fromHexString(body.message.receiver),
-              BytesUtils.fromHexString(body.message.payload)
+              body.message.payload.getBytes(StandardCharsets.UTF_8)
             )
 
             val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)

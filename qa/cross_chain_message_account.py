@@ -104,7 +104,8 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
         assert_equal(consensus_epoch_data["bestEpochNumber"], 20)
 
         ## CREATE CROSS CHAIN MESSAGE
-        tx_data = sendVoteMessage(sc_evm1_node, 1, hex_evm_addr_user_x, sc_evm2_id, hex_evm_addr_user_y, 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130')
+        vote = "8"
+        tx_data = sendVoteMessage(sc_evm1_node, 1, hex_evm_addr_user_x, sc_evm2_id, hex_evm_addr_user_y, vote)
 
         createEIP1559Transaction(sc_evm1_node,
                                  fromAddress=hex_evm_addr_user_x.lower(),
@@ -129,10 +130,10 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
             generate_next_block(sc_evm1_node, "")
             time.sleep(15)
 
-        time.sleep(100)
+        time.sleep(40)
 
         redeem_message = \
-            createAccountRedeemMessage(sc_evm1_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130', sc_evm1_id)["result"]["redeemMessage"]
+            createAccountRedeemMessage(sc_evm1_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote, sc_evm1_id)["result"]["redeemMessage"]
 
         for _ in range(2):
             generate_next_blocks(sc_evm2_node, "fist_node", 5)
@@ -145,7 +146,7 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
         sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
         next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
         proof = redeem_message['proof']
-        redeem_tx_data = redeemVoteMessage(sc_evm2_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130',
+        redeem_tx_data = redeemVoteMessage(sc_evm2_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote,
                                            cert_data_hash, next_cert_data_hash, sc_commitment_tree,
                                            next_sc_commitment_tree, proof)
 

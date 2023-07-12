@@ -14,6 +14,7 @@ import io.horizen.examples.messageprocessor.VoteMessageProcessor;
 import io.horizen.examples.messageprocessor.VoteRedeemMessageProcessor;
 import io.horizen.utils.BytesUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +39,7 @@ public class VoteController extends AccountApplicationApiGroup {
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                BytesUtils.fromHexString(request.getPayload())
+                request.getPayload().getBytes(StandardCharsets.UTF_8)
         );
         byte[] data = Bytes.concat(BytesUtils.fromHexString(VoteMessageProcessor.SEND_VOTE), ccMsg.encode());
         return new SuccessResponseTx(BytesUtils.toHexString(data));
@@ -50,7 +51,7 @@ public class VoteController extends AccountApplicationApiGroup {
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
-                BytesUtils.fromHexString(request.getPayload()),
+                request.getPayload().getBytes(StandardCharsets.UTF_8),
                 BytesUtils.fromHexString(request.getCertificateDataHash()),
                 BytesUtils.fromHexString(request.getNextCertificateDataHash()),
                 BytesUtils.fromHexString(request.getScCommitmentTreeRoot()),

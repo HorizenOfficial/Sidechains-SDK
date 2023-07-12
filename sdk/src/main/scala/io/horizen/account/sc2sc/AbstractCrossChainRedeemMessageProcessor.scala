@@ -5,6 +5,7 @@ import io.horizen.account.state.events.AddCrossChainRedeemMessage
 import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
+import io.horizen.json.SerializationUtil
 import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.utils.BytesUtils
 import sparkz.crypto.hash.Keccak256
@@ -39,6 +40,9 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     accCcRedeemMessage.encode()
   }
 
+  def getAllCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Seq[CrossChainMessage] =
+    getCrossChainMessagesByAddress(address, view)
+
   private def addCrossChainRedeemMessageLogEvent(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
     val event = AddCrossChainRedeemMessage(
       new Address(accCcRedeemMessage.sender),
@@ -57,7 +61,8 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def addCrossChainMessageToView(view: BaseAccountStateView, ccMsg: CrossChainMessage): Unit = {
     val messageHash = ccMsg.getCrossChainMessageHash
-    setCrossChainMessageHash(messageHash, view)
+    setCrossChainMessageByHash(messageHash, view)
+    setCrossChainMessageByAddress(ccMsg, view)
   }
 
   /**
@@ -133,13 +138,28 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     }
   }
 
+  private def setCrossChainMessageByAddress(ccMsg: CrossChainMessage, view: BaseAccountStateView): Unit = {
+    val address = ccMsg.getReceiver
+    val currentMsgs = getCrossChainMessagesByAddress(address, view)
+    val updatedMsgs = currentMsgs :+ ccMsg
+    view.updateAccountStorage(contractAddress, address, SerializationUtil.serializeObject(updatedMsgs))
+  }
+
+  private def getCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Seq[CrossChainMessage] = {
+    val ccMsgBytes = view.getAccountStorage(contractAddress, address)
+    SerializationUtil.deserializeObject(ccMsgBytes) match {
+      case Some(seq) => seq
+      case _ => Seq()
+    }
+  }
+
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
     Keccak256.hash(keySeed)
 
   private[sc2sc] def getCrossChainMessageFromRedeemKey(hash: Array[Byte]): Array[Byte] =
     calculateKey(Bytes.concat("crossChainMessageFromRedeem".getBytes(StandardCharsets.UTF_8), hash))
 
-  private def setCrossChainMessageHash(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Unit =
+  private def setCrossChainMessageByHash(messageHash: CrossChainMessageHash, view: BaseAccountStateView): Unit =
     view.updateAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(messageHash.getValue), messageHash.getValue)
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean =

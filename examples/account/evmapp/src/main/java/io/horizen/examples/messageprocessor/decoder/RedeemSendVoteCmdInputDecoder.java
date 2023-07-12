@@ -5,13 +5,13 @@ import io.horizen.account.sc2sc.AccountCrossChainRedeemMessage;
 import io.horizen.utils.BytesUtils;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.Utils;
-import org.web3j.abi.datatypes.DynamicBytes;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.abi.datatypes.generated.Bytes20;
 import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint32;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
                 new TypeReference<Bytes20>() {},
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes20>() {},
-                new TypeReference<DynamicBytes>() {},
+                new TypeReference<Utf8String>() {},
 
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes32>() {},
@@ -39,7 +39,8 @@ public class RedeemSendVoteCmdInputDecoder implements ABIDecoder<AccountCrossCha
         byte[] sender = ((Bytes20) listOfParams.get(1)).getValue();
         byte[] receiverSidechain = ((Bytes32) listOfParams.get(2)).getValue();
         byte[] receiver = ((Bytes20) listOfParams.get(3)).getValue();
-        byte[] payload = ((DynamicBytes) listOfParams.get(4)).getValue();
+        String payloadAsString = ((Utf8String) listOfParams.get(4)).getValue();
+        byte[] payload = payloadAsString.getBytes(StandardCharsets.UTF_8);
 
         byte[] certificateDataHash = ((Bytes32) listOfParams.get(5)).getValue();
         byte[] nextCertificateDataHash = ((Bytes32) listOfParams.get(6)).getValue();

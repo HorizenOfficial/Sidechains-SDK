@@ -29,6 +29,7 @@ import io.horizen.utxo.node.NodeMemoryPool;
 import io.horizen.utxo.node.SidechainNodeView;
 import io.horizen.utxo.transaction.BoxTransaction;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class VoteController extends SidechainApplicationApiGroup {
@@ -64,7 +65,7 @@ public class VoteController extends SidechainApplicationApiGroup {
                     VOTING_MESSAGE_TYPE,
                     BytesUtils.fromHexString(request.getReceivingSidechain()),
                     BytesUtils.fromHexString(request.getReceivingAddress()),
-                    BytesUtils.fromHexString(request.getVote())
+                    request.getVote().getBytes(StandardCharsets.UTF_8)
             );
 
             // Try to collect regular boxes to pay fee
@@ -154,7 +155,7 @@ public class VoteController extends SidechainApplicationApiGroup {
                     BytesUtils.fromHexString(request.getSender()),
                     BytesUtils.fromHexString(request.getReceiverSidechain()),
                     BytesUtils.fromHexString(request.getReceiver()),
-                    BytesUtils.fromHexString(request.getPayload())
+                    request.getPayload().getBytes(StandardCharsets.UTF_8)
             );
 
             CrossChainRedeemMessage redeemMessage = new CrossChainRedeemMessageImpl(

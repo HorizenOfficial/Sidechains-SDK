@@ -3,8 +3,8 @@ package io.horizen.account.sc2sc
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.sc2sc.CrossChainMessageSemanticValidator
-import org.web3j.abi.datatypes.{DynamicBytes, DynamicStruct, StaticStruct}
 import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
+import org.web3j.abi.datatypes.{DynamicStruct, Utf8String}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -33,7 +33,7 @@ case class AccountCrossChainMessage
       senderAddressABI,
       new Bytes32(receiverSidechain),
       receiverAddressABI,
-      new DynamicBytes(payload)
+      new Utf8String(payload.map(_.toChar).mkString)
     )
   }
 
@@ -44,7 +44,7 @@ case class AccountCrossChainMessage
       case that: AccountCrossChainMessage =>
         messageType == that.messageType && sender.sameElements(that.sender) &&
           receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
-          payload.sameElements(that.payload)
+          payload == that.payload
 
       case _ => false
     }

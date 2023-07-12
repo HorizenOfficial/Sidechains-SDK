@@ -8,6 +8,7 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utxo.box.CrossChainMessageBox;
 import sparkz.crypto.hash.Blake2b256;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey25519Proposition, CrossChainMessageBox, CrossChainMessageBoxData> {
@@ -79,7 +80,7 @@ public final class CrossChainMessageBoxData extends AbstractBoxData<PublicKey255
                 ", messageType=" + messageType +
                 ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
                 ", receiverAddress=" + BytesUtils.toHexString(receiverAddress) +
-                ", payload=" + BytesUtils.toHexString(payload) +
+                ", payload=" + new String(payload, StandardCharsets.UTF_8) +
                 '}';
     }
 }

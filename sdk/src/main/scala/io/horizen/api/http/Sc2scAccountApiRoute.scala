@@ -22,6 +22,7 @@ import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node._
 import sparkz.core.settings.RESTApiSettings
 
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
@@ -61,7 +62,7 @@ case class Sc2scAccountApiRoute(override val settings: RESTApiSettings,
               BytesUtils.fromHexString(body.message.sender),
               BytesUtils.fromHexString(body.message.receiverSidechain),
               BytesUtils.fromHexString(body.message.receiver),
-              BytesUtils.fromHexString(body.message.payload)
+              body.message.payload.getBytes(StandardCharsets.UTF_8)
             )
 
             val crossChainMessage = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accountCcMsg, BytesUtils.fromHexString(body.scId))

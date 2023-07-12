@@ -35,10 +35,10 @@ public final class CrossChainMessageBoxDataSerializer implements BoxDataSerializ
     public CrossChainMessageBoxData parse(Reader reader) {
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parse(reader);
         CrossChainProtocolVersion protocolVersion = CrossChainProtocolVersion.fromShort(reader.getShort());
-        Integer messageType = reader.getInt();
-        byte[]  receiverSidechain = reader.getBytes(reader.getInt());
-        byte[]  receiverAddress = reader.getBytes(reader.getInt());
-        byte[]  payload = reader.getBytes(reader.getInt());
+        int messageType = reader.getInt();
+        byte[] receiverSidechain = reader.getBytes(reader.getInt());
+        byte[] receiverAddress = reader.getBytes(reader.getInt());
+        byte[] payload = reader.getBytes(reader.getInt());
         return new CrossChainMessageBoxData(proposition, protocolVersion, messageType, receiverSidechain, receiverAddress, payload);
     }
 }
