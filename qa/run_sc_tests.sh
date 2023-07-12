@@ -121,6 +121,7 @@ testScriptsEvm=(
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
+    'sc_evm_mc_addr_ownership_perf_test.py'
     'sc_evm_seedernode.py'
 );
 

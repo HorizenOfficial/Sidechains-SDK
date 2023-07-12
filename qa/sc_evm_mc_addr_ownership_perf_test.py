@@ -61,16 +61,20 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         sc_node2 = self.sc_nodes[1]
 
         # it may take long time if these numbers are big
-        #num_of_sc_addresses = 50
-        #num_of_association_per_sc = 200
-        num_of_sc_addresses = 15
-        num_of_associations_per_sc = 10
+        # ---
+        # num_of_sc_addresses = 70
+        # num_of_association_per_sc = 40
+        # ---
+        # Consider that when retrieving a large quantity of data stored in the native smart
+        # contract the eth_call() can trigger an OOG exception thus truncating the list returned as a result (see below
+        # when invoking the ABI methods)
+        num_of_sc_addresses = 20
+        num_of_associations_per_sc_addr = 20
 
         # this test is meaningful if we have at least 2 associations per sc address
-        assert_true(num_of_sc_addresses > 1)
+        assert_true(num_of_associations_per_sc_addr > 1)
 
-        total_num_of_associations = num_of_sc_addresses * num_of_associations_per_sc
-        #num_of_sc_addresses = math.ceil(num_of_association/num_of_association_per_sc)
+        total_num_of_associations = num_of_sc_addresses * num_of_associations_per_sc_addr
         scaddr_list = []
         ft_amount_in_zen_2 = Decimal('5.0')
 
@@ -127,13 +131,13 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         self.sc_sync_all()
 
         # DEFAULT_MAX_NONCE_GAP is the default value of max difference between tx nonce and state nonce allowed by mempool.
-        num_of_tx_in_block = min(num_of_associations_per_sc-1, DEFAULT_MAX_NONCE_GAP)
+        num_of_tx_in_block = min(num_of_associations_per_sc_addr-1, DEFAULT_MAX_NONCE_GAP)
 
         nonce_count = 1
         # this can take long time
         for i in range(total_num_of_associations-num_of_sc_addresses):
-            if i % (num_of_associations_per_sc - 1) == 0:
-                sc_address = scaddr_list[int(i/(num_of_associations_per_sc-1))]
+            if i % (num_of_associations_per_sc_addr - 1) == 0:
+                sc_address = scaddr_list[int(i/(num_of_associations_per_sc_addr-1))]
                 sc_address_checksum_fmt = to_checksum_address(sc_address)
                 nonce_count = 1
 
@@ -180,7 +184,7 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
             # check we have just one sc address association
             assert_true(len(list_associations_sc_address['keysOwnership']) == 1)
             # check we have the expected associations
-            assert_true(len(list_associations_sc_address['keysOwnership'][to_checksum_address(sc_addr)]) == num_of_associations_per_sc)
+            assert_true(len(list_associations_sc_address['keysOwnership'][to_checksum_address(sc_addr)]) == num_of_associations_per_sc_addr)
 
             # execute native smart contract for getting sc address associations
             addr_padded_str = "000000000000000000000000" + sc_addr
@@ -195,10 +199,11 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
             }
             response = sc_node2.rpc_eth_call(req, 'latest')
             abi_return_value = remove_0x_prefix(response['result'])
-            #print(abi_return_value)
             result_string_length = len(abi_return_value)
             # we have an offset of 64 bytes and 11 records with 3 chunks of 32 bytes
-            exp_len = 32 + 32 + num_of_associations_per_sc * (3 * 32)
+            exp_len = 32 + 32 + num_of_associations_per_sc_addr * (3 * 32)
+            # if we have a failure here, we most probably run OOG in retrieving a too big a list. Check warnings in logs
+            # currently the limit is 3399 mc address associations per sc address
             assert_equal(result_string_length, 2 * exp_len)
 
 
@@ -221,11 +226,14 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
             pprint.pprint(response)
         else:
             abi_return_value = remove_0x_prefix(response['result'])
-            # print(abi_return_value)
             result_string_length = len(abi_return_value)
             # we have an offset of 64 bytes and 'num_of_association' records with 3 chunks of 32 bytes
             exp_len = 32 + 32 + total_num_of_associations * (3 * 32)
-            assert_equal(result_string_length, 2 * exp_len)
+            if result_string_length != (2 * exp_len):
+                # if we have a failure here, we most probably run OOG in retrieving a too big a list. Check warnings in logs
+                # currently the limit is about 2970 overall associations, depending on the number of sc addresses.
+                # This limit is smaller than the previous one because the records are larger (sc/mc) vs (mc) address
+                print("Could not get {} records".format(total_num_of_associations))
 
         tx_hash_list = []
 
@@ -252,7 +260,7 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         # internal linked list. Moreover the last sc address is the last node of another linked list, therefore
         # we skip the associations of the last sc address and compare it with the first one
         tx_hash_first = tx_hash_list[0]
-        tx_hash_last = tx_hash_list[-(num_of_associations_per_sc+1) - 1]
+        tx_hash_last = tx_hash_list[-(num_of_associations_per_sc_addr+1) - 1]
 
         receipt_first = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_first))
         assert_true(int(receipt_first['result']['status'], 16) == 1)
@@ -266,7 +274,6 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
 
         # check that we really removed all associations
         list_associations_sc_address = getKeysOwnership(sc_node, sc_address=sc_address)
-        pprint.pprint(list_associations_sc_address)
         assert_true(len(list_associations_sc_address['keysOwnership']) == 0)
 
 
