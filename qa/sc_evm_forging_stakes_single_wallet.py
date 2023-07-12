@@ -21,6 +21,7 @@ Test:
     - Send FTs to SC1 (used for forging delegation)
     - SC1 delegates to itself until the number of delegations is met
     - Check all delegated stakes can be retrieved
+    - Additional infinite loop commented at the bottom to test breaking point
 
 """
 
