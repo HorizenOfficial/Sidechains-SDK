@@ -44,7 +44,7 @@ case class AccountCrossChainMessage
       case that: AccountCrossChainMessage =>
         messageType == that.messageType && sender.sameElements(that.sender) &&
           receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
-          payload == that.payload
+          payload.sameElements(that.payload)
 
       case _ => false
     }
