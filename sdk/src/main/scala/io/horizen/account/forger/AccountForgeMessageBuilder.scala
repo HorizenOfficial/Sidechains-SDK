@@ -152,7 +152,7 @@ class AccountForgeMessageBuilder(
             priceAndNonceIter.next()
 
           case Failure(err) =>
-            log.debug(s"Could not apply tx, reason: ${err.getMessage}")
+            log.debug(s"Could not apply tx ${tx.id}, reason: ${err.getMessage}")
             err match {
               case _: GasLimitReached =>
                 // block gas limit reached

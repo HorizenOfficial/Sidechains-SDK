@@ -5,20 +5,20 @@ import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTR
 
 import scala.util.{Failure, Success}
 
-object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
+object ScAddressRefsLinkedList extends NativeSmartContractLinkedList {
 
-  override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipsLinkedListTipKey
-  override val listTipNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.OwnershipLinkedListNullValue
+  override val listTipKey: Array[Byte] = McAddrOwnershipMsgProcessor.ScAddressRefsLinkedListTipKey
+  override val listTipNullValue: Array[Byte] = McAddrOwnershipMsgProcessor.ScAddressRefsLinkedListNullValue
 
-  def getOwnershipData(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[McAddrOwnershipData] = {
-    val data = view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, ownershipId)
+  def getScAddressRefData(view: BaseAccountStateView, scRefId: Array[Byte]): Option[OwnerScAddress] = {
+    val data = view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, scRefId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
       // gives an empty array instead
       None
     } else {
-      McAddrOwnershipDataSerializer.parseBytesTry(data) match {
+      OwnerScAddressSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
           throw new ExecutionRevertedException("Error while parsing forger data.", exception)
@@ -26,18 +26,17 @@ object McAddrOwnershipLinkedList extends NativeSmartContractLinkedList {
     }
   }
 
-  def getOwnershipListItem(view: BaseAccountStateView, nodeRef: Array[Byte]): (McAddrOwnershipData, Array[Byte]) = {
+  def getScAddresRefsListItem(view: BaseAccountStateView, nodeRef: Array[Byte]): (OwnerScAddress, Array[Byte]) = {
     if (!linkedListNodeRefIsNull(nodeRef)) {
 
       val node = getLinkedListNode(view, nodeRef, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)
         .orElse(throw new ExecutionRevertedException("Could not find a valid node"))
 
-      val ownershipData = getOwnershipData(view, node.get.dataKey)
+      val listItem =  getScAddressRefData(view, node.get.dataKey)
         .orElse(throw new ExecutionRevertedException("Could not find valid data"))
 
-      val listItem = McAddrOwnershipData(ownershipData.get.scAddress, ownershipData.get.mcTransparentAddress)
       val prevNodeKey = node.get.previousNodeKey
-      (listItem, prevNodeKey)
+      (listItem.get, prevNodeKey)
     } else {
       throw new ExecutionRevertedException("Tip has the null value, no list here")
     }

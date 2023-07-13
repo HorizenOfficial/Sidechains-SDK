@@ -142,6 +142,7 @@ class McAddrOwnershipMsgProcessorTest
     assertEquals("Wrong MethodId for RemoveOwnershipCmd", "9183c0da", McAddrOwnershipMsgProcessor.RemoveOwnershipCmd)
     assertEquals("Wrong MethodId for GetListOfAllOwnershipsCmd", "8ef05457", McAddrOwnershipMsgProcessor.GetListOfAllOwnershipsCmd)
     assertEquals("Wrong MethodId for GetListOfOwnershipsCmd", "169e2d15", McAddrOwnershipMsgProcessor.GetListOfOwnershipsCmd)
+    assertEquals("Wrong MethodId for GetListOfOwnerScAddressesCmd", "b97a1cf2", McAddrOwnershipMsgProcessor.GetListOfOwnerScAddressesCmd)
   }
 
   @Test
@@ -307,7 +308,7 @@ class McAddrOwnershipMsgProcessorTest
       val expectedOwnershipId = Keccak256.hash(mcAddrStr1.getBytes(StandardCharsets.UTF_8))
 
       // positive case, verify we can add the data to view
-      val returnData = assertGas(357937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
@@ -342,7 +343,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val returnData2 = assertGas(355737, msg2, view, messageProcessor, defaultBlockContext)
+      val returnData2 = assertGas(362037, msg2, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
       println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
@@ -364,7 +365,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(57037, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(63437, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
       println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
@@ -631,7 +632,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(357937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
 
@@ -768,7 +769,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(357937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
       val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddrStr1))

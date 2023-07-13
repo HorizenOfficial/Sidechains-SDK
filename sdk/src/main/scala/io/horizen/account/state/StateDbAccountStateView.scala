@@ -69,6 +69,9 @@ class StateDbAccountStateView(
   override def getListOfMcAddrOwnerships(scAddressOpt: Option[String]): Seq[McAddrOwnershipData] =
     mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this, scAddressOpt)
 
+  override def getListOfOwnerScAddresses(): Seq[OwnerScAddress] =
+    mcAddrOwnershipProvider.getListOfOwnerScAddresses(this)
+
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 

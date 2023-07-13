@@ -190,7 +190,7 @@ object MessageProcessorUtil {
         view.updateAccountStorage(contract_address, listTipKey, nodeToRemove.previousNodeKey)
       }
 
-      // remove the node from the linked list
+      // remove the node from the storage
       view.removeAccountStorageBytes(contract_address, nodeToRemoveId)
     }
 

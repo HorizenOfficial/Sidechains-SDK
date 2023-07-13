@@ -5,7 +5,7 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipLinkedList._
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -31,7 +31,7 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
 trait McAddrOwnershipsProvider {
   private[horizen] def getListOfMcAddrOwnerships(view: BaseAccountStateView, scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData]
-
+  private[horizen] def getListOfOwnerScAddresses(view: BaseAccountStateView): Seq[OwnerScAddress]
   private[horizen] def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean
 }
 
@@ -83,6 +83,15 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     view.updateAccountStorage(contractAddress, OwnershipsLinkedListTipKey, OwnershipLinkedListNullValue)
+
+    // set the initial value for the linked list last element (null hash)
+    //-------
+    if (!view.getAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey).sameElements(NULL_HEX_STRING_32)) {
+      val errorMsg = s"Sc Initial tip already set, overwriting it!! "
+      log.warn(errorMsg)
+    }
+    view.updateAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey, ScAddressRefsLinkedListNullValue)
+
   }
 
   override def canProcess(msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
@@ -340,6 +349,44 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     McAddrOwnershipDataListEncoder.encode(ownershipList.asJava)
   }
 
+  def doGetListOfOwnerScAddressesCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    // check we have no other bytes after the op code in the msg data
+    if (getArgumentsFromData(msg.getData).length > 0) {
+      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_ID_LENGTH"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
+    }
+
+    val ownershipList = getListOfOwnerScAddresses(view)
+    OwnerScAddrListEncoder.encode(ownershipList.asJava)
+
+  }
+
+  override def getListOfOwnerScAddresses(view: BaseAccountStateView): Seq[OwnerScAddress] = {
+    var ownerScAddresses = Seq[OwnerScAddress]()
+
+    var nodeReference = view.getAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey)
+    if (nodeReference.sameElements(NULL_HEX_STRING_32))
+      return ownerScAddresses
+
+    try {
+      while (!ScAddressRefsLinkedList.linkedListNodeRefIsNull(nodeReference)) {
+        val (item: OwnerScAddress, prevNodeReference: Array[Byte]) = ScAddressRefsLinkedList.getScAddresRefsListItem(view, nodeReference)
+        ownerScAddresses = item +: ownerScAddresses
+        nodeReference = prevNodeReference
+      }
+    } catch {
+      case e: OutOfGasException =>
+        log.warn(s"OOG exception thrown after getting ${ownerScAddresses.length} elements!", e)
+    }
+
+    ownerScAddresses
+  }
+
   override def getListOfMcAddrOwnerships(view: BaseAccountStateView, scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = {
     var ownershipsList = Seq[McAddrOwnershipData]()
 
@@ -399,7 +446,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   private def getExistingAssociation(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[String] = {
-    findOwnershipData(view, ownershipId) match {
+    getOwnershipData(view, ownershipId) match {
       case None => None
       case Some(obj) => Some(obj.scAddress)
     }
@@ -426,6 +473,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       case RemoveOwnershipCmd => doRemoveOwnershipCmd(msg, gasView)
       case GetListOfAllOwnershipsCmd => doGetListOfAllOwnershipsCmd(msg, gasView)
       case GetListOfOwnershipsCmd => doGetListOfOwnershipsCmd(msg, gasView)
+      case GetListOfOwnerScAddressesCmd => doGetListOfOwnerScAddressesCmd(msg, gasView)
 
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
@@ -438,10 +486,14 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
   val OwnershipsLinkedListTipKey: Array[Byte] = Blake2b256.hash("OwnershipTipKey")
   val OwnershipLinkedListNullValue: Array[Byte] = Blake2b256.hash("OwnershipTipNullValue")
 
+  val ScAddressRefsLinkedListTipKey: Array[Byte] = Blake2b256.hash("ScAddrRefsTip")
+  val ScAddressRefsLinkedListNullValue: Array[Byte] = Blake2b256.hash("ScAddressRefsLinkedListNull")
+
   val AddNewOwnershipCmd: String = getABIMethodId("sendKeysOwnership(bytes3,bytes32,bytes24,bytes32,bytes32)")
   val RemoveOwnershipCmd: String = getABIMethodId("removeKeysOwnership(bytes3,bytes32)")
   val GetListOfAllOwnershipsCmd: String = getABIMethodId("getAllKeyOwnerships()")
   val GetListOfOwnershipsCmd: String = getABIMethodId("getKeyOwnerships(address)")
+  val GetListOfOwnerScAddressesCmd: String = getABIMethodId("getKeyOwnerScAddresses()")
 
   // ecdsa curve y^2 mod p = (x^3 + 7) mod p
   val ecParameters: X9ECParameters = SECNamedCurves.getByName("secp256k1")
@@ -451,7 +503,8 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     AddNewOwnershipCmd.length == 2 * METHOD_ID_LENGTH &&
     RemoveOwnershipCmd.length == 2 * METHOD_ID_LENGTH &&
     GetListOfAllOwnershipsCmd.length == 2 * METHOD_ID_LENGTH &&
-    GetListOfOwnershipsCmd.length == 2 * METHOD_ID_LENGTH
+    GetListOfOwnershipsCmd.length == 2 * METHOD_ID_LENGTH &&
+    GetListOfOwnerScAddressesCmd.length == 2 * METHOD_ID_LENGTH
   )
 
   def getOwnershipId(mcAddress: String): Array[Byte] = {
