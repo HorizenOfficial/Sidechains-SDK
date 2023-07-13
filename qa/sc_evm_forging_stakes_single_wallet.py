@@ -2,6 +2,9 @@
 import json
 import logging
 from decimal import Decimal
+import hashlib
+from eth_hash.auto import keccak
+from eth_abi import decode
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
@@ -25,22 +28,30 @@ Test:
 
 """
 
-def getSignerStakeAmount(myInfoList, inSignerAddress):
-    sum = 0
-    for entry in myInfoList:
-        signerAddress = entry['forgerStakeData']['forgerPublicKeys']['blockSignPublicKey']['publicKey']
-        if signerAddress == inSignerAddress:
-            sum += entry['forgerStakeData']['stakedAmount']
-    # print("Sum = {}, address={}".format(sum, inSignerAddress))
-    return sum
+def get_function_selector(function_signature):
+    return keccak(function_signature.encode('utf-8'))[:4].hex()
 
 class SCEvmForgingStakes(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1, forward_amount=99, block_timestamp_rewind=720 * 120 * 10)
 
+    def raw_encode_call(self, function_name: str, *args):
+        """Can be used to encode *args for function_name
+            Params:
+                function_name: The name of the function including parentheses and input types
+                *args: the arguments to encode
+
+            Returns:
+                A bytestring of the encoded function
+        """
+        if function_name not in self.Functions:
+            raise RuntimeError("Function {} does not exist on contract {}".format(function_name, self.Name))
+        else:
+            return self.Functions[function_name].encode(*args)
+
     def run_test(self):
-        # Configuration
-        number_of_stakes = 10000
+        # Configuration 
+        number_of_stakes = 2970
         max_nonces_per_wallet = 16
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
@@ -78,6 +89,12 @@ class SCEvmForgingStakes(AccountChainSetup):
         # Delegate all the stakes
         forgerStake_amount = 0.00001  # Zen
 
+        # Generate request data
+        request = {
+            "to": "0x0000000000000000000022222222222222222222",
+            "data": "0xf6ad3c23"
+        }
+
         while stakes_created < number_of_stakes:
             # Create a stake
             result = ac_makeForgerStake(sc_node_1, wallet, sc1_blockSignPubKey, sc1_vrfPubKey, convertZenToZennies(forgerStake_amount), wallet_nonce)
@@ -92,6 +109,20 @@ class SCEvmForgingStakes(AccountChainSetup):
                 generate_next_block(sc_node_1, "first node")
                 self.sc_sync_all()
 
+            if (wallet_nonce + 1) % (max_nonces_per_wallet*10) == 0 and wallet_nonce != 0:
+                try:
+                    response = sc_node_1.rpc_eth_call(request, "latest")
+                    if 'result' in response:
+                        response_bytes = bytes.fromhex(response['result'][2:])
+                        decoded_response = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)[]'], response_bytes)
+                        logging.info(f"Successfully retrieved {len(decoded_response[0])} forger stakes")
+                    elif 'error' in response:
+                        raise Exception(f"Error in rpc_eth_call: {response['error']['message']}")
+                    else:
+                        raise Exception("rpc_eth_call no result in response")
+                except Exception as e:
+                    raise Exception("There was a problem fetching allForgingStakes: " + str(e))
+
             # Update our counts
             stakes_created += 1
             wallet_nonce += 1
@@ -102,12 +133,16 @@ class SCEvmForgingStakes(AccountChainSetup):
 
         # We have a total of number_of_stakes+1 stake ids, the genesis creation and the txes just forged
         try:
-            stakeList = sc_node_1.transaction_allForgingStakes()['result']['stakes']
+            response = sc_node_1.rpc_eth_call(request, "latest")
+            if 'result' in response:
+                response_bytes = bytes.fromhex(response['result'][2:])
+                decoded_response = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)[]'], response_bytes)
+                logging.info(f"Successfully retrieved {len(decoded_response[0])} forger stakes")
         except Exception as e:
             raise Exception("There was a problem fetching allForgingStakes: " + str(e))
 
         # pprint.pprint(stakeList)
-        assert_equal(number_of_stakes + 1, len(stakeList))
+        assert_equal(number_of_stakes + 1, len(decoded_response[0]))
 
 
         # # Continue sending transactions and getting forging stake list until it breaks
@@ -130,17 +165,18 @@ class SCEvmForgingStakes(AccountChainSetup):
         #         stakes_created += 1
         #         wallet_nonce += 1
 
-        #     # Generate SC block
-        #     generate_next_block(sc_node_1, "first node")
-        #     self.sc_sync_all()
-
-        #     try:
-        #         stakeList = sc_node_1.transaction_allForgingStakes()['result']['stakes']
-        #         assert_equal(stakes_created + 1, len(stakeList))
-        #         logging.info(f"Successfully retrieved {stakes_created + 1} stakes!")
-        #     except Exception as e:
-        #         raise Exception("There was a problem fetching allForgingStakes: " + str(e))
-
+        #         try:
+        #             response = sc_node_1.rpc_eth_call(request, "latest")
+        #             if 'result' in response:
+        #                 response_bytes = bytes.fromhex(response['result'][2:])
+        #                 decoded_response = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)[]'], response_bytes)
+        #                 logging.info(f"Successfully retrieved {len(decoded_response[0])} forger stakes")
+        #             elif 'error' in response:
+        #                 raise Exception(f"Error in rpc_eth_call: {response['error']['message']}")
+        #             else:
+        #                 raise Exception("rpc_eth_call no result in response")
+        #         except Exception as e:
+        #             raise Exception("There was a problem fetching allForgingStakes: " + str(e))
 
 if __name__ == "__main__":
     SCEvmForgingStakes().main()
