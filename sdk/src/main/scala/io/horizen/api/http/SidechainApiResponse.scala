@@ -2,10 +2,9 @@ package io.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode, StatusCodes}
 import akka.http.scaladsl.server.{Directives, Route}
-import JacksonSupport._
-import scala.language.implicitConversions
 
 import scala.concurrent.Future
+import scala.language.implicitConversions
 
 class SidechainApiResponse(statusCode: StatusCode) {
 

@@ -1,12 +1,12 @@
 package io.horizen.utxo.storage
 
 import io.horizen.SidechainTypes
-import io.horizen.utxo.companion._
 import io.horizen.fixtures._
 import io.horizen.storage.Storage
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, Pair}
 import io.horizen.utxo.box.{BoxSerializer, ZenBox}
+import io.horizen.utxo.companion._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxChild, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.wallet.{WalletBox, WalletBoxSerializer}
@@ -39,8 +39,8 @@ class SidechainWalletBoxStorageTest
 
   var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap(), false)
 
   @Before
   def setUp() : Unit = {

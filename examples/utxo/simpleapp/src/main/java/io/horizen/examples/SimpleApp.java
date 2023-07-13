@@ -1,10 +1,8 @@
 package io.horizen.examples;
 
-import io.horizen.utxo.SidechainApp;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-
+import io.horizen.utxo.SidechainApp;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

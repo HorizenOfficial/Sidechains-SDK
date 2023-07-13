@@ -1,15 +1,15 @@
 package io.horizen
 
 import io.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
-
-import language.implicitConversions
-import java.util.{List => JList}
 import io.horizen.proof.Proof
 import io.horizen.proposition.Proposition
 import io.horizen.secret.Secret
-import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import io.horizen.utxo.box.data.BoxData
+import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import io.horizen.utxo.transaction.{BoxTransaction, SidechainTransaction}
+
+import java.util.{List => JList}
+import scala.language.implicitConversions
 
 trait SidechainTypes {
 

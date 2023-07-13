@@ -2,11 +2,11 @@ package io.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.params.NetworkParams
 import io.horizen.utxo.block.SidechainBlock
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.{SidechainSettings, WebSocketClientSettings}
 import org.junit.Test
 import org.mockito.Mockito.when

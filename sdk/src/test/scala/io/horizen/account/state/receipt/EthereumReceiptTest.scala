@@ -1,8 +1,8 @@
 package io.horizen.account.state.receipt
 
 import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import io.horizen.utils.BytesUtils
 import io.horizen.evm.TrieHasher
+import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite

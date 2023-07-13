@@ -1,10 +1,9 @@
 package io.horizen.fixtures.sidechainblock.generation
 
 import com.google.common.primitives.{Ints, Longs}
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block._
-import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
@@ -19,10 +18,11 @@ import io.horizen.utils._
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.box.data.ForgerBoxData
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.transaction.SidechainTransaction
 import io.horizen.vrf._
-import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
@@ -539,6 +539,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val signersThreshold: Int = params.signersThreshold
       override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
       override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
+      override val sc2ScProvingKeyFilePath: Option[String] = params.sc2ScProvingKeyFilePath
+      override val sc2ScVerificationKeyFilePath: Option[String] = params.sc2ScVerificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32) //calculate if we need for some reason that data
       override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
       override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()

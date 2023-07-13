@@ -7,6 +7,7 @@ import io.horizen.utils.Ed25519
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+
 import java.nio.charset.StandardCharsets
 import java.util
 

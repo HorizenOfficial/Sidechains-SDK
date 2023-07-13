@@ -3,15 +3,15 @@ package io.horizen.utxo.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import io.horizen.SidechainTypes
 import io.horizen.block._
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.history.validation.InconsistentSidechainBlockDataException
+import io.horizen.json.Views
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import io.horizen.secret.PrivateKey25519
-import io.horizen.json.Views
 import io.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
 import io.horizen.utxo.box.Box
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.transaction.SidechainTransaction
 import io.horizen.utxo.utils.BlockFeeInfo
 import sparkz.core.block.Block

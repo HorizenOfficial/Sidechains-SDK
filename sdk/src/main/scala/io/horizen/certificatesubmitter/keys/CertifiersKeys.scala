@@ -1,14 +1,13 @@
 package io.horizen.certificatesubmitter.keys
 
 import com.fasterxml.jackson.annotation.JsonView
-import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import io.horizen.json.Views
+import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import io.horizen.utils.ListSerializer
-import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scala.collection.JavaConverters._
+import sparkz.util.serialization.{Reader, Writer}
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters._
 @JsonView(Array(classOf[Views.Default]))
 case class CertifiersKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vector[SchnorrProposition]) extends BytesSerializable {
   override type M = CertifiersKeys

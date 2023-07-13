@@ -8,6 +8,7 @@ import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.sc2sc.{ScTxCommitmentTreeRootHashMessageProcessor, ScTxCommitmentTreeRootHashMessageProvider}
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state._
 import io.horizen.account.state.receipt.EthereumReceipt
@@ -365,6 +366,8 @@ case class AccountMockDataHelper(genesis: Boolean)
         msgProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
       override lazy val forgerStakesProvider: ForgerStakesProvider =
         msgProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
+      override lazy val scTxCommTreeRootProvider: Option[ScTxCommitmentTreeRootHashMessageProvider] =
+        Some(ScTxCommitmentTreeRootHashMessageProcessor)
 
       override def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult = {
         new ProofAccountResult(
@@ -384,6 +387,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(state.getView).thenReturn(stateView)
     Mockito.when(state.getView.getTransactionReceipt(any())).thenReturn(None)
     Mockito.when(state.getView.getTransactionReceipt(txHash)).thenReturn(Some(receipt))
+    Mockito.when(state.getView.getConsensusEpochNumber).thenReturn(None)
     if (state.getView != null) {
       Mockito.when(state.getView.getBalance(any())).thenReturn(BigInteger.valueOf(99999999999999999L))
       Mockito

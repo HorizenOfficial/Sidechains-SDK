@@ -1,11 +1,9 @@
 package io.horizen.forge
 
-import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, byteArrayToMainchainHeaderHash}
+import io.horizen.block.{MainchainBlockReference, MainchainHeader}
+import io.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import io.horizen.history.AbstractHistory
-import io.horizen.storage.AbstractHistoryStorage
-import io.horizen.utils.BytesUtils
-import io.horizen.utils._
+import io.horizen.utils.{BytesUtils, _}
 import io.horizen.websocket.client.MainchainNodeChannel
 
 import scala.collection.mutable.ListBuffer

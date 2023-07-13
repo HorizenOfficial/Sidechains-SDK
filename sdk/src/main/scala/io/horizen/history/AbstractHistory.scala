@@ -2,7 +2,7 @@ package io.horizen.history
 
 import io.horizen.SidechainSyncInfo
 import io.horizen.account.state.HistoryBlockHashProvider
-import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase, MainchainHeaderHash => McHeaderHash}
 import io.horizen.chain._
 import io.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
@@ -466,11 +466,11 @@ abstract class AbstractHistory[
     storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
   }
 
-  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: Array[Byte]): Optional[MainchainBlockReference] = {
+  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: McHeaderHash): Optional[MainchainBlockReference] = {
     storage.getMainchainBlockReferenceByHash(mainchainHeaderHash).asJava
   }
 
-  override def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): Optional[MainchainHeader] = {
+  override def getMainchainHeaderByHash(mainchainHeaderHash: McHeaderHash): Optional[MainchainHeader] = {
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 

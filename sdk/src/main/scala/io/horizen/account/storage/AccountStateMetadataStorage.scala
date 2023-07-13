@@ -2,7 +2,7 @@ package io.horizen.account.storage
 
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.utils.AccountBlockFeeInfo
-import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.storage.{SidechainStorageInfo, Storage}
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
@@ -53,5 +53,7 @@ class AccountStateMetadataStorage(storage: Storage)
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
+  
+  override def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = getView.getTopCertificateMainchainHash(referencedWithdrawalEpoch)
 
 }

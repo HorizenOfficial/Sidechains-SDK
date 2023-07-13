@@ -1,11 +1,11 @@
 package io.horizen.history.validation
 
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import io.horizen.params.NetworkParams
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit}
-import CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
+import io.horizen.cryptolibprovider.CommonCircuit
 import io.horizen.history.AbstractHistory
+import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
 import io.horizen.transaction.mainchain.SidechainCreation

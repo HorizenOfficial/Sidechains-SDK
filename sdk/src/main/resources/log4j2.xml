@@ -3,12 +3,13 @@
 
     <Properties>
         <Property name="LOG_PATTERN">[%-5level] %d{yyyy-MM-dd HH:mm:ss:SSS Z} [%28F:%-4L] [%t] %c - %msg%n</Property>
+        <Property name="CONSOLE_LOG_PATTERN">[pid: %pid] [%-5level] %d{yyyy-MM-dd HH:mm:ss:SSS Z} [%28F:%-4L] [%t] %c - %msg%n</Property>
     </Properties>
 
     <Appenders>
 
         <Console name="Console" target="SYSTEM_OUT" follow="true">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <PatternLayout pattern="${CONSOLE_LOG_PATTERN}"/>
         </Console>
 
         <!--RollingFile name="errorLog" fileName="${sys:logDir}application-error.log"

@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import io.horizen._
 import io.horizen.api.http.client.SecureEnclaveApiClient
-import io.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
+import io.horizen.block.{MainchainBlockReference, MainchainHeaderHash, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
@@ -32,6 +32,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import sparkz.core.transaction.MemoryPool
+import sparkz.util.SparkzLogging
 
 import java.io.File
 import java.util
@@ -45,7 +46,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Random, Success, Try}
 
 /**
- * Certificate submitter listens to the State changes and takes care of of certificate signatures managing (generation, storing and broadcasting)
+ * Certificate submitter listens to the State changes and takes care of certificate signatures managing (generation, storing and broadcasting)
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
@@ -182,7 +183,7 @@ abstract class AbstractCertificateSubmitter[
 
   private def getSidechainCreationTransaction(history: HIS): SidechainCreation = {
     val mainchainReference: MainchainBlockReference = history
-      .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
+      .getMainchainBlockReferenceByHash(MainchainHeaderHash(params.genesisMainchainBlockHash)).asScala
       .getOrElse(throw new IllegalStateException("No mainchain creation transaction in history"))
 
     mainchainReference.data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]

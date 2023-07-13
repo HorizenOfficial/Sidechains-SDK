@@ -16,6 +16,7 @@ import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
+import io.horizen.sc2sc.CrossChainMessage
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
@@ -43,7 +44,7 @@ import scala.util.{Failure, Success}
 
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
-  var params: RegTestParams = _
+  var params: RegTestParams = RegTestParams()
 
   @Before
   def init(): Unit = {
@@ -207,6 +208,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
   private def sidechainNodeView(): CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool] = {
     val sidechainState = mock[SidechainState]
     when(sidechainState.utxoMerkleTreeRoot(ArgumentMatchers.anyInt())).thenAnswer(_ => Some(new Array[Byte](32)))
+    when(sidechainState.getCrossChainMessages(ArgumentMatchers.anyInt())) thenAnswer (_ => Seq[CrossChainMessage]())
     when(sidechainState.backwardTransfers(ArgumentMatchers.anyInt())).thenAnswer(_ => Seq())
     val history = mock[SidechainHistory]
     when(history.mainchainHeaderInfoByHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => {

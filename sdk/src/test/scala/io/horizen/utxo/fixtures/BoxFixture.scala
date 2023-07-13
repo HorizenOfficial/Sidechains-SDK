@@ -5,10 +5,11 @@ import io.horizen.SidechainTypes
 import io.horizen.customtypes._
 import io.horizen.fixtures.SecretFixture
 import io.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.sc2sc.CrossChainProtocolVersion
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.ZenCoinsUtils
-import io.horizen.utxo.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
+import io.horizen.utxo.box._
+import io.horizen.utxo.box.data.{CrossChainMessageBoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxData}
 import io.horizen.utxo.wallet.WalletBox
 import sparkz.core.bytesToId
@@ -17,12 +18,9 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-
 trait BoxFixture
   extends SecretFixture
-  with SidechainTypes
-{
-
+    with SidechainTypes {
   def getZenBoxData: ZenBoxData = {
     new ZenBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100))
   }
@@ -48,6 +46,36 @@ trait BoxFixture
     new ZenBox(new ZenBoxData(proposition, value), nonce)
   }
 
+  def getCrossMessageBox(proposition: PublicKey25519Proposition,
+                         protocolVersion: CrossChainProtocolVersion,
+                         messageType: Integer,
+                         receiverSidechain: Array[Byte],
+                         receiverAddress: Array[Byte],
+                         payload: Array[Byte],
+                         nonce: Long
+                        ): CrossChainMessageBox = {
+    new CrossChainMessageBox(new CrossChainMessageBoxData(proposition, protocolVersion,
+      messageType, receiverSidechain, receiverAddress, payload), nonce)
+  }
+
+  def getRandomCrossMessageBox(seed: Long): CrossChainMessageBox = {
+    val random: Random = new Random(seed)
+    val receiverSidechain = new Array[Byte](32)
+    random.nextBytes(receiverSidechain)
+    val receiverAddress = new Array[Byte](20)
+    random.nextBytes(receiverAddress)
+    val payload = new Array[Byte](32)
+    random.nextBytes(payload)
+    getCrossMessageBox(
+      getPrivateKey25519(Longs.toByteArray(random.nextLong())).publicImage(),
+      CrossChainProtocolVersion.VERSION_1,
+      1,
+      receiverSidechain,
+      receiverAddress,
+      payload,
+      random.nextLong()
+    )
+  }
 
   def getZenBoxList(count: Int): JList[ZenBox] = {
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
@@ -58,7 +86,7 @@ trait BoxFixture
     boxList
   }
 
-  def getZenBoxList(secretList: JList[PrivateKey25519], minBoxAmount:Int = 0): JList[ZenBox] = {
+  def getZenBoxList(secretList: JList[PrivateKey25519], minBoxAmount: Int = 0): JList[ZenBox] = {
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (s <- secretList.asScala)
@@ -134,6 +162,7 @@ trait BoxFixture
   }
 
   val dustThreshold: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+
   def getWithdrawalRequestBoxData: WithdrawalRequestBoxData = {
     new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100) + dustThreshold)
   }
@@ -164,7 +193,7 @@ trait BoxFixture
   }
 
   def getForgerBox: ForgerBox = {
-      new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey).getBox(Random.nextInt(100))
+    new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey).getBox(Random.nextInt(100))
   }
 
   def getForgerBox(proposition: PublicKey25519Proposition): ForgerBox =

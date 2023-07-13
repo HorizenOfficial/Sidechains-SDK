@@ -1,11 +1,11 @@
 package io.horizen.utxo.backup;
 
-import io.horizen.utxo.box.Box;
-import io.horizen.utxo.box.CoinsBox;
-import io.horizen.utxo.companion.SidechainBoxesCompanion;
 import io.horizen.proposition.Proposition;
 import io.horizen.storage.StorageIterator;
 import io.horizen.utils.Utils;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.CoinsBox;
+import io.horizen.utxo.companion.SidechainBoxesCompanion;
 import scala.util.Try;
 import sparkz.util.serialization.VLQByteBufferReader;
 

@@ -3,7 +3,7 @@ package io.horizen.api.http
 import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
 import io.horizen.account.transaction.AccountTransaction
-import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -13,7 +13,6 @@ import io.horizen.utxo.transaction.BoxTransaction
 import org.junit.Assert._
 import sparkz.util.ModifierId
 
-import scala.Console.println
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.language.existentials

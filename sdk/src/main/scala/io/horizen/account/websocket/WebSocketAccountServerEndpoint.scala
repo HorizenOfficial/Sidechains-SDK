@@ -3,13 +3,13 @@ package io.horizen.account.websocket
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.horizen.account.api.rpc.request.{RpcId, RpcRequest}
 import io.horizen.account.api.rpc.response.{RpcResponseError, RpcResponseSuccess}
-import io.horizen.account.api.rpc.service.{EthService, RpcFilter, RpcProcessor}
+import io.horizen.account.api.rpc.service.RpcFilter
 import io.horizen.account.api.rpc.types.{EthereumLogView, FilterQuery}
 import io.horizen.account.api.rpc.utils.{RpcCode, RpcError}
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.serialization.EthJsonMapper
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.websocket.data.{Subscription, SubscriptionWithFilter, WebSocketAccountEvent, WebSocketAccountEventParams, WebSocketSyncEvent, WebSocketSyncStatus}
+import io.horizen.account.websocket.data._
 import io.horizen.evm.Address
 import io.horizen.network.SyncStatus
 import jakarta.websocket._

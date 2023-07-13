@@ -2,19 +2,20 @@ package io.horizen.utxo.integration.storage
 
 import io.horizen._
 import io.horizen.block.WithdrawalEpochCertificateFixture
-import io.horizen.utxo.companion._
 import io.horizen.consensus._
 import io.horizen.fixtures._
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
-import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import io.horizen.sc2sc.CrossChainMessageHash
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.{BoxSerializer, WithdrawalRequestBox}
+import io.horizen.utxo.companion._
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
 import io.horizen.utxo.storage.SidechainStateStorage
 import io.horizen.utxo.utils.BlockFeeInfo
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
@@ -22,16 +23,14 @@ import java.util.{Random, HashMap => JHashMap}
 import scala.collection.JavaConverters._
 
 class SidechainStateStorageTest
-  extends JUnitSuite
-    with BoxFixture
+  extends BoxFixture
     with StoreFixture
     with WithdrawalEpochCertificateFixture
-    with SidechainTypes
-{
+    with SidechainTypes {
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
 
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
@@ -41,7 +40,7 @@ class SidechainStateStorageTest
   val params: NetworkParams = MainNetParams()
 
   @Test
-  def mainFlowTest() : Unit = {
+  def mainFlowTest(): Unit = {
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     // Verify that withdrawal epoch info and consensus info is not defined
@@ -62,8 +61,8 @@ class SidechainStateStorageTest
 
     // Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(),
-        consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
     assertEquals("Storage must contain 1 version.",
@@ -80,7 +79,7 @@ class SidechainStateStorageTest
     val boxIdsToRemoveSet: Set[ByteArrayWrapper] = Set(new ByteArrayWrapper(bList1.head.id()), new ByteArrayWrapper(bList2.head.id()))
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(),
-        boxIdsToRemoveSet, Seq(), consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+        boxIdsToRemoveSet, Seq(), Seq(), Seq(), Set(), consensusEpoch,  Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
 
     assertEquals("Version in storage must be - " + version2,
       version2, sidechainStateStorage.lastVersionId.get)
@@ -113,7 +112,7 @@ class SidechainStateStorageTest
   }
 
   @Test
-  def withdrawalRequestsFlow() : Unit = {
+  def withdrawalRequestsFlow(): Unit = {
     val rnd = new Random(90)
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
@@ -129,9 +128,10 @@ class SidechainStateStorageTest
     val mod1Version = getVersion
     val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(firstWithdrawalEpochNumber, 1)
     val mod1mcBlockHashInCertificate = Option(Array.fill(32)(rnd.nextInt().toByte))
+
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList,
-        consensusEpoch, Option(generateWithdrawalEpochCertificate(mod1mcBlockHashInCertificate)), blockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList, Seq(), Seq(), Set(),
+        consensusEpoch, Seq((generateWithdrawalEpochCertificate(mod1mcBlockHashInCertificate), generateRandomMainchainHash())), blockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -149,7 +149,6 @@ class SidechainStateStorageTest
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
       withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(firstWithdrawalEpochNumber))
 
-
     // Test append withdrawals to existing withdrawal epoch
     val mod2Version = getVersion
     val newWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(2).asScala.toList
@@ -157,8 +156,8 @@ class SidechainStateStorageTest
     val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(firstWithdrawalEpochNumber, 2)
     val mod2mcBlockHashInCertificate = Option(Array.fill(32)(rnd.nextInt().toByte))
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), newWithdrawalRequestsList,
-        consensusEpoch, Option(generateWithdrawalEpochCertificate(mod2mcBlockHashInCertificate)), blockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), newWithdrawalRequestsList, Seq(), Seq(), Set(),
+        consensusEpoch, Seq((generateWithdrawalEpochCertificate(mod2mcBlockHashInCertificate), generateRandomMainchainHash())), blockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -185,8 +184,8 @@ class SidechainStateStorageTest
     val mod3WithdrawalEpochInfo = WithdrawalEpochInfo(secondWithdrawalEpochNumber, 1)
     val secondEpochWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(2).asScala.toList
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), secondEpochWithdrawalRequestsList,
-        consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), secondEpochWithdrawalRequestsList, Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
     // Check that first epoch withdrawals still exist -> no clean-up
@@ -199,8 +198,8 @@ class SidechainStateStorageTest
     val mod4WithdrawalEpochInfo = WithdrawalEpochInfo(thirdWithdrawalEpochNumber, 1)
     val thirdEpochWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(3).asScala.toList
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod4Version, mod4WithdrawalEpochInfo, Set(), Set(), thirdEpochWithdrawalRequestsList,
-        consensusEpoch, None, blockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod4Version, mod4WithdrawalEpochInfo, Set(), Set(), thirdEpochWithdrawalRequestsList, Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), blockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
     // Check that first epoch withdrawals were removed.
@@ -224,7 +223,7 @@ class SidechainStateStorageTest
   }
 
   @Test
-  def feePaymentsFlow() : Unit = {
+  def feePaymentsFlow(): Unit = {
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch0: Int = 0
@@ -240,8 +239,8 @@ class SidechainStateStorageTest
     val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod1BlockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod1BlockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -261,8 +260,8 @@ class SidechainStateStorageTest
     val mod2BlockFeeInfo = BlockFeeInfo(200, getPrivateKey25519("mod2".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod2BlockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod2BlockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -284,8 +283,8 @@ class SidechainStateStorageTest
     val mod3BlockFeeInfo = BlockFeeInfo(300, getPrivateKey25519("mod3".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod3BlockFeeInfo, None, false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod3BlockFeeInfo, None, false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -315,14 +314,13 @@ class SidechainStateStorageTest
   }
 
   @Test
-  def testUtxoMerkleTreeRootUpdate() : Unit = {
+  def testUtxoMerkleTreeRootUpdate(): Unit = {
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch1: Int = 0
 
     // Verify initial value
     assertFalse(s"Storage must not have ceased flag defined.", sidechainStateStorage.getUtxoMerkleTreeRoot(withdrawalEpoch1).isDefined)
-
 
 
     // Test 1: append block with utxoMerkleRoot.
@@ -332,8 +330,8 @@ class SidechainStateStorageTest
     val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod1BlockFeeInfo, Some(utxoMerkleRoot1), scHasCeased = false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod1BlockFeeInfo, Some(utxoMerkleRoot1), scHasCeased = false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -351,8 +349,8 @@ class SidechainStateStorageTest
     val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod2BlockFeeInfo, Some(utxoMerkleRoot2), scHasCeased = true, new Array[Int](0), 0
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod2BlockFeeInfo, Some(utxoMerkleRoot2), scHasCeased = true, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -367,7 +365,7 @@ class SidechainStateStorageTest
   }
 
   @Test
-  def testHasCeased() : Unit = {
+  def testHasCeased(): Unit = {
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, params)
 
     val withdrawalEpoch0: Int = 0
@@ -382,8 +380,8 @@ class SidechainStateStorageTest
     val mod1BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod1BlockFeeInfo, None, scHasCeased = false, new Array[Int](0), 0
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod1BlockFeeInfo, None, scHasCeased = false, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -397,8 +395,8 @@ class SidechainStateStorageTest
     val mod2BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("mod1".getBytes(StandardCharsets.UTF_8)).publicImage())
 
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
-        consensusEpoch, None, mod2BlockFeeInfo, None, scHasCeased = true, new Array[Int](0), 0
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(), Seq(),
+        Seq(), Set(), consensusEpoch, Seq(), mod2BlockFeeInfo, None, scHasCeased = true, new Array[Int](0), 0
       ).isSuccess
     )
 
@@ -419,7 +417,47 @@ class SidechainStateStorageTest
 
     //Try to remove non-existent item
     assertFalse("Remove operation of non-existent item must not throw exception.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(b => new ByteArrayWrapper(b.id())),
-        Seq(), intToConsensusEpochNumber(0), None, blockFeeInfo, None, false, new Array[Int](0), 0).isFailure)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(b => new ByteArrayWrapper(b.id())), Seq(), Seq(),
+        Seq(), Set(), intToConsensusEpochNumber(0), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isFailure)
+  }
+
+  @Test
+  def nonCeasingScTxCommitmentHashesFlow(): Unit = {
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
+
+    val hashScTxsCommitment1 = "fdea8365827f86c8af84"
+    val hashScTxsCommitment2 = "8bbbf0fbce129c5c7f72"
+    val scTxsCommitmentHashes = Set(hashScTxsCommitment1, hashScTxsCommitment2)
+
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
+
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(getVersion, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), Seq(),
+        scTxsCommitmentHashes, intToConsensusEpochNumber(5), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+
+    assertTrue(String.format("Storage expected to have scTxCommitmentHash %s", hashScTxsCommitment1),
+      sidechainStateStorage.doesScTxCommitmentTreeRootExist(BytesUtils.fromHexString(hashScTxsCommitment1)))
+    assertTrue(String.format("Storage expected to have scTxCommitmentHash %s", hashScTxsCommitment2),
+      sidechainStateStorage.doesScTxCommitmentTreeRootExist(BytesUtils.fromHexString(hashScTxsCommitment2)))
+  }
+
+  @Test
+  def nonCeasingCrossChainMessageHashesFlow(): Unit = {
+    val nonCeasingParams = MainNetParams(isNonCeasing = true, sc2ScProvingKeyFilePath = Some("somePath"))
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion, nonCeasingParams)
+
+    val ccMsgHash1 = new CrossChainMessageHash(BytesUtils.fromHexString("3a0ac71d16d9cbbf3973b8cb41e43b653a0ac71d16d9cbbf3973b8cb41e43b65"))
+    val ccMsgHash2 = new CrossChainMessageHash(BytesUtils.fromHexString("0f8da0549b2fd8b580e8664e98e4030d3a0ac71d16d9cbbf3973b8cb41e43b65"))
+    val crossChainMsgHashes = Seq(ccMsgHash1, ccMsgHash2)
+
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(getVersion, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), crossChainMsgHashes,
+        Set(), intToConsensusEpochNumber(5), Seq(), blockFeeInfo, None, false, new Array[Int](0), 0).isSuccess)
+
+    assertTrue(String.format("Storage expected to have message hash %s", ccMsgHash1),
+      sidechainStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash1))
+    assertTrue(String.format("Storage expected to have message hash %s", ccMsgHash2),
+      sidechainStateStorage.doesCrossChainMessageHashFromRedeemMessageExist(ccMsgHash2))
   }
 }

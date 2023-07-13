@@ -1,7 +1,6 @@
 package io.horizen.cryptolibprovider;
 
 import com.horizen.certnative.WithdrawalCertificate;
-import io.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
 import com.horizen.cswnative.CswSysData;
@@ -15,6 +14,7 @@ import com.horizen.poseidonnative.PoseidonHash;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.scutxonative.ScUtxoOutput;
+import io.horizen.cryptolibprovider.implementations.CswCircuitImplZendoo;
 import io.horizen.utils.BytesUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -28,7 +28,6 @@ import java.util.Optional;
 import java.util.Random;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertFalse;
 
 @Ignore
 public class CswProofTest {

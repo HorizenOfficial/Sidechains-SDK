@@ -312,6 +312,7 @@ abstract class AbstractSidechainNodeViewHolder[
       val branchingPoint = progressInfo.branchPoint.get
       if (state.version != branchingPoint) {
         log.debug(s"chain reorg needed, rolling back state and wallet to branching point: $branchingPoint")
+
         (
           wallet.rollback(idToVersion(branchingPoint)),
           state.rollbackTo(idToVersion(branchingPoint)),
@@ -319,6 +320,8 @@ abstract class AbstractSidechainNodeViewHolder[
         )
       } else (Success(wallet), Success(state), IndexedSeq())
     } else (Success(wallet), Success(state), suffixApplied)
+
+
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) =>

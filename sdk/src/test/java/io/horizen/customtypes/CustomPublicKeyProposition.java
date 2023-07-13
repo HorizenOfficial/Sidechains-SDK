@@ -2,9 +2,11 @@ package io.horizen.customtypes;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import io.horizen.proposition.*;
 import io.horizen.json.Views;
+import io.horizen.proposition.PropositionSerializer;
+import io.horizen.proposition.SingleSecretProofOfKnowledgeProposition;
 import io.horizen.utils.BytesUtils;
+
 import java.util.Arrays;
 
 

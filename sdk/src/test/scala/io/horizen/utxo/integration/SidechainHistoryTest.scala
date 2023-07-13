@@ -1,7 +1,6 @@
 package io.horizen.utxo.integration
 
 import io.horizen.chain.SidechainBlockInfo
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import io.horizen.fixtures._
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -11,9 +10,10 @@ import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.storage.{InMemoryStorageAdapter, Storage}
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils._
-import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.customtypes.SemanticallyInvalidTransactionSerializer
+import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.{SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}

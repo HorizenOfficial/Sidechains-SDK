@@ -1,16 +1,17 @@
 package io.horizen.utxo.state
 
 import io.horizen.SidechainTypes
-import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainHeader, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.consensus.{ConsensusEpochNumber, TimeProviderFixture, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.fixtures._
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.{Proposition, VrfPublicKey}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
@@ -38,7 +39,6 @@ import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success}
 
-
 class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
@@ -46,6 +46,7 @@ class SidechainStateTest
     with StoreFixture
     with MockitoSugar
     with SidechainTypesTestsExtension
+    with TimeProviderFixture
 {
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
@@ -61,7 +62,7 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
   val vrfList = new ListBuffer[VrfPublicKey]()
 
-  val params = MainNetParams()
+  val params: MainNetParams = MainNetParams()
 
   @Before
   def init(): Unit = {
@@ -342,7 +343,7 @@ class SidechainStateTest
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedStateStorage.lastVersionId)
-        .thenAnswer(answer => {Some(stateVersion.last)})
+      .thenAnswer(answer => {Some(stateVersion.last)})
 
     Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
@@ -350,13 +351,21 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    val mcHeader1 = mock[MainchainHeader]
+    val mcHeader2 = mock[MainchainHeader]
+    val hashScTxsCommitment1 = "05d164ffb71075ffd5bf1a9fd4021ae8"
+    val hashScTxsCommitment2 = "13b46183a484035c2a9b023cf1542ccf"
+
     Mockito.when(mockedStateStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
+      ArgumentMatchers.any[Seq[CrossChainMessage]](),
+      ArgumentMatchers.any[Seq[CrossChainMessageHash]](),
+      ArgumentMatchers.eq(Set(hashScTxsCommitment1, hashScTxsCommitment2)),
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
+      ArgumentMatchers.any[Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
       ArgumentMatchers.any[Boolean](),
@@ -370,18 +379,18 @@ class SidechainStateTest
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
-        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
-        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
-        val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
-        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
-        val scHasCeased = answer.getArgument[Boolean](9)
+        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](8)
+        val backwardTransferCertificate = answer.getArgument[Seq[(WithdrawalEpochCertificate, Array[Byte])]](9)
+        val blockFeeInfo = answer.getArgument[BlockFeeInfo](10)
+        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](11)
+        val scHasCeased = answer.getArgument[Boolean](12)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
         // Verify consensus epoch number
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
         // Verify certificate presence
-        assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
+        assertEquals("Certificate expected to be absent.", 0, backwardTransferCertificate.size)
         // Verify blockFeeInfo
         assertEquals("blockFeeInfo expected to be different.", modBlockFeeInfo, blockFeeInfo)
         // Verify utxoMerkleTreeRoot
@@ -475,6 +484,10 @@ class SidechainStateTest
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
     Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
+    Mockito.when(mcHeader1.hashScTxsCommitment).thenReturn(BytesUtils.fromHexString(hashScTxsCommitment1))
+    Mockito.when(mcHeader2.hashScTxsCommitment).thenReturn(BytesUtils.fromHexString(hashScTxsCommitment2))
+    Mockito.when(mockedBlock.mainchainHeaders).thenReturn(Seq(mcHeader1, mcHeader2))
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())

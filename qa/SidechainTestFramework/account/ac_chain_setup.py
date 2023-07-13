@@ -1,8 +1,7 @@
 import logging
 from decimal import Decimal
+import os
 
-from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT, SC_CREATION_VERSION_2, \
-    SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, \
     SCNetworkConfiguration, SCCreationInfo, SCNodeConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -46,7 +45,9 @@ class AccountChainSetup(SidechainTestFramework):
                  cert_sig_threshold=5,
                  # Array of arrays of signer keys indexes owned by the nodes. For example, [[0,1], [2,4]]
                  # If no value for given Node N index is present then the default value is assigned later: range(7)
-                 submitters_private_keys_indexes=[]
+                 submitters_private_keys_indexes=[],
+                 sc2sc_proving_key_file_name=None,
+                 sc2sc_verification_key_file_name=None
                  ):
 
         super().__init__()
@@ -84,6 +85,8 @@ class AccountChainSetup(SidechainTestFramework):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.submitters_private_keys_indexes = submitters_private_keys_indexes
+        self.sc2sc_proving_key_file_path = sc2sc_proving_key_file_name
+        self.sc2sc_verification_key_file_path = sc2sc_verification_key_file_name
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -112,7 +115,7 @@ class AccountChainSetup(SidechainTestFramework):
 
         for x in range(self.number_of_sidechain_nodes):
             if self.forger_options is None:
-               sc_node_configuration.append(SCNodeConfiguration(
+                sc_node_configuration.append(SCNodeConfiguration(
                     MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     api_key=self.API_KEY,
@@ -128,7 +131,9 @@ class AccountChainSetup(SidechainTestFramework):
                     websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
                     websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
                     cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
-                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None,
+                    sc2sc_proving_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_proving_key_file_path) if self.sc2sc_proving_key_file_path is not None else None,
+                    sc2sc_verification_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_verification_key_file_path) if self.sc2sc_verification_key_file_path is not None else None
                 ))
 
             else:
@@ -150,9 +155,11 @@ class AccountChainSetup(SidechainTestFramework):
                     websocket_server_enabled=True if self.websocket_server_ports[x] != None else False,
                     websocket_server_port=self.websocket_server_ports[x] if self.websocket_server_ports[x] != None else 0,
                     cert_submitter_enabled=True if x == 0 else False,  # last first is a submitter
-                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None
+                    submitter_private_keys_indexes=self.submitters_private_keys_indexes[x] if len(self.submitters_private_keys_indexes) > x else None,
+                    sc2sc_proving_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_proving_key_file_path) if self.sc2sc_proving_key_file_path is not None else None,
+                    sc2sc_verification_key_file_path=os.path.join(self.options.tmpdir, self.sc2sc_verification_key_file_path) if self.sc2sc_verification_key_file_path is not None else None
                 ))
-   
+
         if self.circuittype_override is not None:
             circuit_type = self.circuittype_override
         else:

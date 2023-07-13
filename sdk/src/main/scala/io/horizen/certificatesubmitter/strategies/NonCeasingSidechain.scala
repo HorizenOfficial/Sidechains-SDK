@@ -1,13 +1,12 @@
 package io.horizen.certificatesubmitter.strategies
+import io.horizen.AbstractState
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
+import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
-import io.horizen.AbstractState
-import io.horizen.history.AbstractHistory
 import io.horizen.websocket.client.MainchainNodeChannel
 import sparkz.util.{ModifierId, SparkzLogging}
-import sparkz.core.NodeViewHolder.CurrentView
 
 import scala.util.{Failure, Success}
 

@@ -1,14 +1,15 @@
 package io.horizen.secret;
 
-import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.proof.Signature25519;
+import io.horizen.proposition.PublicKey25519Proposition;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PrivateKey25519Test {
     byte[] testMessage = "Test string message to sign/verify.".getBytes(StandardCharsets.UTF_8);

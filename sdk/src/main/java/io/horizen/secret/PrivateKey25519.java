@@ -1,11 +1,11 @@
 package io.horizen.secret;
 
-import io.horizen.cryptolibprovider.CryptoLibProvider;
 import io.horizen.proof.Signature25519;
 import io.horizen.proposition.ProofOfKnowledgeProposition;
 import io.horizen.proposition.PublicKey25519Proposition;
 import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Ed25519;
+
 import java.util.Arrays;
 import java.util.Objects;
 

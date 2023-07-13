@@ -19,7 +19,6 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.VersionTag
-import sparkz.core.utils.NetworkTimeProvider
 
 import java.math.BigInteger
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
@@ -52,7 +51,6 @@ class AccountStateTest
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
 
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
-    val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
     val messageProcessors: Seq[MessageProcessor] = Seq()
 
     Mockito.when(params.chainId).thenReturn(1997)
@@ -63,7 +61,6 @@ class AccountStateTest
 
     state = new AccountState(
       params,
-      mockedTimeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       metadataStorage,

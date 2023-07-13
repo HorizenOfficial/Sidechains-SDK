@@ -3,13 +3,13 @@ package io.horizen.certificatesubmitter.keys
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.KeyRotationProofType
+import io.horizen.json.Views
 import io.horizen.proof.{SchnorrProof, SchnorrSignatureSerializer}
 import io.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import io.horizen.json.Views
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint32}
-import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.util.serialization.{Reader, Writer}
 
 @JsonView(Array(classOf[Views.Default]))
 case class KeyRotationProof(keyType: KeyRotationProofType, index: Int = 0, newKey: SchnorrProposition,

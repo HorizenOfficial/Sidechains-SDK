@@ -1,16 +1,12 @@
 package io.horizen.examples;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.horizen.utxo.SidechainAppModule;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
-import io.horizen.utxo.api.http.SidechainApplicationApiGroup;
+import io.horizen.examples.api.VoteController;
+import io.horizen.examples.transaction.RedeemVoteMessageTransactionSerializer;
+import io.horizen.examples.transaction.SendVoteMessageTransactionSerializer;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.Secret;
@@ -18,13 +14,25 @@ import io.horizen.secret.SecretSerializer;
 import io.horizen.settings.SettingsReader;
 import io.horizen.storage.Storage;
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import io.horizen.utxo.transaction.BoxTransaction;
 import io.horizen.transaction.TransactionSerializer;
+import io.horizen.utils.Pair;
+import io.horizen.utxo.SidechainAppModule;
+import io.horizen.utxo.api.http.SidechainApplicationApiGroup;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.BoxSerializer;
+import io.horizen.utxo.companion.SidechainTransactionsCompanion;
 import io.horizen.utxo.state.ApplicationState;
+import io.horizen.utxo.transaction.BoxTransaction;
 import io.horizen.utxo.wallet.ApplicationWallet;
-import io.horizen.utils.Pair;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+
+import static io.horizen.examples.transaction.TransactionIdsEnum.RedeemVoteTransactionId;
+import static io.horizen.examples.transaction.TransactionIdsEnum.SendVoteToSidechainTransactionId;
 
 public class SimpleAppModule extends SidechainAppModule
 {
@@ -42,6 +50,8 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
+        customTransactionSerializers.put(SendVoteToSidechainTransactionId.id(), (TransactionSerializer) SendVoteMessageTransactionSerializer.getSerializer());
+        customTransactionSerializers.put(RedeemVoteTransactionId.id(), (TransactionSerializer) RedeemVoteMessageTransactionSerializer.getSerializer());
 
         String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
@@ -73,8 +83,12 @@ public class SimpleAppModule extends SidechainAppModule
         int consensusSecondsInSlot = 120;
         String appVersion = "";
 
+        // Create companions that will allow to serialize and deserialize any kind of core and custom types specified.
+        SidechainTransactionsCompanion transactionsCompanion = new SidechainTransactionsCompanion(customTransactionSerializers, null);
+
         // Here I can add my custom rest api and/or override existing one
         List<SidechainApplicationApiGroup> customApiGroups = new ArrayList<>();
+        customApiGroups.add(new VoteController(transactionsCompanion));
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"

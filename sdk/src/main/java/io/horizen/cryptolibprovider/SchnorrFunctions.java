@@ -1,7 +1,5 @@
 package io.horizen.cryptolibprovider;
 
-import com.horizen.librustsidechains.FieldElement;
-
 import java.util.EnumMap;
 
 public interface SchnorrFunctions {

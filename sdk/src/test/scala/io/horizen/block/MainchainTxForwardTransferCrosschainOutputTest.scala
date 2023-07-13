@@ -9,8 +9,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 import java.nio.charset.StandardCharsets
-import scala.util.Random
-import scala.util.Try
+import scala.util.{Random, Try}
 
 class MainchainTxForwardTransferCrosschainOutputTest extends JUnitSuite with MainchainTxCrosschainOutputFixture {
 

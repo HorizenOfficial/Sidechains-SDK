@@ -3,8 +3,9 @@ package io.horizen.utxo.forge
 import io.horizen._
 import io.horizen.block._
 import io.horizen.consensus._
+import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.Proposition
@@ -39,15 +40,14 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock](
-  mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-) {
+    mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
+  ) {
   type FPI = SidechainFeePaymentsInfo
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
   type MS = SidechainState
   type MP = SidechainMemoryPool
-
 
   override def createNewBlock(
                  nodeView: View,
@@ -156,17 +156,27 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     var txsCounter: Int = 0
     val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
+    val sc2ScFork = Sc2ScFork.get(consensusEpochNumber)
+    val allowedCrossChainMessageBoxes =
+      if (sc2ScFork.sc2ScCanSend) {
+        nodeView.state.getAllowedCrossChainMessageBoxes(mainchainBlockReferenceData.size, CryptoLibProvider.sc2scCircuitFunctions.getMaxCrossChainMessagesPerEpoch) - nodeView.state.getAlreadyMinedCrossChainMessagesInCurrentEpoch
+      } else 0
+
     val mempoolTx =
-      if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled)
-      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
-      else
+      if (ForkManager.getSidechainFork(consensusEpochNumber).backwardTransferLimitEnabled) {
+        // In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes and CrossChainMessageBox
+        // allowed to be mined in the current block.
+        nodeView.pool.takeWithdrawalAndCrossChainBoxesWithLimit(allowedWithdrawalRequestBoxes, allowedCrossChainMessageBoxes)
+      } else
         nodeView.pool.take(nodeView.pool.size)
+
     (mempoolTx
-      .filter( tx => {nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
-        nodeView.state.validateWithWithdrawalEpoch(tx,
-          WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferenceData.size, withdrawalEpochInfo, params).epoch
-        ).isSuccess})
+      .filter(tx => {
+        nodeView.state.validateWithFork(tx, consensusEpochNumber).isSuccess &&
+          nodeView.state.validateWithWithdrawalEpoch(tx,
+            WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferenceData.size, withdrawalEpochInfo, params).epoch
+          ).isSuccess
+      })
       ++ forcedTx)
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length

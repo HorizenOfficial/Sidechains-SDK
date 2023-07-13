@@ -13,6 +13,7 @@ import io.horizen.tools.utils.MessagePrinter;
 import io.horizen.utils.ByteArrayWrapper;
 import io.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.Logger;
+
 import java.io.*;
 import java.util.List;
 

@@ -6,6 +6,8 @@ import io.horizen.api.http.SidechainApiResponseBody;
 import io.horizen.json.serializer.ApplicationJsonSerializer;
 import scala.Option;
 
+import java.io.*;
+
 public class SerializationUtil {
 
     public static String serialize(Object value) throws Exception {
@@ -41,5 +43,21 @@ public class SerializationUtil {
                 new SidechainApiErrorResponseSchema(
                         new SidechainApiManagedError(code, description, Option.apply(detail))
                 ));
+    }
+
+    public static <T> byte[] serializeObject(T objectToSerialize) throws IOException {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(stream)) {
+            oos.writeObject(objectToSerialize);
+            return stream.toByteArray();
+        }
+    }
+
+    public static <T> Option<T> deserializeObject(byte[] objectToDeserialize) throws IOException, ClassNotFoundException {
+        if (objectToDeserialize.length == 0) return Option.empty();
+
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(objectToDeserialize))) {
+            return Option.apply((T) ois.readObject());
+        }
     }
 }

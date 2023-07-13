@@ -3,12 +3,12 @@ package io.horizen.account.block
 import io.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountGenerationMetadata}
 import io.horizen.fixtures.CompanionsFixture
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.history.validation.InvalidSidechainBlockHeaderException
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.VrfProof
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.VrfSecretKey
 import io.horizen.utils.BytesUtils
-import io.horizen.history.validation.InvalidSidechainBlockHeaderException
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.{Before, Test}

@@ -14,7 +14,7 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
-import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -75,8 +75,14 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
 
     usingView { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       val transaction = createLegacyTransaction(
         BigInteger.TEN,
         gasLimit = BigInteger.valueOf(10000000)
@@ -84,7 +90,7 @@ class AccountForgeMessageBuilderTest
       val fromAddress = transaction.getFrom.address()
       stateView.addBalance(fromAddress, BigInteger.valueOf(100000000010L))
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
       val initialStateRoot = stateView.getIntermediateRoot
       val listOfTxs = setupTransactionsByPriceAndNonce(
         Seq[SidechainTypes#SCAT](transaction.asInstanceOf[SidechainTypes#SCAT])
@@ -94,6 +100,7 @@ class AccountForgeMessageBuilderTest
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
+        Seq.empty,
         Seq.empty,
         blockContext,
         null,
@@ -121,16 +128,21 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
-
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       stateView.addBalance(
         invalidTx.getFrom.address(),
         BigInteger.valueOf(100000000010L)
       )
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
       val initialStateRoot = stateView.getIntermediateRoot
       val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](
@@ -141,6 +153,7 @@ class AccountForgeMessageBuilderTest
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
+        Seq.empty,
         Seq.empty,
         blockContext,
         null,
@@ -170,10 +183,15 @@ class AccountForgeMessageBuilderTest
       MockedHistoryBlockHashProvider,
       Hash.ZERO
     )
-
+    val params = TestNetParams(
+      sc2ScProvingKeyFilePath = Some("someProvingKey"),
+      sc2ScVerificationKeyFilePath = Some("someVerificationKey")
+    )
     val mockMsgProcessor: MessageProcessor = setupMockMessageProcessor
 
     usingView(mockMsgProcessor) { stateView =>
+      Mockito.when(stateView.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber(0)))
+
       stateView.addBalance(
         invalidTx.getFrom.address(),
         BigInteger.valueOf(1000000000)
@@ -183,7 +201,7 @@ class AccountForgeMessageBuilderTest
         BigInteger.valueOf(1000000000)
       )
 
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+      val forger = new AccountForgeMessageBuilder(null, null, params, false)
 
       val listOfTxs = setupTransactionsByPriceAndNonce(
         List[SidechainTypes#SCAT](
@@ -195,6 +213,7 @@ class AccountForgeMessageBuilderTest
       val (_, appliedTxs, _) = forger.computeBlockInfo(
         stateView,
         listOfTxs,
+        Seq.empty,
         Seq.empty,
         blockContext,
         null,

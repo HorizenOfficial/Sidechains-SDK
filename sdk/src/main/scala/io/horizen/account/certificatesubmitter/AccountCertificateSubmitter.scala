@@ -17,9 +17,9 @@ import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.mainchain.api.MainchainNodeCertificateApi
 import io.horizen.params.NetworkParams
 import io.horizen.websocket.client.MainchainNodeChannel
+
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
-
 
 class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
                                                         sidechainNodeViewHolderRef: ActorRef,
@@ -40,10 +40,7 @@ class AccountCertificateSubmitter[T <: CertificateData](settings: SidechainSetti
     AccountWallet,
     AccountMemoryPool,
     T
-  ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {
-
-
-}
+  ](settings, sidechainNodeViewHolderRef, secureEnclaveApiClient, params, mainchainChannel, submissionStrategy, keyRotationStrategy) {}
 
 object AccountCertificateSubmitterRef {
   def props(settings: SidechainSettings,

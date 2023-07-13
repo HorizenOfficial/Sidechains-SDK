@@ -39,7 +39,7 @@ class SidechainStateIntegrationTest
     with MockitoSugar
     with SidechainTypesTestsExtension
 {
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap(), false)
   val applicationState = new DefaultApplicationState()
 
   var stateStorage: SidechainStateStorage = _
@@ -50,9 +50,9 @@ class SidechainStateIntegrationTest
   var initialForgerBoxes: Seq[ForgerBox] = _
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val secretList = new ListBuffer[PrivateKey25519]()
-  val params = MainNetParams()
+  val params: MainNetParams = MainNetParams()
 
-  val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, params.withdrawalEpochLength - 1)
+  val initialWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(1, params.withdrawalEpochLength - 1)
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes(StandardCharsets.UTF_8)).publicImage())
@@ -129,8 +129,11 @@ class SidechainStateIntegrationTest
       boxList.toSet,
       Set(),
       Seq[WithdrawalRequestBox](),
+      Seq(),
+      Seq(),
+      Set(),
       initialConsensusEpoch,
-      None,
+      Seq(),
       initialBlockFeeInfo,
       None,
       scHasCeased = false,
@@ -255,8 +258,11 @@ class SidechainStateIntegrationTest
     // Mock 1 MCBlockRefData entry to simulate the last withdrawal epoch SidechainBlock
     // to check that fee payment boxes were created and appended to closed boxes.
     // to check that utxo merkle tree root was stored for the given epoch
+    val mockMainchainBlockReferenceData = mock[MainchainBlockReferenceData]
+    Mockito.when(mockMainchainBlockReferenceData.topQualityCertificate)
+      .thenReturn(None)
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
-      .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
+      .thenReturn(Seq[MainchainBlockReferenceData](mockMainchainBlockReferenceData))
 
     Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
@@ -268,6 +274,8 @@ class SidechainStateIntegrationTest
       FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
     })
 
+    Mockito.when(mockedBlock.mainchainHeaders).thenReturn(Seq())
+
     // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
     assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
       sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
@@ -276,8 +284,7 @@ class SidechainStateIntegrationTest
     assertFalse("SC must be alive", sidechainState.hasCeased)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
-    assertTrue("ApplyChanges for block must be successful.",
-      applyTry.isSuccess)
+    assertTrue("ApplyChanges for block must be successful.", applyTry.isSuccess)
 
     val sidechainStateAfterApplyModifier = applyTry.get
 
@@ -381,7 +388,7 @@ class SidechainStateIntegrationTest
   @Test
   def applyModifierWithCSWDisabled(): Unit = {
     val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage,
-                      SidechainUtxoMerkleTreeProviderCSWDisabled(), MainNetParams(isCSWEnabled = false), applicationState).get
+      SidechainUtxoMerkleTreeProviderCSWDisabled(), MainNetParams(isCSWEnabled = false), applicationState).get
 
     val transactionList = new collection.mutable.ListBuffer[RegularTransaction]()
     transactionList.append(getRegularTransaction(2, 1))
@@ -416,6 +423,4 @@ class SidechainStateIntegrationTest
         sidechainStateAfterRollback.closedBox(b).isDefined)
     }
   }
-
-
 }

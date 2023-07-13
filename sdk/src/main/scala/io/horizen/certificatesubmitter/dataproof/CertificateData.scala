@@ -3,7 +3,6 @@ package io.horizen.certificatesubmitter.dataproof
 import com.horizen.certnative.BackwardTransfer
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
-import io.horizen.utxo.box.WithdrawalRequestBox
 
 abstract class CertificateData(val referencedEpochNumber: Int,
                                val sidechainId: Array[Byte],

@@ -23,8 +23,8 @@ class BadSc2scForkConfigurator extends ForkConfigurator {
 
   override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = {
     Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
-      new Pair(SidechainForkConsensusEpoch(0, 0, 0), Sc2scFork(sc2scCanSend = true)),
-      new Pair(SidechainForkConsensusEpoch(0, 0, 1), Sc2scFork(sc2scCanReceive = true)),
+      new Pair(SidechainForkConsensusEpoch(0, 0, 0), Sc2ScFork(sc2ScCanSend = true)),
+      new Pair(SidechainForkConsensusEpoch(0, 0, 1), Sc2ScFork(sc2ScCanReceive = true)),
     ).asJava
   }
 }
@@ -73,6 +73,15 @@ class GoodOptionalForkConfigurator extends ForkConfigurator {
     ).asJava
 }
 
+class Sc2ScOptionalForkConfigurator() extends ForkConfigurator {
+  override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(5, 5, 5)
+
+  override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+    Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
+      new Pair(fork1activation, Sc2ScFork(sc2ScCanSend = true, sc2ScCanReceive = true))
+    ).asJava
+}
+
 class ForkConfiguratorTest extends JUnitSuite {
   val badForkConfigurator = new BadForkConfigurator()
   val badSc2scForkConfigurator = new BadSc2scForkConfigurator()
@@ -83,7 +92,7 @@ class ForkConfiguratorTest extends JUnitSuite {
   @Test
   def testConfiguration(): Unit = {
     assertThrows[RuntimeException](badForkConfigurator.check())
-    assertThrows[ExceptionInInitializerError](badSc2scForkConfigurator.check())
+    assertThrows[RuntimeException](badSc2scForkConfigurator.check())
     assertThrows[RuntimeException](badOptionalForkConfigurator.check())
     // these should not throw
     goodOptionalForkConfigurator.check()

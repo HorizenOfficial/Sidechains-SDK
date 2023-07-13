@@ -5,21 +5,22 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import io.horizen._
+import io.horizen.block.{MainchainHeaderHash => McHeaderHash}
 import io.horizen.cryptolibprovider.CryptoLibProvider
-import CswManager.ReceivableMessages._
-import CswManager.Responses._
-import CswManager.{ProofInProcess, ProofInQueue}
+import io.horizen.json.Views
+import io.horizen.json.serializer.CswProofStatusSerializer
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.secret.PrivateKey25519
-import io.horizen.json.Views
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochUtils}
-import io.horizen._
-import io.horizen.json.serializer.CswProofStatusSerializer
+import io.horizen.utxo.csw.CswManager.ReceivableMessages._
+import io.horizen.utxo.csw.CswManager.Responses._
+import io.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
 import io.horizen.utxo.wallet.SidechainWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -418,7 +419,7 @@ class CswManager(settings: SidechainSettings,
     // Note 2: Getting `hashScTxsCommitment` operation is quite expensive due to look up into the storage for the header.
     // Note 3: Mainchain header keep `hashScTxsCommitment` in RPC friendly way - BE form of uint256.
     var scTxsComHashes: Seq[Array[Byte]] = (startBlockHeight + 1 to endBlockHeight).flatMap(height => history.getMainchainHeaderInfoByHeight(height)).map(info => {
-      BytesUtils.reverseBytes(history.getMainchainHeaderByHash(info.hash.data).get.hashScTxsCommitment)
+      BytesUtils.reverseBytes(history.getMainchainHeaderByHash(McHeaderHash(info.hash.data)).get.hashScTxsCommitment)
     })
 
     if(excludeGenesisCommTreeHash) {

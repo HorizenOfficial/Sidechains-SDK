@@ -1,9 +1,5 @@
 package io.horizen.history.validation
 
-import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import java.lang.{Byte => JByte}
-import java.util
-import java.util.{ArrayList => JArrayList}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import io.horizen.utxo.box.ForgerBox
@@ -12,7 +8,12 @@ import io.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+
+import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
+import java.lang.{Byte => JByte}
 import java.nio.charset.StandardCharsets
+import java.util
+import java.util.{ArrayList => JArrayList}
 
 
 class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {

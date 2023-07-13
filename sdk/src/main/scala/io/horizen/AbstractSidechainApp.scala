@@ -14,7 +14,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
@@ -136,7 +136,7 @@ abstract class AbstractSidechainApp
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+      sidechainId = BytesUtils.toMainchainFormat(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -161,7 +161,9 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.regtestId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+      sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
+      sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
 
     case "testnet" => TestNetParams(
@@ -190,7 +192,9 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.testnetId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+      sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
+      sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
 
     case "mainnet" => MainNetParams(
@@ -219,7 +223,9 @@ abstract class AbstractSidechainApp
       chainId = chainInfo.mainnetId,
       isCSWEnabled = isCSWEnabled,
       isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+      sc2ScProvingKeyFilePath = sidechainSettings.sc2sc.sc2ScProvingKeyFilePath,
+      sc2ScVerificationKeyFilePath = sidechainSettings.sc2sc.sc2ScVerificationKeyFilePath,
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -238,7 +244,7 @@ abstract class AbstractSidechainApp
 
   // Generate Coboundary Marlin Proving System dlog keys
   log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
-  if(!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+  if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
@@ -269,23 +275,43 @@ abstract class AbstractSidechainApp
   // We need to have it initializes before the creation of the SidechainState
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
+  if (!isCSWEnabled) {
+    if (ForkManager.hasOptionalForkOfType[Sc2ScFork]()) {
+      val sc2ScProvingKeyFilePath = params.sc2ScProvingKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc proving key path")
+      )
+      val sc2ScVerificationKeyFilePath = params.sc2ScVerificationKeyFilePath.getOrElse(
+        throw new IllegalArgumentException("Sc2Sc protocol is configured: you must set a sc2sc verification key path")
+      )
+      val keyFilesDontExist = !Files.exists(Paths.get(sc2ScProvingKeyFilePath)) || !Files.exists(Paths.get(sc2ScVerificationKeyFilePath))
+      if (keyFilesDontExist) {
+        log.info("Generating Sc2Sc snark keys. It may take some time.")
+        val keysCreated = CryptoLibProvider.sc2scCircuitFunctions.generateSc2ScKeys(sc2ScProvingKeyFilePath, sc2ScVerificationKeyFilePath)
+
+        if (!keysCreated) {
+          throw new IllegalArgumentException("Can't generate Sc2Sc Coboundary Marlin ProvingSystem snark keys.")
+        }
+      }
+    }
+  }
+
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
   lazy val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocketClient)
 
   // Create the web socket connector and configure it
-  if(sidechainSettings.websocketClient.enabled) {
-    val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+  if (sidechainSettings.websocketClient.enabled) {
+    val webSocketConnector: WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
       sidechainSettings.websocketClient.address,
       sidechainSettings.websocketClient.connectionTimeout,
       communicationClient,
       webSocketReconnectionHandler
     )
     // Start the web socket connector
-    val connectorStarted : Try[Unit] = webSocketConnector.start()
+    val connectorStarted: Try[Unit] = webSocketConnector.start()
 
     // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-    if(connectorStarted.isSuccess)
+    if (connectorStarted.isSuccess)
       communicationClient.setWebSocketChannel(webSocketConnector)
     else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
       throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
@@ -296,9 +322,6 @@ abstract class AbstractSidechainApp
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-
-//  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
-//  val applicationApiRoutes: Seq[ApplicationApiRoute]
 
   // Init API
   lazy val rejectedApiRoutes: Seq[SidechainRejectionApiRoute] = rejectedApiPaths.asScala.map(path => route.SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
@@ -397,7 +420,7 @@ abstract class AbstractSidechainApp
       }
   }
 
-  protected def registerClosableResource[S <: AutoCloseable](closableResource: S) : S = {
+  protected def registerClosableResource[S <: AutoCloseable](closableResource: S): S = {
     closableResourceList += closableResource
     closableResource
   }

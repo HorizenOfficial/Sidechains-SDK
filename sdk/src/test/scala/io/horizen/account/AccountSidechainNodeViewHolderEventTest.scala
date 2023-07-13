@@ -15,15 +15,15 @@ import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm.{Address, Database}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
 import io.horizen.{AccountMempoolSettings, SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
@@ -38,22 +38,21 @@ import scala.concurrent.duration.DurationInt
  */
 
 class AccountSidechainNodeViewHolderEventTest
-    extends JUnitSuite
-      with EthereumTransactionFixture
-      with StoreFixture
-      with SparkzEncoding {
+  extends EthereumTransactionFixture
+    with StoreFixture
+    with SparkzEncoding {
   var historyMock: AccountHistory = _
   var state: AccountState = _
   var stateViewMock: AccountStateView = _
   var wallet: AccountWallet = _
   var mempool: AccountMemoryPool = _
 
-  var eventNotifierProvider:AccountEventNotifierProvider = _
+  var eventNotifierProvider: AccountEventNotifierProvider = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val mockStateDbNonces:TrieMap[Address, BigInteger]  = TrieMap[Address, BigInteger]()
+  val mockStateDbNonces: TrieMap[Address, BigInteger] = TrieMap[Address, BigInteger]()
 
   @Before
   def setUp(): Unit = {
@@ -67,14 +66,15 @@ class AccountSidechainNodeViewHolderEventTest
     Mockito.when(stateViewMock.isEoaAccount(ArgumentMatchers.any[Address])).thenReturn(true)
     Mockito.when(stateViewMock.getNextBaseFee).thenReturn(BigInteger.ZERO)
 
-    Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Address])).thenAnswer { answer =>
-      {
-        mockStateDbNonces.getOrElse(answer.getArgument(0), BigInteger.ZERO)
-      }
+    Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Address])).thenAnswer { answer => {
+      mockStateDbNonces.getOrElse(answer.getArgument(0), BigInteger.ZERO)
+    }
     }
 
     wallet = mock[AccountWallet]
     Mockito.when(wallet.scanOffchain(ArgumentMatchers.any[SidechainTypes#SCAT])).thenReturn(wallet)
+
+    ForkManagerUtil.initializeForkManager(new Sc2ScOptionalForkConfigurator, "regtest")
   }
 
   @Test
@@ -122,28 +122,28 @@ class AccountSidechainNodeViewHolderEventTest
   }
 
   class MockedAccountSidechainNodeViewHolder(
-      sidechainSettings: SidechainSettings,
-      params: NetworkParams,
-      timeProvider: NetworkTimeProvider,
-      historyStorage: AccountHistoryStorage,
-      consensusDataStorage: ConsensusDataStorage,
-      stateMetadataStorage: AccountStateMetadataStorage,
-      stateDbStorage: Database,
-      customMessageProcessors: Seq[MessageProcessor],
-      secretStorage: SidechainSecretStorage,
-      genesisBlock: AccountBlock
-  ) extends AccountSidechainNodeViewHolder(
-        sidechainSettings,
-        params,
-        timeProvider,
-        historyStorage,
-        consensusDataStorage,
-        stateMetadataStorage,
-        stateDbStorage,
-        customMessageProcessors,
-        secretStorage,
-        genesisBlock
-      ) {
+                                              sidechainSettings: SidechainSettings,
+                                              params: NetworkParams,
+                                              timeProvider: NetworkTimeProvider,
+                                              historyStorage: AccountHistoryStorage,
+                                              consensusDataStorage: ConsensusDataStorage,
+                                              stateMetadataStorage: AccountStateMetadataStorage,
+                                              stateDbStorage: Database,
+                                              customMessageProcessors: Seq[MessageProcessor],
+                                              secretStorage: SidechainSecretStorage,
+                                              genesisBlock: AccountBlock
+                                            ) extends AccountSidechainNodeViewHolder(
+    sidechainSettings,
+    params,
+    timeProvider,
+    historyStorage,
+    consensusDataStorage,
+    stateMetadataStorage,
+    stateDbStorage,
+    customMessageProcessors,
+    secretStorage,
+    genesisBlock
+  ) {
     override def txModify(tx: SidechainTypes#SCAT): Unit = super.txModify(tx)
 
     override def minimalState(): AccountState = state
@@ -157,16 +157,16 @@ class AccountSidechainNodeViewHolderEventTest
     override protected def genesisState: (HIS, MS, VL, MP) = (history(), state, wallet, mempool)
 
     override def updateMemPool(
-        blocksRemoved: Seq[AccountBlock],
-        blocksApplied: Seq[AccountBlock],
-        memPool: AccountMemoryPool,
-        state: AccountState
-    ): AccountMemoryPool = super.updateMemPool(blocksRemoved, blocksApplied, memPool, state)
+                                blocksRemoved: Seq[AccountBlock],
+                                blocksApplied: Seq[AccountBlock],
+                                memPool: AccountMemoryPool,
+                                state: AccountState
+                              ): AccountMemoryPool = super.updateMemPool(blocksRemoved, blocksApplied, memPool, state)
 
   }
 
   def getMockedAccountSidechainNodeViewHolder(mempoolSettings: AccountMempoolSettings)(implicit
-      actorSystem: ActorSystem
+                                                                                       actorSystem: ActorSystem
   ): MockedAccountSidechainNodeViewHolder = {
     val sidechainSettings = mock[SidechainSettings]
     val mockWalletSettings: WalletSettings = mock[WalletSettings]
@@ -175,7 +175,12 @@ class AccountSidechainNodeViewHolderEventTest
     val params: NetworkParams = mock[NetworkParams]
     Mockito.when(params.chainId).thenReturn(1997)
     Mockito.when(params.circuitType).thenReturn(NaiveThresholdSignatureCircuit)
+    Mockito.when(params.sc2ScProvingKeyFilePath).thenReturn(None)
+    Mockito.when(params.sc2ScVerificationKeyFilePath).thenReturn(None)
+
     val timeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
+    when(params.consensusSlotsInEpoch).thenReturn(10)
+    when(params.consensusSecondsInSlot).thenReturn(5)
 
     val historyStorage: AccountHistoryStorage = mock[AccountHistoryStorage]
     val consensusDataStorage: ConsensusDataStorage = mock[ConsensusDataStorage]
@@ -191,7 +196,6 @@ class AccountSidechainNodeViewHolderEventTest
 
     state = new AccountState(
       params,
-      timeProvider,
       MockedHistoryBlockHashProvider,
       versionTag,
       stateMetadataStorage,

@@ -13,15 +13,18 @@ import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataSt
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.consensus._
+import io.horizen.evm.Database
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import io.horizen.params.NetworkParams
 import io.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
+import io.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import io.horizen.{AbstractSidechainNodeViewHolder, NodeViewHolderForSeederNode, SidechainSettings, SidechainTypes}
 import io.horizen.evm.Database
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, NodeViewHolderEvent, RollbackFailed}
 import sparkz.core.utils.NetworkTimeProvider
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
@@ -37,7 +40,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
   extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider)
-  with AccountEventNotifier {
+    with AccountEventNotifier {
 
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
@@ -49,7 +52,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
-      MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
+    val consensusEpoch = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
+    MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors, consensusEpoch)
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
@@ -126,7 +130,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val restoredData = for {
       history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider)
+      state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider)
       wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Some(AccountMemoryPool.createEmptyMempool(() => minimalState(),
         () => minimalState(),
@@ -140,15 +144,15 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, blockHashProvider, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, blockHashProvider, genesisBlock)
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes(StandardCharsets.UTF_8), secretStorage)
       pool <- Success(AccountMemoryPool.createEmptyMempool(() => minimalState(),
-                                                           () => minimalState(),
-                                                           sidechainSettings.accountMempool,
-                                                           () => this))
+        () => minimalState(),
+        sidechainSettings.accountMempool,
+        () => this))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -156,12 +160,12 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   private def blockHashProvider(height: Int): Option[String] = history.blockIdByHeight(height)
 
-  override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
+  override def getFeePaymentsInfo(state: MS, epochNumber: Int): FPI = {
     val feePayments = state.getFeePaymentsInfo(epochNumber)
     AccountFeePaymentsInfo(feePayments)
   }
 
-  override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+  override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL): VL = {
     wallet.scanPersistent(modToApply)
   }
 
@@ -293,4 +297,3 @@ object AccountNodeViewHolderRef {
       customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
 }
-

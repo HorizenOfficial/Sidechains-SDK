@@ -5,25 +5,25 @@ import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.google.common.primitives.Longs
+import io.horizen._
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
-import io.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainHeader, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.chain.MainchainHeaderInfo
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
-import io.horizen.utxo.csw.CswManager.ReceivableMessages._
-import io.horizen.utxo.csw.CswManager.Responses._
-import io.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
 import io.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockFixture}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.PublicKey25519Proposition
 import io.horizen.secret.{PrivateKey25519Creator, Secret}
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
-import io.horizen._
+import io.horizen.utxo.csw.CswManager.ReceivableMessages._
+import io.horizen.utxo.csw.CswManager.Responses._
+import io.horizen.utxo.csw.CswManager.{ProofInProcess, ProofInQueue}
 import io.horizen.utxo.fixtures.CswDataFixture
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
-import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
 import io.horizen.utxo.state.SidechainState
+import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
 import io.horizen.utxo.wallet.SidechainWallet
 import org.junit.Assert._
 import org.junit.{Assert, Test}
@@ -189,10 +189,10 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
         getRandomBlockId(height), FieldElementUtils.randomFieldElementBytes(height)))
     })
 
-    Mockito.when(history.getMainchainHeaderByHash(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
-      val headerHash: Array[Byte] = args.getArgument(0)
+    Mockito.when(history.getMainchainHeaderByHash(ArgumentMatchers.any[MainchainHeaderHash]())).thenAnswer(args => {
+      val headerHash: MainchainHeaderHash = args.getArgument(0)
       val header = mock[MainchainHeader]
-      Mockito.when(header.hashScTxsCommitment).thenReturn(FieldElementUtils.randomFieldElementBytes(Longs.fromByteArray(headerHash)))
+      Mockito.when(header.hashScTxsCommitment).thenReturn(FieldElementUtils.randomFieldElementBytes(Longs.fromByteArray(headerHash.value)))
       java.util.Optional.of(header)
     })
 

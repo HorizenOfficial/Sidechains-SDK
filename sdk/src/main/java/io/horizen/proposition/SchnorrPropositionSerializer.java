@@ -1,8 +1,9 @@
 package io.horizen.proposition;
 
 import sparkz.util.serialization.Reader;
-import sparkz.util.serialization.Writer;
 import sparkz.util.serialization.VLQByteBufferReader;
+import sparkz.util.serialization.Writer;
+
 import java.nio.ByteBuffer;
 
 public class SchnorrPropositionSerializer implements PropositionSerializer<SchnorrProposition> {

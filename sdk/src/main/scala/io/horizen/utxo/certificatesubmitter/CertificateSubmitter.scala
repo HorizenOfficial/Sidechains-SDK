@@ -23,13 +23,13 @@ import scala.language.postfixOps
 
 
 class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
-                           sidechainNodeViewHolderRef: ActorRef,
-                           secureEnclaveApiClient: SecureEnclaveApiClient,
-                           params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel,
-                           submissionStrategy: CertificateSubmissionStrategy,
-                           keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, T])
-                          (implicit ec: ExecutionContext)
+                                                 sidechainNodeViewHolderRef: ActorRef,
+                                                 secureEnclaveApiClient: SecureEnclaveApiClient,
+                                                 params: NetworkParams,
+                                                 mainchainChannel: MainchainNodeChannel,
+                                                 submissionStrategy: CertificateSubmissionStrategy,
+                                                 keyRotationStrategy: CircuitStrategy[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistory, SidechainState, T])
+                                                (implicit ec: ExecutionContext)
   extends AbstractCertificateSubmitter[
     SidechainTypes#SCBT,
     SidechainBlockHeader,

@@ -9,9 +9,8 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.SparkzEncoder
 
-import scala.collection.JavaConverters._
-
 import java.nio.charset.StandardCharsets
+import scala.collection.JavaConverters._
 
 
 class PublicKey25519PropositionScalaTest

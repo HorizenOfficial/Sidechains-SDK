@@ -3,22 +3,24 @@ package io.horizen.utxo
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import io.horizen._
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
-import io.horizen.fork.ForkConfigurator
+import io.horizen.fork.{ForkConfigurator, ForkManager, Sc2ScFork}
 import io.horizen.helper._
 import io.horizen.params._
+import io.horizen.sc2sc.Sc2ScProverRef
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.transaction.TransactionSerializer
 import io.horizen.utils.{BytesUtils, Pair}
 import io.horizen.utxo.api.http
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
-import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}
+import io.horizen.utxo.api.http.route._
 import io.horizen.utxo.backup.BoxIterator
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader, SidechainBlockSerializer}
 import io.horizen.utxo.box.BoxSerializer
@@ -26,6 +28,7 @@ import io.horizen.utxo.certificatesubmitter.CertificateSubmitterRef
 import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.companion.{SidechainBoxesCompanion, SidechainTransactionsCompanion}
 import io.horizen.utxo.csw.CswManagerRef
+import io.horizen.utxo.forge.ForgerRef
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.network.SidechainNodeViewSynchronizer
 import io.horizen.utxo.node._
@@ -33,7 +36,6 @@ import io.horizen.utxo.state.{ApplicationState, SidechainStateUtxoMerkleTreeProv
 import io.horizen.utxo.storage._
 import io.horizen.utxo.wallet.{ApplicationWallet, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWDisabled, SidechainWalletCswDataProviderCSWEnabled}
 import io.horizen.utxo.websocket.server.WebSocketServerRef
-import io.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainAppStopper, SidechainSettings, SidechainSyncInfo, SidechainSyncInfoMessageSpec, SidechainTypes, WebSocketServerSettings}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -42,8 +44,8 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import scala.jdk.CollectionConverters.asScalaBufferConverter
 import scala.io.{Codec, Source}
+import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -83,8 +85,7 @@ class SidechainApp @Inject()
       testnetId = 222,
       mainnetId = 333),
     secondsInSlot
-    )
-{
+  ) {
 
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
@@ -95,20 +96,21 @@ class SidechainApp @Inject()
   override val swaggerConfig: String = Source.fromResource("utxo/api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers, circuitType)
-  protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
+  private lazy val isSc2ScConfigured: Boolean = ForkManager.hasOptionalForkOfType[Sc2ScFork]()
+  protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxSerializers, isSc2ScConfigured)
 
   // Deserialize genesis block bytes
   override lazy val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
-    )
+    BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
+  )
 
   if (isCSWEnabled) {
     log.info("Ceased Sidechain Withdrawal (CSW) is enabled")
-    if (Option(params.cswVerificationKeyFilePath).forall(_.trim.isEmpty)){
+    if (Option(params.cswVerificationKeyFilePath).forall(_.trim.isEmpty)) {
       log.error("CSW Verification Key file path is not defined.")
       throw new IllegalArgumentException("CSW Verification Key file path is not defined.")
     }
-    if (Option(params.cswProvingKeyFilePath).forall(_.trim.isEmpty)){
+    if (Option(params.cswProvingKeyFilePath).forall(_.trim.isEmpty)) {
       log.error("CSW Proving Key file path is not defined.")
       throw new IllegalArgumentException("CSW Proving Key file path is not defined.")
     }
@@ -119,7 +121,6 @@ class SidechainApp @Inject()
         params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
         throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
       }
-
     }
   }
   else {
@@ -158,11 +159,11 @@ class SidechainApp @Inject()
   protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerClosableResource(walletCswDataStorage), params)
 
   // Append genesis secrets if we start the node first time
-  if(sidechainSecretStorage.isEmpty) {
-    for(secretHex <- sidechainSettings.wallet.genesisSecrets)
+  if (sidechainSecretStorage.isEmpty) {
+    for (secretHex <- sidechainSettings.wallet.genesisSecrets)
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
 
-    for(secretSchnorr <- sidechainSettings.withdrawalEpochCertificateSettings.signersSecrets)
+    for (secretSchnorr <- sidechainSettings.withdrawalEpochCertificateSettings.signersSecrets)
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
@@ -194,7 +195,7 @@ class SidechainApp @Inject()
 
   override val nodeViewSynchronizer: ActorRef =
     actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
+      SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = forge.ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
@@ -222,6 +223,7 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
+  var sc2scProverRef: ActorRef = Sc2ScProverRef(sidechainSettings, nodeViewHolderRef, params)
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => http.route.SidechainApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
@@ -236,7 +238,8 @@ class SidechainApp @Inject()
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
-    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params),
+    Sc2scApiRoute(settings.restApi, nodeViewHolderRef, sc2scProverRef, sidechainStateStorage)
   )
 
   val nodeViewProvider: NodeViewProvider[
@@ -261,7 +264,7 @@ class SidechainApp @Inject()
     NodeMemoryPool,
     SidechainNodeView] = nodeViewProvider
 
-  val transactionSubmitProvider : TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
+  val transactionSubmitProvider: TransactionSubmitProvider[TX] = new TransactionSubmitProviderImpl[TX](sidechainTransactionActorRef)
 
   override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
 

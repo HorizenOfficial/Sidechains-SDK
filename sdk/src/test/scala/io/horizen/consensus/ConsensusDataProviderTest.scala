@@ -1,6 +1,5 @@
 package io.horizen.consensus
 
-import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -11,10 +10,11 @@ import io.horizen.utils
 import io.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import io.horizen.vrf.VrfOutput
 import org.junit.Assert._
-import sparkz.core.consensus.ModifierSemanticValidity
 import org.junit.{Before, Test}
+import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.util._
 
+import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
 import scala.collection.mutable

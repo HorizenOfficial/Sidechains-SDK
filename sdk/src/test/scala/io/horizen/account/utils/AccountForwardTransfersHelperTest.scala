@@ -3,7 +3,6 @@ package io.horizen.account.utils
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import io.horizen.block.MainchainBlockReferenceData
-import io.horizen.utxo.box._
 import io.horizen.fixtures._
 import io.horizen.proposition._
 import io.horizen.transaction.MC2SCAggregatedTransaction

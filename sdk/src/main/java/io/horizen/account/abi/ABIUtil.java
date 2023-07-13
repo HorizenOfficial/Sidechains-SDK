@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class ABIUtil {
-
     public static final int METHOD_ID_LENGTH = 4;
 
     public static byte[] getArgumentsFromData(byte[] data) throws ExecutionRevertedException {

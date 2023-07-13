@@ -1,7 +1,9 @@
 package io.horizen.account.state
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.history.validation.InvalidTransactionChainIdException
 import io.horizen.account.node.NodeAccountState
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
@@ -9,19 +11,18 @@ import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
-import io.horizen.block.WithdrawalEpochCertificate
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.GasFeeFork
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
+import io.horizen.evm._
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import io.horizen.evm._
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
-import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 
 import java.math.BigInteger
@@ -31,18 +32,17 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class AccountState(
-    val params: NetworkParams,
-    timeProvider: NetworkTimeProvider,
-    blockHashProvider: HistoryBlockHashProvider,
-    override val version: VersionTag,
-    stateMetadataStorage: AccountStateMetadataStorage,
-    stateDbStorage: Database,
-    messageProcessors: Seq[MessageProcessor]
-) extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
-      with TransactionValidation[SidechainTypes#SCAT]
-      with NodeAccountState
-      with ClosableResourceHandler
-      with SparkzLogging {
+                    val params: NetworkParams,
+                    blockHashProvider: HistoryBlockHashProvider,
+                    override val version: VersionTag,
+                    stateMetadataStorage: AccountStateMetadataStorage,
+                    stateDbStorage: Database,
+                    messageProcessors: Seq[MessageProcessor]
+                  ) extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
+  with TransactionValidation[SidechainTypes#SCAT]
+  with NodeAccountState
+  with ClosableResourceHandler
+  with SparkzLogging {
 
   override type NVCT = AccountState
 
@@ -91,32 +91,35 @@ class AccountState(
       val currentWithdrawalEpochInfo = getWithdrawalEpochInfo
       val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
-        // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-        if(params.isNonCeasing) {
-          // For non-ceasing sidechains certificate must be validated just when it has been received.
-          // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
-          // then the whole block is invalid.
-          mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
-        } else {
-          // For ceasing sidechains submission window concept is used.
-          // If SC block has reached the certificate submission window end -> check the top quality certificate
-          // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-          if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
-            val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
+      // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
+      if (params.isNonCeasing) {
+        // For non-ceasing sidechains certificate must be validated just when it has been received.
+        // In case of multiple certificates appeared and at least one of them is invalid (conflicts with the current chain)
+        // then the whole block is invalid.
+        mod.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).foreach(cert => validateTopQualityCertificate(cert, stateView))
 
-            // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-            val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
-              stateView.getTopQualityCertificate(certReferencedEpochNumber))
+        // Save the scTxCommitmentTreeRootHash of every mainchain header in a block
+        mod.mainchainHeaders.foreach(mcHeader => stateView.applyMainchainHeader(mcHeader))
+      } else {
+        // For ceasing sidechains submission window concept is used.
+        // If SC block has reached the certificate submission window end -> check the top quality certificate
+        // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
+        if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+          val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
-            // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-            topQualityCertificateOpt match {
-              case Some(cert) =>
-                validateTopQualityCertificate(cert, stateView)
-              case None =>
-                log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
-                  s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
-                stateView.setCeased()
-            }
+          // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+          val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
+            stateView.getTopQualityCertificate(certReferencedEpochNumber))
+
+          // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
+          topQualityCertificateOpt match {
+            case Some(cert) =>
+              validateTopQualityCertificate(cert, stateView)
+            case None =>
+              log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
+                s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+              stateView.setCeased()
+          }
         }
       }
 
@@ -228,7 +231,6 @@ class AccountState(
 
       new AccountState(
         params,
-        timeProvider,
         blockHashProvider,
         idToVersion(mod.id),
         stateMetadataStorage,
@@ -309,6 +311,15 @@ class AccountState(
           )
         }
     }
+    //sc2sc validation
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          validateTopQualityCertificateForSc2Sc(topQualityCertificate, certReferencedEpochNumber, params.sidechainCreationVersion)
+        }
+      case _ =>
+    }
   }
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
@@ -322,7 +333,7 @@ class AccountState(
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-    new AccountState(params, timeProvider, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
+    new AccountState(params, blockHashProvider, version, newMetaState, stateDbStorage, messageProcessors)
   } recoverWith { case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -351,6 +362,31 @@ class AccountState(
   override def backwardTransfers(withdrawalEpoch: Int): Seq[BackwardTransfer] =
     using(getView)(_.getWithdrawalRequests(withdrawalEpoch))
       .map(wr => new BackwardTransfer(wr.proposition.bytes(), wr.valueInZennies))
+
+  override def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.getCrossChainMessages(withdrawalEpoch))
+        } else Seq()
+      case _ => Seq()
+    }
+  }
+
+  override def getCrossChainMessageHashEpoch(messageHash: CrossChainMessageHash): Option[Int] = {
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.getCrossChainMessageHashEpoch(messageHash))
+        } else None
+      case _ => None
+    }
+  }
+
+  def getTopCertificateMainchainHash(withdrawalEpoch: Int): Option[MainchainHeaderHash] =
+    using(getView)(_.getTopCertificateMainchainHash(withdrawalEpoch))
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     using(getView)(_.keyRotationProof(withdrawalEpoch, indexOfSigner, keyType))
@@ -514,17 +550,27 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
+  override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean = {
+    val sc2ScFork = ForkManager.getOptionalSidechainFork[Sc2ScFork](getCurrentConsensusEpochInfo._2.epoch)
+    sc2ScFork match {
+      case Some(sc2ScConf) =>
+        if (sc2ScConf.sc2ScCanSend) {
+          using(getView)(_.doesCrossChainMessageHashFromRedeemMessageExist(hash))
+        } else false
+      case _ => false
+    }
+  }
 }
 
 object AccountState extends SparkzLogging {
   private[horizen] def restoreState(
-      stateMetadataStorage: AccountStateMetadataStorage,
-      stateDbStorage: Database,
-      messageProcessors: Seq[MessageProcessor],
-      params: NetworkParams,
-      timeProvider: NetworkTimeProvider,
-      blockHashProvider: HistoryBlockHashProvider
-  ): Option[AccountState] = {
+                                     stateMetadataStorage: AccountStateMetadataStorage,
+                                     stateDbStorage: Database,
+                                     messageProcessors: Seq[MessageProcessor],
+                                     params: NetworkParams,
+                                     blockHashProvider: HistoryBlockHashProvider
+                                   ): Option[AccountState] = {
 
     if (stateMetadataStorage.isEmpty) {
       None
@@ -532,7 +578,6 @@ object AccountState extends SparkzLogging {
       Some(
         new AccountState(
           params,
-          timeProvider,
           blockHashProvider,
           bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
           stateMetadataStorage,
@@ -544,20 +589,18 @@ object AccountState extends SparkzLogging {
   }
 
   private[horizen] def createGenesisState(
-      stateMetadataStorage: AccountStateMetadataStorage,
-      stateDbStorage: Database,
-      messageProcessors: Seq[MessageProcessor],
-      params: NetworkParams,
-      timeProvider: NetworkTimeProvider,
-      blockHashProvider: HistoryBlockHashProvider,
-      genesisBlock: AccountBlock
-  ): Try[AccountState] = Try {
+                                           stateMetadataStorage: AccountStateMetadataStorage,
+                                           stateDbStorage: Database,
+                                           messageProcessors: Seq[MessageProcessor],
+                                           params: NetworkParams,
+                                           blockHashProvider: HistoryBlockHashProvider,
+                                           genesisBlock: AccountBlock
+                                         ): Try[AccountState] = Try {
 
     if (!stateMetadataStorage.isEmpty) throw new RuntimeException("State metadata storage is not empty!")
 
     new AccountState(
       params,
-      timeProvider,
       blockHashProvider,
       idToVersion(genesisBlock.parentId),
       stateMetadataStorage,

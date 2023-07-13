@@ -3,7 +3,9 @@ package io.horizen.utxo.state
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen.SidechainTypes
+import io.horizen.fork.Sc2ScFork
 import io.horizen.params.NetworkParams
+import io.horizen.sc2sc.Sc2ScUtils
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -23,12 +25,12 @@ class SidechainBackup @Inject()
   (@Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
    @Named("BackupStorage") val backUpStorage: Storage,
    @Named("BackUpper") val backUpper : BoxBackupInterface,
-   @Named("Params") val params : NetworkParams
+   @Named("Params") val params : NetworkParams,
+   sc2ScFork: Sc2ScFork
   ) extends SparkzLogging
   {
-    protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
+    protected val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(customBoxSerializers, Sc2ScUtils.isActive(Some(sc2ScFork)))
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
-
 
     def createBackup(stateStoragePath: String, sidechainBlockIdToRollback: String, copyStateStorage: Boolean): Unit = {
       var storagePath = stateStoragePath

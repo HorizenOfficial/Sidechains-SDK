@@ -4,11 +4,11 @@ import io.horizen.SidechainTypes
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils._
-import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainHeaderHash, WithdrawalEpochCertificate}
 import io.horizen.consensus.ConsensusEpochNumber
+import io.horizen.evm.StateDB
 import io.horizen.state.StateView
 import io.horizen.utils.WithdrawalEpochInfo
-import io.horizen.evm.StateDB
 import sparkz.core.VersionTag
 import sparkz.util.{ModifierId, SparkzLogging}
 
@@ -31,16 +31,20 @@ class AccountStateView(
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
     refData.topQualityCertificate.foreach(cert => {
       log.debug(s"adding top quality cert to state: $cert.")
-      updateTopQualityCertificate(cert, blockId)
+      updateTopQualityCertificate(cert, MainchainHeaderHash(refData.headerHash), blockId)
     })
   }
 
   // out-of-the-box helpers
-  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, blockId: ModifierId): Unit = {
+  override def updateTopQualityCertificate(cert: WithdrawalEpochCertificate, mainChainHash: MainchainHeaderHash, blockId: ModifierId): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
     metadataStorageView.updateLastCertificateReferencedEpoch(cert.epochNumber)
     metadataStorageView.updateLastCertificateSidechainBlockIdOpt(blockId)
+    metadataStorageView.addTopCertificateMainchainHash(cert.epochNumber, mainChainHash)
   }
+
+  override def getTopCertificateMainchainHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] =
+    metadataStorageView.getTopCertificateMainchainHash(referencedWithdrawalEpoch)
 
   override def updateFeePaymentInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.updateFeePaymentInfo(info)
@@ -71,8 +75,9 @@ class AccountStateView(
     metadataStorageView.commit(version)
   }
 
-  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
+  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
+  }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
 

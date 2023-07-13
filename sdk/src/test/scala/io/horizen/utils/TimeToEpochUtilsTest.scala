@@ -1,20 +1,20 @@
 package io.horizen.utils
 
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import io.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes
-import CircuitTypes.CircuitTypes
+import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
-import scala.concurrent.duration._
+import sparkz.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
+import scala.concurrent.duration._
 
 class TimeToEpochUtilsTest extends JUnitSuite {
 
@@ -43,6 +43,8 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val signersThreshold: Int = 0
     override val certProvingKeyFilePath: String = ""
     override val certVerificationKeyFilePath: String = ""
+    override val sc2ScProvingKeyFilePath: Option[String] = None
+    override val sc2ScVerificationKeyFilePath: Option[String] = None
     override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32)
     override val initialCumulativeCommTreeHash: Array[Byte] = Array()
     override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()

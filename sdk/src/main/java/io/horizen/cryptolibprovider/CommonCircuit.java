@@ -1,15 +1,15 @@
 package io.horizen.cryptolibprovider;
 
-import io.horizen.block.MainchainBackwardTransferCertificateOutput;
-import io.horizen.block.WithdrawalEpochCertificate;
-import io.horizen.utxo.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrSignature;
+import io.horizen.block.MainchainBackwardTransferCertificateOutput;
+import io.horizen.block.WithdrawalEpochCertificate;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utxo.box.WithdrawalRequestBox;
 import scala.Enumeration;
 import scala.collection.Seq;
 
@@ -38,6 +38,7 @@ public class  CommonCircuit {
     // In general the idea is to have different sidecahins with different circuits to be compatible with SC2SC circuit.
     // For example, for Latus circuit (at least 13 custom fields for own needs) with SC2SC support.
     public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW_WITH_KEY_ROTATION = 32;
+
 
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
@@ -68,6 +69,28 @@ public class  CommonCircuit {
                 cert.btrFee(),
                 Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
         );
+    }
+
+    // NOTE: this method refers to the mainchain issue reported here https://github.com/HorizenOfficial/Sidechains-SDK/blob/dev/sdk/src/main/scala/io/horizen/block/SidechainCommitmentTree.scala#L74
+    // when we need to create a WithdrawalCertificate from a WithdrawalEpochCertificate created in mainchain, use this function to not double swap the two parameters
+    public static WithdrawalCertificate createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        return new WithdrawalCertificate(
+                FieldElement.deserialize(cert.sidechainId()),
+                cert.epochNumber(),
+                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs())
+                        .stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                cert.quality(),
+                FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
+                cert.btrFee(),
+                cert.ftMinAmount(),
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+        );
+    }
+
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        try(WithdrawalCertificate wc = createWithdrawalCertificateWithBtrFreeAndFtMinAmountSwapped(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
+            return hashFe.serializeFieldElement();
+        }
     }
 
     public static List<SchnorrSignature> getSignatures(List<Optional<byte[]>> schnorrSignatureBytesList){

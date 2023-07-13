@@ -62,7 +62,7 @@ class StateTransition(
               view.revertToSnapshot(revisionProcessor)
               gasPool.subGas(gasPool.getGas)
               throw err
-            case err : Throwable =>
+            case err: Throwable =>
               // do not process refunds in this case, all changes will be reverted
               skipRefund = true
               throw err

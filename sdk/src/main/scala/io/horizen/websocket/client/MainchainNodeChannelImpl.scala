@@ -183,11 +183,11 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     val unknown = sidechainIds.filterNot(id => sidechainsVersionsCache.contains(id))
     for(group <- unknown.grouped(MAX_SIDECHAINS_REQUEST)) {
       // Server expects sidechain ids to be a hex of BigEndian bytes
-      getSidechainVersions(group.map(id => BytesUtils.toHexString(BytesUtils.reverseBytes(id.data())))) match {
+      getSidechainVersions(group.map(id => BytesUtils.toHexString(BytesUtils.toMainchainFormat(id.data())))) match {
         case Success(res) =>
           for(info: SidechainVersionsInfo <- res) {
             // Convert sidechain ids back to LittleEndian bytes
-            sidechainsVersionsCache += new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(info.scId))) -> SidechainCreationVersions.getVersion(info.version)
+            sidechainsVersionsCache += new ByteArrayWrapper(BytesUtils.toMainchainFormat(BytesUtils.fromHexString(info.scId))) -> SidechainCreationVersions.getVersion(info.version)
           }
         case Failure(exception) =>
           throw new RuntimeException("Can't retrieve sidechain versions.", exception)

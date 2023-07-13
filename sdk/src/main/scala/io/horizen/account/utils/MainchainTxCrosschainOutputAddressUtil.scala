@@ -1,7 +1,7 @@
 package io.horizen.account.utils
 
-import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
+import io.horizen.utils.BytesUtils
 
 object MainchainTxCrosschainOutputAddressUtil {
 

@@ -1,15 +1,14 @@
 package io.horizen.block
 
-import java.util
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.utils.BytesUtils
 import org.bouncycastle.crypto.digests.Blake2bDigest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.{assertArrayEquals, assertEquals}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 import java.nio.charset.StandardCharsets
+import java.util
 
 class EquihashTest extends JUnitSuite {
 

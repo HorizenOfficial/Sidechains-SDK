@@ -9,9 +9,9 @@ import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.ByteArrayWrapper
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.CoinsBox
+import io.horizen.utxo.state.UtxoMerkleTreeView
 import io.horizen.utxo.storage.SidechainWalletCswDataStorage
 import io.horizen.utxo.utils.{CswData, ForwardTransferCswData, UtxoCswData}
-import io.horizen.utxo.state.UtxoMerkleTreeView
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

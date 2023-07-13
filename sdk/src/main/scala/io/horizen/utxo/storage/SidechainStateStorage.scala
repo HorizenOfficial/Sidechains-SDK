@@ -2,11 +2,13 @@ package io.horizen.utxo.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.SidechainTypes
-import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
+import io.horizen.block.{MainchainHeaderHash, WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import io.horizen.certificatesubmitter.keys._
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes
+import io.horizen.fork.{ForkManager, Sc2ScFork}
 import io.horizen.params.NetworkParams
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash, CrossChainMessageSerializer, Sc2ScUtils}
 import io.horizen.storage.{SidechainStorageInfo, Storage, StorageIterator, leveldb}
 import io.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import io.horizen.utxo.backup.BoxIterator
@@ -36,6 +38,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes(StandardCharsets.UTF_8))
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
+  private val crossChainMessagesSerializer = new ListSerializer[CrossChainMessage](CrossChainMessageSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes(StandardCharsets.UTF_8))
 
@@ -44,17 +47,40 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] val forgerListIndexKey = Utils.calculateKey("forgerListIndexKey".getBytes(StandardCharsets.UTF_8))
 
   private val undefinedWithdrawalEpochCounter: Int = -1
+  private val undefinedCrosschainMessagesEpochCounter: Int = -1
+
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
+  }
+
+  private[horizen] def getCrosschainMessagesEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessagesEpochCounterKey".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
+  private[horizen] def getCrosschainMessagesKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessages".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+  }
+
+  private[horizen] def getCrosschainMessageSingleKey(hash: CrossChainMessageHash): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessage".getBytes, hash.bytes))
+  }
+
+  private[horizen] def getCrossChainMessageHashFromRedeemMessage(hash: CrossChainMessageHash): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("ccMessageHashFromRedeemMessage".getBytes, hash.bytes))
+  }
+
+  private[horizen] def getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeHash: Array[Byte]): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("scTxCommitmentTreeKey".getBytes, scTxCommitmentTreeHash))
+  }
+
   private[horizen] def getCertifiersStorageKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("certificateKeys".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch)))
   }
+
   private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(indexOfSigner), Ints.toByteArray(keyType)))
@@ -63,6 +89,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
   }
+
+  private[horizen] def getTopQualityCertificateMainchainHeaderKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper =
+    Utils.calculateKey(Bytes.concat("topQualityCertificateMainchainHeaderKey".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
 
   private[horizen] val getLastCertificateEpochNumberKey = Utils.calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 
@@ -81,7 +110,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(withdrawalEpochNumber)))
   }
-
 
   def getBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
     storage.get(Utils.calculateKey(boxId)) match {
@@ -116,6 +144,16 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           Ints.fromByteArray(baw.data)
         }.toOption.getOrElse(undefinedWithdrawalEpochCounter)
       case _ => undefinedWithdrawalEpochCounter
+    }
+  }
+
+  def getCrossChainMessagesEpochCounter(epoch: Int): Int = {
+    storage.get(getCrosschainMessagesEpochCounterKey(epoch)).asScala match {
+      case Some(baw) =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        }.toOption.getOrElse(undefinedCrosschainMessagesEpochCounter)
+      case _ => undefinedCrosschainMessagesEpochCounter
     }
   }
 
@@ -165,6 +203,41 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
+  def getCrossChainMessagesPerEpoch(withdrawalEpoch: Int): Seq[CrossChainMessage] = {
+    // Aggregate all crosschainMessages until reaching the counter, where the key is not present in the storage.
+    val crosschainMessages: ListBuffer[CrossChainMessage] = ListBuffer()
+    val lastCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpoch)
+    for (counter <- 0 to lastCounter) {
+      storage.get(getCrosschainMessagesKey(withdrawalEpoch, counter)).asScala match {
+        case Some(baw) =>
+          crossChainMessagesSerializer.parseBytesTry(baw.data) match {
+            case Success(wr) =>
+              crosschainMessages.appendAll(wr.asScala)
+            case Failure(exception) =>
+              throw new IllegalStateException("Error while crosschainMessages parsing.", exception)
+          }
+        case None =>
+          throw new IllegalStateException("Error while crosschainMessages retrieving: record expected to exist.")
+      }
+    }
+    crosschainMessages
+  }
+
+  def getCrossChainMessageHashEpoch(singleMessageHash: CrossChainMessageHash): Option[Int] = {
+    storage.get(getCrosschainMessageSingleKey(singleMessageHash)).asScala match {
+      case Some(baw) => Option( Ints.fromByteArray(baw.data()))
+      case _ => Option.empty
+    }
+  }
+
+  def doesCrossChainMessageHashFromRedeemMessageExist(msgHash: CrossChainMessageHash): Boolean = {
+    storage.get(getCrossChainMessageHashFromRedeemMessage(msgHash)).isPresent
+  }
+
+  def doesScTxCommitmentTreeRootExist(scTxCommitmentTreeRoot: Array[Byte]): Boolean = {
+    storage.get(getSidechainTxCommitmentTreeHashKey(scTxCommitmentTreeRoot)).isPresent
+  }
+
   def getCertifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     storage.get(getCertifiersStorageKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
@@ -202,6 +275,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case _ => Option.empty
     }
   }
+
+  def getTopQualityCertificateMainchainHeaderHash(referencedWithdrawalEpoch: Int): Option[MainchainHeaderHash] = {
+    storage.get(getTopQualityCertificateMainchainHeaderKey(referencedWithdrawalEpoch)).asScala match {
+      case Some(baw) => Some(MainchainHeaderHash(baw.data()))
+      case _ => Option.empty
+    }
+  }
+
 
   def getLastCertificateReferencedEpoch(): Option[Int] = {
     storage.get(getLastCertificateEpochNumberKey).asScala match {
@@ -279,8 +360,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxUpdateList: Set[SidechainTypes#SCB],
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
+             crossChainMessagesToAppendSeq: Seq[CrossChainMessage],
+             crossChainMessageHashesToAppend: Seq[CrossChainMessageHash],
+             hashScTxsCommitment: Set[String],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+             topQualityCerts: Seq[(WithdrawalEpochCertificate, MainchainHeaderHash)],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
              scHasCeased: Boolean,
@@ -294,8 +378,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(!boxUpdateList.contains(null), "Box to add/update must be NOT NULL.")
     require(!boxIdsRemoveSet.contains(null), "BoxId to remove must be NOT NULL.")
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
+    require(crossChainMessagesToAppendSeq != null, "Seq of CrossChainMessages to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
     require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
+
+    val topQualityCertificateOpt : Option[WithdrawalEpochCertificate] = topQualityCerts.lastOption.map(_._1)
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
@@ -335,6 +422,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch, keyRotationProof.index, keyRotationProof.keyType.id),
         new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
     })
+
     // Store utxo tree merkle root if present
     utxoMerkleTreeRootOpt.foreach(merkleRoot => {
       updateList.add(new JPair(getUtxoMerkleTreeRootKey(withdrawalEpochInfo.epoch), new ByteArrayWrapper(merkleRoot)))
@@ -378,7 +466,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
-
     if (params.isNonCeasing) {
       topQualityCertificateOpt.foreach(certificate => {
         // For non-ceasing sidechain store the id of the SC block which contains the certificate.
@@ -408,14 +495,55 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         }
       })
     }
+
     // Store referenced epoch number and the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getLastCertificateEpochNumberKey,
-       new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
+        new ByteArrayWrapper(Ints.toByteArray(certificate.epochNumber))))
 
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
+
+    if (Sc2ScUtils.isActive(ForkManager.getOptionalSidechainFork[Sc2ScFork](consensusEpoch))) {
+      if (crossChainMessagesToAppendSeq.nonEmpty) {
+        // Calculate the next counter for storing crosschain messages requests without duplication previously stored ones.
+        val nextCrossChainMessageEpochCounter: Int = getCrossChainMessagesEpochCounter(withdrawalEpochInfo.epoch) + 1
+
+        updateList.add(new JPair(getCrosschainMessagesEpochCounterKey(withdrawalEpochInfo.epoch),
+          new ByteArrayWrapper(Ints.toByteArray(nextCrossChainMessageEpochCounter))))
+
+        //collect and store the crosschain messages, grouped by epoch
+        val ccMessages = new JArrayList[CrossChainMessage]()
+        for (b <- crossChainMessagesToAppendSeq) {
+          ccMessages.add(b)
+
+          //store also every  single hash separately with its epoch
+          val singleMessageHash = b.getCrossChainMessageHash
+          updateList.add(new JPair(getCrosschainMessageSingleKey(singleMessageHash),
+            new ByteArrayWrapper(Ints.toByteArray(withdrawalEpochInfo.epoch))))
+        }
+
+        updateList.add(new JPair(getCrosschainMessagesKey(withdrawalEpochInfo.epoch, nextCrossChainMessageEpochCounter),
+          new ByteArrayWrapper(crossChainMessagesSerializer.toBytes(ccMessages))))
+      }
+
+      // Save all the cross-chain message hashes received in a redeem tx
+      crossChainMessageHashesToAppend.foreach(msgHash =>
+        updateList.add(new JPair(getCrossChainMessageHashFromRedeemMessage(msgHash), Array.emptyByteArray))
+      )
+
+      // Save all the hash sidechain transaction commitment in mainchain header
+      hashScTxsCommitment.foreach(scCommHash =>
+        updateList.add(new JPair(getSidechainTxCommitmentTreeHashKey(BytesUtils.fromHexString(scCommHash)), Array.emptyByteArray))
+      )
+
+      //for sidechain2Sidehcain we store also the mainchain hash for each top quality certificate
+      topQualityCerts.foreach(ele =>
+        updateList.add(new JPair(getTopQualityCertificateMainchainHeaderKey(ele._1.epochNumber),
+          new ByteArrayWrapper(ele._2.value)))
+      )
+    }
 
     // Update BlockFeeInfo data
     val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1

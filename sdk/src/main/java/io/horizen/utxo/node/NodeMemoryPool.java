@@ -1,8 +1,8 @@
 package io.horizen.utxo.node;
 
 import io.horizen.node.NodeMemoryPoolBase;
-import io.horizen.utxo.box.Box;
 import io.horizen.proposition.Proposition;
+import io.horizen.utxo.box.Box;
 import io.horizen.utxo.transaction.BoxTransaction;
 
 import java.util.List;

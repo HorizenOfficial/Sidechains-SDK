@@ -1,5 +1,10 @@
 package io.horizen.utxo.backup;
 
+import io.horizen.proposition.Proposition;
+import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
+import io.horizen.utils.ByteArrayWrapper;
+import io.horizen.utils.Pair;
+import io.horizen.utils.Utils;
 import io.horizen.utxo.box.Box;
 import io.horizen.utxo.box.BoxSerializer;
 import io.horizen.utxo.box.ZenBox;
@@ -7,12 +12,7 @@ import io.horizen.utxo.companion.SidechainBoxesCompanion;
 import io.horizen.utxo.customtypes.CustomBox;
 import io.horizen.utxo.customtypes.CustomBoxSerializer;
 import io.horizen.utxo.fixtures.BoxFixtureClass;
-import io.horizen.proposition.Proposition;
 import io.horizen.utxo.storage.BackupStorage;
-import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import io.horizen.utils.ByteArrayWrapper;
-import io.horizen.utils.Pair;
-import io.horizen.utils.Utils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+
 import static org.junit.Assert.fail;
 
 public class BoxIteratorTest extends BoxFixtureClass {
@@ -43,7 +44,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
     @Before
     public void setup() {
         customBoxSerializers.put(CustomBox.BOX_TYPE_ID, (BoxSerializer) CustomBoxSerializer.getSerializer());
-        sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxSerializers);
+        sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxSerializers, false);
 
         customBoxes = getCustomBoxList(nBoxes);
         for (CustomBox box : customBoxes) {

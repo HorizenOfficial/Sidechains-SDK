@@ -9,7 +9,7 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 public class Signature25519Test {
 

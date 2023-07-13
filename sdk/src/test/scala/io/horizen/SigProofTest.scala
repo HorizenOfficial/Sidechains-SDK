@@ -1,9 +1,9 @@
 package io.horizen
 
 import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import io.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
-import com.horizen.certnative.BackwardTransfer
 import io.horizen.fixtures.{FieldElementFixture, SecretFixture}
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.BytesUtils
@@ -11,7 +11,6 @@ import org.junit.Assert.{assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 
 import java.io._
-import java.nio.charset.StandardCharsets
 import java.util.Optional
 import java.{lang, util}
 import scala.collection.JavaConverters._

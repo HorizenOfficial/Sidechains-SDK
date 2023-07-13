@@ -3,16 +3,16 @@ package io.horizen.api.http.route
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
-import io.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
+import akka.pattern.ask
 import io.horizen.api.http.{ApplicationBaseApiGroup, FunctionsApplierOnSidechainNodeView}
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import io.horizen.transaction.Transaction
+import io.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
 import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
-import akka.pattern.ask
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}

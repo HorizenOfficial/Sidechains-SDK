@@ -1,16 +1,14 @@
 package io.horizen.params
 
-import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
-
-import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
-import sparkz.util.ModifierId
-import sparkz.util.bytesToId
+import sparkz.util.{ModifierId, bytesToId}
 
+import java.math.BigInteger
 import scala.concurrent.duration._
 
 case class MainNetParams(
@@ -33,10 +31,11 @@ case class MainNetParams(
                           override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte]
                           (CumulativeHashFunctions.hashLength()),
-                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
-                          = Seq(),
+                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
+                          override val sc2ScProvingKeyFilePath: Option[String] = None,
+                          override val sc2ScVerificationKeyFilePath: Option[String] = None,
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,

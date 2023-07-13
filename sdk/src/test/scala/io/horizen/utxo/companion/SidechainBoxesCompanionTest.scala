@@ -2,7 +2,6 @@ package io.horizen.utxo.companion
 
 import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
-import io.horizen.customtypes._
 import io.horizen.utxo.box.BoxSerializer
 import io.horizen.utxo.customtypes.{CustomBox, CustomBoxSerializer}
 import io.horizen.utxo.fixtures.BoxFixture
@@ -12,7 +11,6 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-import scala.util.{Failure, Success}
 
 class SidechainBoxesCompanionTest
   extends JUnitSuite
@@ -23,8 +21,8 @@ class SidechainBoxesCompanionTest
   var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
 
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers, false)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap(), false)
 
   @Test
   def testCore(): Unit = {

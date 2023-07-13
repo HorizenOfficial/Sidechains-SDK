@@ -1,13 +1,16 @@
 package io.horizen.utxo.transaction;
 
-import io.horizen.utxo.box.*;
-import io.horizen.utxo.box.data.*;
 import io.horizen.proof.Proof;
 import io.horizen.proof.Signature25519;
 import io.horizen.proof.Signature25519Serializer;
 import io.horizen.proposition.Proposition;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.ListSerializer;
+import io.horizen.utxo.box.Box;
+import io.horizen.utxo.box.BoxUnlocker;
+import io.horizen.utxo.box.data.BoxData;
+import io.horizen.utxo.box.data.ZenBoxData;
+import io.horizen.utxo.box.data.ZenBoxDataSerializer;
 
 import java.util.ArrayList;
 import java.util.Collections;

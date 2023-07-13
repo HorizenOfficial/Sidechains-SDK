@@ -3,6 +3,7 @@ package io.horizen.account.state
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.evm.{Address, ResourceHandle}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainMessageHash}
 
 import java.math.BigInteger
 
@@ -31,5 +32,11 @@ trait AccountStateReader {
   def getIntermediateRoot: Array[Byte]
 
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys]
+
   def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof]
+  def getCrossChainMessages(withdrawalEpoch: Int): Seq[CrossChainMessage]
+
+  def getCrossChainMessageHashEpoch(msgHash: CrossChainMessageHash): Option[Int]
+
+  def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash): Boolean
 }

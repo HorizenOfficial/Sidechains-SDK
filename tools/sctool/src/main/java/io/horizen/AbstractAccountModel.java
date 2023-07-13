@@ -32,6 +32,7 @@ import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.transaction.mainchain.SidechainCreation;
 import io.horizen.utils.MerklePath;
+import io.horizen.utils.TimeToEpochUtils;
 import io.horizen.vrf.VrfOutput;
 import scala.collection.Iterator;
 import scala.collection.JavaConverters;
@@ -130,10 +131,16 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
 
     protected byte[] getGenesisStateRoot(MainchainBlockReference mcRef, NetworkParams params) throws MessageProcessorInitializationException {
         List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
+        MainchainHeader mcHeader = mcRef.header();
 
         List<MessageProcessor> customMessageProcessors = getCustomMessageProcessors(params);
+        int consensusEpochAtGenesisBlock = 0;
 
-        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, JavaConverters.asScalaBuffer(customMessageProcessors));
+        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(
+                params,
+                JavaConverters.asScalaBuffer(customMessageProcessors),
+                consensusEpochAtGenesisBlock
+        );
 
         AccountStateView view = getStateView(messageProcessorSeq);
         try (view) {
@@ -149,9 +156,10 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
                 view.applyMainchainBlockReferenceData(mcBlockRefData);
             }
 
+            view.applyMainchainHeader(mcHeader);
+
             // get the state root after all state-changing operations
             return view.getIntermediateRoot();
-
         }
     }
 

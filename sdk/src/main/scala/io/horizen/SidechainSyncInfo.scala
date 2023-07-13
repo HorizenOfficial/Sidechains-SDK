@@ -3,12 +3,11 @@ package io.horizen
 import io.horizen.block.SidechainBlockBase
 import sparkz.core.NodeViewModifier
 import sparkz.core.consensus.History.ModifierIds
-import sparkz.util.ModifierId
 import sparkz.core.consensus.SyncInfo
 import sparkz.core.network.message.SyncInfoMessageSpec
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.serialization.{Reader, Writer}
-import sparkz.util.{bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 
 // knownBlockIds ordered backward most recent one to oldest

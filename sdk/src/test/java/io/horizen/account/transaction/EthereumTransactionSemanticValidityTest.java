@@ -6,8 +6,10 @@ import io.horizen.account.state.GasUtil;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
+
 import java.math.BigInteger;
 import java.util.Optional;
+
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 

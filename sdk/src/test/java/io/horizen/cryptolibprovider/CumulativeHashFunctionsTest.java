@@ -3,7 +3,8 @@ package io.horizen.cryptolibprovider;
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions;
 import io.horizen.utils.BytesUtils;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.assertEquals;
 
 public class CumulativeHashFunctionsTest {
 

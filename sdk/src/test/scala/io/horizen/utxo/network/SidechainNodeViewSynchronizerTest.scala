@@ -4,13 +4,13 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import io.horizen._
 import io.horizen.block.SidechainBlockBase
-import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
 import io.horizen.fixtures.SidechainBlockInfoFixture
+import io.horizen.history.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import io.horizen.utils.BytesUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockSerializer}
+import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.utxo.transaction.{RegularTransaction, RegularTransactionSerializer}
-import io.horizen.history.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.horizen.SidechainTypes
 import io.horizen.api.http.JacksonSupport._
-import io.horizen.api.http.route.{DisableApiRoute, ErrorNotEnabledOnSeederNode, TransactionBaseApiRoute}
-import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorBadCircuit
+import io.horizen.api.http.route.{ErrorNotEnabledOnSeederNode, TransactionBaseApiRoute}
+import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.api.http.route.TransactionBaseRestScheme.{TransactionBytesDTO, TransactionDTO}
 import io.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
@@ -17,7 +17,6 @@ import io.horizen.proof.{Proof, SchnorrSignatureSerializer}
 import io.horizen.proposition._
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import io.horizen.api.http.route.TransactionBaseErrorResponse._
 import io.horizen.utxo.api.http.route.SidechainTransactionRestScheme._
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
@@ -692,9 +691,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     } else
       Seq.empty
   }
-
 }
-
 
 object SidechainTransactionRestScheme {
 
