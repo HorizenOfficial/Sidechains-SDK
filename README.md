@@ -102,3 +102,4 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 
 Version 0.7.0 is not backward compatible with any previous versions.
 Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.1 into a >=0.7.0
+

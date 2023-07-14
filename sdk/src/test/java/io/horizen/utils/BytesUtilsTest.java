@@ -13,7 +13,6 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;
 import static org.junit.Assert.*;
 
@@ -255,14 +254,14 @@ public class BytesUtilsTest {
 
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
                 expectedPublicKeyHashBytesMainNet,
-                BytesUtils.fromHorizenPublicKeyAddress(pubKeyAddressMainNet, mainNetParams));
+                BytesUtils.fromHorizenMcTransparentAddress(pubKeyAddressMainNet, mainNetParams));
 
 
         // Test 2: invalid MainNetAddress in MainNet network: broken checksum
         String invalidPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4c1";
         boolean exceptionOccurred = false;
         try {
-            BytesUtils.fromHorizenPublicKeyAddress(invalidPubKeyAddressMainNet, mainNetParams);
+            BytesUtils.fromHorizenMcTransparentAddress(invalidPubKeyAddressMainNet, mainNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
         }
@@ -273,7 +272,7 @@ public class BytesUtilsTest {
         String invalidLengthPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4c";
         exceptionOccurred = false;
         try {
-            BytesUtils.fromHorizenPublicKeyAddress(invalidLengthPubKeyAddressMainNet, mainNetParams);
+            BytesUtils.fromHorizenMcTransparentAddress(invalidLengthPubKeyAddressMainNet, mainNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
         }
@@ -284,7 +283,7 @@ public class BytesUtilsTest {
         String invalidNetworkPubKeyAddress = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi"; // from testnet
         exceptionOccurred = false;
         try {
-            BytesUtils.fromHorizenPublicKeyAddress(invalidNetworkPubKeyAddress, mainNetParams);
+            BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, mainNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
         }
@@ -304,14 +303,14 @@ public class BytesUtilsTest {
         byte[] expectedPublicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
                 expectedPublicKeyHashBytesTestNet,
-                BytesUtils.fromHorizenPublicKeyAddress(pubKeyAddressTestNet, testNetParams));
+                BytesUtils.fromHorizenMcTransparentAddress(pubKeyAddressTestNet, testNetParams));
 
 
         // Test 6: MainNetAddress in TestNet network
         invalidNetworkPubKeyAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK"; // from testnet
         exceptionOccurred = false;
         try {
-            BytesUtils.fromHorizenPublicKeyAddress(invalidNetworkPubKeyAddress, testNetParams);
+            BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, testNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
         }

@@ -55,7 +55,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
@@ -373,7 +372,11 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
+          .map(err => {
+              log.debug(s"Execution has been reverted: ${err.getMessage}", err)
+              RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData))
+            }
+          )
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }
