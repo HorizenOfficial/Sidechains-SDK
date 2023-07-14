@@ -6,7 +6,7 @@ import akka.util.Timeout
 import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
+import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusParamsUtil, ConsensusSlotNumber}
 import io.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -195,7 +195,7 @@ abstract class AbstractForger[
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete {
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
+          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusSlotsPerEpoch, epochAndSlot, isForgingEnabled))
 
         case failure@Failure(_) =>
           forgerInfoRequester ! failure

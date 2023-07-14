@@ -2,6 +2,7 @@ package io.horizen.history.validation
 
 import java.util.Random
 import io.horizen.SidechainTypes
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.block.{Ommer, SidechainBlockHeaderBase}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus._
@@ -504,6 +505,9 @@ class ConsensusValidatorOmmersTest
 
   private def mockHistory(slotsInEpoch: Int = 720): SidechainHistory = {
     val params: NetworkParams = MainNetParams(consensusSlotsInEpoch = slotsInEpoch)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(slotsInEpoch)),
+    ))
     val history: SidechainHistory = mock[SidechainHistory]
 
     Mockito.when(history.params).thenReturn(params)

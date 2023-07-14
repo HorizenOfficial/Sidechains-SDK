@@ -2,14 +2,14 @@ package io.horizen
 
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.consensus.{ConsensusParamsUtil, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation._
 import io.horizen.params.NetworkParams
 import io.horizen.secret.{Secret, SecretCreator}
 import io.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
@@ -385,6 +385,7 @@ abstract class AbstractSidechainNodeViewHolder[
                 updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
 
               val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
+              ConsensusParamsUtil.setCurrentConsensusEpoch(consensusEpochInfo.epoch + 1)
               (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
             } else
               (updateInfo.history, updateInfo.wallet)

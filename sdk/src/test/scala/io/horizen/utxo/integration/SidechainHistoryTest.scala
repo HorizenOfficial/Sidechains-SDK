@@ -1,8 +1,9 @@
 package io.horizen.utxo.integration
 
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
-import io.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
+import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import io.horizen.fixtures._
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.history.AbstractHistory
@@ -52,6 +53,9 @@ class SidechainHistoryTest extends JUnitSuite
   val sidechainSettings: SidechainSettings = mock[SidechainSettings]
   val sparkzSettings: SparkzSettings = mock[SparkzSettings]
   var storage: Storage = _
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+  ))
 
   @Before
   def setUp(): Unit = {
@@ -711,6 +715,9 @@ class SidechainHistoryTest extends JUnitSuite
       sidechainGenesisBlockTimestamp = 100000,
       consensusSecondsInSlot = 10,
       consensusSlotsInEpoch = 2)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(2))
+    ))
 
     val sidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), sidechainTransactionsCompanion, params)
     // Create first history object

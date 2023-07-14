@@ -23,7 +23,7 @@ import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.consensus.ConsensusDataStorage
+import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil}
 import io.horizen.evm.LevelDBDatabase
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
@@ -33,11 +33,12 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
-import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen.utils.{BytesUtils, Pair, TimeToEpochUtils}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -91,6 +92,18 @@ class AccountSidechainApp @Inject()
   val consensusStore = new File(dataDirAbsolutePath + "/consensusData")
 
   // Init all storages
+  protected val sidechainHistoryStorage = new AccountHistoryStorage(
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 1441)),
+    sidechainTransactionsCompanion,
+    params)
+
+  if (sidechainHistoryStorage.height > 0) {
+    val bestBlockTimestamp = sidechainHistoryStorage.bestBlock.timestamp
+    ConsensusParamsUtil.setCurrentConsensusEpoch(TimeToEpochUtils.timeStampToEpochNumber(params, bestBlockTimestamp))
+  } else {
+    ConsensusParamsUtil.setCurrentConsensusEpoch(0)
+  }
+
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore)),
     sidechainSecretsCompanion)
@@ -99,11 +112,6 @@ class AccountSidechainApp @Inject()
     registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
 
   protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
-
-  protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore)),
-    sidechainTransactionsCompanion,
-    params)
 
   protected val consensusDataStorage = new ConsensusDataStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore)))

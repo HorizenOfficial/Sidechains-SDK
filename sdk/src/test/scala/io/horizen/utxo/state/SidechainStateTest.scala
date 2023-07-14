@@ -1,10 +1,11 @@
 package io.horizen.utxo.state
 
 import io.horizen.SidechainTypes
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.consensus.{ConsensusEpochNumber, ConsensusParamsUtil, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.fixtures._
@@ -62,6 +63,10 @@ class SidechainStateTest
   val vrfList = new ListBuffer[VrfPublicKey]()
 
   val params = MainNetParams()
+
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, new ConsensusParamsFork(720)),
+  ))
 
   @Before
   def init(): Unit = {
@@ -999,6 +1004,11 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(720)),
+    ))
+    ConsensusParamsUtil.setCurrentConsensusEpoch(11)
+
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
         buildRegularTransaction(0,1,0,Seq(),1)
@@ -1123,6 +1133,10 @@ class SidechainStateTest
     //Test BTs limit before the Fork1
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
     Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(86400)
+    ConsensusParamsUtil.setCurrentConsensusEpoch(1)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(86400)),
+    ))
 
     transactionList.clear()
     transactionList += buildRegularTransaction(1, 0, 100, Seq(), 100)

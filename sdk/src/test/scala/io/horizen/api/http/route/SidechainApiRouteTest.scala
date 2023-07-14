@@ -8,11 +8,12 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages._
 import io.horizen.account.fixtures.BasicAuthenticationFixture
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.api.http._
 import io.horizen.companion.SidechainSecretsCompanion
-import io.horizen.consensus.ConsensusEpochAndSlot
+import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusParamsUtil}
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.forge.AbstractForger
@@ -62,6 +63,7 @@ import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.Seq
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._

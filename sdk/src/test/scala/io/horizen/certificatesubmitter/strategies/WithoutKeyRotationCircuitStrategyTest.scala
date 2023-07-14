@@ -5,11 +5,13 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.schnorrnative.SchnorrKeyPair
 import io.horizen._
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.block.SidechainCreationVersions
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -44,6 +46,9 @@ import scala.util.{Failure, Success}
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = _
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+  ))
 
   @Before
   def init(): Unit = {

@@ -1,6 +1,7 @@
 package io.horizen.history.validation
 
-import io.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
+import io.horizen.account.fork.ConsensusParamsFork
+import io.horizen.consensus.{ConsensusParamsUtil, FullConsensusEpochInfo, HistoryConsensusChecker}
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -88,6 +89,10 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4 - 2
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(epochSizeInSlots)),
+    ))
+
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
     val lastGenerator = generators.last
@@ -105,6 +110,10 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(epochSizeInSlots)),
+    ))
+
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
     val lastGenerator = generators.last

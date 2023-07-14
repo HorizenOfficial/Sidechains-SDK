@@ -1,8 +1,8 @@
 package io.horizen.storage.leveldb
 
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.storage.StorageIterator
 import io.horizen.utils.ByteArrayWrapper
-import org.fusesource.leveldbjni.internal.JniDBIterator
 import org.iq80.leveldb.{DB, ReadOptions}
 
 import scala.collection.mutable
@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
   *
   * A LevelDB wrapper providing additional versioning layer along with a convenient db interface.
   */
-final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends KVStore {
+final class VersionedLDBKVStore(protected val db: DB, var keepVersions: Int) extends KVStore {
 
   import io.horizen.storage.leveldb.VersionedLDBKVStore.VersionId
 
@@ -62,6 +62,7 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
     } finally {
       batch.close()
       ro.snapshot().close()
+      recalculateVersionsToKeep
     }
   }
 
@@ -133,9 +134,15 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
   def versionIdExists(versionId: VersionId): Boolean =
     versions.exists(new ByteArrayWrapper(_) == new ByteArrayWrapper(versionId))
 
-  def getIterator(): StorageIterator = {
+  def getIterator: StorageIterator = {
     new DatabaseIterator(db.iterator())
   }
+
+  def recalculateVersionsToKeep: Unit = {
+    keepVersions = ConsensusParamsUtil.getConsensusSlotsPerEpoch * 2 + 1
+  }
+
+  def getVersionsToKeep: Int = keepVersions
 }
 
 object VersionedLDBKVStore {

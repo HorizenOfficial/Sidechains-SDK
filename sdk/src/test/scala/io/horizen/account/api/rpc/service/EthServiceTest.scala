@@ -7,6 +7,7 @@ import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.request.RpcRequest
 import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
@@ -21,6 +22,7 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
@@ -315,6 +317,9 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   private var ethService: EthService = _
   protected var senderWithSecret: String = _
   protected var networkParams: RegTestParams = _
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
 
   @Before
   def setUp(): Unit = {

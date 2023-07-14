@@ -1,6 +1,8 @@
 package io.horizen.account.utils
 
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import org.junit.Assert.assertEquals
@@ -25,6 +27,10 @@ class FeeUtilsTest extends JUnitSuite {
       )
     assertEquals(message, calculateNextBaseFee(block, RegTestParams()), BigInteger.valueOf(expectedBaseFee))
   }
+
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
 
   @Before
   def init(): Unit = {

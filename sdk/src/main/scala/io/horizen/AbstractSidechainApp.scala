@@ -4,12 +4,14 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.javadsl.Sink
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
@@ -133,9 +135,16 @@ abstract class AbstractSidechainApp
       s"Current value: $consensusSecondsInSlot")
   }
 
+  val consensusParamsFork = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
+  val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
+
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
-    case "regtest" => RegTestParams(
+    case "regtest" =>
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        (fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      RegTestParams(
       sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
@@ -164,7 +173,11 @@ abstract class AbstractSidechainApp
       isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
     )
 
-    case "testnet" => TestNetParams(
+    case "testnet" =>
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        (fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      TestNetParams(
       sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
@@ -193,7 +206,11 @@ abstract class AbstractSidechainApp
       isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
     )
 
-    case "mainnet" => MainNetParams(
+    case "mainnet" =>
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        (fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      MainNetParams(
       sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,

@@ -2,6 +2,7 @@ package io.horizen.account.forger
 
 import io.horizen.account.block.AccountBlockHeader
 import io.horizen.account.fixtures.EthereumTransactionFixture
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proof.SignatureSecp256k1
@@ -14,7 +15,7 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
-import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
@@ -55,6 +56,10 @@ class AccountForgeMessageBuilderTest
       with CompanionsFixture
       with SecretFixture
       with SidechainRelatedMainchainOutputFixture {
+
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
 
   @Before
   def init(): Unit = {
