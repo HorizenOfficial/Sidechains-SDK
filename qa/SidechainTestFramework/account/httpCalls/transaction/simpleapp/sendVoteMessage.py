@@ -1,8 +1,9 @@
 import json
 
-def sendVoteMessage(sidechain_node, message_type, sender, receiver_sidechain, receiver, payload):
+def sendVoteMessage(sidechain_node, message_type, sender_sidechain, sender, receiver_sidechain, receiver, payload):
     j = {
         "messageType": message_type,
+        "senderSidechain": sender_sidechain,
         "sender": sender,
         "receiverSidechain": receiver_sidechain,
         "receiver": receiver,

@@ -100,12 +100,14 @@ class AbstractCrossChainMessageProcessorTest extends MockitoSugar
 
       for (index <- 1 to numOfMessages) {
         val sender = Array.fill(20)(Random.nextInt().toByte)
+        val senderSidechain = Array.fill(32)(Random.nextInt().toByte)
         val receiverSidechain = Array.fill(32)(Random.nextInt().toByte)
         val receiver = Array.fill(20)(Random.nextInt().toByte)
         val payload = Array.fill(32)(Random.nextInt().toByte)
 
         val wr = AccountCrossChainMessage(
           1,
+          senderSidechain,
           sender,
           receiverSidechain,
           receiver,

@@ -28,20 +28,21 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
 
   override def createType(listOfParams: util.List[Type[_]]): AccountCrossChainRedeemMessage = {
     val messageType = listOfParams.get(0).asInstanceOf[Uint32].getValue.intValue
-    val sender = listOfParams.get(1).asInstanceOf[Bytes20].getValue
-    val receiverSidechain = listOfParams.get(2).asInstanceOf[Bytes32].getValue
-    val receiver = listOfParams.get(3).asInstanceOf[Bytes20].getValue
-    val payloadAsString = listOfParams.get(4).asInstanceOf[Utf8String].getValue
+    val senderSidechain = listOfParams.get(1).asInstanceOf[Bytes32].getValue
+    val sender = listOfParams.get(2).asInstanceOf[Bytes20].getValue
+    val receiverSidechain = listOfParams.get(3).asInstanceOf[Bytes32].getValue
+    val receiver = listOfParams.get(4).asInstanceOf[Bytes20].getValue
+    val payloadAsString = listOfParams.get(5).asInstanceOf[Utf8String].getValue
     val payload = payloadAsString.getBytes(StandardCharsets.UTF_8)
 
-    val certificateDataHash = listOfParams.get(5).asInstanceOf[Bytes32].getValue
-    val nextCertificateDataHash = listOfParams.get(6).asInstanceOf[Bytes32].getValue
-    val scCommitmentTreeRoot = listOfParams.get(7).asInstanceOf[Bytes32].getValue
-    val nextScCommitmentTreeRoot = listOfParams.get(8).asInstanceOf[Bytes32].getValue
-    val proofAsString = listOfParams.get(9).asInstanceOf[Utf8String].getValue
+    val certificateDataHash = listOfParams.get(6).asInstanceOf[Bytes32].getValue
+    val nextCertificateDataHash = listOfParams.get(7).asInstanceOf[Bytes32].getValue
+    val scCommitmentTreeRoot = listOfParams.get(8).asInstanceOf[Bytes32].getValue
+    val nextScCommitmentTreeRoot = listOfParams.get(9).asInstanceOf[Bytes32].getValue
+    val proofAsString = listOfParams.get(10).asInstanceOf[Utf8String].getValue
     val proof = BytesUtils.fromHexString(proofAsString)
 
-    AccountCrossChainRedeemMessage(messageType, sender, receiverSidechain, receiver, payload, certificateDataHash,
+    AccountCrossChainRedeemMessage(messageType, senderSidechain, sender, receiverSidechain, receiver, payload, certificateDataHash,
       nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof)
   }
 }

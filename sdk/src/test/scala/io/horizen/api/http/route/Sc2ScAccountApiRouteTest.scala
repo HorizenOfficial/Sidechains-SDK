@@ -3,20 +3,17 @@ package io.horizen.api.http.route
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import io.horizen.account.sc2sc.{AccountCrossChainRedeemMessage, CrossChainMessageProcessorFixture}
+import io.horizen.account.sc2sc.CrossChainMessageProcessorFixture
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.api.http.Sc2ScAccountApiRouteRestScheme.{AccountCrossChainMessageEle, ReqCreateAccountRedeemMessage}
 import io.horizen.api.http.Sc2scAccountApiRoute
-import io.horizen.api.http.Sc2scApiRouteRestScheme.{CrossChainMessageEle, ReqCreateRedeemMessage}
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.fork.{ForkManagerUtil, Sc2ScOptionalForkConfigurator}
 import io.horizen.json.SerializationUtil
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
-import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage, CrossChainRedeemMessageImpl, Sc2ScException}
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessageImpl, Sc2ScException}
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.storage.SidechainStateStorage
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.mockito.Mockito
 import sparkz.core.NodeViewHolder.CurrentView
@@ -38,6 +35,7 @@ class Sc2ScAccountApiRouteTest extends SidechainApiRouteTest with CrossChainMess
 
   val testCrossChainMessage: AccountCrossChainMessageEle = AccountCrossChainMessageEle(
     1,
+    BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),
     BytesUtils.toHexString(getRandomBytes(32)),

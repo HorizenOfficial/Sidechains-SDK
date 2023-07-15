@@ -1,6 +1,7 @@
 package io.horizen.account.sc2sc
 
 import com.google.common.primitives.Bytes
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.AddCrossChainRedeemMessage
 import io.horizen.account.state.{BaseAccountStateView, ExecutionRevertedException, Message, NativeSmartContractMsgProcessor}
 import io.horizen.cryptolibprovider.Sc2scCircuit
@@ -24,12 +25,10 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
                                                        ) extends NativeSmartContractMsgProcessor with CrossChainRedeemMessageProvider {
   protected def processRedeemMessage(accCcRedeemMessage: AccountCrossChainRedeemMessage, view: BaseAccountStateView): Array[Byte] = {
     val accCcMsg = AccountCrossChainMessage(
-      accCcRedeemMessage.messageType, accCcRedeemMessage.sender, accCcRedeemMessage.receiverSidechain, accCcRedeemMessage.receiver, accCcRedeemMessage.payload
+      accCcRedeemMessage.messageType, accCcRedeemMessage.senderSidechain, accCcRedeemMessage.sender,
+      accCcRedeemMessage.receiverSidechain, accCcRedeemMessage.receiver, accCcRedeemMessage.payload
     )
-    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(
-      accCcMsg,
-      scId
-    )
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accCcMsg)
 
     validateRedeemMsg(accCcRedeemMessage, ccMsg, view)
 
@@ -40,7 +39,15 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     accCcRedeemMessage.encode()
   }
 
-  def getAllCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Seq[CrossChainMessage] =
+  private def getAllCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Seq[CrossChainMessage] = {
+    val ccMsgBytes = getCrossChainMessagesByAddress(address, view)
+    SerializationUtil.deserializeObject(ccMsgBytes) match {
+      case Some(seq) => seq
+      case _ => Seq()
+    }
+  }
+
+  def getAllCrossChainMessagesByAddressAsBytes(address: Array[Byte], view: BaseAccountStateView): Array[Byte] =
     getCrossChainMessagesByAddress(address, view)
 
   private def addCrossChainRedeemMessageLogEvent(view: BaseAccountStateView, accCcRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
@@ -121,9 +128,10 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def validateProof(ccRedeemMessage: AccountCrossChainRedeemMessage): Unit = {
     val accCcMsg = AccountCrossChainMessage(
-      ccRedeemMessage.messageType, ccRedeemMessage.sender, ccRedeemMessage.receiverSidechain, ccRedeemMessage.receiver, ccRedeemMessage.payload
+      ccRedeemMessage.messageType, ccRedeemMessage.senderSidechain, ccRedeemMessage.sender,
+      ccRedeemMessage.receiverSidechain, ccRedeemMessage.receiver, ccRedeemMessage.payload
     )
-    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accCcMsg, scId)
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accCcMsg)
     val ccMsgHash = ccMsg.getCrossChainMessageHash
     val isProofValid = sc2scCircuit.verifyRedeemProof(
       ccMsgHash,
@@ -140,18 +148,13 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
 
   private def setCrossChainMessageByAddress(ccMsg: CrossChainMessage, view: BaseAccountStateView): Unit = {
     val address = ccMsg.getReceiver
-    val currentMsgs = getCrossChainMessagesByAddress(address, view)
+    val currentMsgs = getAllCrossChainMessagesByAddress(calculateKey(address), view)
     val updatedMsgs = currentMsgs :+ ccMsg
-    view.updateAccountStorage(contractAddress, address, SerializationUtil.serializeObject(updatedMsgs))
+    view.updateAccountStorageBytes(contractAddress, calculateKey(address), SerializationUtil.serializeObject(updatedMsgs))
   }
 
-  private def getCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Seq[CrossChainMessage] = {
-    val ccMsgBytes = view.getAccountStorage(contractAddress, address)
-    SerializationUtil.deserializeObject(ccMsgBytes) match {
-      case Some(seq) => seq
-      case _ => Seq()
-    }
-  }
+  private def getCrossChainMessagesByAddress(address: Array[Byte], view: BaseAccountStateView): Array[Byte] =
+    view.getAccountStorageBytes(contractAddress, calculateKey(address))
 
   private def calculateKey(keySeed: Array[Byte]): Array[Byte] =
     Keccak256.hash(keySeed)
@@ -163,5 +166,5 @@ abstract class AbstractCrossChainRedeemMessageProcessor(
     view.updateAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(messageHash.getValue), messageHash.getValue)
 
   override def doesCrossChainMessageHashFromRedeemMessageExist(hash: CrossChainMessageHash, view: BaseAccountStateView): Boolean =
-    view.getAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(hash.getValue)).nonEmpty
+    !view.getAccountStorage(contractAddress, getCrossChainMessageFromRedeemKey(hash.getValue)).sameElements(NULL_HEX_STRING_32)
 }

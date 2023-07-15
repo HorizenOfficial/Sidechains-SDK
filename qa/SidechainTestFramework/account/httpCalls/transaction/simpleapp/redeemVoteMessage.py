@@ -1,11 +1,12 @@
 import json
 
 
-def redeemVoteMessage(sidechain_node, message_type, sender, receiver_sidechain, receiver, payload,
+def redeemVoteMessage(sidechain_node, message_type, sender_sidechain, sender, receiver_sidechain, receiver, payload,
                       certificate_data_hash, next_certificate_data_hash, sc_commitment_tree_root,
                       next_sc_commitment_tree_root, proof):
     j = {
         "messageType": message_type,
+        "senderSidechain": sender_sidechain,
         "sender": sender,
         "receiverSidechain": receiver_sidechain,
         "receiver": receiver,

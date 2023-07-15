@@ -162,6 +162,7 @@ class CrossChainRedeemMessageProcessorImpl(scId: Array[Byte], path: Option[Strin
 
   override protected def getAccountCrossChainRedeemMessageFromMessage(msg: Message): AccountCrossChainRedeemMessage = {
     val messageType = 1
+    val senderSidechain = BytesUtils.fromHexString("f495ee28259c5548d7879fcc5518fe1701e3d5c949797c469644a8c7f1e2163c")
     val sender = "d504dbfde192182c68d2".getBytes
     val receiverSidechain = CrossChainRedeemMessageProcessorImpl.receiverSidechain
     val receiver = "0303908acce9dd1078bd".getBytes
@@ -172,7 +173,8 @@ class CrossChainRedeemMessageProcessorImpl(scId: Array[Byte], path: Option[Strin
     val nextScCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.nextScCommitmentTreeRoot
     val proof = BytesUtils.fromHexString("1701e3d5c949797c469644a8c7ff495ee28259c5548d7879fcc5518fe1e2163c")
     AccountCrossChainRedeemMessage(
-      messageType, sender, receiverSidechain, receiver, payload, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
+      messageType, senderSidechain, sender, receiverSidechain, receiver, payload,
+      certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
     )
   }
 

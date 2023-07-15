@@ -11,6 +11,7 @@ import sparkz.util.serialization.{Reader, Writer}
 case class AccountCrossChainMessage
 (
   messageType: Int,
+  senderSidechain: Array[Byte],
   sender: Array[Byte], //we keep it generic because the format is dependant on the sidechain type
   receiverSidechain: Array[Byte],
   receiver: Array[Byte], //we keep it generic because  the format is dependant on the sidechain type
@@ -30,6 +31,7 @@ case class AccountCrossChainMessage
                              else new Bytes32(receiver)
     new DynamicStruct(
       new Uint32(messageType),
+      new Bytes32(senderSidechain),
       senderAddressABI,
       new Bytes32(receiverSidechain),
       receiverAddressABI,
@@ -42,7 +44,7 @@ case class AccountCrossChainMessage
   override def equals(obj: Any): Boolean = {
     obj match {
       case that: AccountCrossChainMessage =>
-        messageType == that.messageType && sender.sameElements(that.sender) &&
+        messageType == that.messageType && senderSidechain.sameElements(that.senderSidechain) && sender.sameElements(that.sender) &&
           receiverSidechain.sameElements(that.receiverSidechain) && receiver.sameElements(that.receiver) &&
           payload.sameElements(that.payload)
 
@@ -54,6 +56,7 @@ case class AccountCrossChainMessage
 object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossChainMessage] {
   override def serialize(obj: AccountCrossChainMessage, writer: Writer): Unit = {
     writer.putUInt(obj.messageType)
+    writeBytes(writer, obj.senderSidechain)
     writeBytes(writer, obj.sender)
     writeBytes(writer, obj.receiverSidechain)
     writeBytes(writer, obj.receiver)
@@ -62,11 +65,12 @@ object AccountCrossChainMessageSerializer extends SparkzSerializer[AccountCrossC
 
   override def parse(reader: Reader): AccountCrossChainMessage = {
     val messageType = reader.getUInt().toInt
+    val senderSidechain = parseNextBytes(reader)
     val sender = parseNextBytes(reader)
     val receiverSidechain = parseNextBytes(reader)
     val receiver = parseNextBytes(reader)
     val payload = parseNextBytes(reader)
-    AccountCrossChainMessage(messageType, sender, receiverSidechain, receiver, payload)
+    AccountCrossChainMessage(messageType, senderSidechain, sender, receiverSidechain, receiver, payload)
   }
 
   private def writeBytes(writer: Writer, value: Array[Byte]): Unit = {

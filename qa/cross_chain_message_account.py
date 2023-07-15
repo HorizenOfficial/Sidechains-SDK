@@ -11,6 +11,8 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.scutil import assert_true, generate_next_block, generate_next_blocks, assert_equal
 from httpCalls.block.forgingInfo import http_block_forging_info
 from httpCalls.sc2sc.createAccountRedeemMessage import createAccountRedeemMessage
+from SidechainTestFramework.account.httpCalls.transaction.simpleapp.showAllVotesByAddress import \
+    showAllVotesByAddress
 from test_framework.util import forward_transfer_to_sidechain
 
 
@@ -105,7 +107,7 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
 
         ## CREATE CROSS CHAIN MESSAGE
         vote = "8"
-        tx_data = sendVoteMessage(sc_evm1_node, 1, hex_evm_addr_user_x, sc_evm2_id, hex_evm_addr_user_y, vote)
+        tx_data = sendVoteMessage(sc_evm1_node, 1, sc_evm1_id, hex_evm_addr_user_x, sc_evm2_id, hex_evm_addr_user_y, vote)
 
         createEIP1559Transaction(sc_evm1_node,
                                  fromAddress=hex_evm_addr_user_x.lower(),
@@ -130,10 +132,10 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
             generate_next_block(sc_evm1_node, "")
             time.sleep(15)
 
-        time.sleep(40)
+        time.sleep(20)
 
         redeem_message = \
-            createAccountRedeemMessage(sc_evm1_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote, sc_evm1_id)["result"]["redeemMessage"]
+            createAccountRedeemMessage(sc_evm1_node, 1, sc_evm1_id, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote, sc_evm1_id)["result"]["redeemMessage"]
 
         for _ in range(2):
             generate_next_blocks(sc_evm2_node, "fist_node", 5)
@@ -146,7 +148,7 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
         sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
         next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
         proof = redeem_message['proof']
-        redeem_tx_data = redeemVoteMessage(sc_evm2_node, 1, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote,
+        redeem_tx_data = redeemVoteMessage(sc_evm2_node, 1, sc_evm1_id, hex_evm_addr_user_x.lower(), sc_evm2_id, hex_evm_addr_user_y.lower(), vote,
                                            cert_data_hash, next_cert_data_hash, sc_commitment_tree,
                                            next_sc_commitment_tree, proof)
 
@@ -168,6 +170,8 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
         assert_true(sc_best_block["block"]["sidechainTransactions"] != [])
         assert_true(sc_best_block["block"]["sidechainTransactions"][0]["to"] != "0000000000000000000066666666666666666666")
 
+        show_all_votes_data = showAllVotesByAddress(sc_evm2_node, hex_evm_addr_user_y.lower(), "0000000000000000000066666666666666666666")
+        print(f'THE PAYLOAD IS: {show_all_votes_data}')
 
 if __name__ == "__main__":
     CrossChainMessageAccount().main()

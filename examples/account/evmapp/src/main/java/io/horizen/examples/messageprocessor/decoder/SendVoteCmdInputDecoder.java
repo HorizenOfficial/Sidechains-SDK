@@ -20,6 +20,7 @@ public class SendVoteCmdInputDecoder implements ABIDecoder<AccountCrossChainMess
     public List<TypeReference<Type>> getListOfABIParamTypes() {
         return Utils.convert(Arrays.asList(
                 new TypeReference<Uint32>() {},
+                new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes20>() {},
                 new TypeReference<Bytes32>() {},
                 new TypeReference<Bytes20>() {},
@@ -30,13 +31,15 @@ public class SendVoteCmdInputDecoder implements ABIDecoder<AccountCrossChainMess
     @Override
     public AccountCrossChainMessage createType(List<Type> listOfParams) {
         int messageType = ((Uint32) listOfParams.get(0)).getValue().intValue();
-        byte[] sender = ((Bytes20) listOfParams.get(1)).getValue();
-        byte[] receiverSidechain = ((Bytes32) listOfParams.get(2)).getValue();
-        byte[] receiver = ((Bytes20) listOfParams.get(3)).getValue();
-        String payloadAsString = ((Utf8String) listOfParams.get(4)).getValue();
+        byte[] senderSidechain = ((Bytes32) listOfParams.get(1)).getValue();
+        byte[] sender = ((Bytes20) listOfParams.get(2)).getValue();
+        byte[] receiverSidechain = ((Bytes32) listOfParams.get(3)).getValue();
+        byte[] receiver = ((Bytes20) listOfParams.get(4)).getValue();
+        String payloadAsString = ((Utf8String) listOfParams.get(5)).getValue();
+        System.out.println("THE PAYLOAD AS STRING IS " + payloadAsString);
         byte[] payload = payloadAsString.getBytes(StandardCharsets.UTF_8);
 
-        return new AccountCrossChainMessage(messageType, sender, receiverSidechain, receiver, payload);
+        return new AccountCrossChainMessage(messageType, senderSidechain, sender, receiverSidechain, receiver, payload);
     }
 
 }

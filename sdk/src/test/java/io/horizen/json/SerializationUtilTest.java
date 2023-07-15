@@ -5,10 +5,9 @@ import io.horizen.sc2sc.CrossChainProtocolVersion;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 
 public class SerializationUtilTest {

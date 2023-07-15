@@ -38,7 +38,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
   }
 
   override def getCrossChainMessages(epochNum: Int, view: BaseAccountStateView): Seq[CrossChainMessage] = {
-    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(msg, sidechainId))
+    getListOfCrossChainMessagesRecords(epochNum, view).map(msg => AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(msg))
   }
 
   private[horizen] def getListOfCrossChainMessagesRecords(epochNum: Int, view: BaseAccountStateView): Seq[AccountCrossChainMessage] = {
@@ -68,7 +68,7 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
       throw new ExecutionRevertedException("Reached maximum number of CrossChainMessages per epoch: request is invalid")
     }
 
-    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(request, sidechainId)
+    val ccMsg = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(request)
     val messageHash = ccMsg.getCrossChainMessageHash
 
     //check for duplicates in this and other message processor, in any epoch
@@ -95,13 +95,14 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
   }
 
   protected def addCrossChahinMessage(messageType: Int,
+                                      senderSidechain: Array[Byte],
                                       sender: Address,
                                       receiverSidechain: Array[Byte],
-                                      receiver: Array[Byte],
+                                      receiver: Address,
                                       payload: Array[Byte],
                                       view: BaseAccountStateView,
                                       currentEpochNum: Int): Array[Byte] = {
-    val request = AccountCrossChainMessage(messageType, sender.toBytes, receiverSidechain, receiver, payload)
+    val request = AccountCrossChainMessage(messageType, senderSidechain, sender.toBytes, receiverSidechain, receiver.toBytes, payload)
     addCrossChainMessage(request, view, currentEpochNum)
   }
 
@@ -134,11 +135,11 @@ abstract class AbstractCrossChainMessageProcessor(sidechainId: Array[Byte]) exte
 }
 
 object AbstractCrossChainMessageProcessor {
-  private[horizen] def buildCrossChainMessageFromAccount(data: AccountCrossChainMessage, sidechainId: Array[Byte]): CrossChainMessage = {
+  private[horizen] def buildCrossChainMessageFromAccount(data: AccountCrossChainMessage): CrossChainMessage = {
     new CrossChainMessage(
       CrossChainProtocolVersion.VERSION_1,
       data.messageType,
-      sidechainId,
+      data.senderSidechain,
       data.sender,
       data.receiverSidechain,
       data.receiver,

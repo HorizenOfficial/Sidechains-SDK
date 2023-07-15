@@ -36,6 +36,7 @@ public class VoteController extends AccountApplicationApiGroup {
     private ApiResponse sendVoteMessage(AccountNodeView accountNodeView, SendVoteMessageRequest request) {
         AccountCrossChainMessage ccMsg = new AccountCrossChainMessage(
                 request.getMessageType(),
+                BytesUtils.fromHexString(request.getSenderSidechain()),
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),
@@ -48,6 +49,7 @@ public class VoteController extends AccountApplicationApiGroup {
     private ApiResponse redeemVoteMessage(AccountNodeView accountNodeView, RedeemVoteMessageRequest request) {
         AccountCrossChainRedeemMessage redeemMsg = new AccountCrossChainRedeemMessage(
                 request.getMessageType(),
+                BytesUtils.fromHexString(request.getSenderSidechain()),
                 BytesUtils.fromHexString(request.getSender()),
                 BytesUtils.fromHexString(request.getReceiverSidechain()),
                 BytesUtils.fromHexString(request.getReceiver()),

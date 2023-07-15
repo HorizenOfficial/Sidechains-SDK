@@ -2,6 +2,7 @@ package io.horizen.examples.api.model;
 
 public final class SendVoteMessageRequest {
     private int messageType;
+    private String senderSidechain;
     private String sender;
     private String receiverSidechain;
     private String receiver;
@@ -13,6 +14,10 @@ public final class SendVoteMessageRequest {
 
     public void setMessageType(int messageType) {
         this.messageType = messageType;
+    }
+
+    public String getSenderSidechain() {
+        return senderSidechain;
     }
 
     public String getSender() {

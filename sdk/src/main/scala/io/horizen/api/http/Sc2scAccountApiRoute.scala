@@ -6,21 +6,24 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.SidechainTypes
-import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage, AccountCrossChainRedeemMessage}
+import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import io.horizen.account.chain.AccountFeePaymentsInfo
+import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import io.horizen.account.sc2sc.{AbstractCrossChainMessageProcessor, AccountCrossChainMessage}
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.Sc2ScAccountApiErrorResponse.GenericSc2ScAccountApiError
-import io.horizen.api.http.Sc2ScAccountApiRouteRestScheme.{ReqCreateAccountRedeemMessage, RespCreateRedeemMessage}
+import io.horizen.api.http.Sc2ScAccountApiRouteRestScheme.{ReqCreateAccountRedeemMessage, ReqGetAllRedeemedMessagesByAddress, RespCreateRedeemMessage, RespCrossChainMessage, RespGetAllRedeemedMessagesByAddress}
 import io.horizen.api.http.route.SidechainApiRoute
+import io.horizen.evm.Address
 import io.horizen.fork.{ForkManager, Sc2ScFork}
-import io.horizen.json.Views
-import io.horizen.sc2sc.{CrossChainRedeemMessage, Sc2ScUtils}
+import io.horizen.json.{SerializationUtil, Views}
+import io.horizen.node.NodeWalletBase
 import io.horizen.sc2sc.Sc2scProver.ReceivableMessages.BuildRedeemMessage
+import io.horizen.sc2sc.{CrossChainMessage, CrossChainProtocolVersion, CrossChainRedeemMessage, Sc2ScUtils}
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
-import io.horizen.utxo.chain.SidechainFeePaymentsInfo
-import io.horizen.utxo.node._
 import sparkz.core.settings.RESTApiSettings
+import sparkz.crypto.hash.Keccak256
 
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -36,20 +39,20 @@ case class Sc2scAccountApiRoute(override val settings: RESTApiSettings,
                                )
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
-    SidechainTypes#SCBT,
-    SidechainBlockHeader,
-    SidechainBlock,
-    SidechainFeePaymentsInfo,
-    NodeHistory,
-    NodeState,
-    NodeWallet,
-    NodeMemoryPool,
-    SidechainNodeView] {
-  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
+    SidechainTypes#SCAT,
+    AccountBlockHeader,
+    AccountBlock,
+    AccountFeePaymentsInfo,
+    NodeAccountHistory,
+    NodeAccountState,
+    NodeWalletBase,
+    NodeAccountMemoryPool,
+    AccountNodeView] {
+  override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
   override implicit lazy val timeout: Timeout = akka.util.Timeout.create(Duration.ofSeconds(60))
 
   override val route: Route = pathPrefix("sc2sc") {
-    createAccountRedeemMessage
+    createAccountRedeemMessage ~ getAllRedeemedMessagesByAddress
   }
 
   def createAccountRedeemMessage: Route = (post & path("createAccountRedeemMessage")) {
@@ -59,13 +62,14 @@ case class Sc2scAccountApiRoute(override val settings: RESTApiSettings,
           if (Sc2ScUtils.isActive(ForkManager.getOptionalSidechainFork[Sc2ScFork](stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)))) {
             val accountCcMsg = AccountCrossChainMessage(
               body.message.messageType,
+              BytesUtils.fromHexString(body.message.senderSidechain),
               BytesUtils.fromHexString(body.message.sender),
               BytesUtils.fromHexString(body.message.receiverSidechain),
               BytesUtils.fromHexString(body.message.receiver),
               body.message.payload.getBytes(StandardCharsets.UTF_8)
             )
 
-            val crossChainMessage = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accountCcMsg, BytesUtils.fromHexString(body.scId))
+            val crossChainMessage = AbstractCrossChainMessageProcessor.buildCrossChainMessageFromAccount(accountCcMsg)
             val future = sc2scProver ? BuildRedeemMessage(crossChainMessage)
             Await.result(future, timeout.duration).asInstanceOf[Try[CrossChainRedeemMessage]] match {
               case Success(ret) =>
@@ -77,6 +81,25 @@ case class Sc2scAccountApiRoute(override val settings: RESTApiSettings,
             ApiResponseUtil.toResponse(GenericSc2ScAccountApiError("Cannot create redeem message if sc2sc feature is not active"))
           }
         }
+    }
+  }
+
+  def getAllRedeemedMessagesByAddress: Route = (post & path("getAllRedeemedMessagesByAddress")) {
+    entity(as[ReqGetAllRedeemedMessagesByAddress]) { body =>
+      withNodeView { sidechainNodeView =>
+        val accountState = sidechainNodeView.getNodeState
+        val messagesAsBytes = accountState.getAccountStorageBytes(
+          new Address(BytesUtils.fromHexString(body.smartContractAddress)), Keccak256.hash(BytesUtils.fromHexString(body.userAddress))
+        )
+
+        val msgs: Seq[RespCrossChainMessage] = SerializationUtil.deserializeObject(messagesAsBytes).getOrElse(Seq())
+          .map { msg: CrossChainMessage =>
+            RespCrossChainMessage(
+              msg.getProtocolVersion, msg.getMessageType, msg.getSenderSidechain, msg.getSender, msg.getReceiverSidechain, msg.getReceiver, msg.getPayload.map(_.toChar).mkString
+            )
+          }
+        ApiResponseUtil.toResponse(RespGetAllRedeemedMessagesByAddress(msgs))
+      }
     }
   }
 }
@@ -108,6 +131,7 @@ object Sc2ScAccountApiRouteRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class AccountCrossChainMessageEle(
                                                        messageType: Int,
+                                                       senderSidechain: String,
                                                        sender: String,
                                                        receiverSidechain: String,
                                                        receiver: String,
@@ -118,6 +142,23 @@ object Sc2ScAccountApiRouteRestScheme {
     require(receiver != null, "Empty receiver address")
     require(payload != null, "Empty payload ")
   }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetAllRedeemedMessagesByAddress(userAddress: String, smartContractAddress: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetAllRedeemedMessagesByAddress(redeemedMessages: Seq[RespCrossChainMessage]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  case class RespCrossChainMessage(
+                                  protocolVersion: CrossChainProtocolVersion,
+                                  messageType: Int,
+                                  senderSidechain: Array[Byte],
+                                  sender: Array[Byte],
+                                  receiverSidechain: Array[Byte],
+                                  receiver: Array[Byte],
+                                  payload: String
+                                  )
 }
 
 object Sc2ScAccountApiErrorResponse {

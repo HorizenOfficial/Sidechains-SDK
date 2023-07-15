@@ -9,6 +9,7 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utils.FieldElementsContainer;
 import sparkz.core.serialization.BytesSerializable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -90,6 +91,7 @@ public final class CrossChainMessage implements BytesSerializable {
                 ", sender=" + BytesUtils.toHexString(sender) +
                 ", receiverSidechain=" + BytesUtils.toHexString(receiverSidechain) +
                 ", receiver=" + BytesUtils.toHexString(receiver) +
+                ", payload=" + new String(payload, StandardCharsets.UTF_8) +
                 '}';
     }
 

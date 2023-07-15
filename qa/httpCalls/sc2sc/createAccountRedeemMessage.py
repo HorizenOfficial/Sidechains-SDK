@@ -1,9 +1,10 @@
 import json
 
 
-def createAccountRedeemMessage(sidechainNode, messageType, sender, receiverSidechain, receiver, payload, scId):
+def createAccountRedeemMessage(sidechainNode, messageType, senderSidechain, sender, receiverSidechain, receiver, payload, scId):
     message = {
         "messageType": messageType,
+        "senderSidechain": senderSidechain,
         "sender": sender,
         "receiverSidechain": receiverSidechain,
         "receiver": receiver,

@@ -13,6 +13,7 @@ class AccountCrossChainRedeemMessageTest {
   def makeSureEncodingAndDecodingACrossChainRedeemMessageWorksCorrectly(): Unit = {
     // Arrange
     val messageType = 1
+    val senderSidechain = BytesUtils.fromHexString("2b9692d1bd5c612e28b4a3cf70f33a903297b35289e59c9be7afa0984befd230")
     val sender = "d504dbfde192182c68d2".getBytes
     val receiver = "0303908afe9d1078bdf1".getBytes
     val payload = "8b4a3cf70f33a2b9692d1bd5c612e2903297b35289e59c9be7afa0984befd230".getBytes(StandardCharsets.UTF_8)
@@ -23,7 +24,8 @@ class AccountCrossChainRedeemMessageTest {
     val nextScCommitmentTreeRoot = CrossChainRedeemMessageProcessorImpl.nextScCommitmentTreeRoot
     val proof = "proof".getBytes
     val accCcRedeemMsg = AccountCrossChainRedeemMessage(
-      messageType, sender, receiverSidechain, receiver, payload, certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
+      messageType, senderSidechain, sender, receiverSidechain, receiver, payload,
+      certificateDataHash, nextCertificateDataHash, scCommitmentTreeRoot, nextScCommitmentTreeRoot, proof
     )
 
     // Act
