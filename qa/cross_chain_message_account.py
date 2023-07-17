@@ -171,7 +171,15 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
         assert_true(sc_best_block["block"]["sidechainTransactions"][0]["to"] != "0000000000000000000066666666666666666666")
 
         show_all_votes_data = showAllVotesByAddress(sc_evm2_node, hex_evm_addr_user_y.lower(), "0000000000000000000066666666666666666666")
-        print(f'THE PAYLOAD IS: {show_all_votes_data}')
+        assert_equal(1, len(show_all_votes_data), "There should be exactly one message redeemed by sidechain 2")
+        redeemed_message = show_all_votes_data[0]
+        assert_equal("VERSION_1", redeemed_message["protocolVersion"])
+        assert_equal(1, redeemed_message["messageType"])
+        assert_equal(sc_evm1_id.lower(), redeemed_message["senderSidechain"])
+        assert_equal(hex_evm_addr_user_x.lower(), redeemed_message["sender"])
+        assert_equal(sc_evm2_id.lower(), redeemed_message["receiverSidechain"])
+        assert_equal(hex_evm_addr_user_y.lower(), redeemed_message["receiver"])
+        assert_equal(vote, redeemed_message["payload"])
 
 if __name__ == "__main__":
     CrossChainMessageAccount().main()

@@ -14,6 +14,8 @@ from httpCalls.sc2sc.createRedeemMessage import createRedeemMessage
 from httpCalls.transaction.sendTransaction import sendTransaction
 from httpCalls.transaction.vote.sendVoteMessageToSidechain import send_vote_message_to_sidechain
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
+from SidechainTestFramework.account.httpCalls.transaction.simpleapp.showAllVotesByAddress import \
+    showAllVotesByAddress
 from test_framework.util import forward_transfer_to_sidechain
 
 
@@ -78,7 +80,6 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
         hex_evm_addr_user_y = remove_0x_prefix(evm_address_user_y)
 
         ## TRANSFER SOME FUNDS TO ADDRESSES
-        print(f'THE CONTENT {dir(sc_utxo)}')
         forward_transfer_to_sidechain(sc_utxo.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
                                       public_key_user_x,
@@ -105,7 +106,8 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
         assert_equal(consensus_epoch_data["bestEpochNumber"], 20)
 
         ## CREATE CROSS CHAIN MESSAGE
-        tx_data = send_vote_message_to_sidechain(sc_utxo_node, public_key_user_x, 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130', sc_evm_id, hex_evm_addr_user_y, 100)
+        vote = 1
+        tx_data = send_vote_message_to_sidechain(sc_utxo_node, public_key_user_x, vote, sc_evm_id, hex_evm_addr_user_y, 100)
 
         sendTransaction(sc_utxo_node, tx_data["transactionBytes"])
         generate_next_block(sc_utxo_node, "first node")
@@ -124,7 +126,7 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
         time.sleep(40)
 
         redeem_message = \
-            createRedeemMessage(sc_utxo_node, 1, 1, sc_utxo_id, public_key_user_x, sc_evm_id, hex_evm_addr_user_y.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130')["result"]["redeemMessage"]
+            createRedeemMessage(sc_utxo_node, 1, 1, sc_utxo_id, public_key_user_x, sc_evm_id, hex_evm_addr_user_y.lower(), vote)["result"]["redeemMessage"]
 
         for _ in range(2):
             generate_next_blocks(sc_evm_node, "fist_node", 5)
@@ -137,7 +139,7 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
         sc_commitment_tree = redeem_message['scCommitmentTreeRoot']
         next_sc_commitment_tree = redeem_message['nextScCommitmentTreeRoot']
         proof = redeem_message['proof']
-        redeem_tx_data = redeemVoteMessage(sc_evm_node, 1, public_key_user_x, sc_evm_id, hex_evm_addr_user_y.lower(), 'a6902df6488e8c4434125423a6735609e9818e18009035aa28c8b79fa9974130',
+        redeem_tx_data = redeemVoteMessage(sc_evm_node, 1, sc_utxo_id, public_key_user_x, sc_evm_id, hex_evm_addr_user_y.lower(), vote,
                                            cert_data_hash, next_cert_data_hash, sc_commitment_tree,
                                            next_sc_commitment_tree, proof)
 
@@ -159,6 +161,16 @@ class CrossChainMessageHybrid(MultiSidechainTestFramework):
         assert_true(sc_best_block["block"]["sidechainTransactions"] != [])
         assert_true(sc_best_block["block"]["sidechainTransactions"][0]["to"] != "0000000000000000000066666666666666666666")
 
+        show_all_votes_data = showAllVotesByAddress(sc_evm_node, hex_evm_addr_user_y.lower(), "0000000000000000000066666666666666666666")
+        assert_equal(1, len(show_all_votes_data), "There should be exactly one message redeemed by sidechain 2")
+        redeemed_message = show_all_votes_data[0]
+        assert_equal("VERSION_1", redeemed_message["protocolVersion"])
+        assert_equal(1, redeemed_message["messageType"])
+        assert_equal(sc_utxo_id.lower(), redeemed_message["senderSidechain"])
+        assert_equal(public_key_user_x.lower(), redeemed_message["sender"])
+        assert_equal(sc_evm_id.lower(), redeemed_message["receiverSidechain"])
+        assert_equal(hex_evm_addr_user_y.lower(), redeemed_message["receiver"])
+        assert_equal(vote, redeemed_message["payload"])
 
 if __name__ == "__main__":
     CrossChainMessageHybrid().main()
