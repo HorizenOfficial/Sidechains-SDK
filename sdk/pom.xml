@@ -412,6 +412,7 @@
             <phase>generate-sources</phase>
             <goals>
               <goal>compile</goal>
+              <goal>doc</goal>
             </goals>
           </execution>
           <execution>
@@ -419,6 +420,12 @@
             <phase>generate-test-sources</phase>
             <goals>
               <goal>testCompile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>doc-jar</goal>
             </goals>
           </execution>
         </executions>
@@ -536,26 +543,6 @@
                 </goals>
               </execution>
             </executions>
-          </plugin>
-          <plugin>
-            <!-- TODO: replace with scaladoc to generate full documentation -->
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <sourcepath>${project.basedir}/src/main/java/io/horizen</sourcepath>
-              <sourceFileIncludes>
-                  <include>SidechainAppStopper.java</include>              
-              </sourceFileIncludes>
-            </configuration>
           </plugin>
         </plugins>
       </build>
