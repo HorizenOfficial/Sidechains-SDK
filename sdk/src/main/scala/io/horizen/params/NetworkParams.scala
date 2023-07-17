@@ -64,7 +64,6 @@ trait NetworkParams {
   val sidechainGenesisBlockTimestamp: Block.Timestamp
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
-  val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
 

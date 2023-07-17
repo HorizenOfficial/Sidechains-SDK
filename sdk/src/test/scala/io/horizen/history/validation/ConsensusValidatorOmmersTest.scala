@@ -504,7 +504,7 @@ class ConsensusValidatorOmmersTest
   }
 
   private def mockHistory(slotsInEpoch: Int = 720): SidechainHistory = {
-    val params: NetworkParams = MainNetParams(consensusSlotsInEpoch = slotsInEpoch)
+    val params: NetworkParams = MainNetParams()
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(slotsInEpoch)),
     ))

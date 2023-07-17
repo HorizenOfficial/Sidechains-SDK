@@ -21,8 +21,13 @@ object ConsensusParamsUtil {
   def getConsensusParamsForkActivation: Seq[(Int, ConsensusParamsFork)] =
     this.consensusParamsForksActivation
 
-  def getConsensusSlotsPerEpoch: Int = {
-    ConsensusParamsFork.get(this.currentConsensusEpoch).consensusSlotsInEpoch
+  def getConsensusSlotsPerEpoch(epochId: Option[Int]): Int = {
+    epochId match {
+      case Some(epoch) =>
+        ConsensusParamsFork.get(epoch).consensusSlotsInEpoch
+      case None =>
+        ConsensusParamsFork.get(this.currentConsensusEpoch).consensusSlotsInEpoch
+    }
   }
 
   def numberOfConsensusParamsFork: Int = this.consensusParamsForksActivation.size

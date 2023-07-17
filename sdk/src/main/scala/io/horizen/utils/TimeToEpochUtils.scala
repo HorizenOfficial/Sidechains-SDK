@@ -10,7 +10,7 @@ object TimeToEpochUtils {
     Math.multiplyExact(consensusSlotsInEpoch, params.consensusSecondsInSlot)
 
   def virtualGenesisBlockTimeStamp(params: NetworkParams): Long =
-    params.sidechainGenesisBlockTimestamp - epochInSeconds(params, params.consensusSlotsInEpoch) + params.consensusSecondsInSlot
+    params.sidechainGenesisBlockTimestamp - epochInSeconds(params, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch) + params.consensusSecondsInSlot
 
   def timestampToEpochAndSlot(params: NetworkParams, timestamp: Block.Timestamp): ConsensusEpochAndSlot =
     ConsensusEpochAndSlot(timeStampToEpochNumber(params, timestamp), timeStampToSlotNumber(params, timestamp))
@@ -40,7 +40,7 @@ object TimeToEpochUtils {
       val (_, _, _, absoluteSlotNumber)= remainingSecondsAndForkIndexInActiveConsensusParameterFork(params, timestamp)
       absoluteSlotNumber
     } else {
-      val slotNumber = timeStampToEpochNumber(params, timestamp) * params.consensusSlotsInEpoch +
+      val slotNumber = timeStampToEpochNumber(params, timestamp) * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch +
         timeStampToSlotNumber(params, timestamp)
       intToConsensusAbsoluteSlotNumber(slotNumber)
     }
@@ -51,9 +51,8 @@ object TimeToEpochUtils {
       epochNumber: ConsensusEpochNumber,
       slotNumber: ConsensusSlotNumber
   ): Long = {
+    require(slotNumber <= ConsensusParamsFork.get(epochNumber).consensusSlotsInEpoch)
     if (ConsensusParamsUtil.numberOfConsensusParamsFork > 1) {
-      require(slotNumber <= ConsensusParamsFork.get(epochNumber).consensusSlotsInEpoch)
-
 
       var currentForkIndex = 1
       var currentFork = ConsensusParamsUtil.getConsensusParamsForkActivation(currentForkIndex)
@@ -77,9 +76,9 @@ object TimeToEpochUtils {
       val accumulatedSecondsPerEpoch = previousAccumulatedSecondsPerFork + epochInCurrentFork * epochInSeconds(params, lastFork._2.consensusSlotsInEpoch) + slotNumber*params.consensusSecondsInSlot
       virtualGenesisBlockTimeStamp(params) + accumulatedSecondsPerEpoch - 1
     } else {
-      require(slotNumber <= ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch)
+      val defaultConsensusParamsFork = ConsensusParamsUtil.getConsensusParamsForkActivation.head
 
-      val totalSlots: Int = (epochNumber - 1) * params.consensusSlotsInEpoch + (slotNumber - 1)
+      val totalSlots: Int = (epochNumber - 1) * defaultConsensusParamsFork._2.consensusSlotsInEpoch + (slotNumber - 1)
       virtualGenesisBlockTimeStamp(params) + (totalSlots * params.consensusSecondsInSlot)
     }
   }

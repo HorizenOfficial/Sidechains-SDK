@@ -4,6 +4,7 @@ import com.google.common.primitives.{Ints, Longs}
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block._
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
@@ -60,7 +61,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
 
   def tryToGenerateBlockForCurrentSlot(generationRules: GenerationRules): Option[GeneratedBlockInfo] = {
     checkGenerationRules(generationRules)
-    val nextSlot = intToConsensusSlotNumber(Math.min(nextFreeSlotNumber, params.consensusSlotsInEpoch))
+    val nextSlot = intToConsensusSlotNumber(Math.min(nextFreeSlotNumber, ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(nextEpochNumber))))
     getNextEligibleForgerForCurrentEpoch(generationRules, nextSlot).map {
       case (blockForger, vrfProof, vrfOutput, usedSlotNumber) => {
         println(s"Got forger for block: ${blockForger}")
@@ -72,7 +73,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
 
   def tryToGenerateCorrectBlock(generationRules: GenerationRules): (SidechainBlocksGenerator, Either[FinishedEpochInfo, GeneratedBlockInfo]) = {
     checkGenerationRules(generationRules)
-    getNextEligibleForgerForCurrentEpoch(generationRules, intToConsensusSlotNumber(params.consensusSlotsInEpoch)) match {
+    getNextEligibleForgerForCurrentEpoch(generationRules, intToConsensusSlotNumber(ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty))) match {
       case Some((blockForger, vrfProof, vrfOutput, usedSlotNumber)) => {
         println(s"Got forger: ${blockForger}")
         val newBlock: SidechainBlock = generateBlock(blockForger, vrfProof, vrfOutput, usedSlotNumber, generationRules)
@@ -118,7 +119,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
       .toStream
       .flatMap{currentSlot =>
         val slotWithShift = generationRules.forcedTimestamp.map(TimeToEpochUtils.timeStampToSlotNumber(params, _))
-          .getOrElse(intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch)))
+          .getOrElse(intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty))))
         println(s"Process slot: ${slotWithShift}")
         val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction, nextEpochNumber)
         if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
@@ -134,8 +135,10 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
                                         usedSlot: ConsensusSlotNumber,
                                         newForgers: PossibleForgersSet,
                                         vrfOutput: VrfOutput): SidechainBlocksGenerator = {
-    val quietSlotsNumber = params.consensusSlotsInEpoch / 3
-    val eligibleSlotsRange = ((quietSlotsNumber + 1) until (params.consensusSlotsInEpoch - quietSlotsNumber))
+    val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, newBlock.timestamp)
+    val consensusSlotsInEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(epochNumber))
+    val quietSlotsNumber =  consensusSlotsInEpoch / 3
+    val eligibleSlotsRange = ((quietSlotsNumber + 1) until (consensusSlotsInEpoch - quietSlotsNumber))
 
     new SidechainBlocksGenerator(
       params = params,
@@ -440,7 +443,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   private def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VrfProof, merklePath: MerklePath): SidechainBlock = {
     val parentId = bytesToId(new Array[Byte](32))
     val timestamp = if (params.sidechainGenesisBlockTimestamp == 0) {
-      Instant.now.getEpochSecond - (params.consensusSecondsInSlot * params.consensusSlotsInEpoch * 100)
+      Instant.now.getEpochSecond - (params.consensusSecondsInSlot * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch * 100)
     }
     else {
       params.sidechainGenesisBlockTimestamp
@@ -532,7 +535,6 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainGenesisBlockTimestamp: Block.Timestamp = genesisSidechainBlock.timestamp
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
-      override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
       override val mastersPublicKeys: Seq[SchnorrProposition] = params.mastersPublicKeys
       override val circuitType: CircuitTypes = params.circuitType

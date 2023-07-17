@@ -86,9 +86,13 @@ trait ConsensusDataProvider {
     // ensure that the stake distribution, determined at the beginning of the epoch, is stable, and likewise
     // that the nonce is stable before the next epoch begins.)
     // https://eprint.iacr.org/2017/573.pdf p.23
-    val quietSlotsNumber = params.consensusSlotsInEpoch / 3
+
+    val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp)
+    val currentEpochNumberBytes = Ints.toByteArray(currentEpoch)
+    val consensusSlotsPerEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(currentEpoch))
+    val quietSlotsNumber =  consensusSlotsPerEpoch / 3
     val eligibleSlotsRangeStart = quietSlotsNumber + 1
-    val eligibleSlotsRangeEnd = params.consensusSlotsInEpoch - quietSlotsNumber - 1
+    val eligibleSlotsRangeEnd = consensusSlotsPerEpoch - quietSlotsNumber - 1
 
     val nonceMessageDigest: MessageDigest = createNonceMessageDigest(lastBlockIdInEpoch, lastBlockInfoInEpoch, eligibleSlotsRangeStart, eligibleSlotsRangeEnd, initialNonceData)
 
@@ -97,8 +101,6 @@ trait ConsensusDataProvider {
     val previousNonce = consensusDataStorage.getNonceConsensusEpochInfo(previousEpoch).getOrElse(calculateNonceForEpoch(previousEpoch)).bytes
     nonceMessageDigest.update(previousNonce)
 
-    val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp)
-    val currentEpochNumberBytes = Ints.toByteArray(currentEpoch)
     nonceMessageDigest.update(currentEpochNumberBytes)
 
 

@@ -39,7 +39,6 @@ class ForgerTest extends JUnitSuite with Matchers {
     val timeProvider = mock[NetworkTimeProvider]
     when(timeProvider.time()).thenReturn(20000)
     val params = mock[NetworkParams]
-    when(params.consensusSlotsInEpoch).thenReturn(1)
     when(params.consensusSecondsInSlot).thenReturn(2)
     when(params.sidechainGenesisBlockTimestamp).thenReturn(11)
 

@@ -232,7 +232,6 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
     val regTestParams = RegTestParams()
     Mockito.when(history.params.consensusSecondsInSlot).thenReturn(regTestParams.consensusSecondsInSlot)
-    Mockito.when(history.params.consensusSlotsInEpoch).thenReturn(regTestParams.consensusSlotsInEpoch)
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))

@@ -714,7 +714,7 @@ class SidechainHistoryTest extends JUnitSuite
       genesisBlock.id,
       sidechainGenesisBlockTimestamp = 100000,
       consensusSecondsInSlot = 10,
-      consensusSlotsInEpoch = 2)
+      )
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(2))
     ))

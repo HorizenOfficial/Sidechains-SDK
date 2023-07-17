@@ -22,8 +22,7 @@ import java.util
 class TimeToEpochUtilsTest extends JUnitSuite {
 
   case class StubbedNetParams(override val sidechainGenesisBlockTimestamp: Block.Timestamp,
-                              override val consensusSecondsInSlot: Int,
-                              override val consensusSlotsInEpoch: Int) extends NetworkParams {
+                              override val consensusSecondsInSlot: Int) extends NetworkParams {
     override val sidechainId: Array[Byte] = new Array[Byte](32)
     override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32))
     override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32)
@@ -78,7 +77,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
                                 expectedEpoch: Int)(implicit params: StubbedNetParams): Unit = {
     assertEquals("Epoch shall be as expected", expectedEpoch, TimeToEpochUtils.timeStampToEpochNumber(params, timeStamp))
     assertEquals("Slot shall be as expected", expectedSlot, TimeToEpochUtils.timeStampToSlotNumber(params, timeStamp))
-    val expectedAbsoluteSlot = expectedEpoch * params.consensusSlotsInEpoch + expectedSlot
+    val expectedAbsoluteSlot = expectedEpoch * defaultConsensusFork.consensusSlotsInEpoch + expectedSlot
     assertEquals("Absolute slot shall be as expected", expectedAbsoluteSlot, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, timeStamp))
 
     val slotAndEpoch = TimeToEpochUtils.timestampToEpochAndSlot(params, timeStamp)
@@ -98,7 +97,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def getEpochIndexWithSameSlotsTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 720 slots per epoch of 1s and it contains 10 epochs = 720 * 10 * 1 = 7200s
@@ -140,7 +139,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def getEpochIndexTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 1000 slots per epoch of 1s and it contains 10 epochs = 1000 * 10 * 1 = 10000s
@@ -182,7 +181,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timeStampToSlotNumberWithSameSlotsTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 720 slots per epoch of 1s and it contains 10 epochs = 720 * 10 * 1 = 7200s
@@ -225,7 +224,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timeStampToSlotNumberTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 1000 slots per epoch of 1s and it contains 10 epochs = 1000 * 10 * 1 = 10000s
@@ -268,7 +267,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timestampToEpochAndSlotTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 1000 slots per epoch of 1s and it contains 10 epochs = 1000 * 10 * 1 = 10000s
@@ -322,7 +321,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timestampToAbsoluteSlotNumber(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
 
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
     //Initially we have 720 slots per epoch of 1s and it contains 20 epochs = 720 * 20 * 1 = 14400s
     //The first fork has 1000 slots per epoch of 1s and it contains 10 epochs = 1000 * 10 * 1 = 10000s
@@ -365,7 +364,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test
   def checkSlotAndEpoch(): Unit = {
     val consensusSlotsInEpoch = 100
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10, consensusSlotsInEpoch = consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10)
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
@@ -391,13 +390,13 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test
   def checkSlotAndEpoch2(): Unit = {
     val consensusSlotsInEpoch = 8
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = consensusSlotsInEpoch)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3)
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
     ))
 
-    assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params, params.consensusSlotsInEpoch))
+    assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params, consensusSlotsInEpoch))
     checkSlotAndEpoch(90, 1, 3)
     assertEquals(1, TimeToEpochUtils.secondsRemainingInSlot(params,90))
     checkSlotAndEpoch(91, 2, 3)
@@ -412,7 +411,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
   @Test(expected = classOf[java.lang.IllegalArgumentException])
   def checkIncorrectEpoch(): Unit = {
-    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 2000, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 2000, consensusSecondsInSlot = 10)
 
 
     TimeToEpochUtils.timeStampToEpochNumber(params, 1999)
@@ -420,7 +419,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
   @Test(expected = classOf[java.lang.IllegalArgumentException])
   def checkIncorrectSlot(): Unit = {
-    val params = StubbedNetParams(6000, 10, 100)
+    val params = StubbedNetParams(6000, 10)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(100)),
     ))
@@ -431,7 +430,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test
   def testTimestampToSlotEpochNumber(): Unit = {
     val sidechainGenesisBlockTimestamp = 1000
-    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1, consensusSlotsInEpoch = defaultConsensusFork.consensusSlotsInEpoch)
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = 1)
 
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(

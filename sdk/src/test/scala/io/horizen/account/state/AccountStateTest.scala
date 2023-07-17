@@ -57,7 +57,6 @@ class AccountStateTest
 
     Mockito.when(params.chainId).thenReturn(1997)
     Mockito.when(params.consensusSecondsInSlot).thenReturn(120)
-    Mockito.when(params.consensusSlotsInEpoch).thenReturn(720)
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
 

@@ -195,7 +195,7 @@ abstract class AbstractForger[
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete {
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusSlotsPerEpoch, epochAndSlot, isForgingEnabled))
+          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty), epochAndSlot, isForgingEnabled))
 
         case failure@Failure(_) =>
           forgerInfoRequester ! failure

@@ -139,7 +139,7 @@ final class VersionedLDBKVStore(protected val db: DB, var keepVersions: Int) ext
   }
 
   def recalculateVersionsToKeep: Unit = {
-    keepVersions = ConsensusParamsUtil.getConsensusSlotsPerEpoch * 2 + 1
+    keepVersions = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty) * 2 + 1
   }
 
   def getVersionsToKeep: Int = keepVersions

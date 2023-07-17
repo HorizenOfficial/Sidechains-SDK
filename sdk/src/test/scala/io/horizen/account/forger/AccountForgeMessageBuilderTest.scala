@@ -276,7 +276,6 @@ class AccountForgeMessageBuilderTest
     val totalBlockCount = epochSizeInSlots * 4
     val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
     val params = TestNetParams(
-      consensusSlotsInEpoch = epochSizeInSlots,
       consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp
     )

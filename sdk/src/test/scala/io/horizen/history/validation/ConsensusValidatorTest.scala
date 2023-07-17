@@ -4,7 +4,7 @@ import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.consensus.{ConsensusParamsUtil, FullConsensusEpochInfo, HistoryConsensusChecker}
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.history.SidechainHistory
@@ -20,7 +20,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   val rnd = new Random(20)
   val maximumAvailableShift = 2
 
-  ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):
   (SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock]) = {
@@ -50,7 +49,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
 
     val initialParams = TestNetParams(
-      consensusSlotsInEpoch = epochSizeInSlots,
       consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp)
 
@@ -93,6 +91,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       (0, new ConsensusParamsFork(epochSizeInSlots)),
     ))
 
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, 15), "regtest")
+
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
     val lastGenerator = generators.last
@@ -113,6 +113,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(epochSizeInSlots)),
     ))
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, 15), "regtest")
 
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
