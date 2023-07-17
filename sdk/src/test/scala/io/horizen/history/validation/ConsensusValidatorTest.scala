@@ -94,6 +94,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15), Seq(slotLengthInSeconds)), "regtest")
 
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, 15), "regtest")
+
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
     val lastGenerator = generators.last

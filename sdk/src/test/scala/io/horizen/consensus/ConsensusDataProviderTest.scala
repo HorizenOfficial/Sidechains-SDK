@@ -1,5 +1,7 @@
 package io.horizen.consensus
 
+import io.horizen.account.fork.ConsensusParamsFork
+
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
@@ -210,6 +212,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     assertNotEquals(consensusInfoForGenesisEpoch.nonceConsensusEpochInfo, consensusInfoForEndFourthEpoch.nonceConsensusEpochInfo)
 
     // regression test
+    ConsensusParamsUtil.setCurrentConsensusEpoch(10)
     val nonceConsensusInfoForTenEpoch: NonceConsensusEpochInfo = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10).nonceConsensusEpochInfo
     //Set to true and run if you want to update regression data.
     if (false) {
