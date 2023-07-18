@@ -309,7 +309,6 @@ class McAddrOwnershipMsgProcessorTest
       // positive case, verify we can add the data to view
       val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
-      println("This is the returned value: " + BytesUtils.toHexString(returnData))
 
       assertArrayEquals(expectedOwnershipId, returnData)
 
@@ -344,7 +343,6 @@ class McAddrOwnershipMsgProcessorTest
 
       val returnData2 = assertGas(189837, msg2, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
-      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
 
       // Checking log
       listOfLogs = view.getLogs(txHash3)
@@ -366,7 +364,6 @@ class McAddrOwnershipMsgProcessorTest
 
       val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
-      println("This is the returned value: " + BytesUtils.toHexString(returnData3))
 
       // Checking log
       listOfLogs = view.getLogs(txHash4)
