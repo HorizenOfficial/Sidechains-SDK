@@ -196,7 +196,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     val mcSignature = cmdInput.mcSignature
 
     // compute ownershipId
-    val newOwnershipId = getOwnershipId(msg.getFrom, mcTransparentAddress)
+    val newOwnershipId = getOwnershipId(mcTransparentAddress)
 
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
@@ -206,16 +206,9 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       throw new ExecutionRevertedException(errMsg)
     }
 
-    // check we do not already have this obj in the db
-    if (ownershipDataExist(view, newOwnershipId)) {
-      val errMsg = s"Ownership ${BytesUtils.toHexString(newOwnershipId)} already exists: msg = $msg"
-      log.warn(errMsg)
-      throw new ExecutionRevertedException(errMsg)
-    }
-
     // check mc address is not yet associated to any sc address. This could happen by mistake or even if a malicious voter wants
     // to use many times a mc address he really owns
-    isMcAddrAlreadyAssociated(view, mcTransparentAddress) match {
+    getExistingAssociation(view, newOwnershipId) match {
       case Some(scAddrStr) =>
         val errMsg = s"MC address $mcTransparentAddress is already associated to sc address $scAddrStr: msg = $msg"
         log.warn(errMsg)
@@ -259,12 +252,18 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     cmdInput.mcTransparentAddressOpt match {
       case Some(mcTransparentAddress) =>
         // compute ownershipId
-        val ownershipId = getOwnershipId(msg.getFrom, mcTransparentAddress)
+        val ownershipId = getOwnershipId(mcTransparentAddress)
 
-        // check we have this obj in the db
-        if (!ownershipDataExist(view, ownershipId)) {
-          throw new ExecutionRevertedException(
-            s"Ownership ${BytesUtils.toHexString(ownershipId)} does not exists")
+        getExistingAssociation(view, ownershipId) match {
+          case Some(scAddrStr) =>
+            if (!msg.getFrom.toStringNoPrefix.equals(scAddrStr)) {
+              val errMsg = s"sc address $scAddrStr is not the owner of $mcTransparentAddress: msg = $msg"
+              log.warn(errMsg)
+              throw new ExecutionRevertedException(errMsg)
+            }
+          case None =>
+            throw new ExecutionRevertedException(
+              s"Ownership ${BytesUtils.toHexString(ownershipId)} does not exists")
         }
 
         // remove the obj from stateDb
@@ -347,21 +346,11 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     !data.sameElements(NULL_HEX_STRING_32)
   }
 
-  // TODO as an alternative we could maintain a key/value pair mcAddr/scAddr for quickly telling if a mc addr is in use
-  // pros: we would be fast since no list would be looped into -> save also gas
-  // cons: we should also remove an entry when clearing an association -> more gas
-  private def isMcAddrAlreadyAssociated(view: BaseAccountStateView, mcAddress: String): Option[String] = {
-    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
-    if (nodeReference.sameElements(NULL_HEX_STRING_32))
-      return None
-
-    while (!linkedListNodeRefIsNull(nodeReference)) {
-      val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
-      if (item.mcTransparentAddress.equals(mcAddress))
-        return Some(item.scAddress)
-      nodeReference = prevNodeReference
+  private def getExistingAssociation(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[String] = {
+    findOwnershipData(view, ownershipId) match {
+      case None => None
+      case Some(obj) => Some(obj.scAddress)
     }
-    None
   }
 
   @throws(classOf[ExecutionFailedException])
@@ -413,8 +402,11 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     GetListOfOwnershipsCmd.length == 2 * METHOD_ID_LENGTH
   )
 
-  def getOwnershipId(scAddress: Address, mcAddress: String): Array[Byte] = {
-    Keccak256.hash(Bytes.concat(scAddress.toBytes, mcAddress.getBytes(StandardCharsets.UTF_8)))
+  def getOwnershipId(mcAddress: String): Array[Byte] = {
+    // if in future we will have also any context (for instance voting id) we can concatenate it
+    // to the mc addr bytes. In this way we might allow the same mc address to be associated to a different sc address
+    // for a different voting
+    Keccak256.hash(mcAddress.getBytes(StandardCharsets.UTF_8))
   }
 
   def getMcSignature(mcSignatureString: String): SignatureSecp256k1 = {

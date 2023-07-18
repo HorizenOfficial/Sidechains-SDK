@@ -755,10 +755,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                   case Success(dataBytes) =>
 
-                    val ownershipId = getOwnershipId(fromAddress, body.ownershipInfo.mcTransparentAddress)
+                    val ownershipId = getOwnershipId(body.ownershipInfo.mcTransparentAddress)
 
                     if (sidechainNodeView.getNodeState.ownershipDataExist(ownershipId)) {
-                      ApiResponseUtil.toResponse(GenericTransactionError(s"Account $fromAddress already linked to mc address: ${body.ownershipInfo.mcTransparentAddress}", JOptional.empty()))
+                      ApiResponseUtil.toResponse(GenericTransactionError(s"Mc address: ${body.ownershipInfo.mcTransparentAddress} is already associated", JOptional.empty()))
                     } else {
                       val tmpTx: EthereumTransaction = new EthereumTransaction(
                         params.chainId,
@@ -823,7 +823,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   case Success(dataBytes) =>
 
                     val ownershipId = body.ownershipInfo.mcTransparentAddress match {
-                      case Some(mcAddr) => Some(getOwnershipId(fromAddress, mcAddr))
+                      case Some(mcAddr) => Some(getOwnershipId(mcAddr))
                       case None => None
                     }
 
