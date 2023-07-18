@@ -11,7 +11,7 @@ import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
     @Override
-    public void init(BaseAccountStateView view) {
+    public void init(BaseAccountStateView view, int consensusEpochNumber) {
         // nothing to do here
     }
 
@@ -23,7 +23,7 @@ public class EvmMessageProcessor implements MessageProcessor {
      * </ol>
      */
     @Override
-    public boolean canProcess(Message msg, BaseAccountStateView view) {
+    public boolean canProcess(Message msg, BaseAccountStateView view, int consensusEpochNumber) {
         var to = msg.getTo();
         // contract deployment to a new account
         if (to.isEmpty()) return true;

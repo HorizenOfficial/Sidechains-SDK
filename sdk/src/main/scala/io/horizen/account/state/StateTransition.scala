@@ -10,7 +10,7 @@ class StateTransition(
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
-) extends SparkzLogging {
+                     ) extends SparkzLogging {
 
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
@@ -40,10 +40,10 @@ class StateTransition(
       // reset and prepare account access list
       view.setupAccessList(msg)
       // find and execute the first matching processor
-      messageProcessors.find(_.canProcess(msg, view)) match {
+      messageProcessors.find(_.canProcess(msg, view, blockContext.consensusEpochNumber)) match {
         case None =>
           log.error(s"No message processor found for executing message $msg")
-          throw new IllegalArgumentException("Unable to process message.")
+          throw new IllegalArgumentException(s"No message processor found for executing message: $msg")
         case Some(processor) =>
           // increase the nonce by 1
           view.increaseNonce(msg.getFrom)

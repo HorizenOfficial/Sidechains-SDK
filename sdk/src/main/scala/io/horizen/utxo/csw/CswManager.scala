@@ -239,7 +239,7 @@ class CswManager(settings: SidechainSettings,
             val pkOpt = getCswOwner(data)
             pkOpt.foreach(pk => {
               proofInProcessOpt = Some(ProofInProcess(inQueue.boxId, inQueue.receiverAddress))
-              val receiverPubKeyHash = BytesUtils.fromHorizenPublicKeyAddress(inQueue.receiverAddress, params)
+              val receiverPubKeyHash = BytesUtils.fromHorizenMcTransparentAddress(inQueue.receiverAddress, params)
               // Run the time consuming part of proof generation in a background
               // to unlock the Actor message queue for another requests.
               new Thread(new Runnable() {
@@ -434,7 +434,7 @@ class CswManager(settings: SidechainSettings,
 
   private def isValidReceiverAddress(receiverAddress: String): Boolean = {
     try {
-      BytesUtils.fromHorizenPublicKeyAddress(receiverAddress, params)
+      BytesUtils.fromHorizenMcTransparentAddress(receiverAddress, params)
       true
     } catch {
       case _: IllegalArgumentException =>

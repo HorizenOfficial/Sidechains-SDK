@@ -1,14 +1,22 @@
 package io.horizen.utils;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import sparkz.crypto.hash.Blake2b256;
-
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.util.Random;
 
 public final class Utils
 {
+    static {
+        // for Ripemd160 hash
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+    }
+
     private Utils() {}
 
     public static final int SHA256_LENGTH = 32;
@@ -21,6 +29,22 @@ public final class Utils
             digest.update(bytes, 0, bytes.length);
             byte[] first = digest.digest();
             return digest.digest(first);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);  // Cannot happen.
+        }
+    }
+
+    public static byte[] Ripemd160Sha256Hash(byte[] bytes) {
+        try {
+            MessageDigest digest1 = MessageDigest.getInstance("SHA-256");
+            MessageDigest digest2 = MessageDigest.getInstance("RIPEMD160");
+
+            digest1.update(bytes, 0, bytes.length);
+            byte[] first = digest1.digest();
+
+            digest2.update(first, 0, first.length);
+            byte[] second = digest2.digest();
+            return second;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);  // Cannot happen.
         }

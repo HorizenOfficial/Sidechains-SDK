@@ -5,6 +5,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.request.RpcRequest
+import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
@@ -23,18 +24,22 @@ import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionA
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
 import io.horizen.utils.BytesUtils
 import io.horizen.{EthServiceSettings, SidechainTypes}
-import org.junit.{Before, Test}
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.{Assert, Before, Test}
+import org.mockito.Mockito
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
+import sparkz.core.block.Block
 import sparkz.core.bytesToId
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
@@ -308,18 +313,21 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   }"""
 
   private var ethService: EthService = _
-  private var senderWithSecret: String = _
+  protected var senderWithSecret: String = _
+  protected var networkParams: RegTestParams = _
 
   @Before
   def setUp(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
     val genesisBlockId = bytesToId(
       Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000123")
     )
-    val networkParams = RegTestParams(
+    networkParams = Mockito.spy(RegTestParams(
       sidechainGenesisBlockId = genesisBlockId,
       initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement()
-    )
+    ))
+
     val receipt: EthereumReceipt =
       createTestEthereumReceipt(
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
@@ -456,7 +464,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
    * @return
    *   value returned by the RPC method, before serialization
    */
-  private def rpc(method: String, params: Any*): Object = {
+  protected def rpc(method: String, params: Any*): Object = {
     val jsonParams = EthJsonMapper.serialize(params)
     val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
     val request = new RpcRequest(mapper.readTree(json))
@@ -1345,7 +1353,25 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "latest",
         null,
         """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
-      )
+      ),
+      (
+        "0x0",
+        "pending",
+        null,
+        """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
+      ),
+      (
+        "0x20",
+        "pending",
+        null,
+        """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
+      ),
+      (
+        "0x1",
+        "pending",
+        Array(20, 50, 70),
+        """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":[["0x1","0x1","0x1"]]}"""
+      ),
     )
 
     forAll(validCases) { (nrOfBlocks, tag, rewardPercentiles, expectedOutput) =>
@@ -1429,5 +1455,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
     }
   }
+
 
 }
