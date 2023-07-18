@@ -8,7 +8,7 @@ import scala.util.{Failure, Success}
 object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
 
   override val listTipKey: Array[Byte] = ForgerStakeMsgProcessor.LinkedListTipKey
-  override val listNullValue: Array[Byte] = ForgerStakeMsgProcessor.LinkedListNullValue
+  override val listTipNullValue: Array[Byte] = ForgerStakeMsgProcessor.LinkedListNullValue
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
     val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
@@ -28,7 +28,7 @@ object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
 
   def getStakeListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
     if (!linkedListNodeRefIsNull(tip)) {
-      val node = findLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
+      val node = getLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
         node.dataKey,

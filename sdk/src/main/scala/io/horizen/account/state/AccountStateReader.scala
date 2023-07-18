@@ -28,6 +28,7 @@ trait AccountStateReader {
   def getAllowedForgerList: Seq[Int]
 
   def getListOfMcAddrOwnerships(scAddress: Option[String] = None): Seq[McAddrOwnershipData]
+  def getListOfOwnerScAddresses(): Seq[OwnerScAddress]
   def ownershipDataExist(ownershipId: Array[Byte]): Boolean
 
 

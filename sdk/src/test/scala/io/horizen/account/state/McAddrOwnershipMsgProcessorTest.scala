@@ -142,6 +142,7 @@ class McAddrOwnershipMsgProcessorTest
     assertEquals("Wrong MethodId for RemoveOwnershipCmd", "9183c0da", McAddrOwnershipMsgProcessor.RemoveOwnershipCmd)
     assertEquals("Wrong MethodId for GetListOfAllOwnershipsCmd", "8ef05457", McAddrOwnershipMsgProcessor.GetListOfAllOwnershipsCmd)
     assertEquals("Wrong MethodId for GetListOfOwnershipsCmd", "169e2d15", McAddrOwnershipMsgProcessor.GetListOfOwnershipsCmd)
+    assertEquals("Wrong MethodId for GetListOfOwnerScAddressesCmd", "b97a1cf2", McAddrOwnershipMsgProcessor.GetListOfOwnerScAddressesCmd)
   }
 
   @Test
@@ -307,7 +308,7 @@ class McAddrOwnershipMsgProcessorTest
       val expectedOwnershipId = Keccak256.hash(mcAddrStr1.getBytes(StandardCharsets.UTF_8))
 
       // positive case, verify we can add the data to view
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
       assertArrayEquals(expectedOwnershipId, returnData)
@@ -341,7 +342,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
 
-      val returnData2 = assertGas(189837, msg2, view, messageProcessor, defaultBlockContext)
+      val returnData2 = assertGas(362037, msg2, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
 
       // Checking log
@@ -362,7 +363,7 @@ class McAddrOwnershipMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val returnData3 = assertGas(30537, msg3, view, messageProcessor, defaultBlockContext)
+      val returnData3 = assertGas(63437, msg3, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData3)
 
       // Checking log
@@ -577,10 +578,12 @@ class McAddrOwnershipMsgProcessorTest
       }
 
       val ownershipList = getAllOwnershipList(view)
+      val ownershipList2 = getOwnershipList(view, scAddressObj1)
 
       //Check getListOfForgers
       val expectedListData = McAddrOwnershipDataListEncoder.encode(listOfExpectedData)
       assertArrayEquals(expectedListData, ownershipList)
+      assertArrayEquals(expectedListData, ownershipList2)
 
       // remove in the middle of the list
       checkRemoveItemFromList(view, listOfExpectedData, 2)
@@ -626,7 +629,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
 
@@ -763,7 +766,7 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      val returnData = assertGas(180937, msg, view, messageProcessor, defaultBlockContext)
+      val returnData = assertGas(514937, msg, view, messageProcessor, defaultBlockContext)
       assertNotNull(returnData)
 
       val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddrStr1))
@@ -939,6 +942,127 @@ class McAddrOwnershipMsgProcessorTest
 
     assertNotNull(returnData)
     returnData
+  }
+
+  @Test
+  def testSimple(): Unit = {
+
+    usingView(messageProcessor) { view =>
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      // create sender account with some fund in it
+      val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
+      createSenderAccount(view, initialAmount, scAddressObj1)
+
+      val listOfExpectedData = new util.ArrayList[McAddrOwnershipData]()
+
+
+      val mcAddr = listOfMcAddrSign1.get(0)._1
+      val mcSignature = listOfMcAddrSign1.get(0)._2
+      val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
+
+      val data: Array[Byte] = cmdInput.encode()
+      val msg = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data,
+        randomNonce, scAddressObj1
+      )
+
+      listOfExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+
+      val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
+      assertNotNull(returnData)
+
+
+      val ownershipList = getAllOwnershipList(view)
+
+      val expectedListData = McAddrOwnershipDataListEncoder.encode(listOfExpectedData)
+      assertArrayEquals(expectedListData, ownershipList)
+
+      val ownershipList2 = getOwnershipList(view, scAddressObj1)
+      assertArrayEquals(expectedListData, ownershipList2)
+
+      // remove first ownership association
+      val removeCmdInput = RemoveOwnershipCmdInput(Some(mcAddr))
+      val msg2 = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(RemoveOwnershipCmd) ++ removeCmdInput.encode(),
+        randomNonce,
+        scAddressObj1
+      )
+
+      val returnData2 = withGas(messageProcessor.process(msg2, view, _, defaultBlockContext))
+      assertNotNull(returnData2)
+      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
+
+
+      view.commit(bytesToVersion(getVersion.data()))
+    }
+  }
+
+  @Test
+  def testSimple2(): Unit = {
+
+    usingView(messageProcessor) { view =>
+
+      messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      // create sender account with some fund in it
+      val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
+      createSenderAccount(view, initialAmount, scAddressObj1)
+      createSenderAccount(view, initialAmount, scAddressObj2)
+
+      val listOfScAddress2ExpectedData = new util.ArrayList[McAddrOwnershipData]()
+      val numOfOwnerships2 = 1
+
+      // add some mc address associations for sc address 2
+      for (i <- 0 until numOfOwnerships2) {
+        val mcAddr = listOfMcAddrSign2.get(i)._1
+        val mcSignature = listOfMcAddrSign2.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
+
+        val data: Array[Byte] = cmdInput.encode()
+        val msg = getMessage(contractAddress, BigInteger.ZERO,
+          BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj2)
+
+        listOfScAddress2ExpectedData.add(McAddrOwnershipData(scAddrStr2.toLowerCase(), mcAddr))
+
+        val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
+        assertNotNull(returnData)
+      }
+
+      val listOfExpectedData = new util.ArrayList[McAddrOwnershipData]()
+      val numOfOwnerships1 = 2
+
+      for (i <- 0 until numOfOwnerships1) {
+        val mcAddr = listOfMcAddrSign1.get(i)._1
+        val mcSignature = listOfMcAddrSign1.get(i)._2
+        val cmdInput = AddNewOwnershipCmdInput(mcAddr, mcSignature)
+
+        val data: Array[Byte] = cmdInput.encode()
+        val msg = getMessage(contractAddress, BigInteger.ZERO,
+          BytesUtils.fromHexString(AddNewOwnershipCmd) ++ data, randomNonce, scAddressObj1)
+
+        listOfExpectedData.add(McAddrOwnershipData(scAddrStr1, mcAddr))
+
+        val returnData = withGas(messageProcessor.process(msg, view, _, defaultBlockContext))
+        assertNotNull(returnData)
+      }
+
+      val ownershipList = getAllOwnershipList(view)
+
+      val expectedListData = McAddrOwnershipDataListEncoder.encode(listOfExpectedData)
+      //assertArrayEquals(expectedListData, ownershipList)
+
+      val ownershipList2 = getOwnershipList(view, scAddressObj1)
+      assertArrayEquals(expectedListData, ownershipList2)
+
+
+      view.commit(bytesToVersion(getVersion.data()))
+    }
   }
 
 }

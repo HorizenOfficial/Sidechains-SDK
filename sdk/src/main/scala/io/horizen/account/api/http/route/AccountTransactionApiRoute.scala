@@ -71,7 +71,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
-      sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership
+      sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~ getKeysOwnerScAddresses
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -879,6 +879,21 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+
+  def getKeysOwnerScAddresses: Route = (post & path("getKeysOwnerScAddresses")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqGetOwnerScAddresses]) { _ =>
+          withNodeView { sidechainNodeView =>
+            val scAddresses = sidechainNodeView.getNodeState.getListOfOwnerScAddresses()
+            val resultMap = scAddresses.map(k => Keys.toChecksumAddress(k.scAddress))
+            ApiResponseUtil.toResponse(RespOwnersScAddresses(resultMap))
+          }
+        }
+      }
+    }
+  }
+
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
@@ -997,6 +1012,9 @@ object AccountTransactionRestScheme {
   private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespOwnersScAddresses(owners: Seq[String]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private [api] case class RespForgerInfo(
                                  blockSign: PublicKey25519Proposition,
                                  vrfPubKey: VrfPublicKey,
@@ -1089,6 +1107,9 @@ object AccountTransactionRestScheme {
   private[horizen] case class ReqGetMcAddrOwnership(scAddressOpt: Option[String]) {
     require(scAddressOpt != null, "SC address opt must be provided")
   }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqGetOwnerScAddresses() {}
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class ReqOpenStakeForgerList(

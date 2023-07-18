@@ -2,6 +2,7 @@ package io.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.McAddrOwnershipData.{decodeMcAddress, decodeMcSignature}
 import io.horizen.json.Views
 import io.horizen.evm.Address
@@ -11,6 +12,7 @@ import org.web3j.abi.datatypes.generated.{Bytes24, Bytes3, Bytes32}
 import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
+
 import java.nio.charset.StandardCharsets
 import java.util
 
@@ -218,3 +220,42 @@ object McAddrOwnershipDataSerializer extends SparkzSerializer[McAddrOwnershipDat
     )
   }
 }
+
+@JsonView(Array(classOf[Views.Default]))
+case class OwnerScAddress(scAddress: String)
+  extends BytesSerializable  with ABIEncodable[StaticStruct] {
+
+  override type M = OwnerScAddress
+
+  override def serializer: SparkzSerializer[OwnerScAddress] = OwnerScAddressSerializer
+
+  override def toString: String = "%s(scAddress: %s)"
+    .format(this.getClass.toString, scAddress)
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(scAddress))
+    new StaticStruct(listOfParams)
+  }
+}
+
+object OwnerScAddrListEncoder extends ABIListEncoder[OwnerScAddress, StaticStruct]{
+  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
+}
+
+object OwnerScAddressSerializer extends SparkzSerializer[OwnerScAddress] {
+  override def serialize(s: OwnerScAddress, w: Writer): Unit = {
+    val scAddressBytes = s.scAddress.getBytes(StandardCharsets.UTF_8)
+    w.putBytes(scAddressBytes)
+  }
+
+  override def parse(r: Reader): OwnerScAddress = {
+    val scAddressBytes = r.getBytes(2*BytesUtils.HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH)
+
+    OwnerScAddress(
+      new String(scAddressBytes, StandardCharsets.UTF_8)
+    )
+  }
+}
+
