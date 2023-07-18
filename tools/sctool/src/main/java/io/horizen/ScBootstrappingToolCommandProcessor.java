@@ -31,8 +31,6 @@ import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
-import scala.Option;
-import scala.concurrent.duration.FiniteDuration;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -42,7 +40,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {

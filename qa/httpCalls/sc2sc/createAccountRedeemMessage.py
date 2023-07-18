@@ -16,5 +16,4 @@ def createAccountRedeemMessage(sidechainNode, messageType, senderSidechain, send
     }
     body = json.dumps(j)
     response = sidechainNode.sc2sc_createAccountRedeemMessage(body)
-    print(response)
     return response

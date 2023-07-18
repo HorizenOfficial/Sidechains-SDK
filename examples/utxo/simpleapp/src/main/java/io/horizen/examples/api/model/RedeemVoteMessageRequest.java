@@ -1,18 +1,18 @@
 package io.horizen.examples.api.model;
 
 public final class RedeemVoteMessageRequest {
-    private String proposition;
-    private String certificateDataHash;
-    private String nextCertificateDataHash;
-    private String scCommitmentTreeRoot;
-    private String nextScCommitmentTreeRoot;
-    private String proof;
     private int messageType;
     private String senderSidechain;
     private String sender;
     private String receiverSidechain;
     private String receiver;
     private String payload;
+    private String proposition;
+    private String certificateDataHash;
+    private String nextCertificateDataHash;
+    private String scCommitmentTreeRoot;
+    private String nextScCommitmentTreeRoot;
+    private String proof;
     private long fee;
 
     public String getProposition() {

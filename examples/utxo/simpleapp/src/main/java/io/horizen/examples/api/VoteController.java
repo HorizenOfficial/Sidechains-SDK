@@ -50,7 +50,7 @@ public class VoteController extends SidechainApplicationApiGroup {
     public List<Route> getRoutes() {
         List<Route> routes = new ArrayList<>();
         routes.add(bindPostRequest("sendToSidechain", this::sendVoteToSidechain, SendVoteMessageToSidechainRequest.class));
-        routes.add(bindPostRequest("redeem", this::redeem, RedeemVoteMessageRequest.class));
+        routes.add(bindPostRequest("redeemVoteMessage", this::redeemVoteMessage, RedeemVoteMessageRequest.class));
         return routes;
     }
 
@@ -143,7 +143,7 @@ public class VoteController extends SidechainApplicationApiGroup {
         }
     }
 
-    private ApiResponse redeem(SidechainNodeView view, RedeemVoteMessageRequest request) {
+    private ApiResponse redeemVoteMessage(SidechainNodeView view, RedeemVoteMessageRequest request) {
         try {
             PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer()
                     .parseBytes(BytesUtils.fromHexString(request.getProposition()));

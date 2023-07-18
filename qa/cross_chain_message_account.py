@@ -120,7 +120,6 @@ class CrossChainMessageAccount(MultiSidechainTestFramework):
                                  data=tx_data
                                  )
         generate_next_block(sc_evm1_node, "first node")
-        sc_evm1_node.block_best()
 
         for i in range(6):
             mc_node.generate(9)

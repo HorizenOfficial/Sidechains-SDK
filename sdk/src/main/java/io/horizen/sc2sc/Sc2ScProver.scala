@@ -52,7 +52,7 @@ class Sc2ScProver [
 
   def buildRedeemMessage(message: CrossChainMessage): Try[CrossChainRedeemMessage] = {
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) =>
-      buildRedeemMessage(message, view.state, view.history, params)),timeoutDuration)
+      buildRedeemMessage(message, view.state, view.history, params)), timeoutDuration)
       .asInstanceOf[Try[CrossChainRedeemMessage]]
   }
 }
