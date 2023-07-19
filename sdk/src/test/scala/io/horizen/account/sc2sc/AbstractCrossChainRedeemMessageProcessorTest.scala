@@ -2,6 +2,7 @@ package io.horizen.account.sc2sc
 
 import io.horizen.account.fixtures.AccountCrossChainMessageFixture
 import io.horizen.account.sc2sc.CrossChainRedeemMessageProcessorImpl.{contractAddress, nextScCommitmentTreeRoot, scCommitmentTreeRoot}
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.cryptolibprovider.Sc2scCircuit
 import io.horizen.evm.Address
@@ -138,6 +139,7 @@ class AbstractCrossChainRedeemMessageProcessorTest extends MessageProcessorFixtu
 
     when(networkParamsMock.sidechainId).thenReturn(receiverSidechain)
     when(mockStateView.getAccountStorage(ArgumentMatchers.eq(contractAddress), any())).thenReturn(Array.emptyByteArray)
+    when(mockStateView.getAccountStorageBytes(any(), any())).thenReturn(NULL_HEX_STRING_32)
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(scCommitmentTreeRoot, mockStateView)).thenReturn(true)
     when(scTxCommProvider.doesScTxCommitmentTreeRootHashExist(nextScCommitmentTreeRoot, mockStateView)).thenReturn(true)
     when(sc2scCircuitMock.verifyRedeemProof(any(), any(), any(), any(), any())).thenReturn(true)

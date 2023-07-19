@@ -13,6 +13,7 @@ object AccountCrossChainRedeemMessageDecoder extends ABIDecoder[AccountCrossChai
   override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     Utils.convert(util.Arrays.asList(
       new TypeReference[Uint32]() {},
+      new TypeReference[Bytes32]() {},
       new TypeReference[Bytes20]() {},
       new TypeReference[Bytes32]() {},
       new TypeReference[Bytes20]() {},

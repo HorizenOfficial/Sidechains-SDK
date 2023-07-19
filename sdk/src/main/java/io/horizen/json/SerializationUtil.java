@@ -1,5 +1,6 @@
 package io.horizen.json;
 
+import io.horizen.account.state.NativeSmartContractMsgProcessor;
 import io.horizen.api.http.SidechainApiErrorResponseSchema;
 import io.horizen.api.http.SidechainApiManagedError;
 import io.horizen.api.http.SidechainApiResponseBody;
@@ -7,6 +8,7 @@ import io.horizen.json.serializer.ApplicationJsonSerializer;
 import scala.Option;
 
 import java.io.*;
+import java.util.Arrays;
 
 public class SerializationUtil {
 
@@ -54,10 +56,14 @@ public class SerializationUtil {
     }
 
     public static <T> Option<T> deserializeObject(byte[] objectToDeserialize) throws IOException, ClassNotFoundException {
-        if (objectToDeserialize.length == 0) return Option.empty();
+        if (objectToDeserializeIsEmpty(objectToDeserialize)) return Option.empty();
 
         try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(objectToDeserialize))) {
             return Option.apply((T) ois.readObject());
         }
+    }
+
+    private static boolean objectToDeserializeIsEmpty(byte[] objectToDeserialize) {
+        return objectToDeserialize.length == 0 || Arrays.equals(objectToDeserialize, NativeSmartContractMsgProcessor.NULL_HEX_STRING_32());
     }
 }
