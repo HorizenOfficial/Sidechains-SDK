@@ -4,7 +4,6 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.state.McAddrOwnershipLinkedList._
 import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, ecParameters, getMcSignature, getOwnershipId, initDone, isForkActive}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
@@ -35,6 +34,24 @@ trait McAddrOwnershipsProvider {
   private[horizen] def ownershipDataExist(view: BaseAccountStateView, ownershipId: Array[Byte]): Boolean
 }
 
+/*
+ * There are two main linked lists in this native smart contract :
+ * 1) McAddrOwnershipLinkedList:
+ *      keeps track of all association pairs
+ *           id ---> (sc addr / mc addr)
+ *    This is useful for retrieving all associations but also for checking that a mc address can be associated only to
+ *    one sc address
+ *
+ * 2) ScAddressRefsLinkedList:
+ *      keeps track of all sc addresses which owns at least one mc address
+ *           id ---> sc addr
+ *    This is useful for getting all owner sc address without looping on the previous list (high gas consumption)
+ *
+ * Moreover, for any owner sc address, there is a linked list with the associated mc addresses
+ *           id ---> mc addr
+ *    This can is useful for getting all mc addresses associated to an owner sc address without looping on the first
+ *    list (high gas consumption)
+*/
 case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with McAddrOwnershipsProvider {
 
   override val contractAddress: Address = MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
@@ -78,8 +95,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       // Since the initialization is not done at genesis block, to be on the safe side, we chose not to throw an exception
       // but just log a warning and then overwrite the value.
 
-      val errorMsg = s"Initial tip already set, overwriting it!! "
-      log.warn(errorMsg)
+      val warnMsg = s"Initial tip already set, overwriting it!! "
+      log.warn(warnMsg)
     }
 
     view.updateAccountStorage(contractAddress, OwnershipsLinkedListTipKey, OwnershipLinkedListNullValue)
@@ -87,8 +104,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     // set the initial value for the linked list last element (null hash)
     //-------
     if (!view.getAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey).sameElements(NULL_HEX_STRING_32)) {
-      val errorMsg = s"Sc Initial tip already set, overwriting it!! "
-      log.warn(errorMsg)
+      val warnMsg = s"Sc Initial tip already set, overwriting it!! "
+      log.warn(warnMsg)
     }
     view.updateAccountStorage(contractAddress, ScAddressRefsLinkedListTipKey, ScAddressRefsLinkedListNullValue)
 
@@ -401,8 +418,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     try {
-      while (!linkedListNodeRefIsNull(nodeReference)) {
-        val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = getOwnershipListItem(view, nodeReference)
+      while (!McAddrOwnershipLinkedList.linkedListNodeRefIsNull(nodeReference)) {
+        val (item: McAddrOwnershipData, prevNodeReference: Array[Byte]) = McAddrOwnershipLinkedList.getOwnershipListItem(view, nodeReference)
         ownershipsList = item +: ownershipsList
         nodeReference = prevNodeReference
       }
@@ -446,7 +463,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
   }
 
   private def getExistingAssociation(view: BaseAccountStateView, ownershipId: Array[Byte]): Option[String] = {
-    getOwnershipData(view, ownershipId) match {
+    McAddrOwnershipLinkedList.getOwnershipData(view, ownershipId) match {
       case None => None
       case Some(obj) => Some(obj.scAddress)
     }
