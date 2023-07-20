@@ -11,17 +11,22 @@ import java.nio.charset.StandardCharsets
 class ScAddrOwnershipLinkedList(scAddressStringNoPrefix : String)
   extends NativeSmartContractLinkedList {
 
-  val listTipKey: Array[Byte] = Blake2b256.hash(scAddressStringNoPrefix+"TipKey")
-  val listTipNullValue: Array[Byte] = Blake2b256.hash(scAddressStringNoPrefix+"TipNullValue")
+  override val listTipKey: Array[Byte] = Blake2b256.hash(scAddressStringNoPrefix+"TipKey")
+  override val listTipNullValue: Array[Byte] = Blake2b256.hash(scAddressStringNoPrefix+"TipNullValue")
 
   val scAddressTipValue : Array[Byte] = Blake2b256.hash(scAddressStringNoPrefix)
 
+  /**
+   *  Getting a not existing key from state DB using RAW strategy
+      gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+      gives an empty array instead
+   * @param view - the reference view
+   * @param dataKey - The key for accessing the data in the stateDb
+   * @return
+   */
   private def getScAddrData(view: BaseAccountStateView, dataKey: Array[Byte]): Option[String] = {
     val data = view.getAccountStorageBytes(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, dataKey)
     if (data.length == 0) {
-      // getting a not existing key from state DB using RAW strategy
-      // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-      // gives an empty array instead
       None
     } else {
       Some(new String(data, StandardCharsets.UTF_8))

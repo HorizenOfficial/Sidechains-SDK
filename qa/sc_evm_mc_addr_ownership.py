@@ -255,17 +255,20 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         print("mcAddr: " + taddr2)
         print("mcSignature: " + mc_signature2)
 
-        # add a second owned mc address linked to the same sc address
+        # add a second owned mc address linked to the same sc address, and use a different sc address format, we should
+        # support that
         ret = sendKeysOwnership(sc_node, nonce=2,
-                                sc_address=sc_address,
+                                sc_address=to_checksum_address(sc_address),
                                 mc_addr=taddr2,
                                 mc_signature=mc_signature2)
 
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2)
 
-        # check we have both association and only them
+        # check we have both association and only them (and we support different sc address formats)
         ret = getKeysOwnership(sc_node, sc_address=sc_address)
+        ret2 = getKeysOwnership(sc_node, sc_address=to_checksum_address(sc_address))
+        assert_equal(ret, ret2)
 
         # check we have just one sc address association
         assert_true(len(ret['keysOwnership']) == 1)
@@ -431,8 +434,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         taddr_list.remove(taddr_rem)
         assert_true(len(taddr_list) == 9)
 
+        # use a different sc address format, we should support that
         removeKeysOwnership(sc_node, nonce=16,
-                            sc_address=sc_address,
+                            sc_address=to_checksum_address(sc_address),
                             mc_addr=taddr_rem)
 
         generate_next_block(sc_node, "first node")

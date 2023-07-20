@@ -863,9 +863,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       _ => {
         entity(as[ReqGetMcAddrOwnership]) { body =>
 
+          val scAddrNoPrefixOpt = body.scAddressOpt match  {
+            case Some(str) =>
+              Some(normalizeScAddress(str))
+            case None => None
+          }
           withNodeView { sidechainNodeView =>
             val accountState = sidechainNodeView.getNodeState
-            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(body.scAddressOpt)
+            val listOfMcAddrOwnerships = accountState.getListOfMcAddrOwnerships(scAddrNoPrefixOpt)
 
             val resultMap = listOfMcAddrOwnerships.groupBy(_.scAddress).map {
               case (k,v) => (Keys.toChecksumAddress(k),v.map(_.mcTransparentAddress))
@@ -893,6 +898,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       }
     }
   }
+
 
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
@@ -1029,10 +1035,10 @@ object AccountTransactionRestScheme {
   private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class TransactionCreateMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: String, mcSignature: String)
+  private[horizen] case class TransactionCreateMcAddrOwnershipInfo(var scAddress: String, mcTransparentAddress: String, mcSignature: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class TransactionRemoveMcAddrOwnershipInfo(scAddress: String, mcTransparentAddress: Option[String])
+  private[horizen] case class TransactionRemoveMcAddrOwnershipInfo(var scAddress: String, mcTransparentAddress: Option[String])
 
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
@@ -1089,15 +1095,17 @@ object AccountTransactionRestScheme {
                                                         gasInfo: Option[EIP1559GasInfo]
                                                       ) {
     require(ownershipInfo != null, "MC address ownership info must be provided")
+    ownershipInfo.scAddress = normalizeScAddress(ownershipInfo.scAddress)
   }
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class ReqRemoveMcAddrOwnership(
                                                         nonce: Option[BigInteger],
-                                                        ownershipInfo: TransactionRemoveMcAddrOwnershipInfo,
+                                                        var ownershipInfo: TransactionRemoveMcAddrOwnershipInfo,
                                                         gasInfo: Option[EIP1559GasInfo]
                                                       ) {
     require(ownershipInfo != null, "MC address ownership info must be provided")
+    ownershipInfo.scAddress = normalizeScAddress(ownershipInfo.scAddress)
     require(ownershipInfo.scAddress.length == 2*Address.LENGTH, s"Invalid SC address length=${ownershipInfo.scAddress.length}")
     // for the time being do not allow null mc address. In future we can use a null value for removing all sc address ownerships
     require(ownershipInfo.mcTransparentAddress.isDefined, "MC address must be specified")
@@ -1206,6 +1214,16 @@ object AccountTransactionRestScheme {
    private[horizen] case class ReqSignTransaction(from: Option[String], transactionBytes: String)
 
 
+  def normalizeScAddress(str: String): String = {
+    // we support format with and without prefix and checksum address format too, but
+    // we normalize it to lowercase without prefix
+    val str2 = if (str.startsWith("0x")) {
+      str.substring(2)
+    } else {
+      str
+    }
+    str2.toLowerCase()
+  }
 }
 
 object AccountTransactionErrorResponse {
