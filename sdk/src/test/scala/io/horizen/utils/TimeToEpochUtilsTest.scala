@@ -6,7 +6,7 @@ import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusParamsUtil, intToCo
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
 import io.horizen.account.fork.ConsensusParamsFork
-import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkConfigurator, ForkManager, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -15,9 +15,7 @@ import org.scalatestplus.junit.JUnitSuite
 import sparkz.util.{ModifierId, bytesToId}
 import sparkz.core.block.Block
 
-import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import java.math.BigInteger
-import java.util
 
 class TimeToEpochUtilsTest extends JUnitSuite {
 
@@ -57,20 +55,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     override val minVirtualWithdrawalEpochLength: Int = 10
   }
 
-  val consensusForkActivationRegtest1 = 20
-  val consensusForkActivationRegtest2 = 30
-  val consensusForkActivationRegtest3 = 50
-
-  val consensusForkSlotsPerEpochRegtest1: Int = 1000
-  val consensusForkSlotsPerEpochRegtest2: Int = 300
-  val consensusForkSlotsPerEpochRegtest3: Int = 750
-
   val defaultConsensusFork = ConsensusParamsFork.DefaultConsensusParamsFork
-  // 1000 * (30-20) = 10000 slots in fork 1
-  val consensusFork1 = new ConsensusParamsFork(consensusForkSlotsPerEpochRegtest1)
-  // 300 * (50-30) = 6000 slots in fork 2
-  val consensusFork2 = new ConsensusParamsFork(consensusForkSlotsPerEpochRegtest2)
-  val consensusFork3 = new ConsensusParamsFork(consensusForkSlotsPerEpochRegtest3)
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,
                                 expectedSlot: Int,
@@ -106,11 +91,12 @@ class TimeToEpochUtilsTest extends JUnitSuite {
       (23, new ConsensusParamsFork(1200)),
     ))
 
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq(
-      (0, defaultConsensusFork, TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)),
-      (20, new ConsensusParamsFork(1000), TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1))),
-      (23, new ConsensusParamsFork(1200), TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))),
-    )
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))
+    ))
+
 
     var old_ts: Long = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(0), intToConsensusSlotNumber(0))
     var ts: Long = old_ts
@@ -166,7 +152,10 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
     ))
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq((0, defaultConsensusFork, TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
+    ))
 
     var old_ts: Long = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(0), intToConsensusSlotNumber(0))
     var ts: Long = old_ts
@@ -199,7 +188,10 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
     ))
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq((0, defaultConsensusFork, TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
+    ))
 
     ///////////////////////  Test with genesis block /////////////////
     assertEquals("Absolute slot number should be 1440 => epoch=1 slot=720 fork=0 => 1*720 + 720 = 1440", 1440, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, sidechainGenesisBlockTimestamp))
@@ -239,11 +231,12 @@ class TimeToEpochUtilsTest extends JUnitSuite {
       (23, new ConsensusParamsFork(1200)),
     ))
 
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq(
-      (0, defaultConsensusFork, TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)),
-      (20, new ConsensusParamsFork(1000), TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1))),
-      (23, new ConsensusParamsFork(1200), TimeToEpochUtils.getTimeStampForEpochAndSlot(params,  intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))),
-    )
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))
+    ))
 
 
     ///////////////////////  Test with genesis block /////////////////
@@ -306,7 +299,10 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
     ))
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq((0, new ConsensusParamsFork(consensusSlotsInEpoch), TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
+    ))
 
     assertEquals(" Seconds in epoch shall be as expected", 1000, TimeToEpochUtils.epochInSeconds(params, consensusSlotsInEpoch))
     checkSlotAndEpoch(1990, 100, 1)
@@ -336,7 +332,10 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
     ))
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq((0, new ConsensusParamsFork(consensusSlotsInEpoch), TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
+    ))
 
     assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params, consensusSlotsInEpoch))
     checkSlotAndEpoch(90, 1, 3)
@@ -371,21 +370,11 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
     ))
-    ConsensusParamsUtil.consensusParamsForkActivationTs = Seq((0, defaultConsensusFork, TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
+    ))
 
     TimeToEpochUtils.timeStampToSlotNumber(params, -5)
-  }
-
-  class CustomForkConfigurator extends ForkConfigurator {
-    /**
-     * Mandatory for every sidechain to provide an epoch number here.
-     */
-    override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(10, 20, 0)
-
-    override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = {
-      Seq(new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](SidechainForkConsensusEpoch(consensusForkSlotsPerEpochRegtest1, 20, 20), consensusFork1),
-        new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](SidechainForkConsensusEpoch(consensusForkSlotsPerEpochRegtest2, 20, 20), consensusFork2),
-        new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](SidechainForkConsensusEpoch(consensusForkSlotsPerEpochRegtest3, 20, 20), consensusFork3)).asJava
-    }
   }
 }

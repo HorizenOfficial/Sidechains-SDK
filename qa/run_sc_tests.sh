@@ -123,6 +123,7 @@ testScriptsEvm=(
     'sc_evm_mc_addr_ownership.py'
     'sc_evm_mc_addr_ownership_perf_test.py'
     'sc_evm_seedernode.py'
+    'sc_evm_consensus_parameters_fork.py'
 );
 
 testScriptsUtxo=(

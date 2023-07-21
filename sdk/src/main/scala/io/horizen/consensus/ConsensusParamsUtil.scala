@@ -6,7 +6,7 @@ import sparkz.core.block.Block
 object ConsensusParamsUtil {
   private var currentConsensusEpoch: Int = 0
   private var consensusParamsForksActivation: Seq[(Int, ConsensusParamsFork)] = Seq()
-  var consensusParamsForkActivationTs: Seq[(Int, ConsensusParamsFork, Block.Timestamp)] = Seq()
+  private var consensusParamsForkTimestampActivation: Seq[Block.Timestamp] = Seq()
 
   def setCurrentConsensusEpoch(currentConsensusEpoch: Int): Unit = {
     this.currentConsensusEpoch = currentConsensusEpoch
@@ -18,6 +18,14 @@ object ConsensusParamsUtil {
 
   def setConsensusParamsForkActivation(forkActivationHeights: Seq[(Int, ConsensusParamsFork)]): Unit = {
     this.consensusParamsForksActivation = forkActivationHeights
+  }
+
+  def setConsensusParamsForkTimestampActivation(blockTs: Seq[Block.Timestamp]): Unit = {
+    this.consensusParamsForkTimestampActivation = blockTs
+  }
+
+  def getConsensusParamsForkTimestampActivation(): Seq[Block.Timestamp] = {
+    this.consensusParamsForkTimestampActivation
   }
 
   def getConsensusParamsForkActivation: Seq[(Int, ConsensusParamsFork)] =

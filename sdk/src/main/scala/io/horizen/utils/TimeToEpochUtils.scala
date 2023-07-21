@@ -106,7 +106,7 @@ object TimeToEpochUtils {
     startingForkEpoch + (remainingSlotsInFork / epochInSeconds(params, lastFork._2.consensusSlotsInEpoch)).toInt
   }
 
-  private def getConsensusInformationFromTimestamp(params: NetworkParams, timestamp: Block.Timestamp): (Long, Int, (Int, ConsensusParamsFork, Long)) = {
+  private def getConsensusInformationFromTimestamp(params: NetworkParams, timestamp: Block.Timestamp): (Long, Int, (Int, ConsensusParamsFork)) = {
     require(
       timestamp >= params.sidechainGenesisBlockTimestamp,
       s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${params.sidechainGenesisBlockTimestamp}"
@@ -114,21 +114,26 @@ object TimeToEpochUtils {
 
     var startingEpoch = 0
     var forkIndex = 0
-    var fork = ConsensusParamsUtil.consensusParamsForkActivationTs(forkIndex)
+    val forks = ConsensusParamsUtil.getConsensusParamsForkActivation
+    val activationForksTimestamp = ConsensusParamsUtil.getConsensusParamsForkTimestampActivation()
+    var fork = forks(forkIndex)
+    var forkActivationTimestamp = activationForksTimestamp(forkIndex)
     val timestampMinusSlot = timestamp - params.consensusSecondsInSlot
-    while (timestampMinusSlot > fork._3 && forkIndex < ConsensusParamsUtil.consensusParamsForkActivationTs.size) {
+    while (timestampMinusSlot > forkActivationTimestamp && forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
       startingEpoch = fork._1
       forkIndex = forkIndex + 1
-      if (forkIndex < ConsensusParamsUtil.consensusParamsForkActivationTs.size)
-        fork = ConsensusParamsUtil.consensusParamsForkActivationTs(forkIndex)
+      if (forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
+        fork = forks(forkIndex)
+        forkActivationTimestamp = activationForksTimestamp(forkIndex)
+      }
     }
-    val lastFork = ConsensusParamsUtil.consensusParamsForkActivationTs(forkIndex - 1)
-    val timeStampInFork = timestampMinusSlot - lastFork._3 + params.consensusSecondsInSlot
+    val lastFork = forks(forkIndex - 1)
+    val lastForkActivationTimestamp = activationForksTimestamp(forkIndex - 1)
+    val timeStampInFork = timestampMinusSlot - lastForkActivationTimestamp + params.consensusSecondsInSlot
     if (lastFork._1 == 0) {
       startingEpoch = startingEpoch + 1
     }
 
     (timeStampInFork, startingEpoch, lastFork)
   }
-
 }
