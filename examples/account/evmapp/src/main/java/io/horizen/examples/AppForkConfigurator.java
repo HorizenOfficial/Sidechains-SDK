@@ -48,6 +48,12 @@ public class AppForkConfigurator extends ForkConfigurator {
                    new ConsensusParamsFork(
                            1000
                    )
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(30, 30, 30),
+                    new ConsensusParamsFork(
+                            1500
+                    )
             )
         );
     }
