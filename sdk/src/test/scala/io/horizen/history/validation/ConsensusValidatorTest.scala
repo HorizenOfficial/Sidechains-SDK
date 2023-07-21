@@ -6,6 +6,7 @@ import io.horizen.fixtures.VrfGenerator
 import io.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
+import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.history.SidechainHistory
 import org.junit.Test
@@ -87,11 +88,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4 - 2
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots)),
-    ))
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, 15), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15)), "regtest")
 
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
@@ -110,10 +108,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots)),
-    ))
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, 15), "regtest")
+
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15)), "regtest")
 
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 

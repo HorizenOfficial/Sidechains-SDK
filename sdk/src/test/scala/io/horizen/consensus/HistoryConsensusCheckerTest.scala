@@ -4,8 +4,9 @@ import io.horizen.account.fork.ConsensusParamsFork
 
 import java.util.Random
 import io.horizen.fixtures.sidechainblock.generation._
-import io.horizen.fork.{ForkManagerUtil, CustomForkConfiguratorWithConsensusParamsFork}
+import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.{NetworkParams, TestNetParams}
+import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.history.SidechainHistory
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
@@ -16,12 +17,6 @@ import scala.util.{Failure, Success, Try}
 
 class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecker {
 
-  val consensusSlotsInEpoch = 10
-  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
-  ))
-  ConsensusParamsUtil.setCurrentConsensusEpoch(0)
-  ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, consensusSlotsInEpoch), "regtest")
 
   def testWithSeed(testSeed: Int): Unit = {
     //val testSeed = 234

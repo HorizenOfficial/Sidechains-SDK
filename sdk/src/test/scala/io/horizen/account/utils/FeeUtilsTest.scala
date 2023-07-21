@@ -5,6 +5,7 @@ import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee
 import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
+import io.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite

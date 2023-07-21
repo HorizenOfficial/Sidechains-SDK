@@ -138,11 +138,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
   @Before
   def init(): Unit = {
-    ConsensusParamsUtil.setCurrentConsensusEpoch(1)
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(slotsInEpoch)),
-    ))
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(0, slotsInEpoch), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(slotsInEpoch)), "regtest")
   }
 
   @Test

@@ -11,7 +11,7 @@ import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
-import io.horizen.consensus.ConsensusParamsUtil
+import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
@@ -24,7 +24,7 @@ import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -134,6 +134,10 @@ abstract class AbstractSidechainApp
     throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
       s"Current value: $consensusSecondsInSlot")
   }
+
+  // Init ForkManager
+  // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
   val consensusParamsFork = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
@@ -282,9 +286,6 @@ abstract class AbstractSidechainApp
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
   }
 
-  // Init ForkManager
-  // We need to have it initializes before the creation of the SidechainState
-  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

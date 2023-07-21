@@ -1,10 +1,12 @@
 package io.horizen.consensus
 import io.horizen.account.fork.ConsensusParamsFork
+import sparkz.core.block.Block
 
 
 object ConsensusParamsUtil {
   private var currentConsensusEpoch: Int = 0
   private var consensusParamsForksActivation: Seq[(Int, ConsensusParamsFork)] = Seq()
+  var consensusParamsForkActivationTs: Seq[(Int, ConsensusParamsFork, Block.Timestamp)] = Seq()
 
   def setCurrentConsensusEpoch(currentConsensusEpoch: Int): Unit = {
     this.currentConsensusEpoch = currentConsensusEpoch

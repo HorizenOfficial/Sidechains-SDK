@@ -14,7 +14,7 @@ import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.transaction.exception.TransactionSemanticValidityException
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, Pair => JPair}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}

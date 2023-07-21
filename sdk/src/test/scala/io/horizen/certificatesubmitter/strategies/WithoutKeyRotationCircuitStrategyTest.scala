@@ -19,6 +19,7 @@ import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool

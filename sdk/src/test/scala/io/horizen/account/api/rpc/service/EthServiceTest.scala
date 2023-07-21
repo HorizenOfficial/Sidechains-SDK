@@ -30,7 +30,7 @@ import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.{EthServiceSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Assert, Before, Test}
