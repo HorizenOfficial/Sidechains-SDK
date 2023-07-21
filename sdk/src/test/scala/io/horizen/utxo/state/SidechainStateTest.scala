@@ -67,6 +67,7 @@ class SidechainStateTest
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, new ConsensusParamsFork(720)),
   ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
   @Before
   def init(): Unit = {

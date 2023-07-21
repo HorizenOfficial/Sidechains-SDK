@@ -32,6 +32,7 @@ class FeeUtilsTest extends JUnitSuite {
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(RegTestParams())))
 
   @Before
   def init(): Unit = {

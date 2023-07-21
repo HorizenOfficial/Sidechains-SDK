@@ -508,6 +508,8 @@ class ConsensusValidatorOmmersTest
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(slotsInEpoch)),
     ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+
     val history: SidechainHistory = mock[SidechainHistory]
 
     Mockito.when(history.params).thenReturn(params)

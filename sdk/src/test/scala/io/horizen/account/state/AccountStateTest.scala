@@ -1,18 +1,18 @@
 package io.horizen.account.state
 
 import io.horizen.account.fixtures.EthereumTransactionFixture
-import io.horizen.account.fork.GasFeeFork
+import io.horizen.account.fork.{ConsensusParamsFork, GasFeeFork}
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import io.horizen.consensus.intToConsensusEpochNumber
+import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
 import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.utils
-import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -59,6 +59,10 @@ class AccountStateTest
     Mockito.when(params.consensusSecondsInSlot).thenReturn(120)
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
     state = new AccountState(
       params,
@@ -173,6 +177,8 @@ class AccountStateTest
   @Test
   def testSwitchingConsensusEpoch(): Unit = {
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
+    ConsensusParamsUtil.setCurrentConsensusEpoch(86400)
+
     val currentEpochNumber = state.getConsensusEpochNumber
 
     assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)

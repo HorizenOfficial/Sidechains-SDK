@@ -53,15 +53,16 @@ class SidechainHistoryTest extends JUnitSuite
   val sidechainSettings: SidechainSettings = mock[SidechainSettings]
   val sparkzSettings: SparkzSettings = mock[SparkzSettings]
   var storage: Storage = _
-  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
-  ))
 
   @Before
   def setUp(): Unit = {
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
     genesisBlockInfo = AbstractHistory.calculateGenesisBlockInfo(genesisBlock, params).copy(semanticValidity = ModifierSemanticValidity.Valid)
     Mockito.when(sidechainSettings.sparkzSettings)
@@ -718,6 +719,7 @@ class SidechainHistoryTest extends JUnitSuite
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(2))
     ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(testParams)))
 
     val sidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), sidechainTransactionsCompanion, params)
     // Create first history object

@@ -127,8 +127,8 @@ object TimeToEpochUtils {
         forkActivationTimestamp = activationForksTimestamp(forkIndex)
       }
     }
-    val lastFork = forks(forkIndex - 1)
-    val lastForkActivationTimestamp = activationForksTimestamp(forkIndex - 1)
+    val lastFork = forks(Math.max(forkIndex - 1,0))
+    val lastForkActivationTimestamp = activationForksTimestamp(Math.max(forkIndex - 1,0))
     val timeStampInFork = timestampMinusSlot - lastForkActivationTimestamp + params.consensusSecondsInSlot
     if (lastFork._1 == 0) {
       startingEpoch = startingEpoch + 1
