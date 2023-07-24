@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.horizen.account.fork.ConsensusParamsFork;
+import io.horizen.fork.ConsensusParamsFork;
 import io.horizen.fork.OptionalSidechainFork;
 import io.horizen.fork.SidechainForkConsensusEpoch;
 import io.horizen.utxo.SidechainAppModule;
