@@ -15,27 +15,32 @@ git:
 
 env:
   global:
-    - DOCKER_ORG=zencash
-    - IMAGE_NAME=sc-ci-base
     # Separate branches by space
     - PROD_RELEASE_BRANCHES='master'
-    - PUBLISH_BUILD=false
+#    - PUBLISH_BUILD=false
 
 script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
-  - ci/script.sh tests
 
 jobs:
   include:
-    - name: jdk-11_latest
-      env: PUBLISH_BUILD=true IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
+    - stage: Java project
+      name: jdk-11_latest
+      script: ci/script.sh tests
+      env: DOCKER_ORG='zencash' IMAGE_NAME='sc-ci-base' IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
+#      env: PUBLISH_BUILD=true IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
 
+    - stage: Publish Artifact(s)
+      name: Publish java project artifact(s)
+      script: ci/script.sh publish
+      if: tag IS present AND env(IS_A_RELEASE) = true
 
 deploy:
-  provider: script
-  script: ci/script.sh release
-  skip_cleanup: true
+  provider: releases
+  token: $GITHUB_TOKEN
+  prerelease: $IS_A_GH_PRERELEASE
+  overwrite: true
   on:
     tags: true
-    condition: $PUBLISH_BUILD = true
+    condition: $IS_A_RELEASE = true
