@@ -49,11 +49,10 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
 
     val initialParams = TestNetParams(
-      consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp)
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots)),
+      (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams)))
 
@@ -93,7 +92,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4 - 2
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15), Seq(slotLengthInSeconds)), "regtest")
 
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 
@@ -113,7 +112,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(15), Seq(slotLengthInSeconds)), "regtest")
 
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
 

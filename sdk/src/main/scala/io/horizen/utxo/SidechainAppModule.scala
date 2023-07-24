@@ -64,7 +64,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
            @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("ConsensusSecondsInSlot") secondsInSlot: Int,
            @Named("AppVersion") appVersion: String
   ): SidechainApp = {
     synchronized {
@@ -91,7 +90,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           rejectedApiPaths,
           applicationStopper,
           forkConfigurator,
-          secondsInSlot,
           appVersion
         )
       }

@@ -83,8 +83,6 @@ public class SimpleAppModule extends SidechainAppModule
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
         File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
 
-        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
-        int consensusSecondsInSlot = 120;
         String appVersion = "";
 
         // Here I can add my custom rest api and/or override existing one
@@ -171,9 +169,6 @@ public class SimpleAppModule extends SidechainAppModule
         bind(ForkConfigurator.class)
                 .annotatedWith(Names.named("ForkConfiguration"))
                 .toInstance(forkConfigurator);
-        bind(Integer.class)
-                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
-                .toInstance(consensusSecondsInSlot);
 
         bind(String.class)
                 .annotatedWith(Names.named("AppVersion"))

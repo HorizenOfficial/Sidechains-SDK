@@ -54,8 +54,7 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val chainInfo : ChainInfo,
-   val consensusSecondsInSlot: Int
+   val chainInfo : ChainInfo
   )
   extends Application with SparkzLogging
 {
@@ -129,10 +128,6 @@ abstract class AbstractSidechainApp
   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
 
-  if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
-    throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
-      s"Current value: $consensusSecondsInSlot")
-  }
 
   // Init ForkManager
   // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
@@ -152,7 +147,6 @@ abstract class AbstractSidechainApp
         genesisPoWData = genesisPowData,
         mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
         sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-        consensusSecondsInSlot = consensusSecondsInSlot,
         withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
         signersPublicKeys = signersPublicKeys,
         mastersPublicKeys = mastersPublicKeys,
@@ -190,7 +184,6 @@ abstract class AbstractSidechainApp
         genesisPoWData = genesisPowData,
         mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
         sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-        consensusSecondsInSlot = consensusSecondsInSlot,
         withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
         signersPublicKeys = signersPublicKeys,
         mastersPublicKeys = mastersPublicKeys,
@@ -227,7 +220,6 @@ abstract class AbstractSidechainApp
         genesisPoWData = genesisPowData,
         mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
         sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-        consensusSecondsInSlot = consensusSecondsInSlot,
         withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
         signersPublicKeys = signersPublicKeys,
         mastersPublicKeys = mastersPublicKeys,

@@ -4,11 +4,11 @@ import io.horizen._
 import io.horizen.block.MainchainBlockReferenceData
 import io.horizen.consensus._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.MainNetParams
 import io.horizen.proposition.Proposition
 import io.horizen.secret.PrivateKey25519
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, Pair => JPair}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
@@ -237,11 +237,18 @@ class SidechainStateIntegrationTest
 
     val newVersion = getVersion
 
+    val consensusSecondsInSlot = 120
+
     Mockito.when(mockedBlock.id)
       .thenReturn(bytesToId(newVersion.data))
 
     Mockito.when(mockedBlock.timestamp)
-      .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
+      .thenReturn(params.sidechainGenesisBlockTimestamp + consensusSecondsInSlot)
+    
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)

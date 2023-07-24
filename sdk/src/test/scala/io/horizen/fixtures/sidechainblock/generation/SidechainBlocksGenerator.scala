@@ -160,7 +160,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
   private def generateBlock(possibleForger: PossibleForger, vrfProof: VrfProof, vrfOutput: VrfOutput, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
     val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
     val timestamp = generationRules.forcedTimestamp.getOrElse {
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSecondsInSlot
     }
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {
@@ -443,7 +443,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   private def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VrfProof, merklePath: MerklePath): SidechainBlock = {
     val parentId = bytesToId(new Array[Byte](32))
     val timestamp = if (params.sidechainGenesisBlockTimestamp == 0) {
-      Instant.now.getEpochSecond - (params.consensusSecondsInSlot * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch * 100)
+      Instant.now.getEpochSecond - (ConsensusParamsFork.DefaultConsensusParamsFork.consensusSecondsInSlot * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch * 100)
     }
     else {
       params.sidechainGenesisBlockTimestamp
@@ -534,7 +534,6 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val mainchainCreationBlockHeight: Int = genesisSidechainBlock.mainchainBlockReferencesData.size + mainchainHeight
       override val sidechainGenesisBlockTimestamp: Block.Timestamp = genesisSidechainBlock.timestamp
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
-      override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
       override val mastersPublicKeys: Seq[SchnorrProposition] = params.mastersPublicKeys
       override val circuitType: CircuitTypes = params.circuitType

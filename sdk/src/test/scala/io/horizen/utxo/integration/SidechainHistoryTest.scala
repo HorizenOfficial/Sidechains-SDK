@@ -713,10 +713,9 @@ class SidechainHistoryTest extends JUnitSuite
     val testParams = MainNetParams(new Array[Byte](32),
       genesisBlock.id,
       sidechainGenesisBlockTimestamp = 100000,
-      consensusSecondsInSlot = 10,
       )
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(2))
+      (0, new ConsensusParamsFork(2, 10))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(testParams)))
 

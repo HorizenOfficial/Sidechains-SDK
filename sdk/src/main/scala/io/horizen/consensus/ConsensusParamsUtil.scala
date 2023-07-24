@@ -40,5 +40,14 @@ object ConsensusParamsUtil {
     }
   }
 
+  def getConsensusSecondsInSlotsPerEpoch(epochId: Option[Int]): Int = {
+    epochId match {
+      case Some(epoch) =>
+        ConsensusParamsFork.get(epoch).consensusSecondsInSlot
+      case None =>
+        ConsensusParamsFork.get(this.currentConsensusEpoch).consensusSecondsInSlot
+    }
+  }
+
   def numberOfConsensusParamsFork: Int = this.consensusParamsForksActivation.size
 }

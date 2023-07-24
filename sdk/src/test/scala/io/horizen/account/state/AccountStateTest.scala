@@ -38,6 +38,10 @@ class AccountStateTest
   var params: NetworkParams = mock[NetworkParams]
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
   var state: AccountState = _
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
   private def addMockBalance(account: Address, value: BigInteger) = {
     val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
@@ -56,7 +60,6 @@ class AccountStateTest
     val messageProcessors: Seq[MessageProcessor] = Seq()
 
     Mockito.when(params.chainId).thenReturn(1997)
-    Mockito.when(params.consensusSecondsInSlot).thenReturn(120)
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(

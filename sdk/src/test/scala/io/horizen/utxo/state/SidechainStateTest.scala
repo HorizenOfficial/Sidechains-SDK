@@ -454,6 +454,11 @@ class SidechainStateTest
     })
 
     val mockedBlock = mock[SidechainBlock]
+    val consensusSecondsInSlot = 120
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
     Mockito.when(mockedBlock.id)
       .thenReturn({
@@ -461,7 +466,7 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedBlock.timestamp)
-      .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
+      .thenReturn(params.sidechainGenesisBlockTimestamp + consensusSecondsInSlot)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -981,13 +986,17 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += buildRegularTransaction(1, 0, 1, Seq(), 10)
 
+    val consensusSecondsInSlot = 1
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ))
+
     // Max Withdrawal Boxes per epoch = 100
     // Withdrawal epoch length = 10
     // Withdrawal Boxes allowed per mainchain block reference data = 100/ (11 - 1) = 10
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.maxWBsAllowed).thenReturn(100)
     Mockito.when(mockedParams.withdrawalEpochLength).thenReturn(11)
-    Mockito.when(mockedParams.consensusSecondsInSlot).thenReturn(1)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -1003,9 +1012,6 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(720)),
-    ))
     ConsensusParamsUtil.setCurrentConsensusEpoch(11)
 
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
@@ -1133,7 +1139,7 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
     ConsensusParamsUtil.setCurrentConsensusEpoch(1)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(86400)),
+      (0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
     ))
 
     transactionList.clear()

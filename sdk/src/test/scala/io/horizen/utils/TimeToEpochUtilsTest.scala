@@ -18,8 +18,7 @@ import java.math.BigInteger
 
 class TimeToEpochUtilsTest extends JUnitSuite {
 
-  case class StubbedNetParams(override val sidechainGenesisBlockTimestamp: Block.Timestamp,
-                              override val consensusSecondsInSlot: Int) extends NetworkParams {
+  case class StubbedNetParams(override val sidechainGenesisBlockTimestamp: Block.Timestamp) extends NetworkParams {
     override val sidechainId: Array[Byte] = new Array[Byte](32)
     override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32))
     override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32)
@@ -81,13 +80,13 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def generateAndValidateTimestampForDifferentEpochWithForks(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
     val consensusSecondsInSlot = 12
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200), Seq(12, 12)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
-      (20, new ConsensusParamsFork(1000)),
-      (23, new ConsensusParamsFork(1200)),
+      (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
+      (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -144,12 +143,13 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test
   def generateAndValidateTimestampForDifferentEpochNoForks(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
+    val consensusSlotsInEpoch = 720
     val consensusSecondsInSlot = 12
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq()), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, defaultConsensusFork),
+      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -180,12 +180,13 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test
   def timestampToAbsoluteNumberNoForksTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
+    val consensusSlotsInEpoch = 720
     val consensusSecondsInSlot = 12
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq()), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, defaultConsensusFork),
+      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -221,13 +222,13 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timestampToAbsoluteNumberWithForksTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
     val consensusSecondsInSlot = 12
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200), Seq(12,12)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
-      (20, new ConsensusParamsFork(1000)),
-      (23, new ConsensusParamsFork(1200)),
+      (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
+      (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
     ))
 
 
@@ -292,18 +293,18 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     val consensusSlotsInEpoch = 100
     val sidechainGenesisBlockTimestamp = 1990
     val consensusSecondsInSlot = 10
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq()), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
+      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
     ))
 
-    assertEquals(" Seconds in epoch shall be as expected", 1000, TimeToEpochUtils.epochInSeconds(params, consensusSlotsInEpoch))
+    assertEquals(" Seconds in epoch shall be as expected", 1000, TimeToEpochUtils.epochInSeconds(consensusSecondsInSlot, consensusSlotsInEpoch))
     checkSlotAndEpoch(1990, 100, 1)
 
 
@@ -325,18 +326,19 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     val sidechainGenesisBlockTimestamp = 61
     val consensusSecondsInSlot = 3
     val consensusSlotsInEpoch = 8
-    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq()), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(8), Seq(3)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
+      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
+    ConsensusParamsUtil.setCurrentConsensusEpoch(0)
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)
     ))
 
-    assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params, consensusSlotsInEpoch))
+    assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(consensusSecondsInSlot, consensusSlotsInEpoch))
     checkSlotAndEpoch(90, 1, 3)
     assertEquals(1, TimeToEpochUtils.secondsRemainingInSlot(params,90))
     checkSlotAndEpoch(91, 2, 3)
@@ -352,8 +354,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   @Test(expected = classOf[java.lang.IllegalArgumentException])
   def checkIncorrectEpoch(): Unit = {
     val sidechainGenesisBlockTimestamp = 2000
-    val consensusSecondsInSlot = 10
-    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
     TimeToEpochUtils.timeStampToEpochNumber(params, 1999)
   }
@@ -363,11 +364,11 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     val sidechainGenesisBlockTimestamp = 6000
     val consensusSecondsInSlot = 10
     val consensusSlotsInEpoch = 100
-    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp, consensusSecondsInSlot = consensusSecondsInSlot)
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq()), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch)),
+      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(

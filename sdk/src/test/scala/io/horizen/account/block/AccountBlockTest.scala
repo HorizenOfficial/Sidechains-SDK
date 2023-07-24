@@ -17,9 +17,11 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.Bloom
 import io.horizen.account.utils.FeeUtils.INITIAL_BASE_FEE
 import io.horizen.block._
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Hash
 import io.horizen.fixtures._
 import io.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
+import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.history.validation._
 import io.horizen.json.SerializationUtil
 import io.horizen.json.serializer.ApplicationJsonSerializer
@@ -27,7 +29,7 @@ import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.VrfSecretKey
-import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager, TimeToEpochUtils}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
@@ -81,6 +83,13 @@ class AccountBlockTest
   val (accountPayment, forgerMetadata) = ForgerAccountFixture.generateForgerAccountData(seed, vrfKeyPair)
   val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
   val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(generatedDataSeed)
+
+  val consensusSecondsInSlot: Int = 120
+  ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(720), Seq(consensusSecondsInSlot)), "regtest")
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -946,7 +955,7 @@ class AccountBlockTest
       )
 
       currentParent = blockSeq.last.id
-      currentTimestamp += params.consensusSecondsInSlot
+      currentTimestamp += ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)
     }
 
     blockSeq.map(block => Ommer.toOmmer(block))

@@ -56,7 +56,6 @@ class AccountSidechainApp @Inject()
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
-   @Named("ConsensusSecondsInSlot") secondsInSlot: Int,
    @Named("AppVersion") appVersion: String
   )
   extends AbstractSidechainApp(
@@ -65,8 +64,7 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo,
-    secondsInSlot
+    chainInfo
   )
 {
 

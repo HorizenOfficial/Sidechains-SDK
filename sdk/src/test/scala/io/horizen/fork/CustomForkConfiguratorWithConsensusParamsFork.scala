@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import java.util
 
 object CustomForkConfiguratorWithConsensusParamsFork {
-  def getCustomForkConfiguratorWithConsensusParamsFork(activationHeight: Seq[Int], consensusSlotsPerEpoch: Seq[Int]): ForkConfigurator = {
+  def getCustomForkConfiguratorWithConsensusParamsFork(activationHeight: Seq[Int], consensusSlotsPerEpoch: Seq[Int], consensusSecondsPerSlot: Seq[Int]): ForkConfigurator = {
     assert(activationHeight.size == consensusSlotsPerEpoch.size)
 
     class CustomForkConfigurator extends ForkConfigurator {
@@ -19,7 +19,7 @@ object CustomForkConfiguratorWithConsensusParamsFork {
 
         var optionalSidechainFork: Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = Seq()
         for (i <- activationHeight.indices) {
-          optionalSidechainFork = optionalSidechainFork :+ new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](SidechainForkConsensusEpoch(activationHeight(i), activationHeight(i), activationHeight(i)), new ConsensusParamsFork(consensusSlotsPerEpoch(i)))
+          optionalSidechainFork = optionalSidechainFork :+ new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](SidechainForkConsensusEpoch(activationHeight(i), activationHeight(i), activationHeight(i)), new ConsensusParamsFork(consensusSlotsPerEpoch(i), consensusSecondsPerSlot(i)))
         }
         optionalSidechainFork.asJava
       }

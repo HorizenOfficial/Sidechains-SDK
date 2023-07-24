@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 
 
 class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
-                                  val params: NetworkParams, consensusSlotsPerEpoch: Int)
+                                  val params: NetworkParams, consensusSlotsPerEpoch: Int, consensusSecondsInSlot: Int)
   extends ConsensusDataProvider
   with NetworkParamsUtils
   with SparkzLogging {
@@ -67,7 +67,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
       val previousId: ModifierId = acc.last.last._1
       val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
       val newData =
-        generateBlockIdsAndInfosIter(previousId, params.consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
+        generateBlockIdsAndInfosIter(previousId, consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)
       acc
     }
@@ -133,10 +133,11 @@ class ConsensusDataProviderTest extends CompanionsFixture{
   val generator: SidechainBlockFixture = new SidechainBlockFixture {}
   val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
   val slotsInEpoch = 10
+  val secondsInSlot = 100
 
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(slotsInEpoch)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(slotsInEpoch), Seq(secondsInSlot)), "regtest")
   }
 
   @Test
@@ -162,15 +163,13 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     val networkParams = new TestNetParams(
       sidechainGenesisBlockId = genesisBlockId,
       sidechainGenesisBlockTimestamp = genesisBlockTimestamp,
-      consensusSecondsInSlot = 100
     ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes(StandardCharsets.UTF_8)))}
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(slotsInEpoch))
+      (0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams)))
-
-    val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams, slotsInEpoch)
+    val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams, slotsInEpoch, secondsInSlot)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
     val epochIdsForFirstDataProvider = firstDataProvider.epochIds
     //Finished preparation
@@ -246,7 +245,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(8) //10 epoch
     )
 
-    val secondDataProider = new TestedConsensusDataProvider(slotsPresentationForSecondDataProvider, networkParams, slotsInEpoch)
+    val secondDataProider = new TestedConsensusDataProvider(slotsPresentationForSecondDataProvider, networkParams, slotsInEpoch, secondsInSlot)
     val blockIdAndInfosPerEpochForSecondDataProvider = secondDataProider.blockIdAndInfosPerEpoch
     val epochIdsForSecondDataProvider = secondDataProider.epochIds
 

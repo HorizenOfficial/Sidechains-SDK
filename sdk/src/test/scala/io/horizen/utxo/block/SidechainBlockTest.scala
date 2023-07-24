@@ -2,15 +2,17 @@ package io.horizen.utxo.block
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.horizen.block._
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures._
+import io.horizen.fork.ConsensusParamsFork
 import io.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
 import io.horizen.json.serializer.ApplicationJsonSerializer
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
-import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
+import io.horizen.utils.{BytesUtils, TestSidechainsVersionsManager, TimeToEpochUtils}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import io.horizen.vrf.VrfGeneratedDataProvider
@@ -22,6 +24,7 @@ import sparkz.util.{ModifierId, idToBytes}
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.nio.charset.StandardCharsets
 import java.util.Random
+import scala.collection.Seq
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
@@ -61,6 +64,12 @@ class SidechainBlockTest
 
   val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPair)
   val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
+
+  val consensusSecondsInSlot = 120
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -911,7 +920,7 @@ class SidechainBlockTest
       )
 
       currentParent = blockSeq.last.id
-      currentTimestamp += params.consensusSecondsInSlot
+      currentTimestamp += consensusSecondsInSlot
     }
 
     blockSeq.map(block => Ommer.toOmmer(block))

@@ -59,7 +59,7 @@ class AccountForgeMessageBuilderTest
 
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(0)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
   }
 
   @Test
@@ -272,11 +272,10 @@ class AccountForgeMessageBuilderTest
     val totalBlockCount = epochSizeInSlots * 4
     val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
     val params = TestNetParams(
-      consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp
     )
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots)),
+      (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
     Mockito.when(nodeView.history.params).thenReturn(params)

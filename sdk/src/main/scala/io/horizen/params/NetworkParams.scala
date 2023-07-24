@@ -63,7 +63,6 @@ trait NetworkParams {
   val mainchainCreationBlockHeight: Int // Height of the block which include SidechainCreationTx for current SC
   val sidechainGenesisBlockTimestamp: Block.Timestamp
   val withdrawalEpochLength: Int
-  val consensusSecondsInSlot: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
 
