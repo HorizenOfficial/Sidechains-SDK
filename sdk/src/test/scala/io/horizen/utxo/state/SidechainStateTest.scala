@@ -1,7 +1,6 @@
 package io.horizen.utxo.state
 
 import io.horizen.SidechainTypes
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
@@ -9,7 +8,7 @@ import io.horizen.consensus.{ConsensusEpochNumber, ConsensusParamsUtil, intToCon
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}

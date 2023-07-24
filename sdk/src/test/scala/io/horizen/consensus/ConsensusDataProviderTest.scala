@@ -1,11 +1,9 @@
 package io.horizen.consensus
 
-import io.horizen.account.fork.ConsensusParamsFork
-
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import io.horizen.proof.VrfProof
 import io.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}

@@ -4,12 +4,12 @@ import com.google.common.primitives.{Ints, Longs}
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block._
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import io.horizen.fixtures._
+import io.horizen.fork.ConsensusParamsFork
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}

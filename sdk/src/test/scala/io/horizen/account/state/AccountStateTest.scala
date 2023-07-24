@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.account.fixtures.EthereumTransactionFixture
-import io.horizen.account.fork.{ConsensusParamsFork, GasFeeFork}
+import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
@@ -9,7 +9,7 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
-import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.utils
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}

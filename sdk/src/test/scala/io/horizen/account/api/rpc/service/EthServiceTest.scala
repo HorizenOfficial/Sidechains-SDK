@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.request.RpcRequest
 import io.horizen.account.block.AccountBlock
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
@@ -25,7 +24,7 @@ import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams

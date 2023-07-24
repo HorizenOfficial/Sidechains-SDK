@@ -5,7 +5,6 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.schnorrnative.SchnorrKeyPair
 import io.horizen._
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.block.SidechainCreationVersions
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, SignaturesStatus}
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
@@ -14,7 +13,7 @@ import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, Sidec
 import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition

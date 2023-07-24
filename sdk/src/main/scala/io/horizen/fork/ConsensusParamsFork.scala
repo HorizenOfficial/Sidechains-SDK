@@ -1,10 +1,9 @@
-package io.horizen.account.fork
-
-import io.horizen.fork.{ForkManager, OptionalSidechainFork}
+package io.horizen.fork
 
 
 case class ConsensusParamsFork(
-    consensusSlotsInEpoch: Int = 720
+    consensusSlotsInEpoch: Int = 720,
+    consensusSecondsInSlot: Int = 12
    ) extends OptionalSidechainFork
 
 object ConsensusParamsFork {

@@ -6,11 +6,10 @@ import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.fixtures.AccountBlockFixture
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.account.websocket.NodeViewHolderUtilMocks
 import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert._

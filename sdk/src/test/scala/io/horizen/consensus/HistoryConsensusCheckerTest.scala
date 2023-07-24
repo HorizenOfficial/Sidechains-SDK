@@ -1,10 +1,8 @@
 package io.horizen.consensus
 
-import io.horizen.account.fork.ConsensusParamsFork
-
 import java.util.Random
 import io.horizen.fixtures.sidechainblock.generation._
-import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{NetworkParams, TestNetParams}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.history.SidechainHistory

@@ -1,5 +1,5 @@
 package io.horizen.consensus
-import io.horizen.account.fork.ConsensusParamsFork
+import io.horizen.fork.ConsensusParamsFork
 import sparkz.core.block.Block
 
 

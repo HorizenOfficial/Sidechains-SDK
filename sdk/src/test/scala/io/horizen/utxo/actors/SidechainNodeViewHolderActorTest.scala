@@ -5,9 +5,8 @@ import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.consensus.ConsensusParamsUtil
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.fixtures.SidechainNodeViewHolderFixture
 import io.horizen.utxo.node.SidechainNodeView

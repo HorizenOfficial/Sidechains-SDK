@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.javadsl.Sink
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
@@ -16,7 +15,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator, ForkManager}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._

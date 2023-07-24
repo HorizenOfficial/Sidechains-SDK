@@ -1,10 +1,9 @@
 package io.horizen.history.validation
 
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.consensus.{ConsensusParamsUtil, FullConsensusEpochInfo, HistoryConsensusChecker}
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
-import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock

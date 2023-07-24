@@ -1,11 +1,10 @@
 package io.horizen.utxo.integration
 
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
 import io.horizen.params.{MainNetParams, NetworkParams}

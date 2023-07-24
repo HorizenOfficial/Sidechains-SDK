@@ -5,8 +5,7 @@ import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
-import io.horizen.account.fork.ConsensusParamsFork
-import io.horizen.fork.{CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.{assertEquals, assertTrue}

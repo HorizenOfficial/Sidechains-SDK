@@ -1,7 +1,7 @@
 package io.horizen.utils
 
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.consensus._
+import io.horizen.fork.ConsensusParamsFork
 import io.horizen.params.NetworkParams
 import sparkz.core.block.Block
 

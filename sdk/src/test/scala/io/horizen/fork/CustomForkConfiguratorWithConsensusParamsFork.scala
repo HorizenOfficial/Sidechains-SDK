@@ -1,9 +1,8 @@
 package io.horizen.fork
 
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.utils.Pair
-import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import java.util
 
 object CustomForkConfiguratorWithConsensusParamsFork {
