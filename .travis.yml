@@ -19,7 +19,7 @@ env:
     - PROD_RELEASE_BRANCHES='master'
 #    - PUBLISH_BUILD=false
 
-script:
+before_script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
 
