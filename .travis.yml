@@ -38,7 +38,7 @@ jobs:
 
 deploy:
   provider: releases
-  token: $GITHUB_TOKEN
+  token: $GH_TOKEN_RELEASES
   prerelease: $IS_A_GH_PRERELEASE
   overwrite: true
   on:
