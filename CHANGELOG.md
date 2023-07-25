@@ -3,10 +3,13 @@
 2. PeerToPeer and API rate limiting - tx rebroadcast feature
 3. Sparkz dependency updated to 2.0.2
 4. Minor fixes:
--- expose app version in  node/info rest api
--- Account model: fixes in debug_traceTransaction and eth_feeHistory rpc commands
--- improved logs in certificate submission process
-
+    * expose app version in  node/info rest api
+    * account model: fixes in debug_traceTransaction and eth_feeHistory rpc commands
+    * improved logs in certificate submission process
+    * fixed HTTP Header on SecureEnclaveApiClient
+    * fix on syncing mechanism to prevent issue that caused nodes being unable to sync indefinitely
+    * fixed default gasLimit in createKeyRotationTransaction
+    * signaturesFromEnclave timeout handling improvements
 
 **0.7.0**
 1. Account model introduced. EvmApp application example added.
