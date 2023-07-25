@@ -80,19 +80,25 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def generateAndValidateTimestampForDifferentEpochWithForks(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
     val consensusSecondsInSlot = 12
+    val consensusSecondsInSlot2 = 5
+    val consensusSecondsInSlot3 = 1
     implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200), Seq(12, 12)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20, 23, 25, 28), Seq(1000,1200, 1200, 500), Seq(12, 12, 5, 1)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
       (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
       (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
+      (25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
+      (28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params),
       TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1)),
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(25), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(28), intToConsensusSlotNumber(1)),
     ))
 
 
@@ -126,11 +132,47 @@ class TimeToEpochUtilsTest extends JUnitSuite {
         old_ts = ts
       }
     }
-    for (i <- 23 to 25) {
+    for (i <- 23 to 24) {
       for (y <- 1 to 1200) {
         ts = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(i), intToConsensusSlotNumber(y))
         ts_diff = ts - old_ts
         assertEquals(f"The Timestamps should differ of ${consensusSecondsInSlot}", ts_diff, consensusSecondsInSlot)
+        assertEquals("The recalculated epoch must be coherent", TimeToEpochUtils.timeStampToEpochNumber(params, ts), i)
+        assertEquals("The recalculated slot must be coherent", TimeToEpochUtils.timeStampToSlotNumber(params, ts), y)
+        consensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, ts)
+        assertTrue("The recalculated epoch and slot must be coherent", consensusEpochAndSlot.epochNumber == i && consensusEpochAndSlot.slotNumber == y)
+        old_ts = ts
+      }
+    }
+    for (i <- 25 to 27) {
+      for (y <- 1 to 1200) {
+        ts = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(i), intToConsensusSlotNumber(y))
+        ts_diff = ts - old_ts
+
+        //The first block of the new epoch should still be 12s later than the last block of the previous epoch
+        if (i==25 && y==1)
+          assertEquals(f"The Timestamps should differ of ${consensusSecondsInSlot}", ts_diff, consensusSecondsInSlot)
+        else
+          assertEquals(f"The Timestamps should differ of ${consensusSecondsInSlot2}", ts_diff, consensusSecondsInSlot2)
+
+        assertEquals("The recalculated epoch must be coherent", TimeToEpochUtils.timeStampToEpochNumber(params, ts), i)
+        assertEquals("The recalculated slot must be coherent", TimeToEpochUtils.timeStampToSlotNumber(params, ts), y)
+        consensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, ts)
+        assertTrue("The recalculated epoch and slot must be coherent", consensusEpochAndSlot.epochNumber == i && consensusEpochAndSlot.slotNumber == y)
+        old_ts = ts
+      }
+    }
+    for (i <- 28 to 30) {
+      for (y <- 1 to 500) {
+        ts = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(i), intToConsensusSlotNumber(y))
+        ts_diff = ts - old_ts
+
+        //The first block of the new epoch should still be 12s later than the last block of the previous epoch
+        if (i==28 && y==1)
+          assertEquals(f"The Timestamps should differ of ${consensusSecondsInSlot2}", ts_diff, consensusSecondsInSlot2)
+        else
+          assertEquals(f"The Timestamps should differ of ${consensusSecondsInSlot3}", ts_diff, consensusSecondsInSlot3)
+
         assertEquals("The recalculated epoch must be coherent", TimeToEpochUtils.timeStampToEpochNumber(params, ts), i)
         assertEquals("The recalculated slot must be coherent", TimeToEpochUtils.timeStampToSlotNumber(params, ts), y)
         consensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, ts)
@@ -222,20 +264,26 @@ class TimeToEpochUtilsTest extends JUnitSuite {
   def timestampToAbsoluteNumberWithForksTest(): Unit = {
     val sidechainGenesisBlockTimestamp = 10000
     val consensusSecondsInSlot = 12
+    val consensusSecondsInSlot2 = 5
+    val consensusSecondsInSlot3 = 1
     implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = sidechainGenesisBlockTimestamp)
 
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20,23), Seq(1000,1200), Seq(12,12)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20, 23, 25, 28), Seq(1000, 1200, 1200, 500), Seq(12, 12, 5, 1)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, defaultConsensusFork),
       (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
       (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
+      (25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
+      (28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
     ))
 
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params),
       TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(20), intToConsensusSlotNumber(1)),
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1))
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(25), intToConsensusSlotNumber(1)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(28), intToConsensusSlotNumber(1))
     ))
 
 
@@ -276,15 +324,39 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ///////////////////////  Test with block at epoch:23 slot: 300 /////////////////
     blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(300))
-    assertEquals("Absolute slot number should be 17700 => epoch=23 slot=300 fork=1 => (20*720) + 3*1000 (epoch 20-21-22) + 300 = 17700", 17700, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+    assertEquals("Absolute slot number should be 17700 => epoch=23 slot=300 fork=2 => (20*720) + 3*1000 (epoch 20-21-22) + 300 = 17700", 17700, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
 
     ///////////////////////  Test with block at epoch:23 slot: 1200 /////////////////
     blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(23), intToConsensusSlotNumber(1200))
-    assertEquals("Absolute slot number should be 18600 => epoch=23 slot=1200 fork=1 => (20*720) + 3*1000 (epoch 20-21-22) + 1200 = 18600", 18600, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+    assertEquals("Absolute slot number should be 18600 => epoch=23 slot=1200 fork=2 => (20*720) + 3*1000 (epoch 20-21-22) + 1200 = 18600", 18600, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
 
     ///////////////////////  Test with block at epoch:24 slot: 600 /////////////////
     blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(24), intToConsensusSlotNumber(600))
-    assertEquals("Absolute slot number should be 19200 => epoch=24 slot=600 fork=1 => (20*720) + 4*1000 (epoch 20-21-22-23) + 600 = 19200", 19200, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+    assertEquals("Absolute slot number should be 19200 => epoch=24 slot=600 fork=2 => (20*720) + 3*1000 (epoch 20-21-22) +1200(epoch 23) + 600 = 19200", 19200, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:25 slot: 1 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(25), intToConsensusSlotNumber(1))
+    assertEquals("Absolute slot number should be 19801 => epoch=25 slot=1 fork=3 => (20*720) + 3*1000 (epoch 20-21-22) + 2*1200 (epoch 23-24) + 1 = 19801", 19801, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:25 slot: 1200 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(25), intToConsensusSlotNumber(1200))
+    assertEquals("Absolute slot number should be 21000 => epoch=25 slot=1200 fork=3 => (20*720) + 3*1000 (epoch 20-21-22) + 2*1200 (epoch 23-24) + 1200 = 21000", 21000, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:26 slot: 500 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(26), intToConsensusSlotNumber(500))
+    assertEquals("Absolute slot number should be 21500 => epoch=26 slot=500 fork=3 => (20*720) + 3*1000 (epoch 20-21-22) + 3*1200 (epoch 23-24-25) + 500 = 21500", 21500, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:28 slot: 1 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(28), intToConsensusSlotNumber(1))
+    assertEquals("Absolute slot number should be 23401 => epoch=28 slot=1 fork=4 => (20*720) + 3*1000 (epoch 20-21-22) + 5*1200 (epoch 23-24-25-26-27) + 1 = 23401", 23401, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:28 slot: 500 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(28), intToConsensusSlotNumber(500))
+    assertEquals("Absolute slot number should be 23900 => epoch=28 slot=500 fork=4 => (20*720) + 3*1000 (epoch 20-21-22) + 5*1200 (epoch 23-24-25-26-27) + 500 = 23900", 23900, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
+
+    ///////////////////////  Test with block at epoch:29 slot: 400 /////////////////
+    blockTs = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(29), intToConsensusSlotNumber(400))
+    assertEquals("Absolute slot number should be 24300 => epoch=29 slot=400 fork=4 => (20*720) + 3*1000 (epoch 20-21-22) + 5*1200 (epoch 23-24-25-26-27) + 500 (epoch 28) + 400 = 24300", 24300, TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, blockTs))
 
   }
 
