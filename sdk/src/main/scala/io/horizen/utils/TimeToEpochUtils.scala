@@ -18,8 +18,12 @@ object TimeToEpochUtils {
     intToConsensusEpochNumber(getEpochIndex(sidechainGenesisBlockTimestamp, timestamp))
 
   def timeStampToSlotNumber(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusSlotNumber = {
-    val blockConsensusForkInformation = getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp, timestamp, timestamp)
-    val slotIndex = (blockConsensusForkInformation.timestampInFork % epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)) / blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot
+    require(
+      timestamp >= sidechainGenesisBlockTimestamp,
+      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
+    )
+    val blockConsensusForkInformation = getConsensusInformationFromTimestamp(timestamp, timestamp)
+    val slotIndex = (blockConsensusForkInformation.secondsInFork % epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)) / blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot
     intToConsensusSlotNumber(slotIndex.toInt + 1)
   }
 
@@ -102,16 +106,11 @@ object TimeToEpochUtils {
       s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
     )
     val refinedTimestamp = timestamp - ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot
-    val blockConsensusForkInformation = getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp, timestamp, refinedTimestamp)
-    blockConsensusForkInformation.ForkStartingEpoch + (blockConsensusForkInformation.timestampInFork / epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)).toInt
+    val blockConsensusForkInformation = getConsensusInformationFromTimestamp(timestamp, refinedTimestamp)
+    blockConsensusForkInformation.ForkStartingEpoch + (blockConsensusForkInformation.secondsInFork / epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)).toInt
   }
 
-  private def getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp, refinedTimestamp: Block.Timestamp): BlockConsensusForkInformation = {
-    require(
-      timestamp >= sidechainGenesisBlockTimestamp,
-      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
-    )
-
+  private def getConsensusInformationFromTimestamp(timestamp: Block.Timestamp, refinedTimestamp: Block.Timestamp): BlockConsensusForkInformation = {
     var startingEpoch = 0
     var forkIndex = 0
     val forks = ConsensusParamsUtil.getConsensusParamsForkActivation
@@ -130,11 +129,11 @@ object TimeToEpochUtils {
     val lastForkActivationTimestamp = activationForksTimestamp(Math.max(forkIndex - 1,0))
     val timestampMinusSlot = timestamp - lastFork._2.consensusSecondsInSlot
 
-    val timeStampInFork = timestampMinusSlot - lastForkActivationTimestamp + lastFork._2.consensusSecondsInSlot
+    val secondsInFork = timestampMinusSlot - lastForkActivationTimestamp + lastFork._2.consensusSecondsInSlot
     if (lastFork._1 == 0) {
       startingEpoch = startingEpoch + 1
     }
 
-    BlockConsensusForkInformation(timeStampInFork, startingEpoch, lastFork)
+    BlockConsensusForkInformation(secondsInFork, startingEpoch, lastFork)
   }
 }
