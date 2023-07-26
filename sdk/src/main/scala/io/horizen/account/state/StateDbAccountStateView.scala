@@ -361,4 +361,7 @@ class StateDbAccountStateView(
    * Disable write protection.
    */
   def disableWriteProtection(): Unit = readOnly = false
+
+  override def getNativeSmartContractAddressList(): Array[Address] = messageProcessors.collect{
+    case msgProcessor: NativeSmartContractMsgProcessor => msgProcessor.contractAddress}.toArray
 }

@@ -1,6 +1,5 @@
 package io.horizen.account.state;
 
-import io.horizen.account.utils.WellKnownAddresses;
 import io.horizen.evm.*;
 import io.horizen.utils.BytesUtils;
 import scala.Array;
@@ -10,10 +9,14 @@ import scala.compat.java8.OptionConverters;
 import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
-    protected Address[] nativeContractAddresses = new Address[] {
-        WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS(),
-        WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS(),
-    };
+    protected Address[] nativeContractAddresses = null;
+
+    protected Address[] getNativeContractAddresses(BaseAccountStateView view) {
+        if (nativeContractAddresses == null)  {
+            nativeContractAddresses = view.getNativeSmartContractAddressList();
+        }
+        return nativeContractAddresses;
+    }
 
     @Override
     public boolean customTracing() {
@@ -62,7 +65,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             var nativeContractProxy = new NativeContractProxy(context)
         ) {
             evmContext.blockHashCallback = blockHashGetter;
-            evmContext.externalContracts = nativeContractAddresses;
+            evmContext.externalContracts = getNativeContractAddresses(view);
             evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer().orElse(null);
             // Minus one because the depth is incremented for the call to the EvmMessageProcessor itself.
