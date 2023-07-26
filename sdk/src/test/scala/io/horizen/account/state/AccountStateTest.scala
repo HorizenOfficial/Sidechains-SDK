@@ -9,7 +9,7 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.utils
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
@@ -39,7 +39,7 @@ class AccountStateTest
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
   var state: AccountState = _
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
@@ -63,7 +63,7 @@ class AccountStateTest
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

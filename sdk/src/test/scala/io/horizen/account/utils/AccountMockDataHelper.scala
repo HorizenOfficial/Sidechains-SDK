@@ -25,7 +25,7 @@ import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, StateDB}
 import io.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import io.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
-import io.horizen.fork.ConsensusParamsFork
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo}
 import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.proposition.Proposition
 import io.horizen.secret.{Secret, SecretSerializer}
@@ -234,7 +234,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
     val regTestParams = RegTestParams()
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(regTestParams.sidechainGenesisBlockTimestamp)))
 

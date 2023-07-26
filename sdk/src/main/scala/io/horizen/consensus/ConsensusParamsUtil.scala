@@ -1,11 +1,11 @@
 package io.horizen.consensus
-import io.horizen.fork.ConsensusParamsFork
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo}
 import sparkz.core.block.Block
 
 
 object ConsensusParamsUtil {
   private var currentConsensusEpoch: Int = 0
-  private var consensusParamsForksActivation: Seq[(Int, ConsensusParamsFork)] = Seq()
+  private var consensusParamsForksActivation: Seq[ConsensusParamsForkInfo] = Seq()
   private var consensusParamsForkTimestampActivation: Seq[Block.Timestamp] = Seq()
 
   def setCurrentConsensusEpoch(currentConsensusEpoch: Int): Unit = {
@@ -16,7 +16,7 @@ object ConsensusParamsUtil {
     this.currentConsensusEpoch
   }
 
-  def setConsensusParamsForkActivation(forkActivationHeights: Seq[(Int, ConsensusParamsFork)]): Unit = {
+  def setConsensusParamsForkActivation(forkActivationHeights: Seq[ConsensusParamsForkInfo]): Unit = {
     this.consensusParamsForksActivation = forkActivationHeights
   }
 
@@ -28,7 +28,7 @@ object ConsensusParamsUtil {
     this.consensusParamsForkTimestampActivation
   }
 
-  def getConsensusParamsForkActivation: Seq[(Int, ConsensusParamsFork)] =
+  def getConsensusParamsForkActivation: Seq[ConsensusParamsForkInfo] =
     this.consensusParamsForksActivation
 
   def getConsensusSlotsPerEpoch(epochId: Option[Int]): Int = {

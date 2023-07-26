@@ -13,7 +13,7 @@ import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, Sidec
 import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
@@ -47,7 +47,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
   implicit val timeout: Timeout = 100 milliseconds
   var params: RegTestParams = RegTestParams()
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

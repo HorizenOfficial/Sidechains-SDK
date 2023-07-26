@@ -17,7 +17,7 @@ import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
@@ -275,7 +275,7 @@ class AccountForgeMessageBuilderTest
       sidechainGenesisBlockTimestamp = genesisTimestamp
     )
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
     Mockito.when(nodeView.history.params).thenReturn(params)

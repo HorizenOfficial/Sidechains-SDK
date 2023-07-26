@@ -21,7 +21,7 @@ import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Hash
 import io.horizen.fixtures._
 import io.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.txGen.getRandomBoxId
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.history.validation._
 import io.horizen.json.SerializationUtil
 import io.horizen.json.serializer.ApplicationJsonSerializer
@@ -87,7 +87,7 @@ class AccountBlockTest
   val consensusSecondsInSlot: Int = 120
   ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(720), Seq(consensusSecondsInSlot)), "regtest")
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

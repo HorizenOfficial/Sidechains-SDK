@@ -3,7 +3,7 @@ package io.horizen.history.validation
 import io.horizen.consensus.{ConsensusParamsUtil, FullConsensusEpochInfo, HistoryConsensusChecker}
 import io.horizen.fixtures.VrfGenerator
 import io.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
@@ -52,7 +52,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       sidechainGenesisBlockTimestamp = genesisTimestamp)
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams.sidechainGenesisBlockTimestamp)))
 

@@ -2,7 +2,7 @@ package io.horizen.consensus
 
 import java.util.Random
 import io.horizen.fixtures.sidechainblock.generation._
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{NetworkParams, TestNetParams}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.history.SidechainHistory
@@ -24,7 +24,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
     val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(10000000000L, testSeed, initialParams)
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator, "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams.sidechainGenesisBlockTimestamp)))
     val history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)

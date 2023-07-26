@@ -15,7 +15,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator, ForkManager}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
@@ -166,8 +166,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        (fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
       }))
       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.regtest), intToConsensusSlotNumber(1))
@@ -203,8 +203,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        (fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
       }))
       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.testnet), intToConsensusSlotNumber(1))
@@ -239,8 +239,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq((0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        (fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
       }))
       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.mainnet), intToConsensusSlotNumber(1))

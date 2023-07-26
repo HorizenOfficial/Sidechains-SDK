@@ -24,7 +24,7 @@ import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
@@ -314,7 +314,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   protected var senderWithSecret: String = _
   protected var networkParams: RegTestParams = RegTestParams()
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
 

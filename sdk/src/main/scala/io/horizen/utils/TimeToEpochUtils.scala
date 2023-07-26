@@ -1,7 +1,7 @@
 package io.horizen.utils
 
 import io.horizen.consensus._
-import io.horizen.fork.ConsensusParamsFork
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo}
 import sparkz.core.block.Block
 
 object TimeToEpochUtils {
@@ -9,7 +9,7 @@ object TimeToEpochUtils {
     Math.multiplyExact(consensusSlotsInEpoch, consensusSecondsInSlot)
 
   def virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp: Block.Timestamp): Long =
-    sidechainGenesisBlockTimestamp - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch) + ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot
+    sidechainGenesisBlockTimestamp - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSlotsInEpoch) + ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot
 
   def timestampToEpochAndSlot(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusEpochAndSlot =
     ConsensusEpochAndSlot(timeStampToEpochNumber(sidechainGenesisBlockTimestamp, timestamp), timeStampToSlotNumber(sidechainGenesisBlockTimestamp, timestamp))
@@ -23,7 +23,7 @@ object TimeToEpochUtils {
       s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
     )
     val blockConsensusForkInformation = getConsensusInformationFromTimestamp(timestamp, timestamp)
-    val slotIndex = (blockConsensusForkInformation.secondsInFork % epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)) / blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot
+    val slotIndex = (blockConsensusForkInformation.secondsInFork % epochInSeconds(blockConsensusForkInformation.lastConsensusFork.consensusParamsFork.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork.consensusParamsFork.consensusSlotsInEpoch)) / blockConsensusForkInformation.lastConsensusFork.consensusParamsFork.consensusSecondsInSlot
     intToConsensusSlotNumber(slotIndex.toInt + 1)
   }
 
@@ -37,8 +37,8 @@ object TimeToEpochUtils {
       var fork = forks(forkIndex)
       var previousFork = forks(forkIndex -1)
       var absoluteSlotNumber = 0
-      while (epoch > fork._1 && forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
-        absoluteSlotNumber = absoluteSlotNumber + (fork._1 - previousFork._1) * previousFork._2.consensusSlotsInEpoch
+      while (epoch > fork.activationEpoch && forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
+        absoluteSlotNumber = absoluteSlotNumber + (fork.activationEpoch - previousFork.activationEpoch) * previousFork.consensusParamsFork.consensusSlotsInEpoch
         forkIndex = forkIndex + 1
         if (forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
           previousFork = fork
@@ -48,7 +48,7 @@ object TimeToEpochUtils {
 
       val lastFork = ConsensusParamsUtil.getConsensusParamsForkActivation(forkIndex - 1)
 
-      absoluteSlotNumber = absoluteSlotNumber + (epoch - lastFork._1) * lastFork._2.consensusSlotsInEpoch + slot
+      absoluteSlotNumber = absoluteSlotNumber + (epoch - lastFork.activationEpoch) * lastFork.consensusParamsFork.consensusSlotsInEpoch + slot
       intToConsensusAbsoluteSlotNumber(absoluteSlotNumber)
     } else {
       val slotNumber = timeStampToEpochNumber(sidechainGenesisBlockTimestamp, timestamp) * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch +
@@ -70,28 +70,28 @@ object TimeToEpochUtils {
       var currentFork = ConsensusParamsUtil.getConsensusParamsForkActivation(currentForkIndex)
       var previousFork = ConsensusParamsUtil.getConsensusParamsForkActivation(currentForkIndex - 1)
       var previousAccumulatedSecondsPerFork: Long = 0
-      var accumulatedSecondsPerFork: Long = currentFork._1 * epochInSeconds(previousFork._2.consensusSecondsInSlot, previousFork._2.consensusSlotsInEpoch)
+      var accumulatedSecondsPerFork: Long = currentFork.activationEpoch * epochInSeconds(previousFork.consensusParamsFork.consensusSecondsInSlot, previousFork.consensusParamsFork.consensusSlotsInEpoch)
 
-      while (epochNumber > currentFork._1 - 1 && currentForkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
+      while (epochNumber > currentFork.activationEpoch - 1 && currentForkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
         previousAccumulatedSecondsPerFork = accumulatedSecondsPerFork
         currentForkIndex = currentForkIndex + 1
         if (currentForkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
           previousFork = currentFork
           currentFork = ConsensusParamsUtil.getConsensusParamsForkActivation(currentForkIndex)
-          accumulatedSecondsPerFork = accumulatedSecondsPerFork + (currentFork._1 - previousFork._1) * epochInSeconds(previousFork._2.consensusSecondsInSlot, previousFork._2.consensusSlotsInEpoch )
+          accumulatedSecondsPerFork = accumulatedSecondsPerFork + (currentFork.activationEpoch - previousFork.activationEpoch) * epochInSeconds(previousFork.consensusParamsFork.consensusSecondsInSlot, previousFork.consensusParamsFork.consensusSlotsInEpoch )
         }
       }
 
       val lastFork = ConsensusParamsUtil.getConsensusParamsForkActivation(currentForkIndex - 1)
-      val epochInCurrentFork =  epochNumber - lastFork._1 - 1
+      val epochInCurrentFork =  epochNumber - lastFork.activationEpoch - 1
 
-      val accumulatedSecondsPerEpoch = previousAccumulatedSecondsPerFork + (epochInCurrentFork+1) * epochInSeconds(lastFork._2.consensusSecondsInSlot, lastFork._2.consensusSlotsInEpoch) + (slotNumber-1)*lastFork._2.consensusSecondsInSlot - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch)
+      val accumulatedSecondsPerEpoch = previousAccumulatedSecondsPerFork + (epochInCurrentFork+1) * epochInSeconds(lastFork.consensusParamsFork.consensusSecondsInSlot, lastFork.consensusParamsFork.consensusSlotsInEpoch) + (slotNumber-1)*lastFork.consensusParamsFork.consensusSecondsInSlot - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSlotsInEpoch)
       virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp) + accumulatedSecondsPerEpoch
     } else {
       val defaultConsensusParamsFork = ConsensusParamsUtil.getConsensusParamsForkActivation.head
 
-      val totalSlots: Int = (epochNumber - 1) * defaultConsensusParamsFork._2.consensusSlotsInEpoch + (slotNumber - 1)
-      virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp) + (totalSlots * defaultConsensusParamsFork._2.consensusSecondsInSlot)
+      val totalSlots: Int = (epochNumber - 1) * defaultConsensusParamsFork.consensusParamsFork.consensusSlotsInEpoch + (slotNumber - 1)
+      virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp) + (totalSlots * defaultConsensusParamsFork.consensusParamsFork.consensusSecondsInSlot)
     }
   }
 
@@ -105,9 +105,9 @@ object TimeToEpochUtils {
       timestamp >= sidechainGenesisBlockTimestamp,
       s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
     )
-    val refinedTimestamp = timestamp - ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot
+    val refinedTimestamp = timestamp - ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot
     val blockConsensusForkInformation = getConsensusInformationFromTimestamp(timestamp, refinedTimestamp)
-    blockConsensusForkInformation.ForkStartingEpoch + (blockConsensusForkInformation.secondsInFork / epochInSeconds(blockConsensusForkInformation.lastConsensusFork._2.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork._2.consensusSlotsInEpoch)).toInt
+    blockConsensusForkInformation.ForkStartingEpoch + (blockConsensusForkInformation.secondsInFork / epochInSeconds(blockConsensusForkInformation.lastConsensusFork.consensusParamsFork.consensusSecondsInSlot, blockConsensusForkInformation.lastConsensusFork.consensusParamsFork.consensusSlotsInEpoch)).toInt
   }
 
   private def getConsensusInformationFromTimestamp(timestamp: Block.Timestamp, refinedTimestamp: Block.Timestamp): BlockConsensusForkInformation = {
@@ -115,10 +115,10 @@ object TimeToEpochUtils {
     var forkIndex = 0
     val forks = ConsensusParamsUtil.getConsensusParamsForkActivation
     val activationForksTimestamp = ConsensusParamsUtil.getConsensusParamsForkTimestampActivation()
-    var fork = forks(forkIndex)
+    var fork: ConsensusParamsForkInfo = forks(forkIndex)
     var forkActivationTimestamp = activationForksTimestamp(forkIndex)
     while (refinedTimestamp > forkActivationTimestamp && forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
-      startingEpoch = fork._1
+      startingEpoch = fork.activationEpoch
       forkIndex = forkIndex + 1
       if (forkIndex < ConsensusParamsUtil.numberOfConsensusParamsFork) {
         fork = forks(forkIndex)
@@ -127,10 +127,10 @@ object TimeToEpochUtils {
     }
     val lastFork = forks(Math.max(forkIndex - 1,0))
     val lastForkActivationTimestamp = activationForksTimestamp(Math.max(forkIndex - 1,0))
-    val timestampMinusSlot = timestamp - lastFork._2.consensusSecondsInSlot
+    val timestampMinusSlot = timestamp - lastFork.consensusParamsFork.consensusSecondsInSlot
 
-    val secondsInFork = timestampMinusSlot - lastForkActivationTimestamp + lastFork._2.consensusSecondsInSlot
-    if (lastFork._1 == 0) {
+    val secondsInFork = timestampMinusSlot - lastForkActivationTimestamp + lastFork.consensusParamsFork.consensusSecondsInSlot
+    if (lastFork.activationEpoch == 0) {
       startingEpoch = startingEpoch + 1
     }
 

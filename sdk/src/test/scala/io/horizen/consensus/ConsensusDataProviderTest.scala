@@ -3,7 +3,7 @@ package io.horizen.consensus
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import io.horizen.proof.VrfProof
 import io.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
@@ -166,7 +166,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes(StandardCharsets.UTF_8)))}
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot))
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams, slotsInEpoch, secondsInSlot)

@@ -5,7 +5,7 @@ import io.horizen.block._
 import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.fixtures._
-import io.horizen.fork.ConsensusParamsFork
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo}
 import io.horizen.history.validation.{InconsistentOmmerDataException, InconsistentSidechainBlockDataException, InvalidMainchainHeaderException, InvalidOmmerDataException, InvalidSidechainBlockDataException, InvalidSidechainBlockHeaderException}
 import io.horizen.json.serializer.ApplicationJsonSerializer
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -67,7 +67,7 @@ class SidechainBlockTest
 
   val consensusSecondsInSlot = 120
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

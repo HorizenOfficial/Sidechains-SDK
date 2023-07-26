@@ -4,7 +4,7 @@ import io.horizen.chain.SidechainBlockInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import io.horizen.fixtures._
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -59,7 +59,7 @@ class SidechainHistoryTest extends JUnitSuite
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
@@ -715,7 +715,7 @@ class SidechainHistoryTest extends JUnitSuite
       sidechainGenesisBlockTimestamp = 100000,
       )
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(2, 10))
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(2, 10))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(testParams.sidechainGenesisBlockTimestamp)))
 

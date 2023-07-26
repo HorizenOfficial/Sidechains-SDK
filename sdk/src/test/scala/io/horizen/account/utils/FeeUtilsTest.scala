@@ -2,7 +2,7 @@ package io.horizen.account.utils
 
 import io.horizen.account.utils.FeeUtils.{INITIAL_BASE_FEE, calculateNextBaseFee}
 import io.horizen.consensus.ConsensusParamsUtil
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
@@ -29,7 +29,7 @@ class FeeUtilsTest extends JUnitSuite {
   }
 
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(RegTestParams().sidechainGenesisBlockTimestamp)))
 

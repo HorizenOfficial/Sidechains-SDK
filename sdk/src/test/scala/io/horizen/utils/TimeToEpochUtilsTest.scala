@@ -5,7 +5,7 @@ import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes
 import CircuitTypes.CircuitTypes
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.SchnorrProposition
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -85,11 +85,11 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20, 23, 25, 28), Seq(1000,1200, 1200, 500), Seq(12, 12, 5, 1)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, defaultConsensusFork),
-      (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
-      (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
-      (25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
-      (28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
+      ConsensusParamsForkInfo(0, defaultConsensusFork),
+      ConsensusParamsForkInfo(20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
+      ConsensusParamsForkInfo(28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -189,7 +189,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -225,7 +225,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -266,11 +266,11 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(20, 23, 25, 28), Seq(1000, 1200, 1200, 500), Seq(12, 12, 5, 1)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, defaultConsensusFork),
-      (20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
-      (23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
-      (25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
-      (28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
+      ConsensusParamsForkInfo(0, defaultConsensusFork),
+      ConsensusParamsForkInfo(20, new ConsensusParamsFork(1000, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(23, new ConsensusParamsFork(1200, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(25, new ConsensusParamsFork(1200, consensusSecondsInSlot2)),
+      ConsensusParamsForkInfo(28, new ConsensusParamsFork(500, consensusSecondsInSlot3)),
     ))
 
 
@@ -365,7 +365,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
@@ -398,7 +398,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(8), Seq(3)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
     ConsensusParamsUtil.setCurrentConsensusEpoch(0)
 
@@ -435,7 +435,7 @@ class TimeToEpochUtilsTest extends JUnitSuite {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(

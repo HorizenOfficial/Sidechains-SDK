@@ -6,7 +6,7 @@ import akka.testkit.TestKit
 import akka.util.Timeout
 import io.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import io.horizen.consensus.ConsensusParamsUtil
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.fixtures.SidechainNodeViewHolderFixture
 import io.horizen.utxo.node.SidechainNodeView
@@ -39,7 +39,7 @@ class SidechainNodeViewHolderActorTest1
 {
   ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator, "regtest")
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
@@ -70,7 +70,7 @@ class SidechainNodeViewHolderActorTest2
 {
   ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator, "regtest")
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

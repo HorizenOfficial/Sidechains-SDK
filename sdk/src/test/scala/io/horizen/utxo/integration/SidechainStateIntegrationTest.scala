@@ -4,7 +4,7 @@ import io.horizen._
 import io.horizen.block.MainchainBlockReferenceData
 import io.horizen.consensus._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.MainNetParams
 import io.horizen.proposition.Proposition
 import io.horizen.secret.PrivateKey25519
@@ -246,7 +246,7 @@ class SidechainStateIntegrationTest
       .thenReturn(params.sidechainGenesisBlockTimestamp + consensusSecondsInSlot)
     
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 

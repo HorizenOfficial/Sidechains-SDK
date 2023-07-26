@@ -8,7 +8,7 @@ import io.horizen.consensus.{ConsensusEpochNumber, ConsensusParamsUtil, intToCon
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.fixtures._
-import io.horizen.fork.{ConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
@@ -64,7 +64,7 @@ class SidechainStateTest
   val params = MainNetParams()
 
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    (0, new ConsensusParamsFork(720)),
+    ConsensusParamsForkInfo(0, new ConsensusParamsFork(720)),
   ))
   ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
@@ -456,7 +456,7 @@ class SidechainStateTest
     val mockedBlock = mock[SidechainBlock]
     val consensusSecondsInSlot = 120
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
@@ -988,7 +988,7 @@ class SidechainStateTest
 
     val consensusSecondsInSlot = 1
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
     ))
 
     // Max Withdrawal Boxes per epoch = 100
@@ -1139,7 +1139,7 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
     ConsensusParamsUtil.setCurrentConsensusEpoch(1)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
     ))
 
     transactionList.clear()

@@ -6,7 +6,7 @@ import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ConsensusParamsFork, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.NetworkParams
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
@@ -46,7 +46,7 @@ class ForgerTest extends JUnitSuite with Matchers {
 
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(720), Seq(2)), "regtest")
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      (0, new ConsensusParamsFork(720, 2)),
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, 2)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
