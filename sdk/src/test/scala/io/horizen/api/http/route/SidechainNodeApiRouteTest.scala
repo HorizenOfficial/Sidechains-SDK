@@ -15,7 +15,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
   override val basePath = "/node/"
 
   "The Api should to" should {
-/*
+
     "reply at /info" in {
       Post(basePath + "info").addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -54,7 +54,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals("0000000000000000000000000000000000000000000000000000000000000000", result.get("lastCertHash").textValue())
       }
     }
-*/
+
     "reject and reply with http error" in {
       Get(basePath).addCredentials(credentials) ~> sidechainNodeApiRoute ~> check {
         rejection shouldBe MethodRejection(HttpMethods.POST)

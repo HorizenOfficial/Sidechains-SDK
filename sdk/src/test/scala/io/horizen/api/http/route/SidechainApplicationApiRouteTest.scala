@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/customSecret/"
-/*
+
   "The Api should to" should {
 
     "reject and reply with http error" in {
@@ -63,5 +63,4 @@ class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
     }
   }
 
- */
 }
