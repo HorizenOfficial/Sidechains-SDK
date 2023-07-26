@@ -139,7 +139,13 @@ abstract class AbstractSidechainApp
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" =>
-      val regtestParams = RegTestParams(
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.regtest), intToConsensusSlotNumber(1))
+      }))
+      RegTestParams(
         sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
         sidechainGenesisBlockId = genesisBlock.id,
         genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
@@ -166,17 +172,16 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        ConsensusParamsForkInfo(fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
-      }))
-      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
-        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.regtest), intToConsensusSlotNumber(1))
-      }))
-      regtestParams
 
 
     case "testnet" =>
-      val testnetParams = TestNetParams(
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.testnet), intToConsensusSlotNumber(1))
+      }))
+      TestNetParams(
         sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
         sidechainGenesisBlockId = genesisBlock.id,
         genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
@@ -203,16 +208,16 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        ConsensusParamsForkInfo(fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
-      }))
-      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
-        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.testnet), intToConsensusSlotNumber(1))
-      }))
-      testnetParams
 
-    case "mainnet" =>
-      val mainNetParams = MainNetParams(
+
+     case "mainnet" =>
+       ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+         ConsensusParamsForkInfo(fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+       }))
+       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.mainnet), intToConsensusSlotNumber(1))
+       }))
+      MainNetParams(
         sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
         sidechainGenesisBlockId = genesisBlock.id,
         genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
@@ -239,13 +244,7 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
       )
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
-        ConsensusParamsForkInfo(fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
-      }))
-      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
-        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.mainnet), intToConsensusSlotNumber(1))
-      }))
-      mainNetParams
+
 
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
