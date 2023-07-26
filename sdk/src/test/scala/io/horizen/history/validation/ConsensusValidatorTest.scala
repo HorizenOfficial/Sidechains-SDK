@@ -54,7 +54,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams.sidechainGenesisBlockTimestamp)))
 
     val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(10000000000L, rnd.nextInt(), initialParams)
 

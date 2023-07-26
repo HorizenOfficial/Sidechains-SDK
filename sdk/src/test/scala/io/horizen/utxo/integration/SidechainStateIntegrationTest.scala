@@ -248,7 +248,7 @@ class SidechainStateIntegrationTest
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)

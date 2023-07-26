@@ -118,7 +118,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
     val possibleForger = (nextFreeSlotNumber to endSlot)
       .toStream
       .flatMap{currentSlot =>
-        val slotWithShift = generationRules.forcedTimestamp.map(TimeToEpochUtils.timeStampToSlotNumber(params, _))
+        val slotWithShift = generationRules.forcedTimestamp.map(TimeToEpochUtils.timeStampToSlotNumber(params.sidechainGenesisBlockTimestamp, _))
           .getOrElse(intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty))))
         println(s"Process slot: ${slotWithShift}")
         val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction, nextEpochNumber)
@@ -135,7 +135,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
                                         usedSlot: ConsensusSlotNumber,
                                         newForgers: PossibleForgersSet,
                                         vrfOutput: VrfOutput): SidechainBlocksGenerator = {
-    val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, newBlock.timestamp)
+    val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, newBlock.timestamp)
     val consensusSlotsInEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(epochNumber))
     val quietSlotsNumber =  consensusSlotsInEpoch / 3
     val eligibleSlotsRange = ((quietSlotsNumber + 1) until (consensusSlotsInEpoch - quietSlotsNumber))
@@ -160,7 +160,7 @@ class SidechainBlocksGenerator private(val params: NetworkParams,
   private def generateBlock(possibleForger: PossibleForger, vrfProof: VrfProof, vrfOutput: VrfOutput, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
     val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
     val timestamp = generationRules.forcedTimestamp.getOrElse {
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSecondsInSlot
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSecondsInSlot
     }
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {

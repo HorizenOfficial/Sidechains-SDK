@@ -37,7 +37,7 @@ trait OmmersContainer[H <: SidechainBlockHeaderBase] {
     // Verify that Ommers order is valid in context of OmmersContainer epoch&slot order
     // Last ommer epoch&slot number must be before verified block epoch&slot
     val timestamps = ommers.map(_.header.timestamp) :+ header.timestamp
-    val absoluteSlots = timestamps.map(t => TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, t))
+    val absoluteSlots = timestamps.map(t => TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params.sidechainGenesisBlockTimestamp, t))
     for(i <- 1 until absoluteSlots.size) {
       if(absoluteSlots(i) <= absoluteSlots(i-1))
         throw new InvalidOmmerDataException(s"OmmerContainer Ommers slots are not consistent.")

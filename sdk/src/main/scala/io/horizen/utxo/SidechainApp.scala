@@ -168,7 +168,7 @@ class SidechainApp @Inject()
 
   if (sidechainHistoryStorage.height > 0) {
     val bestBlockTimestamp = sidechainHistoryStorage.bestBlock.timestamp
-    ConsensusParamsUtil.setCurrentConsensusEpoch(TimeToEpochUtils.timeStampToEpochNumber(params, bestBlockTimestamp))
+    ConsensusParamsUtil.setCurrentConsensusEpoch(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, bestBlockTimestamp))
   } else {
     ConsensusParamsUtil.setCurrentConsensusEpoch(0)
   }

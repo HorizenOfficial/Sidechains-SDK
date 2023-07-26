@@ -65,7 +65,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
     vrfData.zipWithIndex.foldLeft(accumulator) { case (acc, (processed, index)) =>
       val previousId: ModifierId = acc.last.last._1
-      val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
+      val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
       val newData =
         generateBlockIdsAndInfosIter(previousId, consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)
@@ -168,7 +168,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot))
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams, slotsInEpoch, secondsInSlot)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
     val epochIdsForFirstDataProvider = firstDataProvider.epochIds

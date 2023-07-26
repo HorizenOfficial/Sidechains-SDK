@@ -49,7 +49,7 @@ class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   @Before
   def init(): Unit = {

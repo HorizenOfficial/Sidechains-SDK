@@ -66,7 +66,7 @@ class SidechainStateTest
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, new ConsensusParamsFork(720)),
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   @Before
   def init(): Unit = {
@@ -458,7 +458,7 @@ class SidechainStateTest
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     Mockito.when(mockedBlock.id)
       .thenReturn({

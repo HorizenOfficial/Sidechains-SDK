@@ -277,7 +277,7 @@ class AccountForgeMessageBuilderTest
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
     Mockito.when(nodeView.history.params).thenReturn(params)
     Mockito.when(nodeView.history.modifierById(any())).thenReturn(None)
 

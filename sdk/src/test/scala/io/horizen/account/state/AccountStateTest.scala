@@ -41,7 +41,7 @@ class AccountStateTest
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   private def addMockBalance(account: Address, value: BigInteger) = {
     val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
@@ -65,7 +65,7 @@ class AccountStateTest
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, ConsensusParamsFork.DefaultConsensusParamsFork),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     state = new AccountState(
       params,

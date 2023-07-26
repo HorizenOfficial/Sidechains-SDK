@@ -10,6 +10,7 @@ import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 import java.nio.charset.StandardCharsets
+import scala.math.BigDecimal.double2bigDecimal
 
 package object consensus {
   val merkleTreeHashLen: Int = 32
@@ -94,13 +95,30 @@ package object consensus {
 
   def vrfProofCheckAgainstStake(vrfOutput: VrfOutput, actualStake: Long, totalStake: Long, stakePercentageFork: Boolean): Boolean = {
     val requiredStakePercentage: BigDecimal = vrfOutputToRequiredStakePercentage(vrfOutput, stakePercentageFork)
-    val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
 
+    //Old
+    val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
     requiredStakePercentage.compareTo(actualStakePercentage) match {
       case -1 => true //required percentage is less than actual
       case  0 => true //required percentage is equal to actual
       case  _ => false //any other case
     }
+
+
+
+    /*
+    //New
+    val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
+    val actualStakePercentageWithActiveSlotCoefficient = 1 - Math.pow( 1-0.05, actualStakePercentage.doubleValue())
+    //System.out.println("Actual stake %: "+actualStakePercentage+" Actual stake % with f: "+new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)+" Required stake %: "+requiredStakePercentage)
+    requiredStakePercentage.compareTo(new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)) match {
+      case -1 => true //required percentage is less than actual
+      case  0 => true //required percentage is equal to actual
+      case  _ => false //any other case
+    }
+*/
+
+
   }
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)

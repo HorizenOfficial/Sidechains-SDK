@@ -26,7 +26,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, ConsensusParamsFork.DefaultConsensusParamsFork)
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(initialParams.sidechainGenesisBlockTimestamp)))
     val history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)
     val nonce = history.calculateNonceForEpoch(blockIdToEpochId(genesisBlock.id))
     val stake = genesisEndEpochInfo.stakeConsensusEpochInfo

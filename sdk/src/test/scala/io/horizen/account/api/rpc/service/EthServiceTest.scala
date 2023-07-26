@@ -316,7 +316,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork),
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
 
   @Before
   def setUp(): Unit = {

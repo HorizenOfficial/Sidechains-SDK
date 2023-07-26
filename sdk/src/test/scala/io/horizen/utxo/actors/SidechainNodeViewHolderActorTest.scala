@@ -41,7 +41,7 @@ class SidechainNodeViewHolderActorTest1
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   implicit val timeout = Timeout(5, TimeUnit.SECONDS)
 
@@ -72,7 +72,7 @@ class SidechainNodeViewHolderActorTest2
   ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
     (0, ConsensusParamsFork.DefaultConsensusParamsFork)
   ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params)))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   implicit val timeout = Timeout(5, TimeUnit.SECONDS)
 

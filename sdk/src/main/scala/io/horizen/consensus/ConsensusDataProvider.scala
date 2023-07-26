@@ -87,7 +87,7 @@ trait ConsensusDataProvider {
     // that the nonce is stable before the next epoch begins.)
     // https://eprint.iacr.org/2017/573.pdf p.23
 
-    val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp)
+    val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, lastBlockInfoInEpoch.timestamp)
     val currentEpochNumberBytes = Ints.toByteArray(currentEpoch)
     val consensusSlotsPerEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(currentEpoch))
     val quietSlotsNumber =  consensusSlotsPerEpoch / 3
@@ -131,14 +131,14 @@ trait ConsensusDataProvider {
 
     var nextBlockId = initialBlockId
     var nextBlockInfo = initialBlockInfo
-    var nextBlockSlot = TimeToEpochUtils.timeStampToSlotNumber(params, initialBlockInfo.timestamp)
+    var nextBlockSlot = TimeToEpochUtils.timeStampToSlotNumber(params.sidechainGenesisBlockTimestamp, initialBlockInfo.timestamp)
     while (nextBlockId != initialBlockInfo.lastBlockInPreviousConsensusEpoch && nextBlockSlot >= eligibleSlotsRangeStart) {
       if (eligibleSlotsRangeEnd >= nextBlockSlot) {
         digest.update(nextBlockInfo.vrfOutputOpt.getOrElse(throw new IllegalStateException("Try to calculate nonce by using block with incorrect Vrf proof")).bytes())
       }
       nextBlockId = nextBlockInfo.parentId
       nextBlockInfo = storage.blockInfoById(nextBlockId)
-      nextBlockSlot = TimeToEpochUtils.timeStampToSlotNumber(params, nextBlockInfo.timestamp)
+      nextBlockSlot = TimeToEpochUtils.timeStampToSlotNumber(params.sidechainGenesisBlockTimestamp, nextBlockInfo.timestamp)
     }
 
     digest
@@ -146,9 +146,9 @@ trait ConsensusDataProvider {
 
   def getLastBlockInPreviousConsensusEpoch(blockTimestamp: Block.Timestamp, parentId: ModifierId): ModifierId = {
     val parentBlockInfo: SidechainBlockInfo = storage.blockInfoById(parentId)
-    val parentBlockEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
+    val parentBlockEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, parentBlockInfo.timestamp)
 
-    val currentBlockEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimestamp)
+    val currentBlockEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimestamp)
 
     Ints.compare(parentBlockEpochNumber, currentBlockEpochNumber) match {
       case -1 => parentId   //parentBlockEpochNumber < currentBlockEpochNumber
@@ -173,7 +173,7 @@ trait ConsensusDataProvider {
   }
 
   private def calculateVrfOutput(blockHeader: SidechainBlockHeaderBase, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
-    val slotNumber: ConsensusSlotNumber = TimeToEpochUtils.timeStampToSlotNumber(params, blockHeader.timestamp)
+    val slotNumber: ConsensusSlotNumber = TimeToEpochUtils.timeStampToSlotNumber(params.sidechainGenesisBlockTimestamp, blockHeader.timestamp)
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 
     blockHeader.vrfProof.proofToVrfOutput(blockHeader.forgingStakeInfo.vrfPublicKey, vrfMessage).asScala

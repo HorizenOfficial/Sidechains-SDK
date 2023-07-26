@@ -70,7 +70,7 @@ class ConsensusValidator[
       case _ => // do nothing for other block types because it is not a part of the Header
     }
     
-    val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params, verifiedBlock.timestamp)
+    val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params.sidechainGenesisBlockTimestamp, verifiedBlock.timestamp)
     val stakePercentageForkApplied = ForkManager.getSidechainFork(consensusEpoch).stakePercentageForkApplied
     verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
 
@@ -84,12 +84,12 @@ class ConsensusValidator[
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, params: NetworkParams): Unit = {
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
 
-    val absoluteSlotNumberForVerifiedBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, verifiedBlockTimestamp)
-    val absoluteSlotNumberForParentBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, parentBlockTimestamp)
+    val absoluteSlotNumberForVerifiedBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params.sidechainGenesisBlockTimestamp, verifiedBlockTimestamp)
+    val absoluteSlotNumberForParentBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params.sidechainGenesisBlockTimestamp, parentBlockTimestamp)
     if (absoluteSlotNumberForVerifiedBlock <= absoluteSlotNumberForParentBlock) throw new IllegalArgumentException("Block absolute slot number is equal or less than parent block")
 
-    val epochNumberForVerifiedBlock = TimeToEpochUtils.timeStampToEpochNumber(params, verifiedBlockTimestamp)
-    val epochNumberForParentBlock = TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockTimestamp)
+    val epochNumberForVerifiedBlock = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, verifiedBlockTimestamp)
+    val epochNumberForParentBlock = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, parentBlockTimestamp)
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
@@ -97,7 +97,7 @@ class ConsensusValidator[
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
-    if(TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, verifiedBlockTimestamp) > TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, timeProvider.time() / 1000))
+    if(TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params.sidechainGenesisBlockTimestamp, verifiedBlockTimestamp) > TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000))
       throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
@@ -131,7 +131,7 @@ class ConsensusValidator[
     if(ommers.isEmpty)
       return
 
-    val ommersContainerEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(history.params, ommersContainer.header.timestamp)
+    val ommersContainerEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(history.params.sidechainGenesisBlockTimestamp, ommersContainer.header.timestamp)
 
     var accumulator: Seq[(VrfOutput, ConsensusSlotNumber)] = previousEpochOmmersInfoAccumulator
     var previousOmmerEpochNumber: ConsensusEpochNumber = ommersContainerEpochNumber
@@ -139,7 +139,7 @@ class ConsensusValidator[
     var ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
 
     for(ommer <- ommers) {
-      val ommerEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, ommer.header.timestamp)
+      val ommerEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params.sidechainGenesisBlockTimestamp, ommer.header.timestamp)
 
       if(ommerEpochAndSlot.epochNumber < previousOmmerEpochNumber) {
         // First ommer is from previous consensus epoch to Ommer Container epoch.

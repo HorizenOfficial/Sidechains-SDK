@@ -236,7 +236,7 @@ case class AccountMockDataHelper(genesis: Boolean)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       (0, ConsensusParamsFork.DefaultConsensusParamsFork),
     ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(regTestParams)))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(regTestParams.sidechainGenesisBlockTimestamp)))
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))

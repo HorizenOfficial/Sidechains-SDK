@@ -62,7 +62,7 @@ abstract class AbstractForger[
       case None =>
         val newTimer = new Timer()
         val currentTime: Long = timeProvider.time() / 1000
-        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params.sidechainGenesisBlockTimestamp, currentTime) * 1000
         newTimer.schedule(forgingInitiatorTimerTask, 0L)
         newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty) * 1000)
         timerOpt = Some(newTimer)
@@ -136,7 +136,7 @@ abstract class AbstractForger[
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
-    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
+    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())  }
 
@@ -203,7 +203,7 @@ abstract class AbstractForger[
 
   def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
     val history = view.history
-    TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
+    TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, history.bestBlockInfo.timestamp)
   }
 }
 

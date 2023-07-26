@@ -2,33 +2,32 @@ package io.horizen.utils
 
 import io.horizen.consensus._
 import io.horizen.fork.ConsensusParamsFork
-import io.horizen.params.NetworkParams
 import sparkz.core.block.Block
 
 object TimeToEpochUtils {
   def epochInSeconds(consensusSecondsInSlot: Int, consensusSlotsInEpoch: Int): Long =
     Math.multiplyExact(consensusSlotsInEpoch, consensusSecondsInSlot)
 
-  def virtualGenesisBlockTimeStamp(params: NetworkParams): Long =
-    params.sidechainGenesisBlockTimestamp - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch) + ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot
+  def virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp: Block.Timestamp): Long =
+    sidechainGenesisBlockTimestamp - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch) + ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot
 
-  def timestampToEpochAndSlot(params: NetworkParams, timestamp: Block.Timestamp): ConsensusEpochAndSlot =
-    ConsensusEpochAndSlot(timeStampToEpochNumber(params, timestamp), timeStampToSlotNumber(params, timestamp))
+  def timestampToEpochAndSlot(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusEpochAndSlot =
+    ConsensusEpochAndSlot(timeStampToEpochNumber(sidechainGenesisBlockTimestamp, timestamp), timeStampToSlotNumber(sidechainGenesisBlockTimestamp, timestamp))
 
-  def timeStampToEpochNumber(params: NetworkParams, timestamp: Block.Timestamp): ConsensusEpochNumber =
-    intToConsensusEpochNumber(getEpochIndex(params, timestamp))
+  def timeStampToEpochNumber(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusEpochNumber =
+    intToConsensusEpochNumber(getEpochIndex(sidechainGenesisBlockTimestamp, timestamp))
 
-  def timeStampToSlotNumber(params: NetworkParams, timestamp: Block.Timestamp): ConsensusSlotNumber = {
-    val (remainingSlotsInFork, _, lastFork) = getConsensusInformationFromTimestamp(params, timestamp, false)
+  def timeStampToSlotNumber(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusSlotNumber = {
+    val (remainingSlotsInFork, _, lastFork) = getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp, timestamp, false)
     val slotIndex = (remainingSlotsInFork % epochInSeconds(lastFork._2.consensusSecondsInSlot, lastFork._2.consensusSlotsInEpoch)) / lastFork._2.consensusSecondsInSlot
     intToConsensusSlotNumber(slotIndex.toInt + 1)
   }
 
   // Slot number starting from genesis block
-  def timeStampToAbsoluteSlotNumber(params: NetworkParams, timestamp: Block.Timestamp): ConsensusAbsoluteSlotNumber = {
+  def timeStampToAbsoluteSlotNumber(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): ConsensusAbsoluteSlotNumber = {
     if (ConsensusParamsUtil.numberOfConsensusParamsFork > 1) {
-      val epoch = getEpochIndex(params, timestamp)
-      val slot = timeStampToSlotNumber(params, timestamp)
+      val epoch = getEpochIndex(sidechainGenesisBlockTimestamp, timestamp)
+      val slot = timeStampToSlotNumber(sidechainGenesisBlockTimestamp, timestamp)
       val forks = ConsensusParamsUtil.getConsensusParamsForkActivation
       var forkIndex = 1
       var fork = forks(forkIndex)
@@ -48,15 +47,15 @@ object TimeToEpochUtils {
       absoluteSlotNumber = absoluteSlotNumber + (epoch - lastFork._1) * lastFork._2.consensusSlotsInEpoch + slot
       intToConsensusAbsoluteSlotNumber(absoluteSlotNumber)
     } else {
-      val slotNumber = timeStampToEpochNumber(params, timestamp) * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch +
-        timeStampToSlotNumber(params, timestamp)
+      val slotNumber = timeStampToEpochNumber(sidechainGenesisBlockTimestamp, timestamp) * ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch +
+        timeStampToSlotNumber(sidechainGenesisBlockTimestamp, timestamp)
       intToConsensusAbsoluteSlotNumber(slotNumber)
     }
 
   }
 
     def getTimeStampForEpochAndSlot(
-      params: NetworkParams,
+      sidechainGenesisBlockTimestamp: Block.Timestamp,
       epochNumber: ConsensusEpochNumber,
       slotNumber: ConsensusSlotNumber
   ): Long = {
@@ -83,33 +82,33 @@ object TimeToEpochUtils {
       val epochInCurrentFork =  epochNumber - lastFork._1 - 1
 
       val accumulatedSecondsPerEpoch = previousAccumulatedSecondsPerFork + (epochInCurrentFork+1) * epochInSeconds(lastFork._2.consensusSecondsInSlot, lastFork._2.consensusSlotsInEpoch) + (slotNumber-1)*lastFork._2.consensusSecondsInSlot - epochInSeconds(ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSecondsInSlot, ConsensusParamsUtil.getConsensusParamsForkActivation.head._2.consensusSlotsInEpoch)
-      virtualGenesisBlockTimeStamp(params) + accumulatedSecondsPerEpoch
+      virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp) + accumulatedSecondsPerEpoch
     } else {
       val defaultConsensusParamsFork = ConsensusParamsUtil.getConsensusParamsForkActivation.head
 
       val totalSlots: Int = (epochNumber - 1) * defaultConsensusParamsFork._2.consensusSlotsInEpoch + (slotNumber - 1)
-      virtualGenesisBlockTimeStamp(params) + (totalSlots * defaultConsensusParamsFork._2.consensusSecondsInSlot)
+      virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp) + (totalSlots * defaultConsensusParamsFork._2.consensusSecondsInSlot)
     }
   }
 
-  def secondsRemainingInSlot(params: NetworkParams, timestamp: Block.Timestamp): Long = {
-    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(params)) % ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)
+  def secondsRemainingInSlot(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): Long = {
+    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp)) % ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)
     ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty) - secondsElapsedInSlot
   }
 
-  private def getEpochIndex(params: NetworkParams, timestamp: Block.Timestamp): Int = {
+  private def getEpochIndex(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): Int = {
     require(
-      timestamp >= params.sidechainGenesisBlockTimestamp,
-      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${params.sidechainGenesisBlockTimestamp}"
+      timestamp >= sidechainGenesisBlockTimestamp,
+      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
     )
-    val (remainingSlotsInFork, startingForkEpoch, lastFork) = getConsensusInformationFromTimestamp(params, timestamp, true)
+    val (remainingSlotsInFork, startingForkEpoch, lastFork) = getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp, timestamp, true)
     startingForkEpoch + (remainingSlotsInFork / epochInSeconds(lastFork._2.consensusSecondsInSlot, lastFork._2.consensusSlotsInEpoch)).toInt
   }
 
-  private def getConsensusInformationFromTimestamp(params: NetworkParams, timestamp: Block.Timestamp, getEpoch: Boolean): (Long, Int, (Int, ConsensusParamsFork)) = {
+  private def getConsensusInformationFromTimestamp(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp, getEpoch: Boolean): (Long, Int, (Int, ConsensusParamsFork)) = {
     require(
-      timestamp >= params.sidechainGenesisBlockTimestamp,
-      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${params.sidechainGenesisBlockTimestamp}"
+      timestamp >= sidechainGenesisBlockTimestamp,
+      s"Try to get index epoch for timestamp $timestamp which are less than genesis timestamp ${sidechainGenesisBlockTimestamp}"
     )
 
     var startingEpoch = 0

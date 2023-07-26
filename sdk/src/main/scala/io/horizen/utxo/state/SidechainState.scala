@@ -170,7 +170,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if(hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
     }
-    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
 
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod.mainchainBlockReferencesData.size, currentWithdrawalEpochInfo, params)
@@ -236,7 +236,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
     }
 
-    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
 
     //Check that we don't have multiple openStake transactions with the same forgerIndex
     if (openStakeTransactionEnabled(Some(consensusEpochNumber))) {
@@ -530,7 +530,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           cs,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod.mainchainBlockReferencesData.size, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
+          TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp),
           mod.topQualityCertificateOpt,
           mod.feeInfo,
           getRestrictForgerIndexToUpdate(mod.sidechainTransactions),
@@ -709,7 +709,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   def isSwitchingConsensusEpoch(blockTimestamp: Long): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimestamp)
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimestamp)
     val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
