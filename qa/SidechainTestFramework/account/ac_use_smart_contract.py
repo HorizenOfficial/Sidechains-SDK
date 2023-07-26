@@ -5,7 +5,7 @@ from SidechainTestFramework.account.ac_smart_contract_compile import prepare_res
 from SidechainTestFramework.account.ac_utils import CallMethod, format_eoa, format_evm, ensure_nonce, ensure_chain_id
 from SidechainTestFramework.account.mk_contract_address import mk_contract_address
 from dataclasses import dataclass
-from eth_abi import encode_abi, decode_abi
+from eth_abi import encode, decode
 from eth_utils import to_checksum_address
 from typing import Tuple, Any
 
@@ -25,13 +25,13 @@ class ContractFunction:
 
     def encode(self, *inputs):
         if not self.isConstructor:
-            encoded_string = self.sigHash + encode_abi(self.inputs, inputs).hex()
+            encoded_string = self.sigHash + encode(self.inputs, inputs).hex()
         else:
-            encoded_string = encode_abi(self.inputs, inputs).hex()
+            encoded_string = encode(self.inputs, inputs).hex()
         return encoded_string
 
     def decode(self, output):
-        return decode_abi(self.outputs, output)
+        return decode(self.outputs, output)
 
     def __str__(self):
         return '{} :: {}({}) -> ({})'.format(self.sigHash, self.name, ",".join(self.inputs), ",".join(self.outputs))
@@ -186,7 +186,7 @@ class SmartContract:
                 logging.info(response['error'])
                 if len(response['error']['data']) < 68:
                     raise EvmExecutionError("Execution reverted without a reason.")
-                reason = decode_abi(['string'], bytes.fromhex(response['error']['data'][2:])[4:])[0]
+                reason = decode(['string'], bytes.fromhex(response['error']['data'][2:])[4:])[0]
                 raise EvmExecutionError("Execution reverted. Reason: \"{}\"".format(reason))
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 

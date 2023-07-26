@@ -2,7 +2,7 @@ package io.horizen.api.http.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Post
-import akka.http.scaladsl.model.headers.{Accept, RawHeader}
+import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, HttpRequest, HttpResponse, MediaTypes, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.{Http, HttpExt}
@@ -27,13 +27,13 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
   val SCHNORR = "schnorr"
 
   val headers: List[HttpHeader] = List(
-    Accept(MediaTypes.`application/json`),
-    RawHeader("Content-Type", "application/json")
+    Accept(MediaTypes.`application/json`)
   )
 
   def isEnabled: Boolean = settings.enabled
 
   def listPublicKeys(): Future[Seq[SchnorrProposition]] = {
+    logger.info("Sending listKeys request to secure enclave")
     http.singleRequest(
       Post(settings.address + "/api/v1/listKeys")
         .withEntity(HttpEntity(ContentTypes.`application/json`, ListPublicKeysRequest(SCHNORR).asJson.noSpaces))
@@ -61,6 +61,7 @@ class SecureEnclaveApiClient(settings: RemoteKeysManagerSettings)(implicit syste
   }
 
   def signWithEnclave(message: Array[Byte], publicKey_index: (SchnorrProposition, Int)): Future[Option[CertificateSignatureInfo]] = {
+    logger.info("Sending createSignature request to secure enclave")
     http.singleRequest(buildSignMessageRequest(message, publicKey_index._1))
       .flatMap {
         case response@HttpResponse(StatusCodes.OK, _, _, _) =>

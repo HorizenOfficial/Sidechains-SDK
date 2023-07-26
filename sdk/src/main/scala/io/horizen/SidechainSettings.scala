@@ -58,6 +58,14 @@ case class WithdrawalEpochCertificateSettings(
 case class RemoteKeysManagerSettings(
     enabled: Boolean = false,
     address: String = "",
+    // Timeout for HTTP requests to Secure Enclave
+    requestTimeout: FiniteDuration = 5.seconds,
+    /*
+       Max number of HTTP requests to Secure Enclave that can be executed
+       in parallel. It should be less than the value defined in
+        akka.http.host-connection-pool.max-connections (default is 32)
+     */
+    numOfParallelRequests: Int = 4,
 ) extends SensitiveStringer
 
 case class ForgerSettings(
@@ -157,4 +165,9 @@ case class SidechainSettings(
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
     apiRateLimiter: ApiRateLimiterSettings,
-)
+){
+  require(sparkzSettings.network.handlingTransactionsEnabled || !forger.automaticForging,
+    s"Node that does not support transaction handling cannot be a forger node: " +
+      s"automaticForging: ${forger.automaticForging}")
+
+}   
