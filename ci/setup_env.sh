@@ -74,10 +74,11 @@ function check_signed_tag() {
     export IS_A_RELEASE="true"
   else
     echo "" && echo "=== Warning: GIT's tag = ${tag} signature is NOT valid. The build is not going to be released ... ===" && echo ""
+    export IS_A_RELEASE="false"
   fi
 }
 
-function  check_versions_match () {
+function check_versions_match () {
   local versions_to_check=("$@")
 
   if [ "${#versions_to_check[@]}" -eq 1 ]; then
@@ -107,6 +108,14 @@ function release_prep () {
 touch "${HOME}/key.asc"
 
 if [ -n "${TRAVIS_TAG}" ]; then
+  # Checking evm versions if exist
+  if [ -d "${TRAVIS_BUILD_DIR}/libevm" ]; then
+    check_versions_match "${root_pom_version}" "${lib_evm_version}" "${evmapp_version}"
+  fi
+
+  # Checking versions match
+  check_versions_match "${root_pom_version}" "${sdk_version}" "${dbtool_version}" "${sctool_version}" "${sidechains_sdk_account_sctools_version}" "${sidechains_sdk_utxo_sctools_version}" "${signingtool_version}" "${simpleapp_version}"
+
   # checking if MAINTAINER_KEYS is set
   if [ -z "${MAINTAINER_KEYS}" ]; then
     echo "MAINTAINER_KEYS variable is not set. Make sure to set it up for PROD|DEV release build !!!"
@@ -118,30 +127,23 @@ if [ -n "${TRAVIS_TAG}" ]; then
 
   # Checking git tag gpg signature requirement
   check_signed_tag "${TRAVIS_TAG}"
-  # Checking evm versions if exist
-  if [ -d "${TRAVIS_BUILD_DIR}/libevm" ]; then
-    check_versions_match "${root_pom_version}" "${lib_evm_version}" "${evmapp_version}"
-  fi
-
-  # Checking versions match
-  check_versions_match "${root_pom_version}" "${sdk_version}" "${dbtool_version}" "${sctool_version}" "${sidechains_sdk_account_sctools_version}" "${sidechains_sdk_utxo_sctools_version}" "${signingtool_version}" "${simpleapp_version}"
-
-  # Checking format of production release pom version
-  if ! [[ "${root_pom_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?$ ]]; then
-    echo "Warning: package(s) version is in the wrong format for PRODUCTION} release. Expecting: d.d.d(-RC[0-9]+)?. The build is not going to be released !!!"
-    export IS_A_RELEASE="false"
-  fi
-
-  # Checking Github tag format
-  if ! [[ "${TRAVIS_TAG}" == "${root_pom_version}" ]]; then
-    echo "" && echo "=== Warning: GIT tag format differs from the pom file version. ===" && echo ""
-    echo -e "Github tag name: ${TRAVIS_TAG}\nPom file version: ${root_pom_version}.\nThe build is not going to be released !!!"
-    export IS_A_RELEASE="false"
-  fi
 
   # PROD release
   for release_branch in "${prod_release_br_list[@]}"; do
     if ( git branch -r --contains "${TRAVIS_TAG}" | grep -xqE ". origin\/${release_branch}$" ); then
+      # Checking format of production release pom version
+      if ! [[ "${root_pom_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?$ ]]; then
+        echo "Warning: package(s) version is in the wrong format for PRODUCTION} release. Expecting: d.d.d(-RC[0-9]+)?. The build is not going to be released !!!"
+        export IS_A_RELEASE="false"
+      fi
+
+      # Checking Github tag format
+      if ! [[ "${TRAVIS_TAG}" == "${root_pom_version}" ]]; then
+        echo "" && echo "=== Warning: GIT tag format differs from the pom file version. ===" && echo ""
+        echo -e "Github tag name: ${TRAVIS_TAG}\nPom file version: ${root_pom_version}.\nThe build is not going to be released !!!"
+        export IS_A_RELEASE="false"
+      fi
+
       # Announcing PROD release
       if [ "${IS_A_RELEASE}" = "true" ]; then
         export PROD_RELEASE="true"
