@@ -158,7 +158,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-9.9.9-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
