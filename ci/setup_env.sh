@@ -71,7 +71,6 @@ function check_signed_tag() {
   # Checking if git tag signed by the maintainers
   if git verify-tag -v "${tag}"; then
     echo "${tag} is a valid signed tag"
-    export IS_A_RELEASE="true"
   else
     echo "" && echo "=== Warning: GIT's tag = ${tag} signature is NOT valid. The build is not going to be released ... ===" && echo ""
     export IS_A_RELEASE="false"

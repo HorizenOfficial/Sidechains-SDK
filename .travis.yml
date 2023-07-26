@@ -34,7 +34,8 @@ jobs:
     - stage: Publish Artifact(s)
       name: Publish java project artifact(s)
       script: ci/script.sh publish
-      if: tag IS present AND env(IS_A_RELEASE) = true
+#      if: tag IS present AND env(IS_A_RELEASE) = true
+      if: tag IS present
 
 deploy:
   provider: releases
