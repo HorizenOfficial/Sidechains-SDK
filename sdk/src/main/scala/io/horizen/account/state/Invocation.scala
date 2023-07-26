@@ -55,7 +55,7 @@ case class Invocation(
     } else if (readOnly) {
       TracerOpCode.STATICCALL
     } else {
-      TracerOpCode.CREATE
+      TracerOpCode.CALL
     }
   }
 

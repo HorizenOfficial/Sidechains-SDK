@@ -17,7 +17,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.TransactionBaseApiRoute
@@ -68,7 +68,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix("transaction") {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction
+      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
+      invokeProxyCall
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -718,12 +719,71 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 
+  def invokeProxyCall: Route = (post & path("invokeProxyCall")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqInvokeProxyCall]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = ZenWeiConverter.convertZenniesToWei(0)
+
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
+
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+            val secret = getFittingSecret(sidechainNodeView, None, txCost)
+
+            secret match {
+              case Some(secret) =>
+
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                val dataBytes = encodeInvokeProxyCallCmdRequest(body.invokeInfo)
+                val tmpTx: EthereumTransaction = new EthereumTransaction(
+                  params.chainId,
+                  JOptional.of(new AddressProposition(PROXY_SMART_CONTRACT_ADDRESS)),
+                  nonce,
+                  gasLimit,
+                  maxPriorityFeePerGas,
+                  maxFeePerGas,
+                  valueInWei,
+                  dataBytes,
+                  null
+                )
+                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+
   def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): Array[Byte] = {
     val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
     val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
     val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new Address("0x" + forgerStakeInfo.ownerAddress))
 
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd), addForgerStakeInput.encode())
+  }
+
+
+  def encodeInvokeProxyCallCmdRequest(invokeInfo: TransactionInvokeProxyCall): Array[Byte] = {
+    val invokeInput = InvokeSmartContractCmdInput(new Address("0x" + invokeInfo.contractAddress), invokeInfo.dataStr)
+
+    Bytes.concat(BytesUtils.fromHexString(ProxyMsgProcessor.InvokeSmartContractCallCmd), invokeInput.encode())
   }
 
   def encodeOpenStakeCmdRequest(forgerIndex: Int, signature: Signature25519): Array[Byte] = {
@@ -792,6 +852,10 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class TransactionInvokeProxyCall(contractAddress: String, dataStr: String)
+
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
@@ -838,6 +902,15 @@ object AccountTransactionRestScheme {
                                                 gasInfo: Option[EIP1559GasInfo]
                                               ) {
     require(forgerStakeInfo != null, "Forger stake info must be provided")
+  }
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqInvokeProxyCall(
+                                                    nonce: Option[BigInteger],
+                                                    invokeInfo: TransactionInvokeProxyCall,
+                                                    gasInfo: Option[EIP1559GasInfo]
+                                                  ) {
   }
 
   @JsonView(Array(classOf[Views.Default]))
