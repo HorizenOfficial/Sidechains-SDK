@@ -16,9 +16,7 @@ git:
 env:
   global:
     # Separate branches by space
-    - PROD_RELEASE_BRANCHES='master ghRelease'
-#    - PROD_RELEASE_BRANCHES='ghRelease'
-#    - PUBLISH_BUILD=false
+    - PROD_RELEASE_BRANCHES='master'
 
 before_script:
   - source ci/setup_env.sh
@@ -30,14 +28,11 @@ jobs:
       name: jdk-11_latest
       script: ci/script.sh tests
       env: DOCKER_ORG='zencash' IMAGE_NAME='sc-ci-base' IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
-#      env: PUBLISH_BUILD=true IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
 
     - stage: Publish Artifact(s)
       name: Publish java project artifact(s)
       script: ci/script.sh publish
-#      if: tag IS present AND env(IS_A_RELEASE) = true
       if: tag IS present AND NOT env(IS_A_RELEASE)
-#      if: tag IS present
 
 deploy:
   provider: releases

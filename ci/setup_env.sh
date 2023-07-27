@@ -6,10 +6,6 @@ IS_A_RELEASE="false"
 IS_A_GH_PRERELEASE="false"
 PROD_RELEASE="false"
 
-#export CONTAINER_PUBLISH="false"
-#PUBLISH_BUILD="${PUBLISH_BUILD:-false}"
-#prod_release="false"
-
 mapfile -t prod_release_br_list < <(echo "${PROD_RELEASE_BRANCHES}" | tr " " "\n")
 
 root_pom_version="$(xpath -q -e '/project/version/text()' ./pom.xml)"
@@ -27,7 +23,7 @@ else
   echo "TRAVIS_TAG:                                             $TRAVIS_TAG"
 fi
 echo "Production release branch(es):                          ${prod_release_br_list[*]}"
-echo "./pom.xml version:                                      $pom_version"
+echo "./pom.xml version:                                      $root_pom_version"
 echo "./sdk/pom.xml version:                                  $sdk_version"
 echo "./tools/dbtool/pom.xml version:                         $dbtool_version"
 echo "./tools/sctool/pom.xml version:                         $sctool_version"
@@ -90,7 +86,7 @@ function check_versions_match () {
     { echo -e "Warning: one or more module(s) versions do NOT match. The build is not going to be released ... !!!\nThe versions are ${versions_to_check[*]}"; export IS_A_RELEASE="false" && break; }
   done
 
-  export IS_A_RELEASE="true"
+#  export IS_A_RELEASE="true"
 }
 
 function release_prep () {
@@ -100,7 +96,7 @@ function release_prep () {
     openssl enc -d -aes-256-cbc -md sha256 -pass pass:"${MAVEN_KEY_ARCHIVE_PASSWORD}" |
     tar -xzf- -C "${HOME}"
 
-  export IS_A_RELEASE="true"
+#  export IS_A_RELEASE="true"
 }
 
 # empty key.asc file in case we're not signing
@@ -132,7 +128,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
     if ( git branch -r --contains "${TRAVIS_TAG}" | grep -xqE ". origin\/${release_branch}$" ); then
       # Checking format of production release pom version
       if ! [[ "${root_pom_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?$ ]]; then
-        echo "Warning: package(s) version is in the wrong format for PRODUCTION} release. Expecting: d.d.d(-RC[0-9]+)?. The build is not going to be released !!!"
+        echo "Warning: package(s) version is in the wrong format for PRODUCTION release. Expecting: d.d.d(-RC[0-9]+)?. The build is not going to be released !!!"
         export IS_A_RELEASE="false"
       fi
 
@@ -202,3 +198,4 @@ unset MAVEN_KEY_ARCHIVE_URL
 unset MAVEN_KEY_ARCHIVE_PASSWORD
 
 set +eo pipefail
+set +x
