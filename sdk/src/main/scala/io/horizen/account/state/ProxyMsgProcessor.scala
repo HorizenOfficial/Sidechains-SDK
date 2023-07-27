@@ -3,6 +3,7 @@ package io.horizen.account.state
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.state.ProxyMsgProcessor._
+import io.horizen.account.state.events.ProxyInvocation
 import io.horizen.account.utils.WellKnownAddresses.PROXY_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
@@ -63,20 +64,19 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     }
 
     log.info(s"calling smart contract: address: $contractAddress, data=$data")
+    val dataBytes = Numeric.hexStringToByteArray(data)
     val res = context.execute(
       invocation.call(
         contractAddress,
         value,
-        Numeric.hexStringToByteArray(data),
+        dataBytes,
         invocation.gasPool.getGas // we use all the amount we currently have
       )
     )
 
-    /*  TODO
-    val addNewStakeEvt = DelegateProxy(invocation.caller, ownerAddress, newStakeId, value)
-    val evmLog = getEthereumConsensusDataLog(addNewStakeEvt)
+    val proxyInvocationEvent = ProxyInvocation(invocation.caller, contractAddress, dataBytes)
+    val evmLog = getEthereumConsensusDataLog(proxyInvocationEvent)
     view.addLog(evmLog)
-     */
 
     // result in case of success execution might be useful for RPC commands
     log.info(s"Exiting with res: ${BytesUtils.toHexString(res)}")
