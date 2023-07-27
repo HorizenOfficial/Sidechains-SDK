@@ -197,5 +197,6 @@ unset GITHUB_TOKEN
 unset MAVEN_KEY_ARCHIVE_URL
 unset MAVEN_KEY_ARCHIVE_PASSWORD
 
+export IS_A_RELEASE="false"
 set +eo pipefail
 set +x
