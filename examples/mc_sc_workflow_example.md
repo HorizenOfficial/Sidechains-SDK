@@ -32,8 +32,8 @@ Build SDK components by using a command (in the root of the Sidechains-SDK folde
 
 Run Bootstrapping tool using the command depending on the sidechain model:
 
-- account: `java -jar tools/sidechains-sdk-account_sctools/target/sidechains-sdk-account_sctools-0.7.1.jar`
-- utxo: `java -jar tools/sidechains-sdk-utxo_sctools/target/sidechains-sdk-utxo_sctools-0.7.1.jar`
+- account: `java -jar tools/sidechains-sdk-account_sctools/target/sidechains-sdk-account_sctools-0.0.2-SNAPSHOT.jar`
+- utxo: `java -jar tools/sidechains-sdk-utxo_sctools/target/sidechains-sdk-utxo_sctools-0.0.2-SNAPSHOT.jar`
 
 All other commands are performed as commands for Bootstrapping tool in the next format: `"command name"  "parameters for command in JSON format"`.
 For any help, you could use the command `help`, for the exit just print `exit`
@@ -507,30 +507,30 @@ Run an Example App with the `my_settings.conf`:
 
 * For Windows:
  ```
-    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.0.2-SNAPSHOT.jar;./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.0.2-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.0.2-SNAPSHOT.jar:./examples/simpleapp/target/lib/* io.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 
 **Model: Account**
 
 * For Windows:
  ```
-    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.1.jar;./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.0.2-SNAPSHOT.jar;./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.1.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+    java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.0.2-SNAPSHOT.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.7.1.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/account/evmapp/target/sidechains-sdk-evmapp-0.0.2-SNAPSHOT.jar:./examples/evmapp/target/lib/* io.horizen.examples.EvmApp ./examples/my_settings.conf
 ```
 
 
