@@ -1228,6 +1228,33 @@ def generate_next_blocks(node, node_name, blocks_count, verbose=True):
     return blocks_ids
 
 
+def try_to_generate_block_in_slot(node, next_epoch, next_slot):
+
+    forging_request = generate_forging_request(next_epoch, next_slot, None)
+    forge_result = node.block_generate(forging_request)
+    return forge_result
+
+def try_to_generate_block_in_slots(node, slot_count, add_empty_slots=False):
+    block_ids = []
+
+    # Get starting slot
+    forging_info = node.block_forgingInfo()["result"]
+    slots_in_epoch = forging_info["consensusSlotsInEpoch"]
+    best_slot = forging_info["bestSlotNumber"]
+    best_epoch = forging_info["bestEpochNumber"]
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+
+    for _ in range(slot_count):
+        res = try_to_generate_block_in_slot(node, next_epoch, next_slot)
+        if "result" in res and "blockId" in res["result"]:
+            block_ids.append(res["result"]["blockId"])
+        else:
+            if (add_empty_slots):
+                block_ids.append("")
+        next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
+     
+    return block_ids
+
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
     for box_id in csw_box_ids:
