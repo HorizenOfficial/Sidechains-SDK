@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
   *
   * A LevelDB wrapper providing additional versioning layer along with a convenient db interface.
   */
-final class VersionedLDBKVStore(protected val db: DB, var keepVersions: Int) extends KVStore {
+final class VersionedLDBKVStore(protected val db: DB, val keepVersions: Int) extends KVStore {
 
   import io.horizen.storage.leveldb.VersionedLDBKVStore.VersionId
 
@@ -62,7 +62,6 @@ final class VersionedLDBKVStore(protected val db: DB, var keepVersions: Int) ext
     } finally {
       batch.close()
       ro.snapshot().close()
-      recalculateVersionsToKeep
     }
   }
 
@@ -138,11 +137,6 @@ final class VersionedLDBKVStore(protected val db: DB, var keepVersions: Int) ext
     new DatabaseIterator(db.iterator())
   }
 
-  def recalculateVersionsToKeep: Unit = {
-    keepVersions = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty) * 2 + 1
-  }
-
-  def getVersionsToKeep: Int = keepVersions
 }
 
 object VersionedLDBKVStore {

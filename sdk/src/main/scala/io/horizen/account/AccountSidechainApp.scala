@@ -25,7 +25,7 @@ import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil}
 import io.horizen.evm.LevelDBDatabase
-import io.horizen.fork.ForkConfigurator
+import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator}
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
@@ -90,8 +90,9 @@ class AccountSidechainApp @Inject()
   val consensusStore = new File(dataDirAbsolutePath + "/consensusData")
 
   // Init all storages
+  val maxConsensusSlotsInEpoch = calculateMaxSlotsInEpoch()
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 1441)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, maxConsensusSlotsInEpoch * 2 + 1)),
     sidechainTransactionsCompanion,
     params)
 
@@ -103,16 +104,16 @@ class AccountSidechainApp @Inject()
   }
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, maxConsensusSlotsInEpoch * 2 + 1)),
     sidechainSecretsCompanion)
 
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore, maxConsensusSlotsInEpoch * 2 + 1)))
 
   protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
 
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, maxConsensusSlotsInEpoch * 2 + 1)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -226,4 +227,14 @@ class AccountSidechainApp @Inject()
 
   override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
 
+  def calculateMaxSlotsInEpoch(): Int = {
+    //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
+    var maxConsensusSlotsInEpoch = ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch
+    consensusParamsForkList.foreach(fork => {
+      if (fork.isInstanceOf[ConsensusParamsFork] && fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch > maxConsensusSlotsInEpoch) {
+        maxConsensusSlotsInEpoch = fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch
+      }
+    })
+    maxConsensusSlotsInEpoch
+  }
 }

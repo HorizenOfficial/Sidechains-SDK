@@ -22,7 +22,7 @@ import scala.compat.java8.OptionConverters._
 class VersionedLevelDbStorageAdapter(pathToDB: File, versionsToKeep: Int) extends Storage{
 
   def this(pathToDB: File) {
-    this(pathToDB, ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty) * 2 + 1)
+    this(pathToDB, 720 * 2 + 1)
   }
 
   private val dataBase: VersionedLDBKVStore = createDb(pathToDB)
@@ -107,5 +107,4 @@ class VersionedLevelDbStorageAdapter(pathToDB: File, versionsToKeep: Int) extend
     dataBase.getIterator
   }
 
-  def getStorageVersionToKeep: Int = dataBase.getVersionsToKeep
 }

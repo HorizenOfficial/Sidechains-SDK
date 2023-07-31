@@ -2,7 +2,7 @@ package io.horizen.utxo
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
-import io.horizen.fork.ForkConfigurator
+import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.helper.{SecretSubmitHelper, SecretSubmitHelperImpl}
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage.Storage
@@ -17,10 +17,23 @@ import io.horizen.{AbstractSidechainApp, SidechainAppStopper, SidechainSettings,
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
   var app: SidechainApp = null
+
+  def calculateMaxSlotsInEpoch(forks: java.util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]]) : Int = {
+
+    //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
+    var maxConsensusSlotsInEpoch = ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch
+    forks.foreach(fork => {
+      if (fork.isInstanceOf[ConsensusParamsFork] && fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch > maxConsensusSlotsInEpoch) {
+        maxConsensusSlotsInEpoch = fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch
+      }
+    })
+    maxConsensusSlotsInEpoch
+  }
 
   override def configure(): Unit = {
 

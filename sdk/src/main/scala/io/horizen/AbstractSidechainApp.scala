@@ -133,16 +133,16 @@ abstract class AbstractSidechainApp
   // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
-  val consensusParamsFork = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
+  val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
 
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" =>
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
         ConsensusParamsForkInfo(fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
       }))
-      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.regtest), intToConsensusSlotNumber(1))
       }))
       RegTestParams(
@@ -175,10 +175,10 @@ abstract class AbstractSidechainApp
 
 
     case "testnet" =>
-      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
         ConsensusParamsForkInfo(fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
       }))
-      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.testnet), intToConsensusSlotNumber(1))
       }))
       TestNetParams(
@@ -211,10 +211,10 @@ abstract class AbstractSidechainApp
 
 
      case "mainnet" =>
-       ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsFork.map(fork => {
+       ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
          ConsensusParamsForkInfo(fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
        }))
-       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsFork.map(fork => {
+       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
          TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.mainnet), intToConsensusSlotNumber(1))
        }))
       MainNetParams(
