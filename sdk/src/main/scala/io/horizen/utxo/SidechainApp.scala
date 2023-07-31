@@ -166,13 +166,6 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
-  if (sidechainHistoryStorage.height > 0) {
-    val bestBlockTimestamp = sidechainHistoryStorage.bestBlock.timestamp
-    ConsensusParamsUtil.setCurrentConsensusEpoch(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, bestBlockTimestamp))
-  } else {
-    ConsensusParamsUtil.setCurrentConsensusEpoch(0)
-  }
-
   protected val backupStorage = new BackupStorage(registerClosableResource(backUpStorage), sidechainBoxesCompanion)
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(

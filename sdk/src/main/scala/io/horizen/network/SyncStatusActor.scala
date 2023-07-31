@@ -85,13 +85,15 @@ class SyncStatusActor[
 
   // The expected max new tips events when the node is already synced and receives new tips from the network
   private def getStandardBlockRate(): Int = {
-    Math.ceil(checkBlocksDensityInterval.toSeconds.toDouble / ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)).toInt + 1
+    val currentTime: Long = timeProvider.time() / 1000
+    Math.ceil(checkBlocksDensityInterval.toSeconds.toDouble / ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime)).toInt + 1
   }
 
   // Returns true if the block timestamp is close enough to the current time.
   // Returns false otherwise.
   private def isCloseEnough(blockTimestamp: Long): Boolean = {
-    ((timeProvider.time() / 1000) - blockTimestamp) < (ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty) * CLOSE_ENOUGH_SLOTS_TO_IGNORE)
+    val currentTime: Long = timeProvider.time() / 1000
+    ((timeProvider.time() / 1000) - blockTimestamp) < (ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime) * CLOSE_ENOUGH_SLOTS_TO_IGNORE)
   }
 
   private def stopSyncing(): Unit = {
@@ -186,7 +188,8 @@ class SyncStatusActor[
           // 3. previous attempt was underestimated and new tip reached the estimation height.
           Try {
             Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => {
-              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty),
+              val currentTime: Long = timeProvider.time() / 1000
+              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime),
                 params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)
             }), timeoutDuration).asInstanceOf[Int]
           } match {

@@ -1012,8 +1012,6 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
 
-    ConsensusParamsUtil.setCurrentConsensusEpoch(11)
-
     Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
       Seq(
         buildRegularTransaction(0,1,0,Seq(),1)
@@ -1137,7 +1135,6 @@ class SidechainStateTest
 
     //Test BTs limit before the Fork1
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
-    ConsensusParamsUtil.setCurrentConsensusEpoch(1)
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
     ))

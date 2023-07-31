@@ -955,7 +955,7 @@ class AccountBlockTest
       )
 
       currentParent = blockSeq.last.id
-      currentTimestamp += ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)
+      currentTimestamp += ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTimestamp)
     }
 
     blockSeq.map(block => Ommer.toOmmer(block))

@@ -385,7 +385,6 @@ abstract class AbstractSidechainNodeViewHolder[
                 updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
 
               val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
-              ConsensusParamsUtil.setCurrentConsensusEpoch(consensusEpochInfo.epoch + 1)
               (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
             } else
               (updateInfo.history, updateInfo.wallet)

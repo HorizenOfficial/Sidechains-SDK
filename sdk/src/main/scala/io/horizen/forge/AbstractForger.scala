@@ -50,9 +50,6 @@ abstract class AbstractForger[
   // implicit timeout for akka msg
   implicit private val timeout: Timeout = Timeout(restApiTimeoutDuration)
 
-  // we should not take more time than a slot duration for forging a block.
-  private val mcRefDataRetrievalTimeout = Timeout((restApiTimeoutDuration.min(FiniteDuration(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty), SECONDS)))/2)
-
   private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
   private var timerOpt: Option[Timer] = None
 
@@ -64,7 +61,7 @@ abstract class AbstractForger[
         val currentTime: Long = timeProvider.time() / 1000
         val delay = TimeToEpochUtils.secondsRemainingInSlot(params.sidechainGenesisBlockTimestamp, currentTime) * 1000
         newTimer.schedule(forgingInitiatorTimerTask, 0L)
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty) * 1000)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime) * 1000)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
     }
@@ -141,6 +138,9 @@ abstract class AbstractForger[
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())  }
 
   def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
+    // we should not take more time than a slot duration for forging a block.
+    val mcRefDataRetrievalTimeout = Timeout((restApiTimeoutDuration.min(FiniteDuration(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(epochNumber), SECONDS)))/2)
+
     val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, mcRefDataRetrievalTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
@@ -193,7 +193,7 @@ abstract class AbstractForger[
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete {
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>
-          forgerInfoRequester ! Success(ForgingInfo(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty), ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.empty), epochAndSlot, isForgingEnabled))
+          forgerInfoRequester ! Success(ForgingInfo(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(epochAndSlot.epochNumber), ConsensusParamsUtil.getConsensusSlotsPerEpoch(epochAndSlot.epochNumber), epochAndSlot, isForgingEnabled))
 
         case failure@Failure(_) =>
           forgerInfoRequester ! failure

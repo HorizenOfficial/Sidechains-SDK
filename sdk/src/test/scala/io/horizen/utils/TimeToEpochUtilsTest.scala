@@ -400,7 +400,6 @@ class TimeToEpochUtilsTest extends JUnitSuite {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, new ConsensusParamsFork(consensusSlotsInEpoch, consensusSecondsInSlot)),
     ))
-    ConsensusParamsUtil.setCurrentConsensusEpoch(0)
 
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)

@@ -180,7 +180,6 @@ class AccountStateTest
   @Test
   def testSwitchingConsensusEpoch(): Unit = {
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
-    ConsensusParamsUtil.setCurrentConsensusEpoch(86400)
 
     val currentEpochNumber = state.getConsensusEpochNumber
 

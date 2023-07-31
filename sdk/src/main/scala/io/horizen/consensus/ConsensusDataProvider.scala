@@ -89,7 +89,7 @@ trait ConsensusDataProvider {
 
     val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, lastBlockInfoInEpoch.timestamp)
     val currentEpochNumberBytes = Ints.toByteArray(currentEpoch)
-    val consensusSlotsPerEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(Option.apply(currentEpoch))
+    val consensusSlotsPerEpoch = ConsensusParamsUtil.getConsensusSlotsPerEpoch(currentEpoch)
     val quietSlotsNumber =  consensusSlotsPerEpoch / 3
     val eligibleSlotsRangeStart = quietSlotsNumber + 1
     val eligibleSlotsRangeEnd = consensusSlotsPerEpoch - quietSlotsNumber - 1

@@ -96,13 +96,6 @@ class AccountSidechainApp @Inject()
     sidechainTransactionsCompanion,
     params)
 
-  if (sidechainHistoryStorage.height > 0) {
-    val bestBlockTimestamp = sidechainHistoryStorage.bestBlock.timestamp
-    ConsensusParamsUtil.setCurrentConsensusEpoch(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, bestBlockTimestamp))
-  } else {
-    ConsensusParamsUtil.setCurrentConsensusEpoch(0)
-  }
-
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, maxConsensusSlotsInEpoch * 2 + 1)),
     sidechainSecretsCompanion)

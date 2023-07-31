@@ -96,8 +96,9 @@ object TimeToEpochUtils {
   }
 
   def secondsRemainingInSlot(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): Long = {
-    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp)) % ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty)
-    ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(Option.empty) - secondsElapsedInSlot
+    val consensusSecondsInSlot = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(sidechainGenesisBlockTimestamp, timestamp)
+    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(sidechainGenesisBlockTimestamp)) % consensusSecondsInSlot
+    consensusSecondsInSlot - secondsElapsedInSlot
   }
 
   private def getEpochIndex(sidechainGenesisBlockTimestamp: Block.Timestamp, timestamp: Block.Timestamp): Int = {
