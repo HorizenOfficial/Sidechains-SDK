@@ -49,7 +49,7 @@ abstract class AbstractSidechainNodeViewHolder[
    * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
    */
   protected override lazy val modifiersCache: ModifiersCache[PMOD, HIS] =
-    new DefaultModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
+    new ParentIdModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
 
 
   case class SidechainNodeUpdateInformation(history: HIS,
@@ -168,7 +168,7 @@ abstract class AbstractSidechainNodeViewHolder[
    */
   override def processRemoteModifiers: Receive = {
     case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[PMOD]) =>
-      mods.foreach(m => modifiersCache.put(m.id, m))
+      mods.foreach(m => modifiersCache.put(m.parentId, m))
 
       log.debug(s"Cache size before: ${modifiersCache.size}")
 
