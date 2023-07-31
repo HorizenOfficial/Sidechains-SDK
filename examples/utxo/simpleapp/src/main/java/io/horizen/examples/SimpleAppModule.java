@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.horizen.fork.ConsensusParamsFork;
-import io.horizen.fork.OptionalSidechainFork;
-import io.horizen.fork.SidechainForkConsensusEpoch;
 import io.horizen.utxo.SidechainAppModule;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
@@ -52,14 +49,7 @@ public class SimpleAppModule extends SidechainAppModule
         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
         //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
-        int maxConsensusEpoch = ConsensusParamsFork.DefaultConsensusParamsFork().consensusSlotsInEpoch();
-        for (Pair<SidechainForkConsensusEpoch, OptionalSidechainFork> optionalFork : forkConfigurator.getOptionalSidechainForks()) {
-            if (optionalFork.getValue().getClass().isInstance(ConsensusParamsFork.class)) {
-                ConsensusParamsFork consensusParamsFork = (ConsensusParamsFork) optionalFork.getValue();
-                if (consensusParamsFork.consensusSlotsInEpoch() > maxConsensusEpoch)
-                    maxConsensusEpoch = consensusParamsFork.consensusSlotsInEpoch();
-            }
-        }
+        int maxConsensusEpoch = calculateMaxSlotsInEpoch(forkConfigurator.getOptionalSidechainForks());
 
         // two distinct storages are used in application state and wallet in order to test a version
         // misalignment during startup and the recover logic
