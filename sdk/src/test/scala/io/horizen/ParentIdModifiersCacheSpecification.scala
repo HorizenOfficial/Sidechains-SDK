@@ -31,7 +31,7 @@ class ParentIdModifiersCacheSpecification extends AnyPropSpec
   }
 
   private class FakeSyncInfo extends SyncInfo {
-    override def startingPoints: ModifierIds = _
+    override def startingPoints: ModifierIds = ???
 
     override type M = this.type
 
