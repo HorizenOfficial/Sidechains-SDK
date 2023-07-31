@@ -8,6 +8,7 @@ import io.horizen.account.utils.WellKnownAddresses.PROXY_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
+import org.scalacheck.Prop.True
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.Keccak256
 
@@ -32,10 +33,18 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     super.init(view)
   }
 
-  def doInvokeSmartContractCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+  def doInvokeSmartContractStaticCallCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+    doInvokeSmartContractCmd(invocation, view, context, true)
+  }
+
+  def doInvokeSmartContractCallCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+    doInvokeSmartContractCmd(invocation, view, context, false)
+  }
+
+  private def doInvokeSmartContractCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext, readOnly : Boolean): Array[Byte] = {
 
     val msg = context.msg
-    log.info(s"Entering with msg: $msg")
+    log.info(s"Entering with invocation: $invocation")
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
       throw new ExecutionRevertedException("Call must include a nonce")
@@ -63,15 +72,27 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
       throw new ExecutionRevertedException(s"smart contract address is an EOA")
     }
 
-    log.info(s"calling smart contract: address: $contractAddress, data=$data")
     val dataBytes = Numeric.hexStringToByteArray(data)
-    val res = context.execute(
-      invocation.call(
-        contractAddress,
-        value,
-        dataBytes,
-        invocation.gasPool.getGas // we use all the amount we currently have
-      )
+    val additionalDepth = 0
+    val res = context.executeDepth(
+      readOnly match {
+        case true =>
+          log.info(s"static call to smart contract, address=$contractAddress, data=$data")
+          invocation.staticCall(
+            contractAddress,
+            dataBytes,
+            invocation.gasPool.getGas // we use all the amount we currently have
+          )
+        case false =>
+          log.info(s"call to smart contract, address=$contractAddress, data=$data")
+          invocation.call(
+            contractAddress,
+            value,
+            dataBytes,
+            invocation.gasPool.getGas // we use all the amount we currently have
+          )
+      },
+      additionalDepth
     )
 
     val proxyInvocationEvent = ProxyInvocation(invocation.caller, contractAddress, dataBytes)
@@ -86,9 +107,11 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+    log.info(s"processing invocation: $invocation")
     val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
-      case InvokeSmartContractCallCmd => doInvokeSmartContractCmd(invocation, gasView, context)
+      case InvokeSmartContractCallCmd => doInvokeSmartContractCallCmd(invocation, gasView, context)
+      case InvokeSmartContractStaticCallCmd => doInvokeSmartContractStaticCallCmd(invocation, gasView, context)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
@@ -97,8 +120,8 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
 object ProxyMsgProcessor {
 
-  val InvokeSmartContractCallCmd: String = getABIMethodId("invokeCall(address,string)")
-  val InvokeSmartContractStaticCallCmd: String = getABIMethodId("invokeStaticCall(address,string)")
+  val InvokeSmartContractCallCmd: String = getABIMethodId("invokeCall(address,bytes)")
+  val InvokeSmartContractStaticCallCmd: String = getABIMethodId("invokeStaticCall(address,bytes)")
 
   // ensure we have strings consistent with size of opcode
   require(

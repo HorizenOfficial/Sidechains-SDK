@@ -12,7 +12,8 @@ import java.math.BigInteger;
 public class EvmMessageProcessor implements MessageProcessor {
     protected Address[] nativeContractAddresses = new Address[] {
         WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS(),
-        WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS(),
+          WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS(),
+            WellKnownAddresses.PROXY_SMART_CONTRACT_ADDRESS(),
     };
 
     @Override
