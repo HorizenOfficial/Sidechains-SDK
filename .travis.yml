@@ -27,7 +27,11 @@ jobs:
     - stage: java project
       name: jdk-11_latest
       script: ci/script.sh
-      env: DOCKER_ORG='zencash' IMAGE_NAME='sc-ci-base' IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
+      env:
+      - TESTS_DOCKER_ORG='zencash'
+      - TESTS_IMAGE_NAME='sc-ci-base'
+      - TESTS_IMAGE_TAG='focal_jdk-11_latest'
+      - TESTS='000'
 
 deploy:
   provider: releases

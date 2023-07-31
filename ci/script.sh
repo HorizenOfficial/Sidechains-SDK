@@ -6,12 +6,12 @@ command -v docker &> /dev/null && have_docker="true" || have_docker="false"
 # absolute path to project from relative location of this script
 workdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
 # defaults if not provided via env
-DOCKER_ORG="${DOCKER_ORG:-zencash}"
-IMAGE_NAME="${IMAGE_NAME:-sc-ci-base}"
-IMAGE_TAG="${IMAGE_TAG:-bionic_jdk-11_latest}"
+TESTS_DOCKER_ORG="${TESTS_DOCKER_ORG:-zencash}"
+TESTS_IMAGE_NAME="${TESTS_IMAGE_NAME:-sc-ci-base}"
+TESTS_IMAGE_TAG="${TESTS_IMAGE_TAG:-focal_jdk-11_latest}"
 TESTS="${TESTS:-}"
 IS_A_RELEASE="${IS_A_RELEASE:-false}"
-image="${DOCKER_ORG}/${IMAGE_NAME}:${IMAGE_TAG}"
+image="${TESTS_DOCKER_ORG}/${TESTS_IMAGE_NAME}:${TESTS_IMAGE_TAG}"
 
 
 # Run tests
