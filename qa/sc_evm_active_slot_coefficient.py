@@ -5,12 +5,11 @@ import time
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, AccountModel, \
-    disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots
+    try_to_generate_block_in_slots
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from test_framework.util import assert_equal, assert_true, websocket_port_by_mc_node_index
-from httpCalls.block.best import http_block_best
 import pprint
 
 """
@@ -24,6 +23,8 @@ Configuration:
 Test:
     - Perform a FT.
     - Verify that the forging info are coherent with the default consensus params fork
+    - Forge block to reach the consensus epoch of fork activation
+    - Try to forge in every slot of an epoch and verify that we filled 4-5% of the total slots
 """
 
 
@@ -86,11 +87,6 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
 
         #Verify that the we have more or less 5% of slots filled
         assert_true(block_created_percentage > 4.0 and block_created_percentage < 6.0)
-        forging_info = sc_node.block_forgingInfo()["result"]
-
-        print(block_created_percentage)
-        print(slot_until_next_epoch)
-        pprint.pprint(forging_info)
 
 
 
