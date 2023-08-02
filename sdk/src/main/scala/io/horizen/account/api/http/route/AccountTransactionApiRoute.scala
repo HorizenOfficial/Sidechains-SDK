@@ -725,7 +725,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqInvokeProxyCall]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val valueInWei = ZenWeiConverter.convertZenniesToWei(0)
+            val valueInWei = BigInteger.ZERO
 
             // default gas related params
             val baseFee = sidechainNodeView.getNodeState.getNextBaseFee

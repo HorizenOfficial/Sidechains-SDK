@@ -16,7 +16,7 @@ from SidechainTestFramework.scutil import generate_next_blocks, generate_next_bl
 from test_framework.util import assert_equal, assert_false, assert_true, hex_str_to_bytes
 
 """
-Check an EVM Contract calling a native contract.
+Check the Proxy native contract calling an EVM contract and also itself.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -26,6 +26,7 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 
 Test:
     - Test using a Proxy native smart contract for invoking a solidity smart contract
+    - TODO: test Proxy nsc calling another native smart contract
 """
 
 
