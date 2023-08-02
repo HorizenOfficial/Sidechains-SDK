@@ -188,7 +188,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
           "value" : "0x0",
           "gas" : "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
           "gasUsed" : "0x1a4",
-          "input" : "0x371303c0",
+          "input" : "0x$STORAGE_INC_ABI_ID",
           "output" : "0x"
         } ]
       }""",
