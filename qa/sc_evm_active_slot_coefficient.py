@@ -5,7 +5,7 @@ import time
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, AccountModel, \
-    try_to_generate_block_in_slots
+    try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -24,14 +24,16 @@ Test:
     - Perform a FT.
     - Verify that the forging info are coherent with the default consensus params fork
     - Forge block to reach the consensus epoch of fork activation
+    - Disconnect SC node 2
     - Try to forge in every slot of an epoch and verify that we filled 4-5% of the total slots
+    - Reconnect SC node 2 and verify that it is able to sync
 """
 
 
 
 class SCActiveSlotCoefficientTest(AccountChainSetup):
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=1, withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT, forward_amount=100)
+        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT, forward_amount=100)
 
 
     def sc_setup_chain(self):
@@ -41,7 +43,13 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
                 MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                 cert_submitter_enabled=True,
                 cert_signing_enabled=True,
-                api_key='Horizen')
+                api_key='Horizen'),
+
+            SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                api_key=self.API_KEY,
+                remote_keys_manager_enabled=self.remote_keys_manager_enabled,
+                allow_unprotected_txs=True)
             ]
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, forward_amount=100,
@@ -63,6 +71,7 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
 
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+        sc_node2 = self.sc_nodes[1]
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
@@ -79,6 +88,13 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
         assert_equal(forging_info["bestEpochNumber"], 35)
         assert_equal(forging_info["consensusSlotsInEpoch"], 1500)
         current_best_slot_number = forging_info["bestSlotNumber"]
+
+        # Disconnect SC node 1 and SC node 2
+        disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
+        node1_best_block = sc_node.rpc_eth_getBlockByNumber("latest", "true")
+        node2_best_block = sc_node2.rpc_eth_getBlockByNumber("latest", "true")
+        assert_equal(node1_best_block, node2_best_block)
+
         slot_until_next_epoch = 1500 - current_best_slot_number
 
         #Try to generate a block for every slot of the epoch
@@ -87,6 +103,14 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
 
         #Verify that the we have more or less 5% of slots filled
         assert_true(block_created_percentage > 4.0 and block_created_percentage < 6.0)
+
+        # Reconnect the SC node 1 and the SC node 2 and verify that SC node 2 is able to sync blocks
+        connect_sc_nodes(self.sc_nodes[0], 1)
+        generate_next_block(sc_node, "second node")
+        sync_sc_blocks(self.sc_nodes, wait_for=300)
+        node1_best_block = sc_node.rpc_eth_getBlockByNumber("latest", "true")
+        node2_best_block = sc_node2.rpc_eth_getBlockByNumber("latest", "true")
+        assert_equal(node1_best_block, node2_best_block)
 
 
 
