@@ -82,7 +82,7 @@ class SCConsensusParamsForkTest(AccountChainSetup):
         self.sc_sync_all()
 
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 2)
+        assert_equal(forging_info["bestBlockEpochNumber"], 2)
         assert_equal(forging_info["consensusSlotsInEpoch"], 720)
 
         # Reach the last slot before the activation of the ConsensusParameterFork
@@ -96,36 +96,36 @@ class SCConsensusParamsForkTest(AccountChainSetup):
         assert_equal(node1_best_block, node2_best_block)
 
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 19)
+        assert_equal(forging_info["bestBlockEpochNumber"], 19)
         assert_equal(forging_info["consensusSlotsInEpoch"], 720)
 
         # Verify that we have the consensusSlotsInEpoch updated
         generate_next_block(sc_node, "first", force_switch_to_next_epoch=True)
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 20)
+        assert_equal(forging_info["bestBlockEpochNumber"], 20)
         assert_equal(forging_info["consensusSlotsInEpoch"], 1000) 
-        assert_equal(forging_info["bestSlotNumber"], 1)
+        assert_equal(forging_info["bestBlockSlotNumber"], 1)
 
         # Verify that we are able to forge an entire epoch using the new value of consensusslotsInEpoch
         generate_next_blocks(sc_node, "first node", 1000)
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 21)
-        assert_equal(forging_info["bestSlotNumber"], 1)
+        assert_equal(forging_info["bestBlockEpochNumber"], 21)
+        assert_equal(forging_info["bestBlockSlotNumber"], 1)
 
         # Reach the epoch in which the new ConsensusParamterFork is activated
         for _ in range (9):
            generate_next_block(sc_node, "first", force_switch_to_next_epoch=True)
 
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 30)
+        assert_equal(forging_info["bestBlockEpochNumber"], 30)
         assert_equal(forging_info["consensusSlotsInEpoch"], 1500)       
-        assert_equal(forging_info["bestSlotNumber"], 1)
+        assert_equal(forging_info["bestBlockSlotNumber"], 1)
 
         # Verify that we are able to forge an entire epoch using the new value of consensusslotsInEpoch
         generate_next_blocks(sc_node, "first node", 1499)
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 30)
-        assert_equal(forging_info["bestSlotNumber"], 1500)
+        assert_equal(forging_info["bestBlockEpochNumber"], 30)
+        assert_equal(forging_info["bestBlockSlotNumber"], 1500)
 
         # Reconnect the SC node 1 and the SC node 2 and verify that SC node 2 is able to sync blocks
         connect_sc_nodes(self.sc_nodes[0], 1)

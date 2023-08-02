@@ -184,7 +184,7 @@ class AccountSidechainApp @Inject()
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params, timeProvider),
     SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
@@ -224,8 +224,8 @@ class AccountSidechainApp @Inject()
     //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
     var maxConsensusSlotsInEpoch = ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch
     consensusParamsForkList.foreach(fork => {
-      if (fork.isInstanceOf[ConsensusParamsFork] && fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch > maxConsensusSlotsInEpoch) {
-        maxConsensusSlotsInEpoch = fork.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch
+      if (fork.getValue.isInstanceOf[ConsensusParamsFork] && fork.getValue.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch > maxConsensusSlotsInEpoch) {
+        maxConsensusSlotsInEpoch = fork.getValue.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch
       }
     })
     maxConsensusSlotsInEpoch

@@ -1178,8 +1178,8 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
 def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
-    best_slot = forging_info["bestSlotNumber"]
-    best_epoch = forging_info["bestEpochNumber"]
+    best_slot = forging_info["bestBlockSlotNumber"]
+    best_epoch = forging_info["bestBlockEpochNumber"]
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
