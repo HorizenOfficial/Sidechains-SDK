@@ -20,7 +20,7 @@ from SidechainTestFramework.scutil import (
     generate_next_block, generate_next_blocks
 )
 from test_framework.util import (
-    assert_equal, assert_false, hex_str_to_bytes,
+    assert_equal, assert_false, hex_str_to_bytes, fail
 )
 
 """
@@ -83,10 +83,15 @@ def get_backward_transfers(sc_node, request):
 class SCEvmBackwardTransfer(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=10)
+        super().__init__(withdrawalEpochLength=10, max_nonce_gap=1000)
 
     def run_test(self):
         time.sleep(0.1)
+
+        number_of_bt = 3999
+        max_transactions_per_block=16
+        bt_amount_in_zen_1 = 0.00001
+        sc_bt_amount_in_zennies_1 = convertZenToZennies(bt_amount_in_zen_1)
 
         ft_amount_in_zen = 10
         ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
@@ -128,20 +133,38 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         current_epoch_number=1
         mc_address1 = mc_node.getnewaddress()
 
-        # # Try to withdraw coins from SC to MC
-        bt_amount_in_zen_1 = 0.00001
-        sc_bt_amount_in_zennies_1 = convertZenToZennies(bt_amount_in_zen_1)
 
-        res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1,0)
-        res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1,1)
-        res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1,2)
+        while bt_created < number_of_bt:
 
-        generate_next_blocks(sc_node, "first node", 1)[0]
+            # Create a backward transfer
+            res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1,wallet_nonce)
+            
+            if "result" not in res:
+                fail(f"Backward Transfer Failed - Nonce : {wallet_nonce} : " + json.dumps(res))
+            
+            bt_created += 1
+            wallet_nonce += 1
 
-        request = create_backward_transfer_request(1)
-        response = get_backward_transfers(sc_node, request)
+            # Check if we've reached the maximum number of transactions for this block
+            if bt_created % max_transactions_per_block == 0 and bt_created != 0:
+                self.sc_sync_all()  
+                logging.info(f"Backward Transfer {bt_created} Created.")
 
-        assert_equal(3, len(response[0]))
+                # get mempool contents, we must have max_transactions_per_block forger stake txes
+                mempoolList = sc_node.transaction_allTransactions(json.dumps({"format": False}))['result']['transactionIds']
+                assert_equal(max_transactions_per_block, len(mempoolList))
+
+                # Generate SC block
+                generate_next_block(sc_node, "first node")
+                self.sc_sync_all()
+
+                try:
+                    request = create_backward_transfer_request(1)
+                    response = get_backward_transfers(sc_node, request)
+                    logging.info(f"getBackwardTransfers successfully returned {str(len(response[0]))} BTs")
+                    assert_equal(bt_created, len(response[0]))
+                except Exception as e:
+                    raise Exception("There was a problem fetching getBackwardTransfers: " + str(e))
 
 if __name__ == "__main__":
     SCEvmBackwardTransfer().main()
