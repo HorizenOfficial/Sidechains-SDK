@@ -77,7 +77,7 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
         self.sc_sync_all()
 
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 2)
+        assert_equal(forging_info["bestBlockEpochNumber"], 2)
         assert_equal(forging_info["consensusSlotsInEpoch"], 720)
 
         # Reach the last slot before the activation of the ConsensusParameterFork
@@ -85,9 +85,9 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
             generate_next_block(sc_node, "first", force_switch_to_next_epoch=True)
 
         forging_info = sc_node.block_forgingInfo()["result"]
-        assert_equal(forging_info["bestEpochNumber"], 35)
+        assert_equal(forging_info["bestBlockEpochNumber"], 35)
         assert_equal(forging_info["consensusSlotsInEpoch"], 1500)
-        current_best_slot_number = forging_info["bestSlotNumber"]
+        current_best_slot_number = forging_info["bestBlockSlotNumber"]
 
         # Disconnect SC node 1 and SC node 2
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
