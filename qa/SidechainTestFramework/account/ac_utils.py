@@ -282,13 +282,14 @@ def ac_makeForgerStake(sc_node, owner_address, blockSignPubKey, vrf_public_key, 
     return sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
 
 
-def ac_invokeProxy(sc_node, contract_address, data, nonce=None, static=False):
+def ac_invokeProxy(sc_node, contract_address, data, value=None, nonce=None, static=False):
     params = {
         "invokeInfo": {
             "contractAddress": contract_address,
             "dataStr": data
         },
-        "nonce": nonce
+        "nonce": nonce,
+        "value": value
     }
 
     if (static):

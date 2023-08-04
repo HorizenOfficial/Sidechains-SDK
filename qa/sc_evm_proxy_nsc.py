@@ -81,6 +81,15 @@ class SCEvmProxyNsc(AccountChainSetup):
                                          toAddress=smart_contract_address, gasPrice=900000000)
         assert_equal(initial_message, res[0])
 
+
+        '''res = smart_contract.call_function(sc_node, method_set, 'qqq', fromAddress=self.evm_address, value=123456,
+                                         toAddress=smart_contract_address, gasPrice=900000000, gasLimit=10000000)
+
+
+        self.sc_sync_all()
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()'''
+
         # use static call proxy for getting string value from solidity smart contract
         # actually this is pretty useless since we are not getting back the result, we are just checking the call is OK
         # we will also test eth_call further on
@@ -145,13 +154,37 @@ class SCEvmProxyNsc(AccountChainSetup):
         status = int(receipt['result']['status'], 16)
         assert_true(status == 0)
 
+
         # invoke the proxy native smart contract and modify data
         tx_hash = ac_invokeProxy(
             sc_node,
             remove_0x_prefix(smart_contract_address),
             sol_contract_call_data_set_n1,
-            nonce=None)['result']['transactionId']
+            nonce=None,
+            value=123456
+        )['result']['transactionId']
         self.sc_sync_all()
+
+        on_chain_nonce = int(sc_node.rpc_eth_getTransactionCount(format_evm(self.evm_address), 'latest')['result'], 16)
+
+        # Verify tracing gives reasonable result for the call native contract->native_contract->EVM contract
+        trace_response = sc_node.rpc_debug_traceCall(
+            {
+                "from":  format_evm(self.evm_address),
+                "to": format_evm(PROXY_SMART_CONTRACT_ADDRESS),
+                "nonce": on_chain_nonce,
+                "input": add_0x_prefix(get_contract_input_data_from_mempool_tx(sc_node, tx_hash)),
+                "value": 123456
+            }, "latest", {
+                "tracer": "callTracer"
+            }
+        )
+        pprint.pprint(trace_response)
+
+        # TODO do not use storage contract, make a new one instead
+
+
+
 
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()

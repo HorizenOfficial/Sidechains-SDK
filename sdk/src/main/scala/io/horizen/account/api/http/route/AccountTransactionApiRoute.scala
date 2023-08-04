@@ -718,58 +718,18 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-
   def invokeProxyCall: Route = (post & path("invokeProxyCall")) {
     withBasicAuth {
       _ => {
         entity(as[ReqInvokeProxyCall]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val valueInWei = BigInteger.ZERO
-
-            // default gas related params
-            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-            var maxPriorityFeePerGas = BigInteger.valueOf(120)
-            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-            var gasLimit = BigInteger.valueOf(500000)
-
-            if (body.gasInfo.isDefined) {
-              maxFeePerGas = body.gasInfo.get.maxFeePerGas
-              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-              gasLimit = body.gasInfo.get.gasLimit
-            }
-
-            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
-
-            val secret = getFittingSecret(sidechainNodeView, None, txCost)
-
-            secret match {
-              case Some(secret) =>
-
-                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                val dataBytes = encodeInvokeProxyCallCmdRequest(body.invokeInfo)
-                val tmpTx: EthereumTransaction = new EthereumTransaction(
-                  params.chainId,
-                  JOptional.of(new AddressProposition(PROXY_SMART_CONTRACT_ADDRESS)),
-                  nonce,
-                  gasLimit,
-                  maxPriorityFeePerGas,
-                  maxFeePerGas,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
-            }
+            doProxyCall(sidechainNodeView, body, readOnly = false)
           }
         }
       }
     }
   }
-
-
 
   def invokeProxyStaticCall: Route = (post & path("invokeProxyStaticCall")) {
     withBasicAuth {
@@ -777,49 +737,58 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqInvokeProxyCall]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val valueInWei = ZenWeiConverter.convertZenniesToWei(0)
-
-            // default gas related params
-            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-            var maxPriorityFeePerGas = BigInteger.valueOf(120)
-            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-            var gasLimit = BigInteger.valueOf(500000)
-
-            if (body.gasInfo.isDefined) {
-              maxFeePerGas = body.gasInfo.get.maxFeePerGas
-              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-              gasLimit = body.gasInfo.get.gasLimit
-            }
-
-            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
-
-            val secret = getFittingSecret(sidechainNodeView, None, txCost)
-
-            secret match {
-              case Some(secret) =>
-
-                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                val dataBytes = encodeInvokeProxyStaticCallCmdRequest(body.invokeInfo)
-                val tmpTx: EthereumTransaction = new EthereumTransaction(
-                  params.chainId,
-                  JOptional.of(new AddressProposition(PROXY_SMART_CONTRACT_ADDRESS)),
-                  nonce,
-                  gasLimit,
-                  maxPriorityFeePerGas,
-                  maxFeePerGas,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
-            }
+            doProxyCall(sidechainNodeView, body, readOnly = true)
           }
         }
       }
     }
   }
+
+  private def doProxyCall(sidechainNodeView: AccountNodeView, body : ReqInvokeProxyCall, readOnly : Boolean) = {
+    val valueInWei = body.value.getOrElse(BigInteger.ZERO)
+
+    // default gas related params
+    val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+    var maxPriorityFeePerGas = BigInteger.valueOf(120)
+    var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+    var gasLimit = BigInteger.valueOf(500000)
+
+    if (body.gasInfo.isDefined) {
+      maxFeePerGas = body.gasInfo.get.maxFeePerGas
+      maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+      gasLimit = body.gasInfo.get.gasLimit
+    }
+
+    val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+    val secret = getFittingSecret(sidechainNodeView, None, txCost)
+
+    secret match {
+      case Some(secret) =>
+
+        val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+        val dataBytes = if (readOnly) {
+          encodeInvokeProxyStaticCallCmdRequest(body.invokeInfo)
+        } else {
+          encodeInvokeProxyCallCmdRequest(body.invokeInfo)
+        }
+        val tmpTx: EthereumTransaction = new EthereumTransaction(
+          params.chainId,
+          JOptional.of(new AddressProposition(PROXY_SMART_CONTRACT_ADDRESS)),
+          nonce,
+          gasLimit,
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          valueInWei,
+          dataBytes,
+          null
+        )
+        validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+      case None =>
+        ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+    }
+  }
+
 
 
 
@@ -963,11 +932,7 @@ object AccountTransactionRestScheme {
 
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class ReqInvokeProxyCall(
-                                                    nonce: Option[BigInteger],
-                                                    invokeInfo: TransactionInvokeProxyCall,
-                                                    gasInfo: Option[EIP1559GasInfo]
-                                                  ) {
+  private[horizen] case class ReqInvokeProxyCall(nonce: Option[BigInteger], invokeInfo: TransactionInvokeProxyCall, gasInfo: Option[EIP1559GasInfo], value: Option[BigInteger]) {
   }
 
   @JsonView(Array(classOf[Views.Default]))

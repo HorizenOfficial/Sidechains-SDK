@@ -6,11 +6,15 @@ contract StorageTestContract {
 
     event StorageSet(address indexed operator, string indexed newValue);
 
+    // just for testing some fund transfer
+    //fallback() external payable {}
+    receive() external payable {}
+
     constructor(string memory initialValue) {
         set(initialValue);
     }
 
-    function set(string memory value) public {
+    function set(string memory value) public payable {
         _storage = value;
         emit StorageSet(msg.sender, value);
     }

@@ -45,7 +45,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
     // check that msg.value is greater or equal than zero
     if (value.signum() < 0) {
-      throw new ExecutionRevertedException("Value must not be zero")
+      throw new ExecutionRevertedException("Value must not be negative")
     }
 
     // check that sender account exists
@@ -61,6 +61,18 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
     if (view.isEoaAccount(contractAddress)) {
       throw new ExecutionRevertedException(s"smart contract address is an EOA")
+    }
+
+    // add value to proxy account if any
+    // TODO check this
+    if (value.signum() > 0) {
+      if (!invocation.caller.equals(PROXY_SMART_CONTRACT_ADDRESS)) {
+        log.info(s"Moving value=$value from caller=${invocation.caller} to proxy=$PROXY_SMART_CONTRACT_ADDRESS")
+        // decrease the balance of `from` account by `value`
+        view.subBalance(invocation.caller, value)
+        // increase the balance of the proxy account, which will be charged by the target smart contract
+        view.addBalance(PROXY_SMART_CONTRACT_ADDRESS, value)
+      }
     }
 
     val dataBytes = Numeric.hexStringToByteArray(data)
