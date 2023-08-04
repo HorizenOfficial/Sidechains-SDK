@@ -90,7 +90,6 @@ class AccountSidechainApp @Inject()
   val consensusStore = new File(dataDirAbsolutePath + "/consensusData")
 
   // Init all storages
-  val maxConsensusSlotsInEpoch = calculateMaxSlotsInEpoch()
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
     registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, maxConsensusSlotsInEpoch * 2 + 1)),
     sidechainTransactionsCompanion,
@@ -220,14 +219,4 @@ class AccountSidechainApp @Inject()
 
   override def getTransactionSubmitProvider: TransactionSubmitProvider[TX] = transactionSubmitProvider
 
-  def calculateMaxSlotsInEpoch(): Int = {
-    //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
-    var maxConsensusSlotsInEpoch = ConsensusParamsFork.DefaultConsensusParamsFork.consensusSlotsInEpoch
-    consensusParamsForkList.foreach(fork => {
-      if (fork.getValue.isInstanceOf[ConsensusParamsFork] && fork.getValue.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch > maxConsensusSlotsInEpoch) {
-        maxConsensusSlotsInEpoch = fork.getValue.asInstanceOf[ConsensusParamsFork].consensusSlotsInEpoch
-      }
-    })
-    maxConsensusSlotsInEpoch
-  }
 }

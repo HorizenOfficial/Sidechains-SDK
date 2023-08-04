@@ -1,6 +1,5 @@
 package io.horizen.storage.leveldb
 
-import io.horizen.consensus.ConsensusParamsUtil
 
 import java.io.File
 import java.util

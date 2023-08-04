@@ -3,21 +3,19 @@ package io.horizen.utxo
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import io.horizen.account.storage.AccountHistoryStorage
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil}
+import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper._
 import io.horizen.params._
 import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
-import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{BytesUtils, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BytesUtils, Pair}
 import io.horizen.utxo.api.http
 import io.horizen.utxo.api.http.SidechainApplicationApiGroup
 import io.horizen.utxo.api.http.route.{SidechainBackupApiRoute, SidechainBlockApiRoute, SidechainCswApiRoute, SidechainTransactionApiRoute, SidechainWalletApiRoute}

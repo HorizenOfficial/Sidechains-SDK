@@ -138,3 +138,9 @@ object TimeToEpochUtils {
     BlockConsensusForkInformation(secondsInFork, startingEpoch, lastFork)
   }
 }
+
+case class BlockConsensusForkInformation(
+                                          secondsInFork: Long,
+                                          ForkStartingEpoch: Int,
+                                          lastConsensusFork: ConsensusParamsForkInfo
+                                        )

@@ -1,6 +1,5 @@
 package io.horizen.storage.leveldb
 
-import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.storage.StorageIterator
 import io.horizen.utils.ByteArrayWrapper
 import org.iq80.leveldb.{DB, ReadOptions}
