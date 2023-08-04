@@ -31,6 +31,7 @@ import io.horizen.proof.VrfProof;
 import io.horizen.proposition.Proposition;
 import io.horizen.secret.PrivateKey25519;
 import io.horizen.transaction.mainchain.SidechainCreation;
+import io.horizen.utils.AccountStateViewForBootstrap;
 import io.horizen.utils.MerklePath;
 import io.horizen.vrf.VrfOutput;
 import scala.collection.Iterator;
@@ -141,7 +142,7 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
             // init all the message processors
             Iterator<MessageProcessor> iter = messageProcessorSeq.iterator();
             while (iter.hasNext()) {
-                iter.next().init(view);
+                iter.next().init(view, 0);
             }
 
             // apply sc creation output, this will call forger stake msg processor
@@ -158,7 +159,8 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
     private AccountStateView getStateView(scala.collection.Seq<MessageProcessor> mps) {
         var dbm = new MemoryDatabase();
         StateDB stateDb = new StateDB(dbm, new Hash(AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT()));
-        return new AccountStateView(null, stateDb, mps);
+
+        return new AccountStateViewForBootstrap(stateDb, mps);
     }
 
     protected abstract List<MessageProcessor> getCustomMessageProcessors(NetworkParams params);

@@ -1,3 +1,7 @@
+**0.8.0**
+1. ZenDao native smart contracts
+2. Sidechain2Sidechain message transfers for both UTXO and Account model 
+
 **0.7.1**
 1. Seeder nodes support
 2. PeerToPeer and API rate limiting - tx rebroadcast feature

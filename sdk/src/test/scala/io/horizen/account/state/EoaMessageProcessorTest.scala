@@ -17,7 +17,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     val mockStateView: AccountStateView = mock[AccountStateView]
 
     try {
-      EoaMessageProcessor.init(mockStateView)
+      EoaMessageProcessor.init(mockStateView, 0)
     } catch {
       case ex: Exception =>
         fail("Initialization failed", ex)
@@ -25,7 +25,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
   }
 
   @Test
-  def canProcess(): Unit = {
+  def testCanProcess(): Unit = {
     val address = randomAddress
     val value = BigInteger.ONE
     val msg = getMessage(address, value, Array.emptyByteArray)
@@ -41,14 +41,14 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      EoaMessageProcessor.canProcess(msg, mockStateView))
+      EoaMessageProcessor.canProcess(msg, mockStateView, 0))
 
     // Test 2: send to EOA account, tx with no-empty "data"
     val data = new Array[Byte](1000)
     val msgWithData = getMessage(address, value, data)
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      EoaMessageProcessor.canProcess(msgWithData, mockStateView))
+      EoaMessageProcessor.canProcess(msgWithData, mockStateView, 0))
 
     // Test 3: Failure: send to smart contract account
     Mockito.reset(mockStateView)
@@ -60,21 +60,21 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(msg, mockStateView))
+      EoaMessageProcessor.canProcess(msg, mockStateView, 0))
 
     // Test 4: Failure: to is null
     Mockito.reset(mockStateView)
     val contractDeclarationMessage = getMessage(null, value, data)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
+      EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView, 0))
 
     // Test 4: Failure: data is empty array
     Mockito.reset(mockStateView)
     val contractDeclarationMessage2 = getMessage(null, value, Array.emptyByteArray)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      EoaMessageProcessor.canProcess(contractDeclarationMessage2, mockStateView))
+      EoaMessageProcessor.canProcess(contractDeclarationMessage2, mockStateView, 0))
   }
 
   @Test

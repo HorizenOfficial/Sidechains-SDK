@@ -82,7 +82,7 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
           log.info("Send message failed.")
           messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
         }
-        else log.info("Message sent")
+        else log.debug("Message sent")
       }
       )
     } catch {
