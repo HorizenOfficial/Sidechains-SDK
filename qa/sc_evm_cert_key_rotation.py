@@ -365,19 +365,40 @@ class SCKeyRotationTest(AccountChainSetup):
         new_key_signature_3 = self.secure_enclave_create_signature(message_to_sign=signing_key_message_3,
                                                                    key=new_master_key.secret)["signature"]
 
-        # Change the master key 0
+        # CASE NEGATIVE - Try to change the master key 0 wit low gas_limit which is not enough
+        gas_limit = 100000
         response = http_create_key_rotation_transaction_evm(sc_node,
                                                             key_type=1,
                                                             key_index=0,
                                                             new_key=new_public_key_3,
                                                             signing_key_signature=signing_signature_3,
                                                             master_key_signature=master_signature_3,
-                                                            new_key_signature=new_key_signature_3)
+                                                            new_key_signature=new_key_signature_3,
+                                                            gas_limit=gas_limit)
+        assert_false("error" in response)
+        generate_next_blocks(sc_node, "first node", 1)
+        receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
+        assert_equal(0, status, "Wrong tx status in receipt")
+        assert_true(int(receipt['result']['gasUsed'], 16) == gas_limit, "Gas limit not used")
+        self.sc_sync_all()
+
+        # Change the master key 0
+        gas_limit = 299999
+        response = http_create_key_rotation_transaction_evm(sc_node,
+                                                            key_type=1,
+                                                            key_index=0,
+                                                            new_key=new_public_key_3,
+                                                            signing_key_signature=signing_signature_3,
+                                                            master_key_signature=master_signature_3,
+                                                            new_key_signature=new_key_signature_3,
+                                                            gas_limit=gas_limit)
         assert_false("error" in response)
         generate_next_blocks(sc_node, "first node", 1)
         receipt = sc_node.rpc_eth_getTransactionReceipt("0x" + response['result']['transactionId'])
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status, "Wrong tx status in receipt")
+        assert_true(int(receipt['result']['gasUsed'], 16) <= gas_limit, "Gas limit exceeded")
         check_key_rotation_event(receipt['result']['logs'][0], 1, 0, new_public_key_3, 0)
         self.sc_sync_all()
 

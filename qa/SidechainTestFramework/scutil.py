@@ -661,6 +661,7 @@ EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evm
 UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/sidechains-sdk-utxoapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
 EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/sidechains-sdk-evmapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
 
+
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
     """
