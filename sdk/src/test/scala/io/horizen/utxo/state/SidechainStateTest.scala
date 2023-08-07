@@ -997,10 +997,6 @@ class SidechainStateTest
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.maxWBsAllowed).thenReturn(100)
     Mockito.when(mockedParams.withdrawalEpochLength).thenReturn(11)
-<<<<<<< HEAD
-=======
-    Mockito.when(mockedParams.consensusSecondsInSlot).thenReturn(1)
->>>>>>> Removed consensusSlotsInEpoch from NetworkParams
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -1139,10 +1135,6 @@ class SidechainStateTest
 
     //Test BTs limit before the Fork1
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
-<<<<<<< HEAD
-=======
-    ConsensusParamsUtil.setCurrentConsensusEpoch(1)
->>>>>>> Removed consensusSlotsInEpoch from NetworkParams
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
     ))

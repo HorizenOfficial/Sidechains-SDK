@@ -4,7 +4,6 @@ import com.google.common.primitives.{Ints, Longs}
 import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import io.horizen.block._
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import io.horizen.account.fork.ConsensusParamsFork
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.consensus._
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
