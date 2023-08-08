@@ -226,7 +226,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(gas_used > 21000)
 
         # reach the fork
-        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
         for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
