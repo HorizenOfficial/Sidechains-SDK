@@ -1,3 +1,6 @@
+**0.7.2**
+1. Additional logs
+
 **0.7.1**
 1. Seeder nodes support
 2. PeerToPeer and API rate limiting - tx rebroadcast feature

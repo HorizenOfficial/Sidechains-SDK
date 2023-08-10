@@ -94,7 +94,10 @@ abstract class AbstractForgeMessageBuilder[
       val percentageForkApplied = ForkManager.getSidechainFork(nextConsensusEpochNumber).stakePercentageForkApplied
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
+        {
+          log.info(s"Calling vrfProofCheckAgainstStake with stake ${forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount}")
+          vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
+        }
       }
 
 
