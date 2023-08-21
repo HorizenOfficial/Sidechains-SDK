@@ -49,37 +49,35 @@ class ParentIdModifiersCacheSpecification extends AnyPropSpec
     val k4 = bytesToId(Blake2b256.hash(random.nextString(5)))
     val k5 = bytesToId(Blake2b256.hash(random.nextString(5)))
     val k6 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val v3 = new FakeModifier(k4, k3)
-    val v4 = new FakeModifier(k5, k4)
+    val v4 = new FakeModifier(k4, k3)
+    val v5 = new FakeModifier(k5, k4)
 
     when(historyReader.openSurfaceIds()).thenReturn(Seq(k4))
     when(historyReader.applicableTry(any())).thenAnswer(_ => Failure(new RecoverableModifierError("Parent block IS NOT in history yet")))
-    when(historyReader.applicableTry(v3)).thenAnswer(_ => Success(Unit))
     when(historyReader.applicableTry(v4)).thenAnswer(_ => Success(Unit))
+    when(historyReader.applicableTry(v5)).thenAnswer(_ => Success(Unit))
 
     val cache = new ParentIdModifiersCache[FakeModifier, HistoryReader[FakeModifier, FakeSyncInfo]](limit)
 
-    cache.put(k1, new FakeModifier(k2, k1))
-    cache.put(k2, new FakeModifier(k3, k2))
-    cache.put(k3, v3)
+    cache.put(k2, new FakeModifier(k2, k1))
+    cache.put(k3, new FakeModifier(k3, k2))
     cache.put(k4, v4)
-    cache.put(k5, new FakeModifier(k6, k5))
+    cache.put(k5, v5)
+    cache.put(k6, new FakeModifier(k6, k5))
 
     // pop first candidate that can be found by parentId
     cache.size shouldBe 5
-    cache.popCandidate(historyReader) shouldBe Some(v4)
+    cache.popCandidate(historyReader) shouldBe Some(v5)
     verify(historyReader, times(1)).applicableTry(any())
 
     // pop second candidate that is chosen by iterating over all modifiers in the order they were inserted
     clearInvocations(historyReader)
-    cache.popCandidate(historyReader) shouldBe Some(v3)
-    verify(historyReader, times(3)).applicableTry(any())
+    cache.popCandidate(historyReader) shouldBe Some(v4)
     cache.size shouldBe 3
 
     // try pop third candidate - fail because no suitable parentId found in the cache
     clearInvocations(historyReader)
     cache.popCandidate(historyReader) shouldBe None
-    verify(historyReader, times(3)).applicableTry(any())
     cache.size shouldBe 3
   }
 

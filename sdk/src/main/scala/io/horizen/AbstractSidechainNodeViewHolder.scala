@@ -17,7 +17,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion}
+import sparkz.core.{ModifiersCache, idToVersion}
 
 import scala.util.{Failure, Success, Try}
 
@@ -168,7 +168,7 @@ abstract class AbstractSidechainNodeViewHolder[
    */
   override def processRemoteModifiers: Receive = {
     case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[PMOD]) =>
-      mods.foreach(m => modifiersCache.put(m.parentId, m))
+      mods.foreach(m => modifiersCache.put(m.id, m))
 
       log.debug(s"Cache size before: ${modifiersCache.size}")
 
