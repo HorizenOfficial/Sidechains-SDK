@@ -26,8 +26,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     val STATICCALL_READWRITE_WITH_TRY_TEST_SIG = "cccccccc"
     val STATICCALL_NESTED_CALLS_TEST_SIG = "dddddddd"
 
-    val INC_SIG = io.horizen.account.abi.ABIUtil.getABIMethodId("inc()")
-    val RETRIEVE_SIG =  io.horizen.account.abi.ABIUtil.getABIMethodId("retrieve()")
     val COUNTER_KEY = Keccak256.hash("key".getBytes(StandardCharsets.UTF_8))
 
     val SUB_CALLS_GAS: BigInteger =  BigInteger.valueOf(10000)
@@ -43,9 +41,9 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       //read method signature
      getFunctionSignature(invocation.input) match {
         case STATICCALL_READONLY_TEST_SIG => testStaticCallOnReadonlyMethod(invocation, gasView, context)
-        case RETRIEVE_SIG => retrieve(gasView)
+        case NATIVE_CONTRACT_RETRIEVE_ABI_ID => retrieve(gasView)
         case STATICCALL_READWRITE_TEST_SIG => testStaticCallOnReadwriteMethod(invocation, gasView, context)
-        case INC_SIG => inc(gasView)
+        case NATIVE_CONTRACT_INC_ABI_ID => inc(gasView)
         case STATICCALL_READWRITE_WITH_TRY_TEST_SIG => testStaticCallOnReadwriteMethodWithTry(invocation, gasView, context)
         case STATICCALL_NESTED_CALLS_TEST_SIG => testStaticCallNestedCalls(invocation, gasView, context)
         case _ => throw new IllegalArgumentException("Unknown method call")
@@ -330,7 +328,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     // Test 1: Solidity contract executes a staticcall on a Native Smart Contract, calling a readonly function
     // In the same call, it executes a call for incrementing the counter, to check that the statedb doesn't remain readonly
     ///////////////////////////////////////////////////////
-    val retrieveInput = BytesUtils.fromHexString(getABIMethodId("testStaticCallOnReadonlyMethod()"))
+    val retrieveInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_READONLY_ABI_ID)
 
     var returnData = transition(getMessage(nativeCallerAddress, data = retrieveInput))
     var numericResult = org.web3j.utils.Numeric.toBigInt(returnData).intValueExact()
@@ -393,7 +391,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     // call should works so the counter will be increment by 1.
     ///////////////////////////////////////////////////////
 
-      val readwriteInput = BytesUtils.fromHexString(getABIMethodId("testStaticCallOnReadwriteMethod()"))
+      val readwriteInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_READWRITE_ABI_ID)
 
       returnData = transition(getMessage(nativeCallerAddress, data = readwriteInput))
       numericResult = org.web3j.utils.Numeric.toBigInt(returnData).intValueExact()
@@ -462,7 +460,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       // The transaction should fail.
       ///////////////////////////////////////////////////////
 
-      val readwriteContractCallInput = BytesUtils.fromHexString(getABIMethodId("testStaticCallOnReadwriteMethodContractCall()"))
+      val readwriteContractCallInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_RW_CONTRACT_ABI_ID)
 
       Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput))) match {
         case Failure(ex: ExecutionRevertedException) =>//OK

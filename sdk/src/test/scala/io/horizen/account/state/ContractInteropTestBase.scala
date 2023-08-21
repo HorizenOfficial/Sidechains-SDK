@@ -94,6 +94,12 @@ object ContractInteropTestBase {
 
   val NATIVE_CALLER_NESTED_ABI_ID = getABIMethodId("testNestedCalls()")
 
+  val NATIVE_CALLER_STATIC_READONLY_ABI_ID = getABIMethodId("testStaticCallOnReadonlyMethod()")
+
+  val NATIVE_CALLER_STATIC_READWRITE_ABI_ID = getABIMethodId("testStaticCallOnReadwriteMethod()")
+
+  val NATIVE_CALLER_STATIC_RW_CONTRACT_ABI_ID = getABIMethodId("testStaticCallOnReadwriteMethodContractCall()")
+
   val NATIVE_CONTRACT_RETRIEVE_ABI_ID = getABIMethodId("retrieve()")
 
   val NATIVE_CONTRACT_INC_ABI_ID = getABIMethodId("inc()")
