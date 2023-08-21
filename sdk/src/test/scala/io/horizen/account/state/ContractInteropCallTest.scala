@@ -160,7 +160,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     assertArrayEquals("unexpected result", currentExpectedValueBytes, returnDataTraced)
 
     var traceResult = tracer.getResult.result
-    //println("traceResult" + traceResult.toPrettyString)
 
     // check tracer output
     assertJsonEquals(
@@ -226,7 +225,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     Try(transition(getMessage(NativeTestContract.contractAddress, data = inputIncRequest)))
 
     traceResult = tracer.getResult.result
-    //println("traceResult" + traceResult.toPrettyString)
 
     // check tracer output
     assertJsonEquals(
