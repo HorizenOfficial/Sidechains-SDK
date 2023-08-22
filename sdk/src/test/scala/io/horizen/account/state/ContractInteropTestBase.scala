@@ -35,10 +35,7 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
   def setup(): Unit = {
     processors = Seq(
       processorToTest,
-      new EvmMessageProcessor() {
-        // pass address for the EVM to recognize native contract
-        nativeContractAddresses = Array[Address](processorToTest.contractAddress)
-      }
+      new EvmMessageProcessor()
     )
     db = new MemoryDatabase()
     stateView = new AccountStateView(metadataStorageView, new StateDB(db, Hash.ZERO), processors)
