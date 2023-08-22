@@ -9,12 +9,13 @@ import scala.compat.java8.OptionConverters;
 import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
-    protected Address[] nativeContractAddresses = null;
+    private Address[] nativeContractAddresses = null;
 
-    protected Address[] getNativeContractAddresses(BaseAccountStateView view) {
+    private Address[] getNativeContractAddresses(BaseAccountStateView view) {
         if (nativeContractAddresses == null)  {
             nativeContractAddresses = view.getNativeSmartContractAddressList();
         }
+        assert nativeContractAddresses != null : "List of native smart contract addresses cannot be null";
         return nativeContractAddresses;
     }
 
