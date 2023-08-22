@@ -183,7 +183,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   }
 
   private def checkMessageValidity(invocation: Invocation): Unit = {
-    if (invocation.input.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsLengthInBytes) {
+    if (invocation.input.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsStaticLengthInBytes) {
       throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
     } else if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException(s"Value is non-zero: $invocation")

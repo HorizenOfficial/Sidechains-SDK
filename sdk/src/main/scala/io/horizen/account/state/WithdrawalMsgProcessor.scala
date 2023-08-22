@@ -76,7 +76,7 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    if (invocation.input.length != METHOD_ID_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
+    if (invocation.input.length != METHOD_ID_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsStaticLengthInBytes)
       throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
 
     val inputParams : GetListOfWithdrawalRequestsCmdInput = Try {
@@ -94,7 +94,7 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
   private[horizen] def checkWithdrawalRequestValidity(invocation: Invocation): Unit = {
     val withdrawalAmount = invocation.value
 
-    if (invocation.input.length != METHOD_ID_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
+    if (invocation.input.length != METHOD_ID_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsStaticLengthInBytes) {
       throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
     } else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
       throw new ExecutionRevertedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")

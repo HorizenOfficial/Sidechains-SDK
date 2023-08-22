@@ -1,6 +1,8 @@
 package io.horizen.account.state
 
 import io.horizen.evm.{Address, TracerOpCode}
+import io.horizen.utils.BytesUtils
+import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
@@ -55,9 +57,22 @@ case class Invocation(
     } else if (readOnly) {
       TracerOpCode.STATICCALL
     } else {
-      TracerOpCode.CREATE
+      TracerOpCode.CALL
     }
   }
+
+  override def toString: String =
+    "%s{caller=%s, callee=%s, value=%s, input=%s, gasPool.getUsedGas=%s, readOnly=%s}"
+      .format(
+        this.getClass.toString,
+        caller.toString,
+        if (callee.isEmpty) "" else callee.get.toString,
+        if (value != null) Numeric.toHexStringWithPrefix(value) else "null",
+        if (input != null) BytesUtils.toHexString(input),
+        if (gasPool!=null) gasPool.getUsedGas.toString else "null",
+        if (readOnly) "YES" else "NO"
+      )
+
 
 //  def traceTopLevel(tracer: Tracer): Unit = {}
 }

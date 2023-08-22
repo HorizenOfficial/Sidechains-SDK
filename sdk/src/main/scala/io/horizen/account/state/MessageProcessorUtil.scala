@@ -13,6 +13,7 @@ object MessageProcessorUtil {
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
+      ProxyMsgProcessor(params),
     ) ++ maybeKeyRotationMsgProcessor.toSeq ++ customMessageProcessors
   }
 }
