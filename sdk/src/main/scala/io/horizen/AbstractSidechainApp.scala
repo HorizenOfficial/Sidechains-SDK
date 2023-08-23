@@ -173,7 +173,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.regtestId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 
@@ -209,7 +210,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.testnetId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 
@@ -245,7 +247,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.mainnetId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 

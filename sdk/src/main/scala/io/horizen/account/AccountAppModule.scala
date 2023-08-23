@@ -66,7 +66,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           applicationStopper,
           forkConfigurator,
           chainInfo,
-          appVersion
+          appVersion,
           mcBlockReferenceDelay
         )
       }
