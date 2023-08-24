@@ -1,8 +1,13 @@
 package io.horizen.fork
 
 case class ActiveSlotCoefficientFork(
+                                    // It defines the desired % of filled slots. The default value is -1 meaning we are not using this value inside the vrf lottery
                                     activeSlotCoefficient: Double = -1
-                                    ) extends OptionalSidechainFork
+                                    ) extends OptionalSidechainFork {
+
+  if (activeSlotCoefficient != -1 && (!activeSlotCoefficient.>(0)))
+    throw new RuntimeException("The active slot coefficient if defined must be > 0")
+}
 
 object ActiveSlotCoefficientFork {
   def get(epochNumber: Int): ActiveSlotCoefficientFork = {

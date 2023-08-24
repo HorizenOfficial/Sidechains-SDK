@@ -46,7 +46,7 @@ abstract class AbstractForger[
   type View = CurrentView[HIS, MS, VL, MP]
 
   private val restApiTimeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
-  private var slotsDurationInSeconds = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000) * 1000
+  private var slotsDurationInSeconds: Int = -1
 
   // implicit timeout for akka msg
   implicit private val timeout: Timeout = Timeout(restApiTimeoutDuration)
@@ -61,6 +61,9 @@ abstract class AbstractForger[
         val newTimer = new Timer()
         val currentTime: Long = timeProvider.time() / 1000
         val delay = TimeToEpochUtils.secondsRemainingInSlot(params.sidechainGenesisBlockTimestamp, currentTime) * 1000
+        if (slotsDurationInSeconds == -1) {
+          slotsDurationInSeconds = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000) * 1000
+        }
         newTimer.schedule(forgingInitiatorTimerTask, 0L)
         newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, slotsDurationInSeconds)
         timerOpt = Some(newTimer)
@@ -137,12 +140,13 @@ abstract class AbstractForger[
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())
-    RecalculateSlotDuration()
+    recalculateSlotDuration()
   }
 
-  protected def RecalculateSlotDuration(): Unit = {
+  protected def recalculateSlotDuration(): Unit = {
     val consensusSecondsInSlot = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000) * 1000
     if (consensusSecondsInSlot != slotsDurationInSeconds) {
+      log.info(s"Detected a change in slot duration, previous: $slotsDurationInSeconds actual: $consensusSecondsInSlot - restarting Forger Actor...")
       slotsDurationInSeconds = consensusSecondsInSlot
       stopTimer()
       startTimer()
