@@ -93,17 +93,24 @@ package object consensus {
     new BigInteger(1, vrfOutput.bytes())
   }
 
-  def vrfProofCheckAgainstStake(vrfOutput: VrfOutput, actualStake: Long, totalStake: Long, stakePercentageFork: Boolean): Boolean = {
+  def vrfProofCheckAgainstStake(vrfOutput: VrfOutput, actualStake: Long, totalStake: Long, stakePercentageFork: Boolean, activeSlotCoefficient: Double): Boolean = {
     val requiredStakePercentage: BigDecimal = vrfOutputToRequiredStakePercentage(vrfOutput, stakePercentageFork)
     val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
 
-    requiredStakePercentage.compareTo(actualStakePercentage) match {
-      case -1 => true //required percentage is less than actual
-      case  0 => true //required percentage is equal to actual
-      case  _ => false //any other case
+    if (activeSlotCoefficient >= 0) {
+      val actualStakePercentageWithActiveSlotCoefficient = 1 - Math.pow( 1-activeSlotCoefficient, actualStakePercentage.doubleValue())
+      requiredStakePercentage.compareTo(new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)) match {
+        case -1 => true //required percentage is less than actual
+        case  0 => true //required percentage is equal to actual
+        case  _ => false //any other case
+      }
+    } else {
+      requiredStakePercentage.compareTo(actualStakePercentage) match {
+        case -1 => true //required percentage is less than actual
+        case  0 => true //required percentage is equal to actual
+        case  _ => false //any other case
+      }
     }
-
-
   }
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)

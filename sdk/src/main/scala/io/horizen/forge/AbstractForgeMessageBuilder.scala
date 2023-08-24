@@ -4,7 +4,7 @@ import akka.util.Timeout
 import io.horizen.block._
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import io.horizen.consensus._
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -92,9 +92,10 @@ abstract class AbstractForgeMessageBuilder[
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
 
       val percentageForkApplied = ForkManager.getSidechainFork(nextConsensusEpochNumber).stakePercentageForkApplied
+      val activeSlotCoefficient = ActiveSlotCoefficientFork.get(nextConsensusEpochNumber).activeSlotCoefficient
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied, activeSlotCoefficient)
       }
 
 

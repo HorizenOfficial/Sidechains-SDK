@@ -1,5 +1,6 @@
 package io.horizen.consensus
 
+
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}

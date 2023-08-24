@@ -4,7 +4,7 @@ import io.horizen.account.block.AccountBlock
 import io.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import io.horizen.consensus._
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
@@ -72,7 +72,8 @@ class ConsensusValidator[
     
     val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params.sidechainGenesisBlockTimestamp, verifiedBlock.timestamp)
     val stakePercentageForkApplied = ForkManager.getSidechainFork(consensusEpoch).stakePercentageForkApplied
-    verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
+    val activeSlotCoefficient = ActiveSlotCoefficientFork.get(consensusEpoch).activeSlotCoefficient
+    verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied, activeSlotCoefficient)
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
     val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
@@ -161,7 +162,8 @@ class ConsensusValidator[
         .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
 
       val stakePercentageForkApplied = ForkManager.getSidechainFork(ommersContainerEpochNumber).stakePercentageForkApplied
-      verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput, stakePercentageForkApplied)
+      val activeSlotCoefficient = ActiveSlotCoefficientFork.get(ommersContainerEpochNumber).activeSlotCoefficient
+      verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput, stakePercentageForkApplied, activeSlotCoefficient)
 
       verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
         bestKnownParentId, bestKnownParentInfo, history, accumulator)
@@ -176,7 +178,7 @@ class ConsensusValidator[
   }
 
   //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
+  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean, activeSlotCoefficient: Double): Unit = {
     log.debug(s"Verify Forging stake info against root hash: ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
 
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
@@ -187,7 +189,7 @@ class ConsensusValidator[
 
     val value = header.forgingStakeInfo.stakeAmount
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake, percentageForkApplied)
+    val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake, percentageForkApplied, activeSlotCoefficient)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${header.id} is not enough for to be forger.")

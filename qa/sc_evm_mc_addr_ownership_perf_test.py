@@ -113,7 +113,7 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
         self.sc_sync_all()
 
         # reach the zendao fork if not reached yet
-        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestEpochNumber"]
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
         if (ZENDAO_FORK_EPOCH - current_best_epoch) > 0:
             for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
