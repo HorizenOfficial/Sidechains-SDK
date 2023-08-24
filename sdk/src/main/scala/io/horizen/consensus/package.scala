@@ -10,7 +10,6 @@ import supertagged.TaggedType
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 import java.nio.charset.StandardCharsets
-import scala.math.BigDecimal.double2bigDecimal
 
 package object consensus {
   val merkleTreeHashLen: Int = 32
@@ -113,7 +112,6 @@ package object consensus {
     }
   }
 
-  // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
   def vrfOutputToRequiredStakePercentage(vrfOutput: VrfOutput, stakePercentageFork: Boolean): BigDecimal = {
     val hashAsBigDecimal: BigDecimal = new BigDecimal(vrfOutputToPositiveBigInteger(vrfOutput))
 

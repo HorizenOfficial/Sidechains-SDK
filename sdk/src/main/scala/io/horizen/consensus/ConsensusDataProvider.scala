@@ -81,7 +81,7 @@ trait ConsensusDataProvider {
                                                         lastBlockInfoInEpoch: SidechainBlockInfo,
                                                         initialNonceData: Seq[(VrfOutput, ConsensusSlotNumber)]): NonceConsensusEpochInfo = {
     // Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
-    // all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety.
+    // all blocks up to and including the middle of an epoch.
     // (The “quiet” periods before and after this central block of slots that sets the nonce will
     // ensure that the stake distribution, determined at the beginning of the epoch, is stable, and likewise
     // that the nonce is stable before the next epoch begins.)
