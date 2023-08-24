@@ -99,7 +99,6 @@ package object consensus {
 
     if (activeSlotCoefficient >= 0) {
       val actualStakePercentageWithActiveSlotCoefficient = 1 - Math.pow( 1-activeSlotCoefficient, actualStakePercentage.doubleValue())
-      //System.out.println("Actual stake %: "+actualStakePercentage+" Actual stake % with f: "+new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)+" Required stake %: "+requiredStakePercentage)
       requiredStakePercentage.compareTo(new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)) match {
         case -1 => true //required percentage is less than actual
         case  0 => true //required percentage is equal to actual
