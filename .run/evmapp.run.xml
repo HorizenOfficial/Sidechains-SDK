@@ -6,7 +6,7 @@
     </envs>
     <option name="MAIN_CLASS_NAME" value="io.horizen.examples.EvmApp" />
     <module name="sidechains-sdk-evmapp" />
-    <option name="PROGRAM_PARAMETERS" value="src/main/resources/sc_evm_settings.conf" />
+    <option name="PROGRAM_PARAMETERS" value="/tmp/sc_testa58zy4ig/sc_node0/node0.conf" />
     <option name="VM_PARAMETERS" value="--add-opens java.base/java.lang=ALL-UNNAMED" />
     <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
     <method v="2">

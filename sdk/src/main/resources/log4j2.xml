@@ -43,9 +43,9 @@
         </Logger-->
 
         <!-- Squelch noisy class/package -->
-        <Logger name="sparkz.core.network" level="error">
-            <AppenderRef ref="Console" />
-        </Logger>
+<!--        <Logger name="sparkz.core.network" level="error">-->
+<!--            <AppenderRef ref="Console" />-->
+<!--        </Logger>-->
 
         <Root level="${sys:logRootLevel}">
             <AppenderRef ref="fileLog" level="${sys:logFileLevel}"/>
