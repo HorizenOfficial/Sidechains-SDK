@@ -96,7 +96,7 @@ package object consensus {
     val requiredStakePercentage: BigDecimal = vrfOutputToRequiredStakePercentage(vrfOutput, stakePercentageFork)
     val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
 
-    if (activeSlotCoefficient >= 0) {
+    if (activeSlotCoefficient > 0) {
       val actualStakePercentageWithActiveSlotCoefficient = 1 - Math.pow( 1-activeSlotCoefficient, actualStakePercentage.doubleValue())
       requiredStakePercentage.compareTo(new BigDecimal(actualStakePercentageWithActiveSlotCoefficient)) match {
         case -1 => true //required percentage is less than actual
