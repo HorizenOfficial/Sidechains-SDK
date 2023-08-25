@@ -160,7 +160,7 @@ class SCEvmProxyNsc(AccountChainSetup):
         status = int(receipt['result']['status'], 16)
         assert_true(status == 1)
 
-        # read the new value in the solidity smart contract and check we succesfully modified it
+        # read the new value in the solidity smart contract and check we successfully modified it
         res = smart_contract.static_call(sc_node, method_get, fromAddress=self.evm_address,
                                          toAddress=smart_contract_address, gasPrice=900000000)
         assert_equal(new_message_n1, res[0])
@@ -343,6 +343,8 @@ class SCEvmProxyNsc(AccountChainSetup):
         lev_k = trace_response['result']
         gas_k = lev_k['gasUsed']
         for k in range(0, NUM_OF_RECURSIONS):
+            # check we have no more frames than expected
+            assert_equal(1, len(lev_k['calls']))
             lev_k = lev_k['calls'][0]
             # check each frame spends less gas than outer one
             assert_true(int(gas_k, 16) > int(lev_k['gasUsed'], 16))

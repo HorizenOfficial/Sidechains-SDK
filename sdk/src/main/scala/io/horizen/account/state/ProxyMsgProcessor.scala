@@ -37,9 +37,9 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     val msg = context.msg
     log.debug(s"Entering with invocation: $invocation")
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-    if (msg.getNonce == null) {
-      throw new ExecutionRevertedException("Call must include a nonce")
-    }
+//    if (msg.getNonce == null) {
+//      throw new ExecutionRevertedException("Call must include a nonce")
+//    }
 
     val value = invocation.value
 
