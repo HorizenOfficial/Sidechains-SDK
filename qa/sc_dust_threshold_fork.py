@@ -78,7 +78,7 @@ class SCDustThresholdFork(SidechainTestFramework):
 
         # check we are still in pre-fork epoch
         forging_info = http_block_forging_info(sc_node)
-        assert_equal(forging_info["bestEpochNumber"], 2)
+        assert_equal(forging_info["bestBlockEpochNumber"], 2)
 
         # Send 50 satoshi to node2, it should be successful
         sendCoinsToAddress(sc_node, sc_address_2, _50cent, fee=0)
@@ -94,7 +94,7 @@ class SCDustThresholdFork(SidechainTestFramework):
         # switch to the next consensus epoch
         new_block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         forging_info = http_block_forging_info(sc_node)
-        assert_equal(3, forging_info["bestEpochNumber"])
+        assert_equal(3, forging_info["bestBlockEpochNumber"])
 
         # check that new epoch block does not contain invalid transactions
         new_block = sc_node.block_findById(blockId=new_block_id)

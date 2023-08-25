@@ -17,6 +17,7 @@ import io.horizen.utxo.chain.SidechainFeePaymentsInfo
 import io.horizen.utxo.node._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -29,7 +30,8 @@ case class SidechainBlockApiRoute(
                                    sidechainBlockActorRef: ActorRef,
                                    companion: SparkzSerializer[SidechainTypes#SCBT],
                                    forgerRef: ActorRef,
-                                   params: NetworkParams)
+                                   params: NetworkParams,
+                                   timeProvider: NetworkTimeProvider)
                                  (implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends BlockBaseApiRoute[
     SidechainTypes#SCBT,
@@ -40,7 +42,7 @@ case class SidechainBlockApiRoute(
     NodeState,
     NodeWallet,
     NodeMemoryPool,
-    SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params){
+    SidechainNodeView] (settings, sidechainBlockActorRef, companion, forgerRef, params, timeProvider){
 
   override val route: Route = pathPrefix(blockPathPrefix) {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~

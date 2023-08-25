@@ -4,7 +4,7 @@ import java.util.Random
 import com.google.common.primitives.Longs
 import io.horizen.consensus.{ConsensusNonce, NonceConsensusEpochInfo, buildVrfMessage, intToConsensusSlotNumber, vrfProofCheckAgainstStake}
 import io.horizen.secret.VrfKeyGenerator
-import org.junit.Assert.assertEquals
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Ignore, Test}
 import org.scalatestplus.junit.JUnitSuite
 
@@ -13,7 +13,6 @@ import scala.collection.mutable
 
 class ForgerGenerationRateTest extends JUnitSuite {
 
-  @Ignore
   @Test
   def singleForgerFullStakeTest(): Unit = {
     val slotNumber = 1000
@@ -31,7 +30,8 @@ class ForgerGenerationRateTest extends JUnitSuite {
     val nonce = Longs.toByteArray(changedNonceBytes)
     val consensusNonce: NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ nonce)
 
-    val stakes = (1 to slotNumber).map(slotNumber => {
+    // Test with no active slot coefficient
+    var stakes = (1 to slotNumber).map(slotNumber => {
       val slot = intToConsensusSlotNumber(slotNumber)
       val vrfMessage = buildVrfMessage(slot, consensusNonce)
 
@@ -40,10 +40,26 @@ class ForgerGenerationRateTest extends JUnitSuite {
       val vrfOutput = vrfProofAndHash.getValue
 
       // Check slot leadership
-      vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
+      vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true, activeSlotCoefficient = -1)
     })
 
     assertEquals("Expected stakes result", slotNumber, stakes.count(s => s))
+
+    // Test with active slot coefficient = 0.05
+    stakes = (1 to slotNumber).map(slotNumber => {
+      val slot = intToConsensusSlotNumber(slotNumber)
+      val vrfMessage = buildVrfMessage(slot, consensusNonce)
+
+      // vrfSecret.prove(vrfMessage)
+      val vrfProofAndHash = vrfSecretKey.prove(vrfMessage)
+      val vrfOutput = vrfProofAndHash.getValue
+
+      // Check slot leadership
+      vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true, activeSlotCoefficient = 0.05)
+    })
+
+    val slotFilledPercentage: Double = (stakes.count(s => s).toDouble / slotNumber) * 100
+    assertTrue("Expected stakes result", slotFilledPercentage <= 6 && slotFilledPercentage >= 4)
   }
 
   @Ignore
@@ -75,12 +91,54 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val vrfOutput = vrfProofAndHash.getValue
 
         // Check slot leadership
-        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
+        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true, activeSlotCoefficient = -1)
       })
 
       val slotsOccupied = slotRes.count(s => s)
 
       println("Stake %d of %d - Slots occupied %d of %d".format(stake, totalStake, slotsOccupied, slotNumber))
+    })
+  }
+
+
+  @Test
+  def singleForgerPartialStakeWithActiveSlotCoefficient(): Unit = {
+    val slotNumber = 1000
+    val totalStake = 500
+    val stakeStep = 10
+    val initialStake = 0
+
+    // Generation VRF secret
+    val rnd: Random = new Random()
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes(StandardCharsets.UTF_8))
+
+    // Construction message to sign: (slot + random(8 bytes))
+    val initialNonce: Array[Byte] = new Array[Byte](8)
+    rnd.nextBytes(initialNonce)
+    val changedNonceBytes: Long = Longs.fromByteArray(initialNonce.take(Longs.BYTES))
+    val nonce = Longs.toByteArray(changedNonceBytes)
+    val consensusNonce: NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ nonce)
+
+    // Test with active slot coefficient = 0.05
+    val activeSlotCoefficient = 0.05
+    Seq.range(initialStake, totalStake, stakeStep).foreach(stake => {
+      val slotRes = (1 to slotNumber).map(slotNumber => {
+        val slot = intToConsensusSlotNumber(slotNumber)
+        val vrfMessage = buildVrfMessage(slot, consensusNonce)
+
+        // vrfSecret.prove(vrfMessage)
+        val vrfProofAndHash = vrfSecretKey.prove(vrfMessage)
+        val vrfOutput = vrfProofAndHash.getValue
+
+        // Check slot leadership
+        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true, activeSlotCoefficient = activeSlotCoefficient)
+      })
+
+      val slotsOccupied = slotRes.count(s => s)
+      val slotFilledPercentage: Double = (slotsOccupied.toDouble / slotNumber) * 100
+
+      println("Stake %d of %d active slot coefficient = 0.05 - Slots occupied %d of %d".format(stake, totalStake, slotsOccupied, slotNumber))
+      assertTrue(f"Slots occupied should be around ${activeSlotCoefficient}", slotFilledPercentage <= (activeSlotCoefficient * 100 + 1))
     })
   }
 
@@ -113,7 +171,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val vrfOutput = vrfProofAndHash.getValue
 
         // Check slot leadership
-        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
+        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true, activeSlotCoefficient = -1)
       })
 
       println("Occupied forgers - %d".format(forgerRes.count(s => s)))
@@ -154,7 +212,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val forgerStake = forgerPair._2
 
         // Check slot leadership
-        val proofRes = vrfProofCheckAgainstStake(vrfOutput, forgerStake, totalStake, stakePercentageFork = true)
+        val proofRes = vrfProofCheckAgainstStake(vrfOutput, forgerStake, totalStake, stakePercentageFork = true, activeSlotCoefficient = -1)
         if (proofRes)
           forgersGenRate.put(forgerStake, forgersGenRate.get(forgerStake).get + 1)
 

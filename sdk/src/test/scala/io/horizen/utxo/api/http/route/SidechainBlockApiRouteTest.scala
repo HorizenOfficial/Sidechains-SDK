@@ -342,6 +342,8 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       val expectedEpochNumber = intToConsensusEpochNumber(5)
       val expectedSlotNumber = intToConsensusSlotNumber(6)
       val expectedBestEpochAndSlot = ConsensusEpochAndSlot(expectedEpochNumber, expectedSlotNumber)
+      val currentEpochNumber = 212
+      val currentSlotNumber = 13
       val expectedForgingEnabled = true
 
       sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply =
@@ -354,11 +356,13 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
-        assertEquals(5, result.elements().asScala.length)
+        assertEquals(7, result.elements().asScala.length)
         assertEquals(expectedConsensusSecondsInSlot, result.get("consensusSecondsInSlot").asInt())
         assertEquals(expectedConsensusSlotsInEpoch, result.get("consensusSlotsInEpoch").asInt())
-        assertEquals(expectedEpochNumber, result.get("bestEpochNumber").asInt())
-        assertEquals(expectedSlotNumber, result.get("bestSlotNumber").asInt())
+        assertEquals(expectedEpochNumber, result.get("bestBlockEpochNumber").asInt())
+        assertEquals(expectedSlotNumber, result.get("bestBlockSlotNumber").asInt())
+        assertEquals(currentEpochNumber, result.get("currentEpochNumber").asInt())
+        assertEquals(currentSlotNumber, result.get("currentSlotNumber").asInt())
         assertEquals(expectedForgingEnabled, result.get("forgingEnabled").asBoolean())
       }
     }

@@ -4,16 +4,16 @@ import io.horizen.SidechainTypes
 import io.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import io.horizen.certificatesubmitter.keys.KeyRotationProofTypes.{MasterKeyRotationProofType, SigningKeyRotationProofType}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
-import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
+import io.horizen.consensus.{ConsensusEpochNumber, ConsensusParamsUtil, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.cryptolibprovider.{CircuitTypes, CryptoLibProvider}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proposition.{Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.transaction.exception.TransactionSemanticValidityException
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, Pair => JPair}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import io.horizen.utxo.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
@@ -62,6 +62,11 @@ class SidechainStateTest
   val vrfList = new ListBuffer[VrfPublicKey]()
 
   val params = MainNetParams()
+
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    ConsensusParamsForkInfo(0, new ConsensusParamsFork(720)),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   @Before
   def init(): Unit = {
@@ -449,6 +454,11 @@ class SidechainStateTest
     })
 
     val mockedBlock = mock[SidechainBlock]
+    val consensusSecondsInSlot = 120
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     Mockito.when(mockedBlock.id)
       .thenReturn({
@@ -456,7 +466,7 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedBlock.timestamp)
-      .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
+      .thenReturn(params.sidechainGenesisBlockTimestamp + consensusSecondsInSlot)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -976,14 +986,17 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += buildRegularTransaction(1, 0, 1, Seq(), 10)
 
+    val consensusSecondsInSlot = 1
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, consensusSecondsInSlot)),
+    ))
+
     // Max Withdrawal Boxes per epoch = 100
     // Withdrawal epoch length = 10
     // Withdrawal Boxes allowed per mainchain block reference data = 100/ (11 - 1) = 10
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.maxWBsAllowed).thenReturn(100)
     Mockito.when(mockedParams.withdrawalEpochLength).thenReturn(11)
-    Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(1)
-    Mockito.when(mockedParams.consensusSecondsInSlot).thenReturn(1)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -1122,7 +1135,9 @@ class SidechainStateTest
 
     //Test BTs limit before the Fork1
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
-    Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(86400)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(86400, consensusSecondsInSlot)),
+    ))
 
     transactionList.clear()
     transactionList += buildRegularTransaction(1, 0, 100, Seq(), 100)

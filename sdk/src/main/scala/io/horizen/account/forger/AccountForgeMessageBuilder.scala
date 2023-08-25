@@ -210,7 +210,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp))
     val gasLimit: BigInteger = feeFork.blockGasLimit
 
     // 4. create a context for the new block
@@ -222,7 +222,7 @@ class AccountForgeMessageBuilder(
       baseFee,
       gasLimit,
       parentInfo.height + 1,
-      TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
+      TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp),
       WithdrawalEpochUtils
         .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
