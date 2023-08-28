@@ -64,7 +64,7 @@ class SCFTLimitFork(SidechainTestFramework):
 
         # check we are still in pre-fork epoch and cert has 0 ftScFee
         forging_info = http_block_forging_info(sc_node)
-        assert_equal(forging_info["bestEpochNumber"], 2)
+        assert_equal(forging_info["bestBlockEpochNumber"], 2)
         we0_cert_hash = mc_node.getrawmempool()[0]
         we0_cert = mc_node.getrawtransaction(we0_cert_hash, 1)
         assert_equal(we0_cert["cert"]["ftScFee"], 0)
@@ -72,7 +72,7 @@ class SCFTLimitFork(SidechainTestFramework):
         # switch to the next consensus epoch
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         forging_info = http_block_forging_info(sc_node)
-        assert_equal(forging_info["bestEpochNumber"], 3)
+        assert_equal(forging_info["bestBlockEpochNumber"], 3)
         check_wallet_coins_balance(sc_node, 100.00000050)
 
         # before new cert is created, it should be possible to do Ft with 50 satoshi

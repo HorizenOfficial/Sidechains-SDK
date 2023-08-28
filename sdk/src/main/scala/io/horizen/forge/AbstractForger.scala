@@ -6,7 +6,7 @@ import akka.util.Timeout
 import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
+import io.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusParamsUtil, ConsensusSlotNumber}
 import io.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.NetworkParams
@@ -46,15 +46,11 @@ abstract class AbstractForger[
   type View = CurrentView[HIS, MS, VL, MP]
 
   private val restApiTimeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
-  private val consensusSlotDuration: FiniteDuration = FiniteDuration(params.consensusSecondsInSlot, SECONDS)
+  private var slotsDurationInSeconds: Int = -1
 
   // implicit timeout for akka msg
   implicit private val timeout: Timeout = Timeout(restApiTimeoutDuration)
 
-  // we should not take more time than a slot duration for forging a block.
-  private val mcRefDataRetrievalTimeout = Timeout((restApiTimeoutDuration.min(consensusSlotDuration))/2)
-
-  private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
   private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
   private var timerOpt: Option[Timer] = None
 
@@ -64,9 +60,12 @@ abstract class AbstractForger[
       case None =>
         val newTimer = new Timer()
         val currentTime: Long = timeProvider.time() / 1000
-        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params.sidechainGenesisBlockTimestamp, currentTime) * 1000
+        if (slotsDurationInSeconds == -1) {
+          slotsDurationInSeconds = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000) * 1000
+        }
         newTimer.schedule(forgingInitiatorTimerTask, 0L)
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, slotsDurationInSeconds)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
     }
@@ -138,11 +137,26 @@ abstract class AbstractForger[
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
-    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
+    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())  }
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())
+    recalculateSlotDuration()
+  }
+
+  protected def recalculateSlotDuration(): Unit = {
+    val consensusSecondsInSlot = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, timeProvider.time() / 1000) * 1000
+    if (consensusSecondsInSlot != slotsDurationInSeconds) {
+      log.info(s"Detected a change in slot duration, previous: $slotsDurationInSeconds actual: $consensusSecondsInSlot - restarting Forger Actor...")
+      slotsDurationInSeconds = consensusSecondsInSlot
+      stopTimer()
+      startTimer()
+    }
+  }
 
   def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
+    // we should not take more time than a slot duration for forging a block.
+    val mcRefDataRetrievalTimeout = Timeout((restApiTimeoutDuration.min(FiniteDuration(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(epochNumber), SECONDS)))/2)
+
     val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, mcRefDataRetrievalTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
@@ -195,7 +209,7 @@ abstract class AbstractForger[
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete {
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
+          forgerInfoRequester ! Success(ForgingInfo(ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(epochAndSlot.epochNumber), ConsensusParamsUtil.getConsensusSlotsPerEpoch(epochAndSlot.epochNumber), epochAndSlot, isForgingEnabled))
 
         case failure@Failure(_) =>
           forgerInfoRequester ! failure
@@ -205,7 +219,7 @@ abstract class AbstractForger[
 
   def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
     val history = view.history
-    TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
+    TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, history.bestBlockInfo.timestamp)
   }
 }
 

@@ -67,7 +67,6 @@ class SidechainApp @Inject()
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
-   @Named("ConsensusSecondsInSlot") secondsInSlot: Int,
    @Named("AppVersion") appVersion: String
   )
   extends AbstractSidechainApp(
@@ -82,7 +81,6 @@ class SidechainApp @Inject()
       regtestId = 111,
       testnetId = 222,
       mainnetId = 333),
-    secondsInSlot
     )
 {
 
@@ -229,7 +227,7 @@ class SidechainApp @Inject()
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params, timeProvider),
     SidechainNodeApiRoute[TX,
       SidechainBlockHeader, PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState, NodeWallet, NodeMemoryPool, SidechainNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),

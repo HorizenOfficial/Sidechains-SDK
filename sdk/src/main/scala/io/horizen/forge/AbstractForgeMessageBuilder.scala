@@ -4,7 +4,7 @@ import akka.util.Timeout
 import io.horizen.block._
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import io.horizen.consensus._
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -75,7 +75,7 @@ abstract class AbstractForgeMessageBuilder[
       case _ => // checks passed
     }
 
-    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextConsensusEpochNumber, nextConsensusSlotNumber)
+    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, nextConsensusEpochNumber, nextConsensusSlotNumber)
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
@@ -92,9 +92,10 @@ abstract class AbstractForgeMessageBuilder[
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
 
       val percentageForkApplied = ForkManager.getSidechainFork(nextConsensusEpochNumber).stakePercentageForkApplied
+      val activeSlotCoefficient = ActiveSlotCoefficientFork.get(nextConsensusEpochNumber).activeSlotCoefficient
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied, activeSlotCoefficient)
       }
 
 
@@ -149,8 +150,8 @@ abstract class AbstractForgeMessageBuilder[
     // Parent block and current tip block can be the same in case of extension the Active chain.
     // But can be different in case of sidechain fork caused by mainchain fork.
     // In this case parent block is before the tip, and tip block will be the last Ommer included into the next block.
-    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, parentBlockTimestamp)
-    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTipBlockTimestamp)
+    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, parentBlockTimestamp)
+    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
     if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {

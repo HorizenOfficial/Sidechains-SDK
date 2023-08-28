@@ -124,7 +124,7 @@ class AccountState(
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
@@ -314,7 +314,7 @@ class AccountState(
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
   override def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimeStamp)
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimeStamp)
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch

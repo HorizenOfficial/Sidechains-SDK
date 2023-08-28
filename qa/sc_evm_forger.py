@@ -56,7 +56,7 @@ def get_sc_wallet_pubkeys(sc_node):
 
 def print_current_epoch_and_slot(sc_node):
     ret = sc_node.block_forgingInfo()["result"]
-    logging.info("Epoch={}, Slot={}".format(ret['bestEpochNumber'], ret['bestSlotNumber']))
+    logging.info("Epoch={}, Slot={}".format(ret['bestBlockEpochNumber'], ret['bestBlockSlotNumber']))
 
 
 def check_make_forger_stake_event(event, source_addr, owner, amount):

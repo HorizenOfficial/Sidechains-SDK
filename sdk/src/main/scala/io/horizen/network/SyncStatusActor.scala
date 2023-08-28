@@ -6,6 +6,7 @@ import akka.util.Timeout
 import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlocksDensity
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
@@ -59,8 +60,6 @@ class SyncStatusActor[
   private val checkBlocksDensityScheduler: Cancellable = context.system.scheduler.scheduleAtFixedRate(
       checkBlocksDensityInterval, checkBlocksDensityInterval, self, CheckBlocksDensity)
 
-  // The expected max new tips events when the node is already synced and receives new tips from the network
-  private val standardBlockRate: Int = Math.ceil(checkBlocksDensityInterval.toSeconds.toDouble / params.consensusSecondsInSlot).toInt + 1
   private var appliedBlocksNumber: Int = 0
   private var prevAppliedBlocksNumber: Int = 0
 
@@ -84,10 +83,17 @@ class SyncStatusActor[
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PMOD]])
   }
 
+  // The expected max new tips events when the node is already synced and receives new tips from the network
+  private def getStandardBlockRate(): Int = {
+    val currentTime: Long = timeProvider.time() / 1000
+    Math.ceil(checkBlocksDensityInterval.toSeconds.toDouble / ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime)).toInt + 1
+  }
+
   // Returns true if the block timestamp is close enough to the current time.
   // Returns false otherwise.
   private def isCloseEnough(blockTimestamp: Long): Boolean = {
-    ((timeProvider.time() / 1000) - blockTimestamp) < (params.consensusSecondsInSlot * CLOSE_ENOUGH_SLOTS_TO_IGNORE)
+    val currentTime: Long = timeProvider.time() / 1000
+    ((timeProvider.time() / 1000) - blockTimestamp) < (ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime) * CLOSE_ENOUGH_SLOTS_TO_IGNORE)
   }
 
   private def stopSyncing(): Unit = {
@@ -166,7 +172,7 @@ class SyncStatusActor[
 
     // Check if the applied blocks density since the scheduler last check is big enough to consider ourselves syncing
     val appliedBlocksNumberSinceSchedulerLastCheck = appliedBlocksNumber - prevAppliedBlocksNumber
-    if(appliedBlocksNumberSinceSchedulerLastCheck > standardBlockRate)
+    if(appliedBlocksNumberSinceSchedulerLastCheck > getStandardBlockRate)
       isSyncing = true
 
     isSyncing match {
@@ -182,7 +188,8 @@ class SyncStatusActor[
           // 3. previous attempt was underestimated and new tip reached the estimation height.
           Try {
             Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => {
-              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, params.consensusSecondsInSlot,
+              val currentTime: Long = timeProvider.time() / 1000
+              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime),
                 params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)
             }), timeoutDuration).asInstanceOf[Int]
           } match {
@@ -221,7 +228,7 @@ class SyncStatusActor[
       val appliedBlocksNumberBetweenChecks: Int = appliedBlocksNumber - prevAppliedBlocksNumber
       prevAppliedBlocksNumber = appliedBlocksNumber
 
-      if(appliedBlocksNumberBetweenChecks <= standardBlockRate && isSyncing) {
+      if(appliedBlocksNumberBetweenChecks <= getStandardBlockRate && isSyncing) {
         // We have considered ourselves as "syncing" before,
         // but from the last scheduler event haven't received enough new tips
         stopSyncing()

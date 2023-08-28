@@ -501,7 +501,7 @@ class EthService(
     new BlockContext(
       block.header,
       blockInfo.height,
-      TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
+      TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, blockInfo.timestamp),
       blockInfo.withdrawalEpochInfo.epoch,
       networkParams.chainId,
       blockHashProvider

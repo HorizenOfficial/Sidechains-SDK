@@ -80,7 +80,7 @@ case class MempoolSettings(
 ) extends SensitiveStringer
 
 case class WalletSettings(
-    seed: String,
+    @(SensitiveString @field) seed: String,
     @(SensitiveString @field) genesisSecrets: Seq[String],
     maxTxFee: Long = 10000000,
 ) extends SensitiveStringer

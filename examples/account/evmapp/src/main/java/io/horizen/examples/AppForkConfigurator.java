@@ -1,5 +1,6 @@
 package io.horizen.examples;
 
+import io.horizen.fork.*;
 import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.fork.ZenDAOFork;
 import io.horizen.fork.ForkConfigurator;
@@ -41,6 +42,26 @@ public class AppForkConfigurator extends ForkConfigurator {
                     BigInteger.valueOf(8),
                     BigInteger.ZERO
                 )
+            ),
+            new Pair<>(
+                   new SidechainForkConsensusEpoch(20, 20, 20),
+                   new ConsensusParamsFork(
+                           1000,
+                           18
+                   )
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(30, 30, 30),
+                    new ConsensusParamsFork(
+                            1500,
+                            5
+                    )
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(35, 35, 35),
+                    new ActiveSlotCoefficientFork(
+                            0.05
+                    )
             )
         );
     }

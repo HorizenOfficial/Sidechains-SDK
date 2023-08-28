@@ -26,9 +26,9 @@ public class DefaultApplicationWallet implements ApplicationWallet {
     public static byte[] NULL_VERSION = new byte[32];
     public static byte[] DUMMY_KEY    = BytesUtils.fromHexString("abcd");
 
-    public DefaultApplicationWallet(File storage1, File storage2) {
-        walletStorage1 = new VersionedLevelDbStorageAdapter(storage1);
-        walletStorage2 = new VersionedLevelDbStorageAdapter(storage2);
+    public DefaultApplicationWallet(File storage1, File storage2, int versionToKeep) {
+        walletStorage1 = new VersionedLevelDbStorageAdapter(storage1, versionToKeep);
+        walletStorage2 = new VersionedLevelDbStorageAdapter(storage2, versionToKeep);
     }
 
     public Logger logger = LogManager.getLogger(io.horizen.examples.DefaultApplicationWallet.class);

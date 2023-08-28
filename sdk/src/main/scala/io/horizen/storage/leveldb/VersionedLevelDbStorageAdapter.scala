@@ -1,12 +1,13 @@
 package io.horizen.storage.leveldb
 
+
 import java.io.File
 import java.util
 import java.util.{Optional, List => JList}
 import io.horizen.storage.{Storage, StorageIterator}
 import io.horizen.storage.leveldb.LDBFactory.factory
 import io.horizen.utils.{Pair => JPair, _}
-import org.iq80.leveldb.{Options}
+import org.iq80.leveldb.Options
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -17,8 +18,12 @@ import scala.compat.java8.OptionConverters._
 *    1. Why we use ByteArrayWrapper instead of Array[Byte]?
 *    2. We need iterator over the storage
 * */
-class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
-  private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
+class VersionedLevelDbStorageAdapter(pathToDB: File, versionsToKeep: Int) extends Storage{
+
+  def this(pathToDB: File) {
+    this(pathToDB, 720 * 2 + 1)
+  }
+
   private val dataBase: VersionedLDBKVStore = createDb(pathToDB)
   private val versionsKey: ByteArrayWrapper = new ByteArrayWrapper(dataBase.VersionsKey)
 
@@ -98,6 +103,7 @@ class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
   override def numberOfVersions: Int = dataBase.versions.size
 
   override def getIterator(): StorageIterator = {
-    dataBase.getIterator()
+    dataBase.getIterator
   }
+
 }

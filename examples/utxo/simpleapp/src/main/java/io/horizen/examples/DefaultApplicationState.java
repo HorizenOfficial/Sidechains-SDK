@@ -28,9 +28,9 @@ public class DefaultApplicationState implements ApplicationState {
     public static byte[] NULL_VERSION = new byte[32];
     public static byte[] DUMMY_KEY    = BytesUtils.fromHexString("abcd");
 
-    public DefaultApplicationState(File storage1, File storage2) {
-        appStorage1 = new VersionedLevelDbStorageAdapter(storage1);
-        appStorage2 = new VersionedLevelDbStorageAdapter(storage2);
+    public DefaultApplicationState(File storage1, File storage2, int versionToKeep) {
+        appStorage1 = new VersionedLevelDbStorageAdapter(storage1, versionToKeep);
+        appStorage2 = new VersionedLevelDbStorageAdapter(storage2, versionToKeep);
     }
 
     public Logger logger = LogManager.getLogger(io.horizen.examples.DefaultApplicationState.class);
