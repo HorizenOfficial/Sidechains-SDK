@@ -10,13 +10,15 @@ import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.{Certificate
 import io.horizen.certificatesubmitter.dataproof.CertificateDataWithoutKeyRotation
 import io.horizen.certificatesubmitter.keys.SchnorrKeysSignatures
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.ThresholdSignatureCircuit
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.RegTestParams
 import io.horizen.proof.SchnorrProof
 import io.horizen.proposition.SchnorrProposition
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
+import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
@@ -43,7 +45,11 @@ import scala.util.{Failure, Success}
 
 class WithoutKeyRotationCircuitStrategyTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
-  var params: RegTestParams = _
+  var params: RegTestParams = RegTestParams()
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   @Before
   def init(): Unit = {

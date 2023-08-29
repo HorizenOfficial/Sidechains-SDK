@@ -28,7 +28,7 @@ object FeeUtils {
 
   private def calculateBaseFeeForBlock(block: AccountBlock, params: NetworkParams): BigInteger = {
     val blockHeader = block.header
-    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, blockHeader.timestamp))
+    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockHeader.timestamp))
     val gasTarget = blockHeader.gasLimit.divide(feeFork.baseFeeElasticityMultiplier)
 
     // If the parent gasUsed is the same as the target, the baseFee remains unchanged

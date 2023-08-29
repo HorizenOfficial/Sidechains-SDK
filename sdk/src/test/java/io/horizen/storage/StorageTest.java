@@ -1,6 +1,8 @@
 package io.horizen.storage;
 
 import io.horizen.fixtures.StoreFixtureClass;
+import io.horizen.fork.ForkManagerUtil;
+import io.horizen.fork.SimpleForkConfigurator;
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import io.horizen.utils.ByteArrayWrapper;
 
@@ -15,6 +17,11 @@ import static org.junit.Assert.*;
 public class StorageTest {
 
     StoreFixtureClass storageFixture = new StoreFixtureClass();
+
+    @Before
+    public void init() {
+        ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest");
+    }
 
     @Test
     public void testStorage() {

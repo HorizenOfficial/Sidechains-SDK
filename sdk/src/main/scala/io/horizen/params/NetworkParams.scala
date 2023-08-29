@@ -49,6 +49,7 @@ trait NetworkParams {
   val cswVerificationKeyFilePath: String
   val sidechainCreationVersion: SidechainCreationVersion
   val isCSWEnabled: Boolean
+  val isHandlingTransactionsEnabled: Boolean = true
 
   val maxHistoryRewritingLength: Int = 100
 
@@ -62,12 +63,8 @@ trait NetworkParams {
   val mainchainCreationBlockHeight: Int // Height of the block which include SidechainCreationTx for current SC
   val sidechainGenesisBlockTimestamp: Block.Timestamp
   val withdrawalEpochLength: Int
-  val consensusSecondsInSlot: Int
-  val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
   val isNonCeasing: Boolean
-  val getLogsSizeLimit: Int
-  val getLogsQueryTimeout: FiniteDuration
 
   val minVirtualWithdrawalEpochLength: Int
 

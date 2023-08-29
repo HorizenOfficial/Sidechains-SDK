@@ -162,7 +162,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true(new_public_key_box != {})
 
         forging_info = http_block_forging_info(sc_node1)
-        assert_equal(forging_info["bestEpochNumber"], 2)
+        assert_equal(forging_info["bestBlockEpochNumber"], 2)
 
         # Try to send an openStake transaction without had reach the SC Fork 1
         tx_bytes = createOpenStakeTransaction(sc_node1, new_public_key_box["id"], new_public_key, 0, sc_fee)
@@ -173,7 +173,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         # Reach the SC Fork 1
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
         forging_info = http_block_forging_info(sc_node1)
-        assert_equal(forging_info["bestEpochNumber"], 3)
+        assert_equal(forging_info["bestBlockEpochNumber"], 3)
 
         # Try to send an openStake transaction with negative forgerIndex
         logging.info("Try to send an openStake transaction with negative forgerIndex")

@@ -20,8 +20,8 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
   override val contractCode: Array[Byte] = Keccak256.hash("ProxySmartContractCode")
 
   // TODO this must be updated when merging with 0.8.0, we should support consensusEpochNumber for hard fork activation
-  override def init(view: BaseAccountStateView): Unit = {
-    super.init(view)
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
+    super.init(view, consensusEpochNumber)
   }
 
   def doInvokeSmartContractStaticCallCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {

@@ -23,9 +23,9 @@ import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.consensus.ConsensusDataStorage
+import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil}
 import io.horizen.evm.LevelDBDatabase
-import io.horizen.fork.ForkConfigurator
+import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator}
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
@@ -33,11 +33,12 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
-import io.horizen.utils.{BytesUtils, Pair}
+import io.horizen.utils.{BytesUtils, Pair, TimeToEpochUtils}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -55,7 +56,7 @@ class AccountSidechainApp @Inject()
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
-   @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+   @Named("AppVersion") appVersion: String
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -63,8 +64,7 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo,
-    secondsInSlot
+    chainInfo
   )
 {
 
@@ -90,22 +90,22 @@ class AccountSidechainApp @Inject()
   val consensusStore = new File(dataDirAbsolutePath + "/consensusData")
 
   // Init all storages
-  protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore)),
-    sidechainSecretsCompanion)
-
-  protected val stateMetadataStorage = new AccountStateMetadataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
-
-  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
-
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, maxConsensusSlotsInEpoch * 2 + 1)),
     sidechainTransactionsCompanion,
     params)
 
+  protected val sidechainSecretStorage = new SidechainSecretStorage(
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, maxConsensusSlotsInEpoch * 2 + 1)),
+    sidechainSecretsCompanion)
+
+  protected val stateMetadataStorage = new AccountStateMetadataStorage(
+    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore, maxConsensusSlotsInEpoch * 2 + 1)))
+
+  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
+
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, maxConsensusSlotsInEpoch * 2 + 1)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -173,7 +173,7 @@ class AccountSidechainApp @Inject()
     )
   )
   //Initialize RpcProcessor object with the rpcHandler
-  val rpcProcessor = RpcProcessor(rpcHandler)
+  val rpcProcessor: RpcProcessor = RpcProcessor(rpcHandler)
   
   if(sidechainSettings.websocketServer.wsServer) {
     val webSocketServerActor: ActorRef = WebSocketAccountServerRef(nodeViewHolderRef, rpcProcessor, sidechainSettings.websocketServer)
@@ -182,9 +182,9 @@ class AccountSidechainApp @Inject()
   override lazy val applicationApiRoutes: Seq[ApiRoute] = customApiGroups.asScala.map(apiRoute => AccountApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
-    SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
+    MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params, timeProvider),
+    SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),

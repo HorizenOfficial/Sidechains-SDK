@@ -7,13 +7,13 @@ import sparkz.util.SparkzLogging
  * In our case to make a transfer from one user account (EOA account) to another user account.
  */
 object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
-  override def init(view: BaseAccountStateView): Unit = {
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
     // No actions required for transferring coins during genesis state initialization.
   }
 
   override def customTracing(): Boolean = false
 
-  override def canProcess(invocation: Invocation, view: BaseAccountStateView): Boolean = {
+  override def canProcess(invocation: Invocation, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
     // Can process only EOA to EOA transfer, so when "to" is an EOA account:
     // There is no need to check "from" account because it can't be a smart contract one,
     // because there is no known private key to create a valid signature.

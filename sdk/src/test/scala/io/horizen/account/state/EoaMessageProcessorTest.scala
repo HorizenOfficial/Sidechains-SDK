@@ -17,7 +17,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     val mockStateView: AccountStateView = mock[AccountStateView]
 
     try {
-      EoaMessageProcessor.init(mockStateView)
+      EoaMessageProcessor.init(mockStateView, 0)
     } catch {
       case ex: Exception =>
         fail("Initialization failed", ex)
@@ -25,7 +25,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
   }
 
   @Test
-  def canProcess(): Unit = {
+  def testCanProcess(): Unit = {
     val address = randomAddress
     val value = BigInteger.ONE
     val msg = getMessage(address, value, Array.emptyByteArray)
@@ -41,7 +41,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView)
+      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView, 0)
     )
 
     // Test 2: send to EOA account, tx with no-empty "data"
@@ -49,7 +49,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     val msgWithData = getMessage(address, value, data)
     assertTrue(
       "Message for EoaMessageProcessor cannot be processed",
-      TestContext.canProcess(EoaMessageProcessor, msgWithData, mockStateView)
+      TestContext.canProcess(EoaMessageProcessor, msgWithData, mockStateView, 0)
     )
 
     // Test 3: Failure: send to smart contract account
@@ -62,7 +62,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       })
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView)
+      TestContext.canProcess(EoaMessageProcessor, msg, mockStateView, 0)
     )
 
     // Test 4: Failure: to is null
@@ -70,7 +70,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     val contractDeclarationMessage = getMessage(null, value, data)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage, mockStateView)
+      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage, mockStateView, 0)
     )
 
     // Test 4: Failure: data is empty array
@@ -78,7 +78,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
     val contractDeclarationMessage2 = getMessage(null, value, Array.emptyByteArray)
     assertFalse(
       "Message for EoaMessageProcessor wrongly can be processed",
-      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage2, mockStateView)
+      TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage2, mockStateView, 0)
     )
   }
 

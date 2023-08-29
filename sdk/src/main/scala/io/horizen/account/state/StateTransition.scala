@@ -15,7 +15,7 @@ class StateTransition(
     blockGasPool: GasPool,
     val blockContext: BlockContext,
     val msg: Message,
-) extends SparkzLogging with ExecutionContext {
+                     ) extends SparkzLogging with ExecutionContext {
 
   // the current stack of invocations
   private val invocationStack = new ListBuffer[Invocation]
@@ -167,10 +167,10 @@ class StateTransition(
       // Verify that there is no value transfer during a read-only invocation. This would also throw later because
       // view.addBalance and view.subBalance would throw, this just makes it fail faster.
       if (invocation.readOnly && invocation.value.signum() != 0) {
-        throw new WriteProtectionException("invalid value transfer during read-only invocation");
+        throw new WriteProtectionException("invalid value transfer during read-only invocation")
       }
       // find and execute the first matching processor
-      messageProcessors.find(_.canProcess(invocation, view)) match {
+      messageProcessors.find(_.canProcess(invocation, view, blockContext.consensusEpochNumber)) match {
         case None =>
           log.error(s"No message processor found for invocation: $invocation")
           throw new IllegalArgumentException("Unable to execute invocation.")

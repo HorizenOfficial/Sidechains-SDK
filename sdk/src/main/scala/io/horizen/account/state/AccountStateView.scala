@@ -79,6 +79,9 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
+  // useful in bootstrapping tool
+  def getConsensusEpochNumberAsInt: Int = getConsensusEpochNumber.getOrElse(0)
+
   override def getFeePaymentsInfo(
       withdrawalEpoch: Int,
       blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None

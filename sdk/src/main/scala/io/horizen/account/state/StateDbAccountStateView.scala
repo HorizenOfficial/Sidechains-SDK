@@ -2,15 +2,12 @@ package io.horizen.account.state
 
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
-import io.horizen.block.{
-  MainchainBlockReferenceData,
-  MainchainTxForwardTransferCrosschainOutput,
-  MainchainTxSidechainCreationCrosschainOutput
-}
+import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
+import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.evm.results.{EvmLog, ProofAccountResult}
@@ -39,6 +36,8 @@ class StateDbAccountStateView(
   // certificateKeysProvider is present only for NaiveThresholdSignatureCircuitWithKeyRotation
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
+  lazy val mcAddrOwnershipProvider: McAddrOwnershipsProvider =
+    messageProcessors.find(_.isInstanceOf[McAddrOwnershipsProvider]).get.asInstanceOf[McAddrOwnershipsProvider]
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -62,6 +61,16 @@ class StateDbAccountStateView(
 
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)
+
+
+  override def getListOfMcAddrOwnerships(scAddressOpt: Option[String]): Seq[McAddrOwnershipData] =
+    mcAddrOwnershipProvider.getListOfMcAddrOwnerships(this, scAddressOpt)
+
+  override def getListOfOwnerScAddresses(): Seq[OwnerScAddress] =
+    mcAddrOwnershipProvider.getListOfOwnerScAddresses(this)
+
+  override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
+    mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -157,11 +166,11 @@ class StateDbAccountStateView(
    *     - block gas limit reached
    */
   def applyTransaction(
-      tx: SidechainTypes#SCAT,
-      txIndex: Int,
-      blockGasPool: GasPool,
-      blockContext: BlockContext
-  ): Try[EthereumConsensusDataReceipt] = Try {
+                  tx: SidechainTypes#SCAT,
+                  txIndex: Int,
+                  blockGasPool: GasPool,
+                  blockContext: BlockContext
+                ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -207,11 +216,13 @@ class StateDbAccountStateView(
     consensusDataReceipt
   }
 
-  override def isEoaAccount(address: Address): Boolean =
+
+  override def isEoaAccount(address: Address): Boolean = {
     stateDb.isEoaAccount(address)
+  }
 
   override def isSmartContractAccount(address: Address): Boolean =
-    stateDb.isSmartContractAccount(address)
+      stateDb.isSmartContractAccount(address)
 
   override def accountExists(address: Address): Boolean =
     !stateDb.isEmpty(address)

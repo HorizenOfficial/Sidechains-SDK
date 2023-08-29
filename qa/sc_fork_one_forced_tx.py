@@ -115,7 +115,7 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
         assert_true(new_public_key_box != {})
 
         forging_info = http_block_forging_info(sc_node1)
-        assert_equal(2, forging_info["bestEpochNumber"])
+        assert_equal(2, forging_info["bestBlockEpochNumber"])
 
         # Generate block with unverified tx with low amount, it should fail to validate against stake
         low_amount_tx_bytes = sendCoinsToAddressDryRun(sc_node1, new_public_key, 0, 0)["transactionBytes"]
@@ -133,7 +133,7 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
         open_stake_tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"], new_public_key, forger_index=0, fee=forger0_box["value"])["transactionBytes"]
         block_id = generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True, forced_tx=[open_stake_tx_bytes])
         forging_info = http_block_forging_info(sc_node1)
-        assert_equal(3, forging_info["bestEpochNumber"])
+        assert_equal(3, forging_info["bestBlockEpochNumber"])
         block = sc_node1.block_findById(blockId=block_id)
         assert_equal("OpenStakeTransaction", block["result"]["block"]["sidechainTransactions"][0]["typeName"])
 

@@ -7,10 +7,9 @@ import time
 import socket
 from contextlib import closing
 from decimal import Decimal
-from eth_utils import add_0x_prefix
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     AccountKey, VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
     NO_KEY_ROTATION_CIRCUIT
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
@@ -19,6 +18,8 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
     assert_false, get_field_element_with_padding
 
 WAIT_CONST = 1
+
+SNAPSHOT_VERSION_TAG = "0.8.0-SNAPSHOT"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -198,7 +199,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.7.0-SNAPSHOT.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-"+SNAPSHOT_VERSION_TAG+".jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -488,7 +489,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
+        'API_KEY_HASH': f'apiKeyHash = "{api_key_hash}"' if (api_key_hash != "") else '\r',
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_INCOMING_CONNECTIONS': sc_node_config.max_incoming_connections,
@@ -542,7 +543,9 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_ACCOUNT_SLOTS': sc_node_config.max_account_slots,
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
-        'TX_LIFETIME': sc_node_config.tx_lifetime
+        'TX_LIFETIME': sc_node_config.tx_lifetime,
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -653,10 +656,11 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/utxo/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evmapp-0.7.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/account/evmapp/target/lib/* io.horizen.examples.EvmApp"
-UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/sidechains-sdk-utxoapp_sctool-0.7.0-SNAPSHOT.jar"
-EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/sidechains-sdk-evmapp_sctool-0.7.0-SNAPSHOT.jar"
+SIMPLE_APP_BINARY = get_examples_dir() + "/utxo/simpleapp/target/sidechains-sdk-simpleapp-"+SNAPSHOT_VERSION_TAG+".jar" + get_lib_separator() + get_examples_dir() + "/utxo/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evmapp-"+SNAPSHOT_VERSION_TAG+".jar" + get_lib_separator() + get_examples_dir() + "/account/evmapp/target/lib/* io.horizen.examples.EvmApp"
+UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/sidechains-sdk-utxoapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
+EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/sidechains-sdk-evmapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
+
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
@@ -1174,16 +1178,17 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
 def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
-    best_slot = forging_info["bestSlotNumber"]
-    best_epoch = forging_info["bestEpochNumber"]
+    best_slot = forging_info["bestBlockSlotNumber"]
+    best_epoch = forging_info["bestBlockEpochNumber"]
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
-    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
+    forging_request = generate_forging_request(next_epoch, next_slot, forced_tx)
+    forge_result = node.block_generate(forging_request)
 
     # "while" will break if whole epoch no generated block, due changed error code
     # ErrorBlockNotCreated = 0105
-    count_slot = 720
+    count_slot = slots_in_epoch
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
@@ -1222,6 +1227,33 @@ def generate_next_blocks(node, node_name, blocks_count, verbose=True):
         blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
 
+
+def try_to_generate_block_in_slot(node, next_epoch, next_slot):
+
+    forging_request = generate_forging_request(next_epoch, next_slot, None)
+    forge_result = node.block_generate(forging_request)
+    return forge_result
+
+def try_to_generate_block_in_slots(node, slot_count, add_empty_slots=False):
+    block_ids = []
+
+    # Get starting slot
+    forging_info = node.block_forgingInfo()["result"]
+    slots_in_epoch = forging_info["consensusSlotsInEpoch"]
+    best_slot = forging_info["bestBlockSlotNumber"]
+    best_epoch = forging_info["bestBlockEpochNumber"]
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+
+    for _ in range(slot_count):
+        res = try_to_generate_block_in_slot(node, next_epoch, next_slot)
+        if "result" in res and "blockId" in res["result"]:
+            block_ids.append(res["result"]["blockId"])
+        else:
+            if (add_empty_slots):
+                block_ids.append("")
+        next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
+     
+    return block_ids
 
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):

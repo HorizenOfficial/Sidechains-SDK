@@ -14,7 +14,7 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
     val mockStateView = MockitoSugar.mock[AccountStateView]
     val processor = new EvmMessageProcessor()
     // just make sure this does not throw
-    processor.init(mockStateView)
+    processor.init(mockStateView, 0)
   }
 
   @Test
@@ -32,26 +32,27 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
 
     assertTrue(
       "should process smart contract deployment",
-      TestContext.canProcess(processor, getMessage(null), mockStateView)
+      TestContext.canProcess(processor, getMessage(null), mockStateView, 0)
     )
     assertTrue(
       "should process calls to existing smart contracts",
-      TestContext.canProcess(processor, getMessage(contractAddress), mockStateView)
+      TestContext.canProcess(processor, getMessage(contractAddress), mockStateView, 0)
     )
     assertFalse(
       "should not process EOA to EOA transfer (empty account)",
-      TestContext.canProcess(processor, getMessage(emptyAddress), mockStateView)
+      TestContext.canProcess(processor, getMessage(emptyAddress), mockStateView, 0)
     )
     assertFalse(
       "should not process EOA to EOA transfer (non-empty account)",
-      TestContext.canProcess(processor, getMessage(eoaAddress), mockStateView)
+      TestContext.canProcess(processor, getMessage(eoaAddress), mockStateView, 0)
     )
     assertFalse(
       "should ignore data on EOA to EOA transfer",
       TestContext.canProcess(
         processor,
         getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes(StandardCharsets.UTF_8)),
-        mockStateView
+        mockStateView,
+        0
       )
     )
   }

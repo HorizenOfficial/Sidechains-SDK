@@ -2,7 +2,7 @@ package io.horizen.api.http.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.horizen.fixtures.{CompanionsFixture, FieldElementFixture, SidechainBlockFixture}
@@ -136,6 +136,43 @@ class SecureEnclaveApiClientTest extends AnyWordSpec with Matchers with MockitoS
       )
 
       result shouldBe empty
+      verify(serverMock).singleRequest(any(), any(), any(), any())
+    }
+
+    "check request headers in signWithEnclave" in {
+      val (apiClient, serverMock) = prepareApiClient()
+      val publicKey = generateKey().publicImage()
+      val index = 1
+      val response = mapper
+        .createObjectNode()
+        .put("error", "Do Androids Dream of Electric Sheep?")
+        .toString
+
+      when(serverMock.singleRequest(any(), any(), any(), any()))
+        .thenAnswer(invocationArguments => {
+          assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Accept").get().value() == "application/json")
+          Future.successful(HttpResponse(status = StatusCodes.OK, entity = response))
+        })
+
+      Await.result(apiClient.signWithEnclave("test".getBytes(StandardCharsets.UTF_8), (publicKey, index)), 1.second)
+      verify(serverMock).singleRequest(any(), any(), any(), any())
+    }
+
+    "check request headers in listPublicKeys" in {
+      val (apiClient, serverMock) = prepareApiClient()
+
+      val response = mapper
+        .createObjectNode()
+        .set("keys", mapper.createArrayNode())
+        .toString
+
+      when(serverMock.singleRequest(any(), any(), any(), any()))
+        .thenAnswer(invocationArguments => {
+          assert(invocationArguments.getArgument(0).asInstanceOf[HttpRequest].getHeader("Accept").get().value() == "application/json")
+          Future.successful(HttpResponse(status = StatusCodes.OK, entity = response))
+        })
+
+      Await.result(apiClient.listPublicKeys(), 1.second)
       verify(serverMock).singleRequest(any(), any(), any(), any())
     }
 

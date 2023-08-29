@@ -80,7 +80,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
         assertEquals("Different address expected.", WithdrawalMsgProcessor.contractAddress, args.getArgument(0))
         assertArrayEquals("Different code expected.", WithdrawalMsgProcessor.contractCode, args.getArgument(1))
       })
-    WithdrawalMsgProcessor.init(mockStateView)
+    WithdrawalMsgProcessor.init(mockStateView, 0)
   }
 
   @Test
@@ -88,13 +88,13 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
     val msg = addWithdrawalRequestMessage(BigInteger.ONE)
     assertTrue(
       "Message for WithdrawalMsgProcessor cannot be processed",
-      TestContext.canProcess(WithdrawalMsgProcessor, msg, mockStateView)
+      TestContext.canProcess(WithdrawalMsgProcessor, msg, mockStateView, 0)
     )
     val wrongAddress = new Address("0x35fdd51e73221f467b40946c97791a3e19799bea")
     val msgNotProcessable = getMessage(wrongAddress, BigInteger.ZERO, Array.emptyByteArray)
     assertFalse(
       "Message not for WithdrawalMsgProcessor can be processed",
-      TestContext.canProcess(WithdrawalMsgProcessor, msgNotProcessable, mockStateView)
+      TestContext.canProcess(WithdrawalMsgProcessor, msgNotProcessable, mockStateView, 0)
     )
   }
 
@@ -115,7 +115,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   @Test
   def testProcessShortOpCode(): Unit = {
     usingView(WithdrawalMsgProcessor) { view =>
-      WithdrawalMsgProcessor.init(view)
+      WithdrawalMsgProcessor.init(view, 0)
       val args: Array[Byte] = new Array[Byte](0)
       val opCode = BytesUtils.fromHexString("ac")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -133,7 +133,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   @Test
   def testProcessInvalidOpCode(): Unit = {
     usingView(WithdrawalMsgProcessor) { view =>
-      WithdrawalMsgProcessor.init(view)
+      WithdrawalMsgProcessor.init(view, 0)
       val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val opCode = BytesUtils.fromHexString("abadc0de")
       val msg = getDefaultMessage(opCode, args, randomNonce)

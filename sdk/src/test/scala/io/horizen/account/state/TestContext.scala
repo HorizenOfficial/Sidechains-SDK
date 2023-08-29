@@ -10,8 +10,8 @@ object TestContext {
   /**
    * Creates a top level invocation from the given message and calls "canProcess" on the message processor.
    */
-  def canProcess(processor: MessageProcessor, msg: Message, view: BaseAccountStateView): Boolean = {
-    processor.canProcess(Invocation.fromMessage(msg), view)
+  def canProcess(processor: MessageProcessor, msg: Message, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
+    processor.canProcess(Invocation.fromMessage(msg), view, consensusEpochNumber)
   }
 
   /**

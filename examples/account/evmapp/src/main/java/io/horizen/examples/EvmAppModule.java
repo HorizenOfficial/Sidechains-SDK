@@ -59,8 +59,7 @@ public class EvmAppModule extends AccountAppModule {
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new EvmMessageProcessor());
 
-        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
-        int consensusSecondsInSlot = 12;
+        String appVersion = "";
 
         // use a custom object which implements the stopAll() method
         SidechainAppStopper applicationStopper = new EvmAppStopper();
@@ -101,8 +100,8 @@ public class EvmAppModule extends AccountAppModule {
                 .annotatedWith(Names.named("CustomMessageProcessors"))
                 .toInstance(customMessageProcessors);
 
-        bind(Integer.class)
-                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
-                .toInstance(consensusSecondsInSlot);
+        bind(String.class)
+                .annotatedWith(Names.named("AppVersion"))
+                .toInstance(appVersion);
     }
 }

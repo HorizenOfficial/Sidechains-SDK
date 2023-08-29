@@ -62,4 +62,5 @@ class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
       }
     }
   }
+
 }

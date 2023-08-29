@@ -22,6 +22,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
   var app: SidechainApp = null
 
+
   override def configure(): Unit = {
 
     bind(classOf[NodeViewHelper])
@@ -64,7 +65,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
            @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+           @Named("AppVersion") appVersion: String
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -90,7 +91,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           rejectedApiPaths,
           applicationStopper,
           forkConfigurator,
-          secondsInSlot
+          appVersion
         )
       }
     }

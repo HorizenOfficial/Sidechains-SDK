@@ -6,6 +6,10 @@ import subprocess
 from flask import Flask, request, json
 
 
+from SidechainTestFramework.scutil import SNAPSHOT_VERSION_TAG
+from test_framework.util import assert_equal
+
+
 class SecureEnclaveApiServer(object):
 
     def start(self):
@@ -26,6 +30,9 @@ class SecureEnclaveApiServer(object):
         @self.app.route('/api/v1/createSignature', methods=['POST'])
         def sign_message():
             content = json.loads(request.data)
+            if "akka-http" in request.headers['User-Agent']:
+                assert_equal("application/json", request.headers['Content-Type'])
+                assert_equal("application/json", request.headers['Accept'])
             logging.info("SecureEnclaveApiServer /api/v1/createSignature received request " + str(content))
             if 'privateKey' not in content:
                 pk = content['publicKey']
@@ -83,7 +90,7 @@ def launch_signing_tool(json_parameters):
 
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK", "..")
-                                + "/tools/signingtool/target/sidechains-sdk-signingtools-0.7.0-SNAPSHOT.jar",
+                                + "/tools/signingtool/target/sidechains-sdk-signingtools-"+SNAPSHOT_VERSION_TAG+".jar",
                                 "createSignature", json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:

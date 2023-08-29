@@ -396,10 +396,16 @@ paths:
                       consensusSlotsInEpoch:
                         type: integer
                         format: int32
-                      bestEpochNumber:
+                      bestBlockEpochNumber:
                         type: integer
                         format: int32
-                      bestSlotNumber:
+                      bestBlockSlotNumber:
+                        type: integer
+                        format: int32
+                      currentEpochNumber:
+                        type: integer
+                        format: int32
+                      currentSlotNumber:
                         type: integer
                         format: int32
                       forgingEnabled:

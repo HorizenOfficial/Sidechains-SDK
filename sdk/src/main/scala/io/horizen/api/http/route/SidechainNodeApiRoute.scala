@@ -25,7 +25,7 @@ import io.horizen.utxo.state.SidechainState
 import io.horizen.{AbstractSidechainApp, SidechainNodeViewBase}
 import sparkz.core.api.http.ApiResponse
 import sparkz.core.network.ConnectedPeer
-import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, DisconnectFromNode}
 import sparkz.core.network.peer.PeerInfo
 import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
@@ -52,7 +52,7 @@ case class SidechainNodeApiRoute[
   NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: AbstractSidechainApp, params: NetworkParams, appVersion: String = "")
                                 (implicit val context: ActorRefFactory, val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
 
@@ -249,6 +249,7 @@ case class SidechainNodeApiRoute[
             protocolVersion = protocolVersion,
             agentName = agentName,
             sdkVersion = RpcUtils.getClientVersion,
+            nodeVersion = if (appVersion != "") Option(appVersion) else Option.empty,
             scId = sidechainId,
             scType = if (params.isNonCeasing) "non ceasing" else "ceasing",
             scModel = if (sidechainNodeView.isInstanceOf[SidechainNodeView]) "UTXO" else "Account",
@@ -442,7 +443,7 @@ case class SidechainNodeApiRoute[
                 // Disconnect the connection if present and active.
                 // Note: `Blacklisted` name is misleading, because the message supposed to be used only during peer penalize
                 // procedure. Actually inside NetworkController it looks for connection and emits `CloseConnection`.
-                networkController ! DisconnectFromAddress(peerAddress)
+                networkController ! DisconnectFromNode(peerAddress)
                 ApiResponseUtil.toResponse(RespDisconnect(host + ":" + port))
             }
         }
@@ -526,6 +527,7 @@ object SidechainNodeRestSchema {
                                          protocolVersion: String,
                                          agentName: String,
                                          sdkVersion: String,
+                                         nodeVersion: Option[String],
                                          scId: String,
                                          scType: String,
                                          scModel: String,

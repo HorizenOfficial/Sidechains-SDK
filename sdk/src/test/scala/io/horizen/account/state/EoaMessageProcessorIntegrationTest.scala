@@ -26,7 +26,7 @@ class EoaMessageProcessorIntegrationTest
       // Test 1: to account doesn't exist, so considered as EOA
       assertTrue(
         "Processor expected to BE ABLE to process message",
-        TestContext.canProcess(EoaMessageProcessor, msg, view)
+        TestContext.canProcess(EoaMessageProcessor, msg, view, view.getConsensusEpochNumberAsInt)
       )
 
       // Test 2: to account exists and has NO code hash defined, so considered as EOA
@@ -34,7 +34,7 @@ class EoaMessageProcessorIntegrationTest
       view.addBalance(toAddress, BigInteger.ONE)
       assertTrue(
         "Processor expected to BE ABLE to process message",
-        TestContext.canProcess(EoaMessageProcessor, msg, view)
+        TestContext.canProcess(EoaMessageProcessor, msg, view, view.getConsensusEpochNumberAsInt)
       )
 
       // Test 3: to account exists and has code hash defined, so considered as Smart contract account
@@ -42,7 +42,7 @@ class EoaMessageProcessorIntegrationTest
       view.addAccount(toAddress, codeHash)
       assertFalse(
         "Processor expected to UNABLE to process message",
-        TestContext.canProcess(EoaMessageProcessor, msg, view)
+        TestContext.canProcess(EoaMessageProcessor, msg, view, view.getConsensusEpochNumberAsInt)
       )
 
       // Test 4: "to" is null -> smart contract declaration case
@@ -50,7 +50,7 @@ class EoaMessageProcessorIntegrationTest
       val contractDeclarationMessage = getMessage(toAddress, value, data)
       assertFalse(
         "Processor expected to UNABLE to process message",
-        TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage, view)
+        TestContext.canProcess(EoaMessageProcessor, contractDeclarationMessage, view, 0)
       )
     }
   }

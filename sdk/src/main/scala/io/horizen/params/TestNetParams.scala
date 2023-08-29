@@ -21,8 +21,6 @@ case class TestNetParams(
                           override val mainchainCreationBlockHeight: Int = 1,
                           override val withdrawalEpochLength: Int = 100,
                           override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
-                          override val consensusSecondsInSlot: Int = 120,
-                          override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val mastersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val circuitType: CircuitTypes = NaiveThresholdSignatureCircuit,
@@ -40,8 +38,7 @@ case class TestNetParams(
                           override val chainId: Long = 22222222,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val getLogsSizeLimit: Int = 10000,
-                          override val getLogsQueryTimeout: FiniteDuration = 10.seconds,
+                          override val isHandlingTransactionsEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

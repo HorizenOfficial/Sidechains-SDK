@@ -51,7 +51,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
            @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("ConsensusSecondsInSlot") secondsInSlot: Int
+           @Named("AppVersion") appVersion: String
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {
@@ -65,7 +65,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           applicationStopper,
           forkConfigurator,
           chainInfo,
-          secondsInSlot
+          appVersion
         )
       }
     }

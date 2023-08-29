@@ -2,13 +2,16 @@ package io.horizen.certificatesubmitter.strategies
 import io.horizen.certificatesubmitter.AbstractCertificateSubmitter.SignaturesStatus
 import io.horizen.certificatesubmitter.strategies.NonCeasingSidechain.NON_CEASING_SUBMISSION_DELAY
 import io.horizen.params.NetworkParams
-import io.horizen.utils.WithdrawalEpochInfo
+import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import io.horizen.AbstractState
 import io.horizen.history.AbstractHistory
-import sparkz.util.ModifierId
+import io.horizen.websocket.client.MainchainNodeChannel
+import sparkz.util.{ModifierId, SparkzLogging}
 import sparkz.core.NodeViewHolder.CurrentView
 
-class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionStrategy {
+import scala.util.{Failure, Success}
+
+class NonCeasingSidechain(mainchainChannel: MainchainNodeChannel, params: NetworkParams) extends CertificateSubmissionStrategy with SparkzLogging {
 
   override def getStatus[
     H <: AbstractHistory[_, _, _, _, _, _],
@@ -42,7 +45,33 @@ class NonCeasingSidechain(params: NetworkParams) extends CertificateSubmissionSt
   override def checkQuality(status: SignaturesStatus): Boolean = {
     // No need to check quality against other potential lower quality certificates for non-ceasing case.
     // Only one certificate per epoch is allowed.
-    status.knownSigs.size >= params.signersThreshold
+    if (status.knownSigs.size >= params.signersThreshold && !isCertificatePresent(status.referencedEpoch))
+      return true
+    false
+  }
+
+  private def isCertificatePresent(epoch: Int): Boolean = {
+    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
+      case Success(topQualityCertificates) =>
+        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
+          case (Some(mcInfo), _) if mcInfo.epoch == epoch && mcInfo.certHash != null =>
+              log.info(s"Submission not needed. Certificate already present in epoch " + epoch)
+              return true
+          case (Some(mcInfo), _) if mcInfo.epoch > epoch && mcInfo.certHash != null =>
+              log.info(s"Requested epoch " + epoch + " is obsolete. Current epoch is " + mcInfo.epoch)
+              return true
+          case (_, Some(ccInfo)) if ccInfo.epoch == epoch && ccInfo.certHash != null =>
+              log.info(s"Submission not needed. Certificate already present in epoch " + epoch)
+              return true
+          case (_, Some(ccInfo)) if ccInfo.epoch > epoch && ccInfo.certHash != null =>
+              log.info(s"Requested epoch " + epoch + " is obsolete. Current epoch is " + ccInfo.epoch)
+              return true
+          case _ =>
+        }
+      case Failure(_) =>
+        log.info("Check for top quality certificates before sending it failed. Trying to send the new certificate anyway.")
+    }
+    false
   }
 }
 

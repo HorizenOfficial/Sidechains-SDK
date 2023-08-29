@@ -26,7 +26,7 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public void init(BaseAccountStateView view) {
+    public void init(BaseAccountStateView view, int consensusEpochNumber) {
         // nothing to do here
     }
 
@@ -38,7 +38,7 @@ public class EvmMessageProcessor implements MessageProcessor {
      * </ol>
      */
     @Override
-    public boolean canProcess(Invocation invocation, BaseAccountStateView view) {
+    public boolean canProcess(Invocation invocation, BaseAccountStateView view, int consensusEpochNumber) {
         var to = invocation.callee();
         // contract deployment to a new account
         if (to.isEmpty()) return true;

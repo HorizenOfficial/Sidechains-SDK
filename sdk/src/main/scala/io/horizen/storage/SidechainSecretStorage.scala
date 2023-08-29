@@ -143,14 +143,24 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     }
   }
 
-
-  def storeNonce(nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try {
+  def storeSecretAndNonceAtomic(secret: SidechainTypes#SCS, nonce: Int, keyTypeSalt: Array[Byte]): Try[SidechainSecretStorage] = Try  {
     require(nonce >= 0, "Nonce must be not negative")
     require(keyTypeSalt != null, "Key type salt must be NOT NULL")
+    require(secret != null, "Can not add to storage: Secret must be NOT NULL.")
+
+    val key = calculateKey(secret.publicImage())
+    require(!secrets.contains(key), "Key already exists - " + secret)
+    val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
+
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
+
+    updateList.add(new JPair(key, value))
     updateList.add(new JPair(getNonceKey(keyTypeSalt), new ByteArrayWrapper(Ints.toByteArray(nonce))))
     storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList)
+
+    secrets.put(key, secret)
+
     this
   }
 }

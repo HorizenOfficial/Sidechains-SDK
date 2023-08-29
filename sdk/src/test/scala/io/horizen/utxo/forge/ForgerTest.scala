@@ -2,10 +2,13 @@ package io.horizen.utxo.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import io.horizen.forge.MainchainSynchronizer
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.NetworkParams
+import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.{SidechainSettings, WebSocketClientSettings}
 import org.junit.Test
@@ -39,9 +42,13 @@ class ForgerTest extends JUnitSuite with Matchers {
     val timeProvider = mock[NetworkTimeProvider]
     when(timeProvider.time()).thenReturn(20000)
     val params = mock[NetworkParams]
-    when(params.consensusSlotsInEpoch).thenReturn(1)
-    when(params.consensusSecondsInSlot).thenReturn(2)
     when(params.sidechainGenesisBlockTimestamp).thenReturn(11)
+
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0), Seq(720), Seq(2)), "regtest")
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(720, 2)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     val (forger, viewHolder) = prepareTestData(params, timeProvider)
 

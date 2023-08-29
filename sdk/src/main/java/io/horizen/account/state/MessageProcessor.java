@@ -14,12 +14,13 @@ package io.horizen.account.state;
 public interface MessageProcessor {
     // Initialization is going to happen only once at genesis State creation.
     // Common pattern: declare a new native smart contract account in the View
-    void init(BaseAccountStateView view) throws MessageProcessorInitializationException;
+    void init(BaseAccountStateView view, int consensusEpochNumber) throws MessageProcessorInitializationException;
 
     boolean customTracing();
 
-    // Checks if the processor can execute the given Invocation
-    boolean canProcess(Invocation invocation, BaseAccountStateView view);
+    // Checks if the processor is applicable to the Message. Some message processor can support messages when reaching
+    // a fork point, therefore we pass along the consensus epoch number, which is not stored in stateDb
+    boolean canProcess(Invocation invocation, BaseAccountStateView view, int consensusEpochNumber);
 
     /**
      * Apply message to the given view. Possible results:
@@ -31,7 +32,7 @@ public interface MessageProcessor {
      *
      * @param invocation invocation to execute
      * @param view       state view
-     * @param context    contextual information accessible during execution
+     * @param context    contextual information accessible during execution. It contains also the consensus epoch number
      * @return return data on successful execution
      * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
      * @throws ExecutionFailedException   revert-and-consume-all-gas, also mark the message as "failed"

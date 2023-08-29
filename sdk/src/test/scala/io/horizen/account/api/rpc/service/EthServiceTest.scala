@@ -20,15 +20,18 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.{EthServiceSettings, SidechainTypes}
 import org.junit.{Before, Test}
+import org.mockito.Mockito
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -308,18 +311,25 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   }"""
 
   private var ethService: EthService = _
-  private var senderWithSecret: String = _
+  protected var senderWithSecret: String = _
+  protected var networkParams: RegTestParams = RegTestParams()
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
 
   @Before
   def setUp(): Unit = {
+    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
     val genesisBlockId = bytesToId(
       Numeric.hexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000123")
     )
-    val networkParams = RegTestParams(
+    networkParams = Mockito.spy(RegTestParams(
       sidechainGenesisBlockId = genesisBlockId,
       initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement()
-    )
+    ))
+
     val receipt: EthereumReceipt =
       createTestEthereumReceipt(
         EthereumTransactionType.DynamicFeeTxType.ordinal(),
@@ -456,7 +466,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
    * @return
    *   value returned by the RPC method, before serialization
    */
-  private def rpc(method: String, params: Any*): Object = {
+  protected def rpc(method: String, params: Any*): Object = {
     val jsonParams = EthJsonMapper.serialize(params)
     val json = s"""{"jsonrpc":"2.0","id":"1","method":"$method", "params":$jsonParams}"""
     val request = new RpcRequest(mapper.readTree(json))
@@ -1345,7 +1355,25 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
         "latest",
         null,
         """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
-      )
+      ),
+      (
+        "0x0",
+        "pending",
+        null,
+        """{"oldestBlock":"0x0","baseFeePerGas":null,"gasUsedRatio":null,"reward":null}"""
+      ),
+      (
+        "0x20",
+        "pending",
+        null,
+        """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00","0x342770c0","0x1e0408399"],"gasUsedRatio":[0.0,33.333333366666665],"reward":null}"""
+      ),
+      (
+        "0x1",
+        "pending",
+        Array(20, 50, 70),
+        """{"oldestBlock":"0x2","baseFeePerGas":["0x342770c0","0x1e0408399"],"gasUsedRatio":[33.333333366666665],"reward":[["0x1","0x1","0x1"]]}"""
+      ),
     )
 
     forAll(validCases) { (nrOfBlocks, tag, rewardPercentiles, expectedOutput) =>
@@ -1429,5 +1457,6 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
     }
   }
+
 
 }
