@@ -7,6 +7,7 @@ import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.consensus.ConsensusParamsUtil
+import io.horizen.forge.AbstractForger.ReceivableMessages.GetForgingInfo
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlocksDensity
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
@@ -21,6 +22,8 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallyS
 import sparkz.core.transaction.MemoryPool
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging}
+import io.horizen.forge.ForgingInfo
+import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{DurationInt, FiniteDuration, pairIntToDuration}
@@ -186,11 +189,27 @@ class SyncStatusActor[
           // 1. it has just been detected that we are syncing;
           // 2. every updateHighestBlockFrequency blocks;
           // 3. previous attempt was underestimated and new tip reached the estimation height.
+
+
+          var consensusSecondsInSlot: Int = 0
+          var activeSlotCoefficient: Double = 0
+
+          val future = sidechainNodeViewHolderRef ? GetForgingInfo
+          val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
+          result match {
+            case Success(forgingInfo) =>
+              val bestBlockConsensusEpoch = forgingInfo.currentBestEpochAndSlot.epochNumber
+              consensusSecondsInSlot = forgingInfo.consensusSecondsInSlot
+              activeSlotCoefficient = ActiveSlotCoefficientFork.get(bestBlockConsensusEpoch).activeSlotCoefficient
+              log.info(s"20230829 consensusSecondsInSlot: $consensusSecondsInSlot")
+              log.info(s"20230829 activeSlotCoefficient: $activeSlotCoefficient")
+            case Failure(ex) => log.warn(s"SyncStatusActor exception occurred during estimated highest block processing: $ex")
+          }
+
           Try {
             Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => {
-              val currentTime: Long = timeProvider.time() / 1000
-              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime),
-                params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)
+              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, consensusSecondsInSlot,
+                params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp, activeSlotCoefficient)
             }), timeoutDuration).asInstanceOf[Int]
           } match {
             case Success(estimatedHighestBlock) => highestBlock = estimatedHighestBlock
@@ -255,7 +274,7 @@ class SyncStatusActor[
 
 object SyncStatusActor {
   val CLOSE_ENOUGH_SLOTS_TO_IGNORE: Int = 2
-  val HIGHEST_BLOCK_CHECK_FREQUENCY: Int = 20000
+  val HIGHEST_BLOCK_CHECK_FREQUENCY: Int = 200
   val SYNC_UPDATE_EVENT_FREQUENCY: Int = 500
 
   sealed trait SyncEvent
