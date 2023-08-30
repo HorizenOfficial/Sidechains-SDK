@@ -17,7 +17,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{DefaultModifiersCache, ModifiersCache, idToVersion}
+import sparkz.core.{ModifiersCache, idToVersion}
 
 import scala.util.{Failure, Success, Try}
 
@@ -49,7 +49,7 @@ abstract class AbstractSidechainNodeViewHolder[
    * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
    */
   protected override lazy val modifiersCache: ModifiersCache[PMOD, HIS] =
-    new DefaultModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
+    new ParentIdModifiersCache[PMOD, HIS](sparksSettings.network.maxModifiersCacheSize)
 
 
   case class SidechainNodeUpdateInformation(history: HIS,

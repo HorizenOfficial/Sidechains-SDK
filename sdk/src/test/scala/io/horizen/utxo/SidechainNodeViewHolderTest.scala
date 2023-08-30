@@ -427,6 +427,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
 
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
 
@@ -484,6 +486,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -544,6 +548,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -611,6 +617,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
        Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
