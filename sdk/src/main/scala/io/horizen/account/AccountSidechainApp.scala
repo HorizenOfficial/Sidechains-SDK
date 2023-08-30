@@ -157,7 +157,7 @@ class AccountSidechainApp @Inject()
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init Sync Status actor
-  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef, params, timeProvider)
 
   //rpcHandler
   val rpcHandler = new RpcHandler(
