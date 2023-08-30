@@ -273,7 +273,7 @@ class SyncStatusActor[
 
 object SyncStatusActor {
   val CLOSE_ENOUGH_SLOTS_TO_IGNORE: Int = 2
-  val HIGHEST_BLOCK_CHECK_FREQUENCY: Int = 200
+  val HIGHEST_BLOCK_CHECK_FREQUENCY: Int = 20000
   val SYNC_UPDATE_EVENT_FREQUENCY: Int = 500
 
   sealed trait SyncEvent
