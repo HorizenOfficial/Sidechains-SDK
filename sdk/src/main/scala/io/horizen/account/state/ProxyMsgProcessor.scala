@@ -43,7 +43,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
     val value = invocation.value
 
-    // check that msg.value is greater or equal than zero
+    // check that invocation.value is greater or equal than zero
     if (value.signum() < 0) {
       throw new ExecutionRevertedException("Value must not be zero")
     }
