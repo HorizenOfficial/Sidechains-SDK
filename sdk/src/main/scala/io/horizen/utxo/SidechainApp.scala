@@ -67,7 +67,8 @@ class SidechainApp @Inject()
    @Named("RejectedApiPaths") override val rejectedApiPaths: JList[Pair[String, String]],
    @Named("ApplicationStopper") override val applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") override val forkConfigurator: ForkConfigurator,
-   @Named("AppVersion") appVersion: String
+   @Named("AppVersion") appVersion: String,
+   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -81,6 +82,7 @@ class SidechainApp @Inject()
       regtestId = 111,
       testnetId = 222,
       mainnetId = 333),
+    mcBlockReferenceDelay
     )
 {
 

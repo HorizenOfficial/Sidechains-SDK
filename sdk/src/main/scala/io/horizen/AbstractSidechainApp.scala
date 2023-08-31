@@ -23,7 +23,7 @@ import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils, WithdrawalEpochUtils}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -54,7 +54,8 @@ abstract class AbstractSidechainApp
    val rejectedApiPaths : JList[Pair[String, String]],
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
-   val chainInfo : ChainInfo
+   val chainInfo : ChainInfo,
+   val mcBlockReferenceDelay : Int
   )
   extends Application with SparkzLogging
 {
@@ -67,6 +68,7 @@ abstract class AbstractSidechainApp
   private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
   protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
   protected val terminationTimeout: FiniteDuration = Duration(30, TimeUnit.SECONDS)
+  protected val maxMcBlockRefDelay = 10
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
@@ -171,7 +173,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.regtestId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 
@@ -207,7 +210,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.testnetId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 
@@ -243,7 +247,8 @@ abstract class AbstractSidechainApp
         chainId = chainInfo.mainnetId,
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
       )
 
 
@@ -256,6 +261,12 @@ abstract class AbstractSidechainApp
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
   } else {
+    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params) - 1)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than submission window length")
+
+    if (params.mcBlockRefDelay > maxMcBlockRefDelay)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than %d".format(maxMcBlockRefDelay))
+
     log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 
