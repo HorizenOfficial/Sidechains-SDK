@@ -17,6 +17,6 @@ public class AccountSimpleAppModel extends AbstractAccountModel {
 
     @Override
     public ForkConfigurator getForkConfigurator() {
-        return new AppForkConfigurator();
+        return new AppForkConfigurator(20000000);
     }
 }

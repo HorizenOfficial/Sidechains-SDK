@@ -437,7 +437,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     MerkleTree.createMerkleTree(initialLeaves.asJava)
   }
 
-  private def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VrfProof, merklePath: MerklePath): SidechainBlock = {
+  def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VrfProof, merklePath: MerklePath): SidechainBlock = {
     val parentId = bytesToId(new Array[Byte](32))
     val timestamp = if (params.sidechainGenesisBlockTimestamp == 0) {
       Instant.now.getEpochSecond - (params.consensusSecondsInSlot * params.consensusSlotsInEpoch * 100)

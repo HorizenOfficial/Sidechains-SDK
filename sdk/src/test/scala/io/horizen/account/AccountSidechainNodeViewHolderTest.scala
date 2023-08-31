@@ -3,7 +3,7 @@ package io.horizen.account
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import io.horizen.account.block.AccountBlock
+import io.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.fixtures.{AccountBlockFixture, EthereumTransactionFixture, ForgerAccountFixture, MockedAccountSidechainNodeViewHolderFixture}
@@ -16,7 +16,7 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
-import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
+import io.horizen.utils.{BytesUtils, CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.{AccountMempoolSettings, SidechainSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
@@ -637,5 +637,49 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
 
     val failure = eventListener.expectMsgType[FailedTransaction]
     assertEquals(failure.error.getMessage,"Legacy unprotected transactions are not allowed.")
+  }
+
+  @Test
+  def deprecatedModifiers(): Unit = {
+    val blockBytes = BytesUtils.fromHexString("02e1eceb9f9e4d390ee34063b573b90123f0b36d7ff1b3120f6d5b2fb10f289627f6dddccc0c6e3bda4dfddf67e293362514c36142f70862dab22cd3609face526aec9b1c809dbfb30791dbc1b1d0140fea9c49cd2ca0d6aade8139ee919cc4795e11ae9c10400808cb0e1490201104469c8cd0addeff670801fa8dd9bc69536df036d50ed772bb2cae4e7b37b07432f5977e5e6cb239fb20084b1bd614b90e0adcc55ede058d20986e66de8e03800cfc4787f5f0ac8558d44311ea846412ce44c1c8dd42b135bad31e016b4f41a3be703817d8afc936da39b56be29d31dd37c9e509c45a710401d15de373503b51471882991cb1728b4668aeb2ed7170857cf72474413ed5be9bdb81958869c331556e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b42100000000000000000000000000000000000000000000000000000000000000002e22ffcfdaa460d18b598bb7cf5b3fc31052d0ab746a2857dc93e91f4cdca2a156e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b42100c8f107a09cd4f463afc2f1e6e5bf6022ad46000a04a817c80002000801c9c38000000000000000000000000000000000000000000000000000000000000000000056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027cc0eba54469b2fe62a2724dc4b961a0253c5aa001f5b070a345a29067f90bb4400848e4ecc804f64be56a52a2c94098c4aa9ef840d700083535510cb0f950700000000")
+    val serializer = new AccountBlockSerializer(sidechainTransactionsCompanion)
+    val block1 = serializer.parseBytes(blockBytes)
+    val blocks = Array(block1)
+    var blockIndex: Int = 0
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      val blockToAppend: AccountBlock = answer.getArgument(0).asInstanceOf[AccountBlock]
+      Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      val block: AccountBlock = answer.getArgument(0)
+
+      if (block.id == blocks(blockIndex).id) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[AccountBlock]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(blocks.toSet))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
+            true
+          }
+          case _ => {
+            false
+          }
+        }
+    }
   }
 }

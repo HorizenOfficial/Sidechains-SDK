@@ -685,7 +685,14 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
+    # blockGasLimit = 0 if i == 0 else 30000
+    if (i == 0):
+        blockGasLimit = 20000
+    else:
+        blockGasLimit = 30000
+        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName + " " + str(blockGasLimit)
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:

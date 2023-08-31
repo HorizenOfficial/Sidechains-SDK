@@ -25,9 +25,11 @@ import java.util.Optional;
 
 public class EvmAppModule extends AccountAppModule {
     private final SettingsReader settingsReader;
+    private int gasLimit = 0;
 
-    public EvmAppModule(String userSettingsFileName) {
+    public EvmAppModule(String userSettingsFileName, int gasLimit) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.gasLimit = gasLimit;// 30000000L
     }
 
     @Override
@@ -43,7 +45,7 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
-        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator(gasLimit);
 
         // Here I can add my custom rest api and/or override existing one
         List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
