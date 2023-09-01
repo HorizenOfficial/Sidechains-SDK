@@ -5,12 +5,11 @@ from _decimal import Decimal
 
 import base58
 from eth_abi import decode
-from eth_typing import HexStr
 from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_receipt, format_eoa, estimate_gas
+from SidechainTestFramework.account.ac_utils import generate_block_and_get_tx_receipt, format_eoa
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
@@ -58,6 +57,7 @@ Test:
         - reach next withdrawal epoch and verify that certificate for epoch 1 was added to MC mempool
           and then to MC/SC blocks.
         - verify epoch 1 certificate, verify backward transfers list    
+        - interoperability tests
 """
 
 
