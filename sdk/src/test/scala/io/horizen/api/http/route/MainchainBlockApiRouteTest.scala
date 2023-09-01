@@ -8,13 +8,15 @@ import io.horizen.chain.MainchainBlockReferenceInfo
 import io.horizen.json.SerializationUtil
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
-
 import java.util.{Optional => JOptional}
+
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.DurationInt
 
 class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/mainchain/"
+  override val restTimeout = 2 seconds //increasing timeout (1 sec sometimes was not enough in some enviroments)
 
   "The Api should to" should {
 
