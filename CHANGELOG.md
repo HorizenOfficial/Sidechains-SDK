@@ -1,3 +1,6 @@
+**0.7.2**
+3. Sparkz dependency updated to 2.0.3
+
 **0.7.1**
 1. Seeder nodes support
 2. PeerToPeer and API rate limiting - tx rebroadcast feature
