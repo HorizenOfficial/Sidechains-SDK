@@ -5,8 +5,12 @@ case class ActiveSlotCoefficientFork(
                                     activeSlotCoefficient: Double = -1
                                     ) extends OptionalSidechainFork {
 
-  if (activeSlotCoefficient != -1 && (activeSlotCoefficient <= 0 || activeSlotCoefficient > 1))
-    throw new RuntimeException("The active slot coefficient, if defined, must be > 0 and <= 1")
+  if (isArgumentOutOfActiveSlotCoefficientForkDomain)
+    throw new IllegalArgumentException("The active slot coefficient, if defined, must be > 0 and <= 1")
+
+  private def isArgumentOutOfActiveSlotCoefficientForkDomain = {
+    activeSlotCoefficient != -1 && (activeSlotCoefficient <= 0 || activeSlotCoefficient > 1)
+  }
 }
 
 object ActiveSlotCoefficientFork {
