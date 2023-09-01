@@ -9,7 +9,7 @@ case class ActiveSlotCoefficientFork(
     throw new IllegalArgumentException("The active slot coefficient, if defined, must be > 0 and <= 1")
 
   private def isArgumentOutOfActiveSlotCoefficientForkDomain = {
-    activeSlotCoefficient != -1 && (activeSlotCoefficient <= 0 || activeSlotCoefficient > 1)
+    activeSlotCoefficient != -1 && !ActiveSlotCoefficientFork.isArgumentInActiveSlotCoefficientForkDomain(activeSlotCoefficient)
   }
 }
 
@@ -19,4 +19,5 @@ object ActiveSlotCoefficientFork {
   }
 
   val DefaultActiveSlotCoefficientFork: ActiveSlotCoefficientFork = ActiveSlotCoefficientFork()
+  def isArgumentInActiveSlotCoefficientForkDomain(arg: Double): Boolean = arg > 0 && arg <= 1
 }

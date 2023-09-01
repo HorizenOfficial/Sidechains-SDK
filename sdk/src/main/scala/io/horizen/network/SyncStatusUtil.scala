@@ -1,5 +1,6 @@
 package io.horizen.network
 
+import io.horizen.fork.ActiveSlotCoefficientFork
 import io.horizen.history.AbstractHistory
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.utils.NetworkTimeProvider
@@ -37,7 +38,7 @@ object SyncStatusUtil {
 
     val blockCorrection = {
 
-      if(activeSlotCoefficient > 0 && activeSlotCoefficient <= 1)
+      if(ActiveSlotCoefficientFork.isArgumentInActiveSlotCoefficientForkDomain(activeSlotCoefficient))
         activeSlotCoefficient
       else {
 
