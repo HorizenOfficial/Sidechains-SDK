@@ -130,8 +130,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val badCredentials = getBasicAuthCredentials(password = "wrong_password")
   val apiKeyHash = getBasicAuthApiKeyHash(credentials.password())
 
+  val restTimeout = 1 seconds
+
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
+  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => restTimeout)
   Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some(apiKeyHash))
 
   val mockedNetworkSettings: NetworkSettings = mock[NetworkSettings]
