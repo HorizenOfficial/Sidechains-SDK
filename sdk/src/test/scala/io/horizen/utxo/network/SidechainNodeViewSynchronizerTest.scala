@@ -18,7 +18,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import sparkz.core.network.ModifiersStatus.Requested
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
 import sparkz.core.network.{ConnectedPeer, ConnectionId, DeliveryTracker, Incoming}
@@ -232,6 +232,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       }))
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
+    networkControllerProbe.expectMsgType[StartConnectingPeers.type]
     viewHolderProbe.expectMsgType[GetNodeViewChanges]
 
     val modifierId: ModifierId = getRandomModifier()
