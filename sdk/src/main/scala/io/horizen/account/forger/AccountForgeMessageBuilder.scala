@@ -264,7 +264,7 @@ class AccountForgeMessageBuilder(
               )
               require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
-              val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
+              val withdrawalEpochNumber: Int = WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferencesData.size, dummyView.getWithdrawalEpochInfo, params).epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
