@@ -115,6 +115,7 @@ testScriptsEvm=(
     'sc_evm_multiple_cert_submitters.py'
     'sc_evm_sync_status.py'
     'sc_evm_sync_status_forger_nodes.py'
+    'sc_evm_sync_status_after_consensus_fork.py'
     'sc_evm_txpool.py'
     'sc_evm_eip_1898.py'
     'account_websocket_server.py'
