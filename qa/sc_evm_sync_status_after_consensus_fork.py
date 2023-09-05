@@ -67,7 +67,7 @@ class EvmSyncStatus(SidechainTestFramework):
     def check_sync_status(self, starting_block_height, execute_stop=False ):
         logging.info("Syncing...")
         t_0 = datetime.now()
-        self.sync_sc_blocks(starting_block_height, execute_stop)
+        self.call_eth_syncing_to_sync_sc_blocks(starting_block_height, execute_stop)
         t_1 = datetime.now()
         u_sec = (t_1 - t_0).microseconds
         sec = (t_1 - t_0).seconds
@@ -82,7 +82,7 @@ class EvmSyncStatus(SidechainTestFramework):
         if type(is_sync) is bool and bool(is_sync):
             fail("SC node 1 still consider itself syncing")
 
-    def sync_sc_blocks(self, starting_block_height, execute_stop=False, wait_for=200):
+    def call_eth_syncing_to_sync_sc_blocks(self, starting_block_height, execute_stop=False, wait_for=200):
         # wait for maximum wait_for seconds for everybody to have the same block count
         start = time.time()
         sync_status = False
