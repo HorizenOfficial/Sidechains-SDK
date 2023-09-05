@@ -3,6 +3,20 @@
 ---
 ## Features
 
+### [API]  /block/forgingInfo
+
+The result json has been changed in this way:
+- Renamed two fields:
+  - bestEpochNumber -> bestBlockEpochNumber 
+  - bestSlotNumber -> bestBlockSlotNumber 
+- Added these two new fields:
+  - currentEpochNumber 
+  - currentSlotNumber
+  
+    (their value is calculated based on the current timestamp, while the previous
+  two were and are calculated based on the best block available in the history)
+
+
 ### Force connecting to known peers
 New configuration option `onlyConnectToKnownPeers` was added to `network` section of configuration file. When set to `true` it will force node to only try connecting to known peers. This option is disabled by default.
 ```
@@ -18,7 +32,7 @@ This feature adds a dedicated connection pool reserved for connecting to forger 
 
 Configuration option `isForgerNode` in the `network` section has to be set to `true` to indicate that the node is a forger and other nodes should prioritize connecting with it. Default value is `false`.
 
-Other nodes is the network will prioritize connecting to and broadcasting blocks to forger nodes.
+Nodes will prioritize connecting to and broadcasting blocks to forger nodes.
 
 ```
 sparkz {
