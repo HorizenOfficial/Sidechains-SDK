@@ -62,8 +62,8 @@ class EvmSyncStatus(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # start both SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY] * 2)
-
+        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY] * 2,
+                              extra_args=self.debug_extra_args)
     def check_sync_status(self, starting_block_height, execute_stop=False ):
         logging.info("Syncing...")
         t_0 = datetime.now()
