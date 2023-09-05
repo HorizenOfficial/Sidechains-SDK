@@ -17,10 +17,10 @@ class ActiveSlotCoefficientForkTest {
   @Test
   def ifCorrectCoefficientArgument_theCaseClassIsInstantiated(): Unit = {
     // Arrange
-    val illegalArguments = Seq(-1, 0.1, 0.3, 0.1234, 0.9999999, 1)
+    val legalArguments = Seq(-1, 0.1, 0.3, 0.1234, 0.9999999, 1)
 
     // Act && Assert
-    illegalArguments.foreach(arg => try {
+    legalArguments.foreach(arg => try {
       ActiveSlotCoefficientFork(arg)
     } catch {
       case _: Throwable => fail("Unexpected ifCorrectCoefficientArgument_theCaseClassIsInstantiated case test failed")
