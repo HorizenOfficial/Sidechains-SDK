@@ -2,6 +2,7 @@
 1. ZenDao native smart contracts
 2. Added support for consensus parameter change (epoch lenght, slottime, active slot coefficient) using an hardfork 
 3. Added support for delayed mainchain block inclusion
+4. Sparkz dependency updated to 2.1.0
 
 **0.7.2**
 1. Sparkz dependency updated to 2.0.3
