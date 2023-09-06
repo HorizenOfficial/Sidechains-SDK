@@ -467,7 +467,7 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         assert_true(int(native_call["gas"], 16) > 0)
         assert_true(int(native_call["gasUsed"], 16) > 0)
         assert_equal("0x" + bt_input, native_call["input"])
-        assert_equal(130, len(native_call["output"])) # 130 = 128 bytes + 0x
+        assert_equal(elem_size * 2 + 2, len(native_call["output"])) # 130 = 64 bytes * 2 + 0x
         assert_false("calls" in native_call)
 
         gas_used_tracer = gas_used = int(trace_result['gasUsed'][2:], 16)
