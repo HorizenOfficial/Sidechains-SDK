@@ -1,4 +1,7 @@
 **Sidechains-SDK Blaze**
+
+[Public Release Notes](/doc/index.md)
+
 -------------------
 Sidechains are an innovation devised to enable blockchain scalability and extensibility by creating parallel platform and application layers that are bound to the mainchain without imposing a significant burden. Each sidechain implements the desired features and custom business logic, rooted in a protocol that offers a way to transfer coins from and to the original mainchain and each sidechain.
 

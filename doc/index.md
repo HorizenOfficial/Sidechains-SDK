@@ -1,3 +1,3 @@
 # Horizen Sidechain SDK Release Notes
 
-## [EON 1.0.0](/doc/release/eon_1.0.0.md) (2023-09-06)
+## [0.8.0](/doc/release/0.8.0.md) (2023-09-06)
