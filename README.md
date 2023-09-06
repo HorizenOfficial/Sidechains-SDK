@@ -1,8 +1,14 @@
 **Sidechains-SDK Blaze**
 -------------------
+
 Sidechains are an innovation devised to enable blockchain scalability and extensibility by creating parallel platform and application layers that are bound to the mainchain without imposing a significant burden. Each sidechain implements the desired features and custom business logic, rooted in a protocol that offers a way to transfer coins from and to the original mainchain and each sidechain.
 
 Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo sidechain SDK is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain. A detailed description of the concept, the protocol, and details about mainchain/sidechain interaction can be found in the [Zendoo Whitepaper](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf).
+
+
+[Public Release Notes](/doc/index.md)
+
+[Changelog](/CHANGELOG.md)
 
 **Blaze Features**
 

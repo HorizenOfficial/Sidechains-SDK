@@ -1,9 +1,11 @@
 **0.8.0**
 1. ZenDao native smart contracts
-2. Sidechain2Sidechain message transfers for both UTXO and Account model 
+2. Added support for consensus parameter change (epoch lenght, slottime, active slot coefficient) using an hardfork 
+3. Added support for delayed mainchain block inclusion
+4. Sparkz dependency updated to 2.1.0
 
 **0.7.2**
-3. Sparkz dependency updated to 2.0.3
+1. Sparkz dependency updated to 2.0.3
 
 **0.7.1**
 1. Seeder nodes support
