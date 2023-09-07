@@ -18,6 +18,9 @@ import io.horizen.account.network.AccountNodeViewSynchronizer
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.state.MessageProcessor
 import io.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import io.horizen.account.utils.OFACActorReceivableMessages.CheckFeed
+import io.horizen.account.utils.OFACActorRef
+//import io.horizen.account.utils.OFACFeedSubscriber
 import io.horizen.account.websocket.WebSocketAccountServerRef
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
@@ -158,6 +161,13 @@ class AccountSidechainApp @Inject()
   // Init Sync Status actor
   val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
 
+//  OFACFeedSubscriber.main()
+//  val bla = OFACFeedSubscriber.getLatestEntryHash
+//  println(s"BLA $bla")
+  //todo david actor ref
+  val ofacActorRef: ActorRef = OFACActorRef(sidechainSettings)
+//  ofacActorRef ! CheckFeed
+
   //rpcHandler
   val rpcHandler = new RpcHandler(
     new EthService(
@@ -185,7 +195,7 @@ class AccountSidechainApp @Inject()
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
     AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
-    SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
+    SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion, ofacActorRef),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
