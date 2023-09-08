@@ -356,42 +356,57 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         # Interoperability test with an EVM smart contract calling backward transfer native contract
         #######################################################################################################
 
-        # Create and deploy evm proxy contract
-        proxy_contract = SimpleProxyContract(sc_node, self.evm_address)
-        bt_contract = SmartContract("WithdrawalRequests")
-        method = "getBackwardTransfers(uint32)"
-        bt_input = format_eoa(bt_contract.raw_encode_call(method,current_epoch_number))
+        # Create a new sc address to be used for the interoperability tests
+        evm_address_interop = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
-        res = proxy_contract.do_static_call(WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-                     hex_str_to_bytes(bt_input))
+        new_ft_amount_in_zen = Decimal('5.0')
+
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      evm_address_interop,
+                                      new_ft_amount_in_zen,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=True)
+
+        generate_next_block(sc_node, "first node")
+
+        # Create and deploy evm proxy contract
+        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop)
+
+        native_contract = SmartContract("WithdrawalRequests")
+        method = "getBackwardTransfers(uint32)"
+        native_input = format_eoa(native_contract.raw_encode_call(method, current_epoch_number))
+
+        res = proxy_contract.do_static_call(evm_address_interop, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
+                                            native_input)
 
         # res is (bytes20, uint256)[]. Its ABI encoding in this case is
         # - first 32 bytes is the offset
         # - second 32 bytes is array length
         # - the remaining are the bytes representing the various (bytes20, uint256). Each element is formed of 64 bytes,
         # 32 for bytes20, 32 for uint256
-        res = res[32:] # cut offset, don't care in this case
+        res = res[32:]  # cut offset, don't care in this case
         num_of_wr = int(bytes_to_hex_str(res[0:32]), 16)
         assert_equal(2, num_of_wr, "wrong number of backward transfer")
-        res = res[32:] # cut the array length
+        res = res[32:]  # cut the array length
 
-        elem_size = 64 # 32 + 32 because each elem is a tuple of bytes20 and uint256
+        elem_size = 64  # 32 + 32 because each elem is a tuple of bytes20 and uint256
         list_of_elems = [res[i:i + elem_size] for i in range(0, num_of_wr*elem_size, elem_size)]
 
         wr_1 = decode([('(bytes20,uint256)')], list_of_elems[0])
         wr_2 = decode([('(bytes20,uint256)')], list_of_elems[1])
 
-        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_1), wr_1[0][1], "Wrong amunt in wr")
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_1), wr_1[0][1], "Wrong amount in wr")
         mcDestAddr = bytes_to_hex_str(wr_1[0][0])
 
         mc_address1_pk = base58.b58decode_check(mc_address1).hex()[4:]
         assert_equal(mc_address1_pk, mcDestAddr,"Wrong mc address")
 
-        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), wr_2[0][1], "Wrong amunt in wr")
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), wr_2[0][1], "Wrong amount in wr")
 
         mcDestAddr = bytes_to_hex_str(wr_2[0][0])
         mc_address2_pk = base58.b58decode_check(mc_address2).hex()[4:]
-        assert_equal(mc_address2_pk, mcDestAddr,"Wrong mc address")
+        assert_equal(mc_address2_pk, mcDestAddr, "Wrong mc address")
 
         # Create a backward transfer
         # First, evm smart contract needs some zen to withdraw:
@@ -399,38 +414,27 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         # 2) ft some zen to new sc address
         # 3) send some zen from new sc address to proxy smart contract
 
-        evm_address_sc2 = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
-
-        new_ft_amount_in_zen = Decimal('5.0')
-
-        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
-                                      mc_node,
-                                      evm_address_sc2,
-                                      new_ft_amount_in_zen,
-                                      mc_return_address=mc_node.getnewaddress(),
-                                      generate_block=True)
-
-        generate_next_block(sc_node, "first node")
-        createEIP1559Transaction(sc_node, fromAddress=evm_address_sc2, toAddress=format_eoa(proxy_contract.contract_address),
-                                 nonce=0, gasLimit=230000, maxPriorityFeePerGas=900000000,
+        createEIP1559Transaction(sc_node, fromAddress=evm_address_interop, toAddress=format_eoa(
+                                 proxy_contract.contract_address),
+                                 nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000000,
                                  maxFeePerGas=900000000, value=1000000000000)
         generate_next_block(sc_node, "first node")
 
         # Create a transaction requesting a withdrawal request using the proxy smart contract
         method = "backwardTransfer(bytes20)"
-        bt_input = format_eoa(bt_contract.raw_encode_call(method,hex_str_to_bytes(mc_address1_pk)))
+        native_input = format_eoa(native_contract.raw_encode_call(method, hex_str_to_bytes(mc_address1_pk)))
 
         bt_amount_in_zennies = 100
         bt_amount_in_wei = convertZenniesToWei(bt_amount_in_zennies)
 
         # Estimate gas. The result will be compared with the actual used gas
-        exp_gas = proxy_contract.estimate_gas(evm_address_sc2, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-                                                bt_amount_in_wei, bt_input)
+        exp_gas = proxy_contract.estimate_gas(evm_address_interop, 2, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
+                                              bt_amount_in_wei, native_input)
 
         logging.info("exp_gas: {}".format(exp_gas))
 
-        tx_id = proxy_contract.call_transaction(evm_address_sc2, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-                                                bt_amount_in_wei, bt_input)
+        tx_id = proxy_contract.call_transaction(evm_address_interop, 2, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
+                                                bt_amount_in_wei, native_input)
         receipt = generate_block_and_get_tx_receipt(sc_node, tx_id)
         logging.info("receipt: {}".format(receipt))
         logging.info("gas used in receipt: {}".format(receipt['result']['gasUsed']))
@@ -446,8 +450,8 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         # Compare estimated gas with actual used gas. They are not equal because, during the tx execution, more gas than
         # actually needed is removed from the gas pool and then refunded. This causes the gas estimation algorithm to
         # overestimate the gas.
-        gas_used = int(receipt['result']['gasUsed'][2:], 16)
-        estimated_gas = int(exp_gas['result'][2:], 16)
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        estimated_gas = int(exp_gas['result'], 16)
         assert_true(estimated_gas >= gas_used, "Wrong estimated gas")
 
         # Check tracer
@@ -466,11 +470,11 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         assert_equal("0x" + WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, native_call["to"])
         assert_true(int(native_call["gas"], 16) > 0)
         assert_true(int(native_call["gasUsed"], 16) > 0)
-        assert_equal("0x" + bt_input, native_call["input"])
-        assert_equal(elem_size * 2 + 2, len(native_call["output"])) # 130 = 64 bytes * 2 + 0x
+        assert_equal("0x" + native_input, native_call["input"])
+        assert_equal(elem_size * 2 + 2, len(native_call["output"]))  # 130 = 64 bytes * 2 + 0x
         assert_false("calls" in native_call)
 
-        gas_used_tracer = gas_used = int(trace_result['gasUsed'][2:], 16)
+        gas_used_tracer = int(trace_result['gasUsed'], 16)
         # There is a bug so that the gas_used_tracer doesn't have the intrinsic gas (see JIRA 1446)
         assert_true(gas_used >= gas_used_tracer, "Wrong gas")
 

@@ -226,7 +226,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
       throw new ExecutionRevertedException(errMsg)
     }
 
-    // check that msg.value is zero
+    // check that invocation.value is zero
     if (invocation.value.signum() != 0) {
       val errMsg = s"Value must be zero: invocation = $invocation"
       log.warn(errMsg)
@@ -234,8 +234,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // check that sender account exists
-    if (!view.accountExists(invocation.caller) ) {
-      val errMsg = s"Sender account does not exist: invocation = $invocation"
+    if (!view.accountExists(msg.getFrom) ) {
+      val errMsg = s"Sender account does not exist: msg = $msg"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
     }
@@ -251,7 +251,7 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
-    if (!isValidOwnershipSignature(invocation.caller, mcTransparentAddress, mcSignSecp256k1)) {
+    if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1)) {
       val errMsg = s"Invalid mc signature $mcSignature: invocation = $invocation"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
@@ -268,11 +268,11 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // add the obj to stateDb
-    addMcAddrOwnership(view, newOwnershipId, invocation.caller, mcTransparentAddress)
+    addMcAddrOwnership(view, newOwnershipId, msg.getFrom, mcTransparentAddress)
     log.debug(s"Added ownership to stateDb: newOwnershipId=${BytesUtils.toHexString(newOwnershipId)}," +
-      s" scAddress=${invocation.caller}, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
+      s" scAddress=${msg.getFrom}, mcPubKeyBytes=$mcTransparentAddress, mcSignature=$mcSignature")
 
-    val addNewMcAddrOwnershipEvt = AddMcAddrOwnership(invocation.caller, mcTransparentAddress)
+    val addNewMcAddrOwnershipEvt = AddMcAddrOwnership(msg.getFrom, mcTransparentAddress)
     val evmLog = getEthereumConsensusDataLog(addNewMcAddrOwnershipEvt)
     view.addLog(evmLog)
 
@@ -292,8 +292,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
     }
 
     // check that sender account exists
-    if (!view.accountExists(invocation.caller) ) {
-      throw new ExecutionRevertedException(s"Sender account does not exist: ${invocation.caller}")
+    if (!view.accountExists(msg.getFrom) ) {
+      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom}")
     }
 
     val inputParams = getArgumentsFromData(invocation.input)
@@ -307,8 +307,8 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
 
         getExistingAssociation(view, ownershipId) match {
           case Some(scAddrStr) =>
-            if (!invocation.caller.toStringNoPrefix.equals(scAddrStr)) {
-              val errMsg = s"sc address $scAddrStr is not the owner of $mcTransparentAddress: invocation = $invocation"
+            if (!msg.getFrom.toStringNoPrefix.equals(scAddrStr)) {
+              val errMsg = s"sc address $scAddrStr is not the owner of $mcTransparentAddress: msg = $msg"
               log.warn(errMsg)
               throw new ExecutionRevertedException(errMsg)
             }
@@ -318,11 +318,11 @@ case class McAddrOwnershipMsgProcessor(params: NetworkParams) extends NativeSmar
         }
 
         // remove the obj from stateDb
-        uncheckedRemoveMcAddrOwnership(view, ownershipId, invocation.caller.toStringNoPrefix, mcTransparentAddress)
+        uncheckedRemoveMcAddrOwnership(view, ownershipId, msg.getFrom.toStringNoPrefix, mcTransparentAddress)
         log.debug(s"Removed ownership from stateDb: ownershipId=${BytesUtils.toHexString(ownershipId)}," +
-          s" scAddress=${invocation.caller}, mcPubKeyBytes=$mcTransparentAddress")
+          s" scAddress=${msg.getFrom}, mcPubKeyBytes=$mcTransparentAddress")
 
-        val removeMcAddrOwnershipEvt = RemoveMcAddrOwnership(invocation.caller, mcTransparentAddress)
+        val removeMcAddrOwnershipEvt = RemoveMcAddrOwnership(msg.getFrom, mcTransparentAddress)
         val evmLog = getEthereumConsensusDataLog(removeMcAddrOwnershipEvt)
         view.addLog(evmLog)
 
