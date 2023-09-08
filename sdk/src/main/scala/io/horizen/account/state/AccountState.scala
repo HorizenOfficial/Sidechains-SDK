@@ -313,12 +313,26 @@ class AccountState(
   }
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
+  //ovo se koristi da se updajtuje history i wallet i poziva se sa sledecim block timestamp koji dolazi
   override def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
+    //ovo uzima timestamp (unix time) od sc genesis blocka i novog blocka i onda izracuna kojoj epohi pripada
     val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimeStamp)
+
+    // ovo uzima koja je trenutna epoha
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
+
+
+    //zasto ovako, nesto tu nevalja
+    //ispada da se ne desava switch jedino kad su dve epohe jednake
+
+    //cek sada - da li ova metoda obavestava kada je nova epoha, tj kada se sledeci block nalazi u drugoj epohi
+    //ili obavestava kada se sl block nalazi u novoj epohi koja pripada narednom consensus epoch parameter fork  - bice da je ovo jer pravi novu istoriju
 
     blockConsensusEpoch != currentConsensusEpoch
   }
+
+  //AHA, dakle ovo se koristi na kraju za proveru da li je hard fork concensus epohe jer ako su razlicite epohe sadasnjeg i
+  //sledeceg bloka onda znaci da je doslo do promene consensusa
 
   override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")

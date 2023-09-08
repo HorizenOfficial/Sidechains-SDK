@@ -38,10 +38,12 @@ class AccountStateTest
   var params: NetworkParams = mock[NetworkParams]
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
   var state: AccountState = _
-  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-  ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+
+  //todo this seems redundant because it's already in @Before method
+//  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+//    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+//  ))
+//  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
   private def addMockBalance(account: Address, value: BigInteger) = {
     val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
@@ -60,12 +62,12 @@ class AccountStateTest
     val messageProcessors: Seq[MessageProcessor] = Seq()
 
     Mockito.when(params.chainId).thenReturn(1997)
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
+    //Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+//    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+//      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+//    ))
+//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     state = new AccountState(
       params,
@@ -177,14 +179,59 @@ class AccountStateTest
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
   }
 
+  // todo david
   @Test
   def testSwitchingConsensusEpoch(): Unit = {
+
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(15, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(0)))//kada stavim 0 onda se aktivira odmah ova 15, a kad stavim 8620 (da se kontrira sa onih -8628) onda je 0
+//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(1699282725))
+
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(10)))
+
+    val currentEpochNumber = state.getConsensusEpochNumber
+
+    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), false)
+
+
+//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+//
+//    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
+
+    /*
+    * sta tacno treba da uradim?
+    * fork se aktivira odmah od genesis blocka tako da mozda da testiram nekako da mockujem da se ne aktivira od genesis vec od 5og npr i onda
+    * da proverim za prve 4 epoche(ili blocka pojma nemam) i treba da bude false isSwitchingConsensusEpoch, a onda od 5te true?
+    * */
+  }
+
+  @Test
+  def testSwitchingConsensusEpochOriginal(): Unit = {
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
 
     val currentEpochNumber = state.getConsensusEpochNumber
 
     assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
   }
+
+//  @Test
+//  def testSwitchingConsensusEpochTrials(): Unit = {
+//    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq())
+//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq())
+//
+//    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
+//
+//    val currentEpochNumber = state.getConsensusEpochNumber
+//
+//    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
+//  }
 
   @Test
   def testTransactionLimitExceedsBlockGasLimit(): Unit = {
