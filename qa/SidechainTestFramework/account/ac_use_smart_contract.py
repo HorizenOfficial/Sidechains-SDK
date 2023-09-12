@@ -412,7 +412,7 @@ class SmartContract:
         sol_files = []
         for root, __, files in os.walk(base):
             for file in files:
-                if file.endswith(".json") and not file.endswith(".dbg.json") and file.removesuffix(".sol") == contr:
+                if file.endswith(".json") and not file.endswith(".dbg.json") and file.removesuffix(".json") == contr:
                     sol_files.append(os.path.join(root, file))
         if len(sol_files) < 1:
             raise RuntimeError(
