@@ -187,22 +187,27 @@ class AccountStateTest
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp + 720 * 12 * 20) //starting 20 (old) epoch, it resets to 0 (new) epoch
     ))
 
-    // Test 1. check the first consensus params fork
+    // Test 1. check the first consensus params fork epochs match
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11)))
     // assert that block with this timestamp belongs to 11th epoch
     var blockTimestamp = 720 * 12 * 10
     assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
 
 
-    // Test 2. check the second consensus params fork
+    // Test 2. check the second consensus params fork epochs match
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(18)))
     // assert that block with this timestamp belongs to 18th epoch
 
     // in this timestamp, 2nd consensus params fork has been running for 2 (old) epochs (20 and 21) which is equal to 18 new
     // 2 old epochs have 17280 slots, while the new epoch has 1000 slots
     blockTimestamp = 720 * 12 * 21
-
     assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
+
+
+    // Test 3. check the second consensus params fork epochs don't match
+    // add another (new) epoch to the timestamp and check if there is mismatch between epochs
+    blockTimestamp = 720 * 12 * 21 + 100 * 10
+    assertEquals(true, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
   }
 
   @Test
