@@ -4,8 +4,8 @@ import io.horizen.utils.Pair
 
 
 case class ConsensusParamsFork(
-    consensusSlotsInEpoch: Int = 720, // how many block are in epoch => 720 blocks in 1 epoch; epoch size
-    consensusSecondsInSlot: Int = 12 // block appears on average every 17 seconds. f=0.7 which means 70% of slots are expected to have at least one leader. so 12/0.7 = 17
+    consensusSlotsInEpoch: Int = 720,
+    consensusSecondsInSlot: Int = 12
    ) extends OptionalSidechainFork
 
 object ConsensusParamsFork {

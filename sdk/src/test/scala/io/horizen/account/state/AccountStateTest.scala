@@ -167,45 +167,9 @@ class AccountStateTest
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
   }
 
-  // todo david
   @Test
   def testSwitchingConsensusEpoch(): Unit = {
-    Mockito.when(params.sidechainGenesisBlockTimestamp).thenReturn(1694091721)
-//1694091721 - juce
-//1694178121 - danas
-//1694264521 - sutra
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(15, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(1694264521)))//kada stavim 0 onda se aktivira odmah ova 15, a kad stavim 8620 (da se kontrira sa onih -8628) onda je 0
-//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(1699282725))
-
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(1694178121)))
-
-    val currentEpochNumber = state.getConsensusEpochNumber
-
-    assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)))
-
-
-//    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
-//
-//    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
-
-    /*
-    * sta tacno treba da uradim?
-    * fork se aktivira odmah od genesis blocka tako da mozda da testiram nekako da mockujem da se ne aktivira od genesis vec od 5og npr i onda
-    * da proverim za prve 4 epoche(ili blocka pojma nemam) i treba da bude false isSwitchingConsensusEpoch, a onda od 5te true?
-    * */
-  }
-
-  @Test
-  def testSwitchingConsensusEpochOriginalReal(): Unit = {
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
-
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400))) //ovo je current consensus epoch (nema konverzije ikakve)
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(86400)))
 
     val currentEpochNumber = state.getConsensusEpochNumber
 
@@ -213,55 +177,7 @@ class AccountStateTest
   }
 
   @Test
-  def testSwitchingConsensusEpochOriginalFake(): Unit = {
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
-
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11))) //ovo je current consensus epoch (nema konverzije ikakve)
-
-    val currentEpochNumber = state.getConsensusEpochNumber
-
-    assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(86400)), true)
-  }
-
-  @Test
-  def testSwitchingConsensusEpochTrialsRealData(): Unit = {
-    Mockito.when(params.sidechainGenesisBlockTimestamp).thenReturn(1676035728L)
-
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(20, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    //aktivira se na 20. epohi i to sam izracunao tako sto sam na genesis dodao 720*12*20
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(1676208528L)))
-
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11))) //ovo je current consensus epoch (nema konverzije ikakve)
-
-    val currentEpochNumber = state.getConsensusEpochNumber
-
-    //ovde sam namestio da proveri za block koji je na 10.toj epohi
-    assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(1676044368)))
-  }
-
-  @Test
-  def testSwitchingConsensusEpochTrialsFakeData(): Unit = {
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(20, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    //aktivira se na 20. epohi i to sam izracunao tako sto sam na genesis dodao 720*12*20
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp + 720*12*20)))
-
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11))) //ovo je current consensus epoch (nema konverzije ikakve)
-
-    val currentEpochNumber = state.getConsensusEpochNumber
-
-    //ovde sam namestio da proveri za block koji je na 10.toj epohi
-    assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(720*12*10)))
-  }
-
-  @Test
-  def testSwitchingConsensusEpochTrialsFakeDataWith2ConsensusForks(): Unit = {
+  def testSwitchingConsensusEpochsWith2Forks(): Unit = {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
       ConsensusParamsForkInfo(0, ConsensusParamsFork(100,10)),
