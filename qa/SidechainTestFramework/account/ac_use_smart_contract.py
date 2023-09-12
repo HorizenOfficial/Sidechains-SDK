@@ -52,7 +52,7 @@ class SmartContract:
             SmartContract.__load(
                 SmartContract.__find_contract_data_path(
                     SmartContract.__split_path(
-                        contract_path.rstrip(".sol")))))
+                        contract_path.removesuffix(".sol")))))
         self.Functions = dict()
         for obj in self.Abi:
             if obj['type'] == 'function':
@@ -385,7 +385,7 @@ class SmartContract:
 
     @staticmethod
     def __split_path(contr: str):
-        return contr.rstrip('.sol').split('/')[-1].split('\\')[-1]
+        return contr.removesuffix('.sol').split('/')[-1].split('\\')[-1]
 
     @staticmethod
     def __get_input_type(inp: dict):
@@ -412,7 +412,7 @@ class SmartContract:
         sol_files = []
         for root, __, files in os.walk(base):
             for file in files:
-                if file.endswith(".json") and not file.endswith(".dbg.json") and file.rstrip(".json") == contr:
+                if file.endswith(".json") and not file.endswith(".dbg.json") and file.removesuffix(".sol") == contr:
                     sol_files.append(os.path.join(root, file))
         if len(sol_files) < 1:
             raise RuntimeError(

@@ -705,7 +705,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(estimated_gas >= gas_used, "Wrong estimated gas")
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
+        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
         # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
         # Check traceTransaction
@@ -728,7 +728,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_false("calls" in native_call)
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
+        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
         # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
         # Test 'removeKeysOwnership(bytes3,bytes32)'
@@ -776,7 +776,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(estimated_gas >= gas_used, "Wrong estimated gas")
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
+        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
         # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
         # Check traceTransaction
@@ -799,7 +799,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_false("calls" in native_call)
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
+        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
         # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
 if __name__ == "__main__":
