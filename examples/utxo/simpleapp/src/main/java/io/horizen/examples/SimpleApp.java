@@ -13,7 +13,7 @@ import java.io.File;
 
 public class SimpleApp {
     public static void main(String[] args) {
-        if (args.length == 0) {
+        if (args.length < 1) {
             System.out.println("Please provide settings file name as first parameter!");
             return;
         }
@@ -24,7 +24,17 @@ public class SimpleApp {
         }
         String settingsFileName = args[0];
 
-        Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName));
+        int mcBlockReferenceDelay = 0;
+        try {
+            if (args.length >= 2) {
+                mcBlockReferenceDelay = Integer.parseInt(args[1]);
+            }
+        } catch (NumberFormatException ex) {
+            System.out.println("MC Block Referenced delay can not be parsed.");
+        }
+
+
+        Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName, mcBlockReferenceDelay));
         SidechainApp sidechainApp = injector.getInstance(SidechainApp.class);
 
         Logger logger = LogManager.getLogger(io.horizen.examples.SimpleApp.class);

@@ -31,8 +31,14 @@ public class SimpleAppModule extends SidechainAppModule
 {
     private final SettingsReader settingsReader;
 
-    public SimpleAppModule(String userSettingsFileName) {
+    // It's integer parameter that defines Mainchain Block Reference delay.
+    // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+    // WARNING. It must be constant and should not be changed inside Sidechain network
+    private final int mcBlockRefDelay;
+
+    public SimpleAppModule(String userSettingsFileName, int mcBlockDelayReference) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.mcBlockRefDelay = mcBlockDelayReference;
     }
 
     @Override
@@ -164,5 +170,8 @@ public class SimpleAppModule extends SidechainAppModule
         bind(String.class)
                 .annotatedWith(Names.named("AppVersion"))
                 .toInstance(appVersion);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
+                .toInstance(mcBlockRefDelay);
     }
 }

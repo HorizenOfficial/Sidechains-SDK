@@ -680,6 +680,10 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if (extra_args is not None) and ("-agentlib" in extra_args):
         dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
 
+    mc_block_delay_ref = ''
+    if (extra_args is not None) and ("-mc_block_delay_ref" in extra_args):
+        mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
     Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
@@ -687,7 +691,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
+              + " " + mc_block_delay_ref
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:

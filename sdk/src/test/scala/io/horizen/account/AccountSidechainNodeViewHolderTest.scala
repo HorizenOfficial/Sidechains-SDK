@@ -399,6 +399,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
 
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+
     Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       val block: AccountBlock = answer.getArgument(0)
 
@@ -464,6 +466,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
 
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+
     Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       val block: AccountBlock = answer.getArgument(0)
 
@@ -523,6 +527,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       val block: AccountBlock = answer.getArgument(0)
@@ -590,6 +596,8 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
        Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       val block: AccountBlock = answer.getArgument(0)

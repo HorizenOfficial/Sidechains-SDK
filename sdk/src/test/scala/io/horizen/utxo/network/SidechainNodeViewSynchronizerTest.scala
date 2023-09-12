@@ -18,7 +18,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import sparkz.core.network.ModifiersStatus.Requested
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
 import sparkz.core.network.{ConnectedPeer, ConnectionId, DeliveryTracker, Incoming}
@@ -159,11 +159,11 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       Requested
     })
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transactionBytes))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(ModifierId @@ originalTransaction.id -> transactionBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
     networkControllerProbe.expectNoMessage()
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transferData))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(ModifierId @@ originalTransaction.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
@@ -192,11 +192,11 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       Requested
     })
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> blockBytes))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Seq(deserializedBlock.id -> blockBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     networkControllerProbe.expectNoMessage()
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> transferData))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Seq(deserializedBlock.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
@@ -232,6 +232,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       }))
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
+    networkControllerProbe.expectMsgType[StartConnectingPeers.type]
     viewHolderProbe.expectMsgType[GetNodeViewChanges]
 
     val modifierId: ModifierId = getRandomModifier()

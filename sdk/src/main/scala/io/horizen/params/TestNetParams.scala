@@ -38,7 +38,8 @@ case class TestNetParams(
                           override val chainId: Long = 22222222,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val isHandlingTransactionsEnabled: Boolean = true
+                          override val isHandlingTransactionsEnabled: Boolean = true,
+                          override val mcBlockRefDelay: Int = 0
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

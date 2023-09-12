@@ -7,10 +7,13 @@ import io.horizen._
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.consensus.ConsensusParamsUtil
+import io.horizen.forge.AbstractForger.ReceivableMessages.GetForgingInfo
+import io.horizen.forge.ForgingInfo
+import io.horizen.fork.ActiveSlotCoefficientFork
 import io.horizen.history.AbstractHistory
 import io.horizen.network.SyncStatusActor.InternalReceivableMessages.CheckBlocksDensity
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
-import io.horizen.network.SyncStatusActor.{CLOSE_ENOUGH_SLOTS_TO_IGNORE, HIGHEST_BLOCK_CHECK_FREQUENCY, NotifySyncStart, NotifySyncStop, NotifySyncUpdate, SYNC_UPDATE_EVENT_FREQUENCY}
+import io.horizen.network.SyncStatusActor._
 import io.horizen.params.NetworkParams
 import io.horizen.storage.AbstractHistoryStorage
 import io.horizen.transaction.Transaction
@@ -23,7 +26,7 @@ import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.{DurationInt, FiniteDuration, pairIntToDuration}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -41,6 +44,7 @@ class SyncStatusActor[
 (
   settings: SidechainSettings,
   sidechainNodeViewHolderRef: ActorRef,
+  sidechainBlockForgerActorRef: ActorRef,
   params: NetworkParams,
   timeProvider: NetworkTimeProvider
 )
@@ -180,17 +184,31 @@ class SyncStatusActor[
       case true if isCloseEnough(sidechainBlock.timestamp) =>
         stopSyncing()
       case true =>
+
+        // Try when:
+        // 1. it has just been detected that we are syncing;
+        // 2. every updateHighestBlockFrequency blocks;
+        // 3. previous attempt was underestimated and new tip reached the estimation height.
         if (!isSyncStartEventSent || appliedBlocksNumber % HIGHEST_BLOCK_CHECK_FREQUENCY == 0 || currentBlock == highestBlock) {
+
+          // Retrieve consensus seconds in slot and the active slot coefficient
+          var consensusSecondsInSlot: Int = 0
+          var activeSlotCoefficient: Double = 0
+          val future = sidechainBlockForgerActorRef ? GetForgingInfo
+          val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
+          result match {
+            case Success(forgingInfo) =>
+              val bestBlockConsensusEpoch = forgingInfo.currentBestEpochAndSlot.epochNumber
+              consensusSecondsInSlot = forgingInfo.consensusSecondsInSlot
+              activeSlotCoefficient = ActiveSlotCoefficientFork.get(bestBlockConsensusEpoch).activeSlotCoefficient
+            case Failure(ex) => log.warn(s"SyncStatusActor exception occurred during estimated highest block processing: $ex")
+          }
+
           // Calculate the estimated highest block given a block correction calculated on how many slots were filled
-          // Try when:
-          // 1. it has just been detected that we are syncing;
-          // 2. every updateHighestBlockFrequency blocks;
-          // 3. previous attempt was underestimated and new tip reached the estimation height.
           Try {
             Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView((view: View) => {
-              val currentTime: Long = timeProvider.time() / 1000
-              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(params.sidechainGenesisBlockTimestamp, currentTime),
-                params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp)
+              SyncStatusUtil.calculateEstimatedHighestBlock(view, timeProvider, consensusSecondsInSlot,
+                params.sidechainGenesisBlockTimestamp, currentBlock, sidechainBlock.timestamp, activeSlotCoefficient)
             }), timeoutDuration).asInstanceOf[Int]
           } match {
             case Success(estimatedHighestBlock) => highestBlock = estimatedHighestBlock
@@ -283,9 +301,11 @@ object SyncStatusActorRef {
     MS <: AbstractState[TX, H, PMOD, MS],
     VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL],
     MP <: MemoryPool[TX, MP]
-  ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
+  ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockForgerActorRef:
+  ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit ec: ExecutionContext): Props =
-    Props(new SyncStatusActor[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
+    Props(new SyncStatusActor[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, sidechainBlockForgerActorRef,
+      params, timeProvider))
 
   def apply[
     TX <: Transaction, H <: SidechainBlockHeaderBase,
@@ -296,9 +316,11 @@ object SyncStatusActorRef {
     MS <: AbstractState[TX, H, PMOD, MS],
     VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL],
     MP <: MemoryPool[TX, MP]
-  ](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
+  ](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockForgerActorRef: ActorRef,
+    params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider), name)
+    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, sidechainBlockForgerActorRef,
+      params, timeProvider), name)
 
   def apply[
     TX <: Transaction, H <: SidechainBlockHeaderBase,
@@ -309,7 +331,9 @@ object SyncStatusActorRef {
     MS <: AbstractState[TX, H, PMOD, MS],
     VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL],
     MP <: MemoryPool[TX, MP]
-  ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams, timeProvider: NetworkTimeProvider)
+  ](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockForgerActorRef: ActorRef,
+    params: NetworkParams, timeProvider: NetworkTimeProvider)
    (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, params, timeProvider))
+    system.actorOf(props[TX, H, PMOD, FPI, HSTOR, HIS, MS, VL, MP](settings, sidechainNodeViewHolderRef, sidechainBlockForgerActorRef,
+      params, timeProvider))
 }
