@@ -34,12 +34,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
 
   private def doInvokeSmartContractCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext, readOnly : Boolean): Array[Byte] = {
 
-    val msg = context.msg
     log.debug(s"Entering with invocation: $invocation")
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-//    if (msg.getNonce == null) {
-//      throw new ExecutionRevertedException("Call must include a nonce")
-//    }
 
     val value = invocation.value
 
@@ -64,8 +59,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     }
 
     val dataBytes = Numeric.hexStringToByteArray(data)
-    val additionalDepth = 0
-    val res = context.executeDepth(
+    val res = context.execute(
       if (readOnly) {
         log.info(s"static call to smart contract, address=$contractAddress, data=$data")
         invocation.staticCall(
@@ -81,8 +75,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
           dataBytes,
           invocation.gasPool.getGas // we use all the amount we currently have
         )
-      },
-      additionalDepth
+      }
     )
 
     val proxyInvocationEvent = ProxyInvocation(invocation.caller, contractAddress, dataBytes)
