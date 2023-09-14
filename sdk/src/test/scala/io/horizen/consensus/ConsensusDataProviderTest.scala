@@ -165,12 +165,12 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1), //2 epoch
       List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //3 epoch
       List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //4 epoch
-      List(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1), //5 epoch
-      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1), //6 epoch
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0), //7 epoch
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0), //8 epoch
-      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0), //9 epoch
-      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1), //10 epoch
+      List(0, 0, 0, 0, 1, 1, 1, 1, 0, 0,  0, 0,  0, 0, 1), //5 epoch
+      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1,  0, 0,  1, 0, 1), //6 epoch
+      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 0,  0, 0,  0, 1, 0), //7 epoch
+      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 0,  0, 0,  1, 0, 0), //8 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1,  0, 0,  0, 1, 0), //9 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1,  0, 0,  0, 0, 1), //10 epoch
 
     )
 //    require(slotsPresentationForFirstDataProvider.forall(_.size == slotsInEpoch))
@@ -261,9 +261,9 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(1), //3 epoch
       slotsPresentationForFirstDataProvider(2), //4 epoch
       slotsPresentationForFirstDataProvider(3), //5 epoch
-      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0), //6 epoch, changed quiet slots compared to original
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1   , 0, 0, 1), //7 epoch, changed quiet slots
-      List(1, 0, 1, 0, 1, 1, 1, 0, 1, 0   , 0, 0, 1), //8 epoch, changed non-quiet slot
+      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1,    0, 0   , 1, 0, 0), //6 epoch, changed quiet slots compared to original
+      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1,    0, 0   , 0, 0, 1), //7 epoch, changed quiet slots
+      List(1, 0, 1, 0, 1, 1, 1, 0, 1, 0,    0, 0   , 0, 0, 1), //8 epoch, changed non-quiet slot
       slotsPresentationForFirstDataProvider(7), //9 epoch
       slotsPresentationForFirstDataProvider(8) //10 epoch
     )
