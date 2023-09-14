@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.fork.ContractInteroperabilityFork
 import io.horizen.account.state.ProxyMsgProcessor._
 import io.horizen.account.state.events.ProxyInvocation
 import io.horizen.account.utils.WellKnownAddresses.PROXY_SMART_CONTRACT_ADDRESS
@@ -10,18 +11,14 @@ import io.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.Keccak256
 
-trait ProxyProvider {
 
-}
-
-case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractMsgProcessor with ProxyProvider {
+case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractWithFork {
 
   override val contractAddress: Address = PROXY_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ProxySmartContractCode")
 
-  // TODO this must be updated when merging with 0.8.0, we should support consensusEpochNumber for hard fork activation
-  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
-    super.init(view, consensusEpochNumber)
+  override def isForkActive(consensusEpochNumber: Int): Boolean = {
+    ContractInteroperabilityFork.get(consensusEpochNumber).active
   }
 
   def doInvokeSmartContractStaticCallCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
@@ -61,14 +58,14 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     val dataBytes = Numeric.hexStringToByteArray(data)
     val res = context.execute(
       if (readOnly) {
-        log.info(s"static call to smart contract, address=$contractAddress, data=$data")
+        log.debug(s"static call to smart contract, address=$contractAddress, data=$data")
         invocation.staticCall(
           contractAddress,
           dataBytes,
           invocation.gasPool.getGas // we use all the amount we currently have
         )
       } else {
-        log.info(s"call to smart contract, address=$contractAddress, data=$data")
+        log.debug(s"call to smart contract, address=$contractAddress, data=$data")
         invocation.call(
           contractAddress,
           value,
@@ -83,14 +80,18 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     view.addLog(evmLog)
 
     // result in case of success execution might be useful for RPC commands
-    log.info(s"Exiting with res: ${BytesUtils.toHexString(res)}")
+    log.debug(s"Exiting with res: ${BytesUtils.toHexString(res)}")
 
     res
   }
 
+
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
-    log.info(s"processing invocation: $invocation")
+    log.debug(s"processing invocation: $invocation")
+    if (!isForkActive(context.blockContext.consensusEpochNumber)) {
+      throw new ExecutionRevertedException(s"fork not active")
+    }
 
     if (params.isInstanceOf[MainNetParams]) {
       val errMsg = "Proxy Native Smart Contract is not supported in MainNet"

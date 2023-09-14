@@ -9,10 +9,13 @@ from eth_utils import add_0x_prefix, function_signature_to_4byte_selector, encod
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import deploy_smart_contract, ac_invokeProxy, format_evm
+from SidechainTestFramework.account.ac_utils import deploy_smart_contract, ac_invokeProxy, format_evm, format_eoa
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
+    createLegacyEIP155Transaction
 from SidechainTestFramework.account.utils import PROXY_SMART_CONTRACT_ADDRESS
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
+from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_false, assert_true, hex_str_to_bytes
 
 """
@@ -41,11 +44,15 @@ def get_contract_input_data_from_mempool_tx(sc_node, tx_hash):
 
 NUM_OF_RECURSIONS = 10
 
+# The activation epoch of the Contracts Interoperability feature, as coded in the sdk
+# TODO It may change
+FORK_EPOCH = 50
 
 class SCEvmProxyNsc(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=100, max_account_slots=NUM_OF_RECURSIONS + 1,
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * FORK_EPOCH,
+                         withdrawalEpochLength=100, max_account_slots=NUM_OF_RECURSIONS + 1,
                          max_nonce_gap=2 * NUM_OF_RECURSIONS + 1)
 
     def deploy(self, contract_name):
@@ -58,6 +65,34 @@ class SCEvmProxyNsc(AccountChainSetup):
     def run_test(self):
         self.sc_ac_setup()
         sc_node = self.sc_nodes[0]
+
+        native_contract_address = PROXY_SMART_CONTRACT_ADDRESS
+
+        # send funds to native smart contract before the fork is reached
+        eoa_nsc_amount = 123456
+        tx_hash_eoa = createLegacyEIP155Transaction(sc_node,
+                                                    fromAddress=format_eoa(self.evm_address),
+                                                    toAddress=native_contract_address,
+                                                    value=eoa_nsc_amount
+                                                    )
+        self.sc_sync_all()
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # get mempool contents and check tx has been forged even if the fork is not active yet. Check the receipt
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash_eoa not in response['transactionIds'])
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status)
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        assert_equal(gas_used, 21000)
+
+        # check the address has the expected balance
+        nsc_bal = int(
+            sc_node.rpc_eth_getBalance(format_evm(native_contract_address), 'latest')['result'], 16)
+        assert_equal(nsc_bal, eoa_nsc_amount)
 
         # Deploy Smart Contract
         smart_contract_type = 'StorageTestContract'
@@ -72,7 +107,6 @@ class SCEvmProxyNsc(AccountChainSetup):
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
-
         method_get = 'get()'
         method_set = 'set(string)'
 
@@ -80,6 +114,36 @@ class SCEvmProxyNsc(AccountChainSetup):
         res = smart_contract.static_call(sc_node, method_get, fromAddress=self.evm_address,
                                          toAddress=smart_contract_address, gasPrice=900000000)
         assert_equal(initial_message, res[0])
+
+        # Try a static call on proxy before reaching the fork point.
+        sol_contract_call_data_get = smart_contract.raw_encode_call(method_get)
+        tx_hash = ac_invokeProxy(
+            sc_node,
+            remove_0x_prefix(smart_contract_address),
+            sol_contract_call_data_get,
+            nonce=None,
+            static=True)['result']['transactionId']
+        self.sc_sync_all()
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # get mempool contents and check tx has been forged even if the fork is not active yet since it is processed
+        # by the eoa msg processor. Check also the receipt and gas used greater than an eoa (due to contract code)
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash not in response['transactionIds'])
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+        status = int(receipt['result']['status'], 16)
+        assert_true(1, status)
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        assert_true(gas_used > 21000)
+
+        # reach the fork
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
 
         # use static call proxy for getting string value from solidity smart contract
         # actually this is pretty useless since we are not getting back the result, we are just checking the call is OK

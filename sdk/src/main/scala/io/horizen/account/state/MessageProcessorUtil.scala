@@ -23,11 +23,11 @@ object MessageProcessorUtil {
       // This is for having the initialization performed as soon as the fork point is reached, otherwise
       // the Eoa msg processor would preempt it
       McAddrOwnershipMsgProcessor(params),
+      ProxyMsgProcessor(params),
       //--
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params),
-      ProxyMsgProcessor(params),
     ) ++ maybeKeyRotationMsgProcessor.toSeq ++ customMessageProcessors
   }
 

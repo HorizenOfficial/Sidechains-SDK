@@ -150,16 +150,16 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertTrue(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
 
       messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       assertTrue(view.accountExists(contractAddress))
       assertFalse(view.isEoaAccount(contractAddress))
       assertTrue(view.isSmartContractAccount(contractAddress))
-      assertTrue(McAddrOwnershipMsgProcessor.initDone(view))
+      assertTrue(messageProcessor.initDone(view))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -175,15 +175,15 @@ class McAddrOwnershipMsgProcessorTest
     usingView(messageProcessor) { view =>
 
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
 
-      assertFalse(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertFalse(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
 
       messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // assert no initialization took place
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
     }
   }
 
@@ -193,15 +193,15 @@ class McAddrOwnershipMsgProcessorTest
 
     usingView(messageProcessor) { view =>
 
-      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertTrue(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
 
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
 
       messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       assertTrue(view.accountExists(contractAddress))
-      assertTrue(McAddrOwnershipMsgProcessor.initDone(view))
+      assertTrue(messageProcessor.initDone(view))
 
       view.commit(bytesToVersion(getVersion.data()))
 
@@ -219,9 +219,9 @@ class McAddrOwnershipMsgProcessorTest
 
       // assert no initialization took place yet
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
 
-      assertTrue(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertTrue(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
 
       // correct contract address
       assertTrue(TestContext.canProcess(messageProcessor, getMessage(messageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))
@@ -266,14 +266,14 @@ class McAddrOwnershipMsgProcessorTest
         scAddressObj1
       )
 
-      assertFalse(McAddrOwnershipMsgProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertFalse(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
 
       // correct contract address and message but fork not yet reached
-      assertFalse(TestContext.canProcess(messageProcessor, getMessage(messageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))
+      assertFalse(TestContext.canProcess(messageProcessor, msg, view, view.getConsensusEpochNumberAsInt))
 
       // the init did not take place
       assertFalse(view.accountExists(contractAddress))
-      assertFalse(McAddrOwnershipMsgProcessor.initDone(view))
+      assertFalse(messageProcessor.initDone(view))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
