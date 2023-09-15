@@ -28,7 +28,6 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   with NetworkParamsUtils
   with SparkzLogging {
 
-//  require(slotsPresentation.forall(_.size == consensusSlotsPerEpoch))
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
   val testVrfProofData: String = "bf4d2892d7562e973ba8a60ef5f9262c088811cc3180c3389b1cef3a66dcfb390d9bb91cebab11bcae871d6a6bd203292264d1002ac70b539f7025a9a813637e1866b2d5c289f28646385549bac7681ef659f2d1d8ca1a21037b036c7925b692e8"
@@ -66,9 +65,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
     vrfData.zipWithIndex.foldLeft(accumulator) { case (acc, (processed, index)) =>
       val previousId: ModifierId = acc.last.last._1
-      val b = params.sidechainGenesisBlockTimestamp
       val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
-      val a = 5
       val newData =
         generateBlockIdsAndInfosIter(previousId, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)
@@ -84,8 +81,8 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                          vrfData: List[Option[(VrfProof, VrfOutput)]]): Seq[(ModifierId, SidechainBlockInfo)] = {
     val seqTimestampsForActivation = ConsensusParamsUtil.getConsensusParamsForkTimestampActivation()
     var secondsInSlot = ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot
-    if (nextTimestamp > seqTimestampsForActivation(1))
-      secondsInSlot = ConsensusParamsUtil.getConsensusParamsForkActivation(1).consensusParamsFork.consensusSecondsInSlot
+//    if (nextTimestamp > seqTimestampsForActivation(1))
+//      secondsInSlot = ConsensusParamsUtil.getConsensusParamsForkActivation(1).consensusParamsFork.consensusSecondsInSlot
     vrfData.headOption match {
       case Some(Some((vrfProof, vrfOutput))) => {
         val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfOutput, lastBlockInPreviousConsensusEpoch)
@@ -144,16 +141,19 @@ class BlocksInfoProvider extends SidechainBlockInfoProvider {
 class ConsensusDataProviderTest extends CompanionsFixture{
   val generator: SidechainBlockFixture = new SidechainBlockFixture {}
   val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
-  val slotsInEpoch = 10
+  val slotsInEpoch = 10  //eligible range 4-6
   val secondsInSlot = 100
-  val slotsInEpoch2 = 15
+
+  val slotsInEpoch2 = 12  //eligible range 5-7
   val secondsInSlot2 = 100
-  val slotsInEpoch3 = 20
+  val startFork2 = 5
+
+  val slotsInEpoch3 = 10
   val secondsInSlot3 = 100
 
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0,0,0), Seq(slotsInEpoch, slotsInEpoch2, slotsInEpoch3), Seq(secondsInSlot, secondsInSlot2, secondsInSlot3)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0,startFork2), Seq(slotsInEpoch, slotsInEpoch2), Seq(secondsInSlot, secondsInSlot2)), "regtest")
   }
 
   // epoch 7 impacts nonce epoch 8
@@ -164,28 +164,44 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     val slotsPresentationForFirstDataProvider: List[List[Int]] = List(
 //   1 -- block in slot is present; 0 -- no block for slot
 //   slots 1  2  3  4  5  6  7  8  9  10
+//      List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1), //2 epoch
+//      List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //3 epoch
+//      List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //4 epoch
+//      List(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1), //5 epoch
+//
+//      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1), //6 epoch
+//      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0), //7 epoch
+//      List(1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0,   0, 0, 1, 0, 0), //8 epoch
+//
+//      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0,   0, 0, 0, 1, 0), //9 epoch
+//      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1,   0, 0, 0, 0, 1), //10 epoch
+      //eligible slot start 4
+      //eligible slot end 6
+
       List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1), //2 epoch
       List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //3 epoch
       List(1, 1, 0, 0, 1, 1, 1, 1, 0, 0), //4 epoch
-      List(0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1), //5 epoch
+      List(0, 0, 0, 0, 1, 1, 1, 1, 0, 0,0,0), //5 epoch
 
-      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1), //6 epoch
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0), //7 epoch
-      List(1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0,   0, 0, 1, 0, 0), //8 epoch
+      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1,0,0), //6 epoch
+      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1,0,0), //7 epoch
+      List(0, 0, 1, 0, 1, 1, 1, 0, 1, 1,   0, 0), //8 epoch
 
-      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0,   0, 0, 0, 1, 0), //9 epoch
-      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1,   0, 0, 0, 0, 1), //10 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1,   0, 0), //9 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1,   0, 0), //10 epoch
+
+//quiet slots - oni koji nisu u rangu 4-6, a rangovi idu 1-10
+      //non quiet - oni u 4-6
     )
 
     /*
-      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0), //6 epoch, changed quiet slots compared to original
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1), //7 epoch, changed quiet slots
-      List(1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1,    0, 0, 0, 0, 0), //8 epoch, changed non-quiet slot
+      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0), //6 epoch, changed quiet slots compared to original
+      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1), //7 epoch, changed quiet slots
+      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0,   0, 0), //8 epoch, changed non-quiet slot
     * */
 
 
 
-//    require(slotsPresentationForFirstDataProvider.forall(_.size == slotsInEpoch))
     // todo consensus nonce shall be the same in case if changed quiet slots only
 
     val genesisBlockId = bytesToId(Utils.doubleSHA256Hash("genesis".getBytes(StandardCharsets.UTF_8)))
@@ -197,13 +213,13 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot)),
-      ConsensusParamsForkInfo(5, new ConsensusParamsFork(slotsInEpoch2, secondsInSlot2)),
-      ConsensusParamsForkInfo(8, new ConsensusParamsFork(slotsInEpoch3, secondsInSlot3))
+      ConsensusParamsForkInfo(startFork2, new ConsensusParamsFork(slotsInEpoch2, secondsInSlot2)),
+      //ConsensusParamsForkInfo(8, new ConsensusParamsFork(slotsInEpoch3, secondsInSlot3))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp),
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(5), intToConsensusSlotNumber(slotsInEpoch2)),
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(8), intToConsensusSlotNumber(slotsInEpoch3))
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(startFork2), intToConsensusSlotNumber(slotsInEpoch2)),
+      //TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(8), intToConsensusSlotNumber(slotsInEpoch3))
     ))
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
@@ -275,9 +291,11 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(1), //3 epoch
       slotsPresentationForFirstDataProvider(2), //4 epoch
       slotsPresentationForFirstDataProvider(3), //5 epoch
-      List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0), //6 epoch, changed quiet slots compared to original
-      List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1), //7 epoch, changed quiet slots
-      List(1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1,    0, 0, 0, 0, 0), //8 epoch, changed non-quiet slot
+
+      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0,0,0), //6 epoch, changed quiet slots compared to original
+      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1,0,0), //7 epoch, changed quiet slots
+      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0,   0, 0), //8 epoch, changed non-quiet slot
+
       slotsPresentationForFirstDataProvider(7), //9 epoch
       slotsPresentationForFirstDataProvider(8) //10 epoch
     )
