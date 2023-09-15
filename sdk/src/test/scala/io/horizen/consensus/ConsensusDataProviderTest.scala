@@ -202,8 +202,8 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp),
-      TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp + 100*10*5),
-      TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp + 100*10*5 + 100*15*3)
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(5), intToConsensusSlotNumber(slotsInEpoch2)),
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(8), intToConsensusSlotNumber(slotsInEpoch3))
     ))
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
@@ -282,18 +282,18 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(8) //10 epoch
     )
 
-    val secondDataProider = new TestedConsensusDataProvider(slotsPresentationForSecondDataProvider, networkParams)
-    val blockIdAndInfosPerEpochForSecondDataProvider = secondDataProider.blockIdAndInfosPerEpoch
-    val epochIdsForSecondDataProvider = secondDataProider.epochIds
+    val secondDataProvider = new TestedConsensusDataProvider(slotsPresentationForSecondDataProvider, networkParams)
+    val blockIdAndInfosPerEpochForSecondDataProvider = secondDataProvider.blockIdAndInfosPerEpoch
+    val epochIdsForSecondDataProvider = secondDataProvider.epochIds
 
     //consensus info shall be calculated the same if all previous infos the same
     val consensusInfoForEndFifthEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(5)
-    val consensusInfoForEndFifthEpoch2 = secondDataProider.getInfoForCheckingBlockInEpochNumber(5)
+    val consensusInfoForEndFifthEpoch2 = secondDataProvider.getInfoForCheckingBlockInEpochNumber(5)
     assertEquals(consensusInfoForEndFifthEpoch, consensusInfoForEndFifthEpoch2)
 
     //consensus nonce shall be the same in case if changed quiet slots only
     val consensusInfoForEndSeventhEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(7)
-    val consensusInfoForEndSeventhEpoch2 = secondDataProider.getInfoForCheckingBlockInEpochNumber(7)
+    val consensusInfoForEndSeventhEpoch2 = secondDataProvider.getInfoForCheckingBlockInEpochNumber(7)
     assertEquals(consensusInfoForEndSeventhEpoch.nonceConsensusEpochInfo, consensusInfoForEndSeventhEpoch2.nonceConsensusEpochInfo)
     //Stack root shall not be changed as well due it calculated for epoch 5
     assertEquals(consensusInfoForEndSeventhEpoch.stakeConsensusEpochInfo.rootHash.deep, consensusInfoForEndSeventhEpoch2.stakeConsensusEpochInfo.rootHash.deep)
@@ -301,23 +301,23 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
     //consensus nonce shall be the same in case if changed quiet slots only
     val consensusInfoForEndEightEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(8)
-    val consensusInfoForEndEightEpoch2 = secondDataProider.getInfoForCheckingBlockInEpochNumber(8)
+    val consensusInfoForEndEightEpoch2 = secondDataProvider.getInfoForCheckingBlockInEpochNumber(8)
 
-    //assertEquals(consensusInfoForEndEightEpoch.nonceConsensusEpochInfo, consensusInfoForEndEightEpoch2.nonceConsensusEpochInfo)
+    assertEquals(consensusInfoForEndEightEpoch.nonceConsensusEpochInfo, consensusInfoForEndEightEpoch2.nonceConsensusEpochInfo)
     //but stack root shall be changed (root hash calculated based on last block id in epoch, last block for epoch 6 in tested1 and in tested2 is differ)
     assertNotEquals(consensusInfoForEndEightEpoch.stakeConsensusEpochInfo.rootHash.deep, consensusInfoForEndEightEpoch2.stakeConsensusEpochInfo.rootHash.deep)
 
 
-    //consensus nonce shall be the changed due non-quet slots are changed
+    //consensus nonce shall be the changed due non-quiet slots are changed
     val consensusInfoForEndNineEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(9)
-    val consensusInfoForEndNineEpoch2 = secondDataProider.getInfoForCheckingBlockInEpochNumber(9)
+    val consensusInfoForEndNineEpoch2 = secondDataProvider.getInfoForCheckingBlockInEpochNumber(9)
 
     assertNotEquals(consensusInfoForEndNineEpoch.nonceConsensusEpochInfo, consensusInfoForEndNineEpoch2.nonceConsensusEpochInfo)
 
 
-    //consensus nonce shall be the changed due non-quet slots are changed in some previous epoch
+    //consensus nonce shall be the changed due non-quiet slots are changed in some previous epoch
     val consensusInfoForEndTenEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10)
-    val consensusInfoForEndTenEpoch2 = secondDataProider.getInfoForCheckingBlockInEpochNumber(10)
+    val consensusInfoForEndTenEpoch2 = secondDataProvider.getInfoForCheckingBlockInEpochNumber(10)
 
     assertNotEquals(consensusInfoForEndTenEpoch.nonceConsensusEpochInfo, consensusInfoForEndTenEpoch2.nonceConsensusEpochInfo)
   }
