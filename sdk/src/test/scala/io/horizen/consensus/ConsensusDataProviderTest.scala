@@ -150,10 +150,11 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
   val slotsInEpoch3 = 10
   val secondsInSlot3 = 100
+  val startFork3 = 8
 
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0,startFork2), Seq(slotsInEpoch, slotsInEpoch2), Seq(secondsInSlot, secondsInSlot2)), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(0,startFork2, startFork3), Seq(slotsInEpoch, slotsInEpoch2, slotsInEpoch3), Seq(secondsInSlot, secondsInSlot2, secondsInSlot3)), "regtest")
   }
 
   // epoch 7 impacts nonce epoch 8
@@ -185,10 +186,10 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
       List(1, 0, 0, 0, 0, 0, 0, 0, 0, 1,0,0), //6 epoch
       List(1, 0, 1, 0, 1, 0, 1, 0, 1, 1,0,0), //7 epoch
-      List(0, 0, 1, 0, 1, 1, 1, 0, 1, 1,   0, 0), //8 epoch
+      List(0, 0, 1, 0, 1, 1, 1, 0, 1, 1,   0, 0,   0, 0), //8 epoch
 
-      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1,   0, 0), //9 epoch
-      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1,   0, 0), //10 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1,   0, 0,   0, 0), //9 epoch
+      List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1,   0, 0,   0, 0), //10 epoch
 
 //quiet slots - oni koji nisu u rangu 4-6, a rangovi idu 1-10
       //non quiet - oni u 4-6
@@ -214,12 +215,12 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot)),
       ConsensusParamsForkInfo(startFork2, new ConsensusParamsFork(slotsInEpoch2, secondsInSlot2)),
-      //ConsensusParamsForkInfo(8, new ConsensusParamsFork(slotsInEpoch3, secondsInSlot3))
+      ConsensusParamsForkInfo(startFork3, new ConsensusParamsFork(slotsInEpoch3, secondsInSlot3))
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp),
       TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(startFork2), intToConsensusSlotNumber(slotsInEpoch2)),
-      //TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(8), intToConsensusSlotNumber(slotsInEpoch3))
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(networkParams.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(startFork3), intToConsensusSlotNumber(slotsInEpoch3))
     ))
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
@@ -292,9 +293,9 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(2), //4 epoch
       slotsPresentationForFirstDataProvider(3), //5 epoch
 
-      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0,0,0), //6 epoch, changed quiet slots compared to original
-      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1,0,0), //7 epoch, changed quiet slots
-      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0,   0, 0), //8 epoch, changed non-quiet slot
+      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0   ,0,0), //6 epoch, changed quiet slots compared to original
+      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1   ,0,0), //7 epoch, changed quiet slots
+      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0,   0, 0,   0, 0), //8 epoch, changed non-quiet slot
 
       slotsPresentationForFirstDataProvider(7), //9 epoch
       slotsPresentationForFirstDataProvider(8) //10 epoch
