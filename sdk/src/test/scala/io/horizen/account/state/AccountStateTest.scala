@@ -6,7 +6,7 @@ import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber}
+import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
@@ -180,33 +180,31 @@ class AccountStateTest
   def testSwitchingConsensusEpochsWith2Forks(): Unit = {
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
       ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-      ConsensusParamsForkInfo(0, ConsensusParamsFork(100,10)),
+      ConsensusParamsForkInfo(20, ConsensusParamsFork(100,10)),
     ))
     ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
       TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp), //runs for 19 epochs
-      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp + 720 * 12 * 20) //starting 20 (old) epoch, it resets to 0 (new) epoch
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(20), intToConsensusSlotNumber(100)), //on the 20th epoch it's activated
     ))
 
     // Test 1. check the first consensus params fork epochs match
     Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11)))
     // assert that block with this timestamp belongs to 11th epoch
-    var blockTimestamp = 720 * 12 * 10
+    var blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(11), intToConsensusSlotNumber(720)).toInt
     assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
 
 
     // Test 2. check the second consensus params fork epochs match
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(18)))
-    // assert that block with this timestamp belongs to 18th epoch
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(25)))
 
-    // in this timestamp, 2nd consensus params fork has been running for 2 (old) epochs (20 and 21) which is equal to 18 new
-    // 2 old epochs have 17280 slots, while the new epoch has 1000 slots
-    blockTimestamp = 720 * 12 * 21
+    // assert that block with this timestamp belongs to 25th epoch
+    blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(25), intToConsensusSlotNumber(100)).toInt
     assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
 
 
     // Test 3. check the second consensus params fork epochs don't match
-    // add another (new) epoch to the timestamp and check if there is mismatch between epochs
-    blockTimestamp = 720 * 12 * 21 + 100 * 10
+    // add another epoch to the timestamp and check if there is mismatch between epochs
+    blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(26), intToConsensusSlotNumber(100)).toInt
     assertEquals(true, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
   }
 
