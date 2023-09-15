@@ -1,5 +1,6 @@
 package io.horizen.account.state;
 
+import io.horizen.account.fork.ContractInteroperabilityFork;
 import io.horizen.evm.*;
 import io.horizen.utils.BytesUtils;
 import scala.Array;
@@ -66,7 +67,12 @@ public class EvmMessageProcessor implements MessageProcessor {
             var nativeContractProxy = new NativeContractProxy(context)
         ) {
             evmContext.blockHashCallback = blockHashGetter;
-            evmContext.externalContracts = getNativeContractAddresses(view);
+            if (ContractInteroperabilityFork.get(block.consensusEpochNumber).active()){
+                evmContext.externalContracts = getNativeContractAddresses(view);
+            }
+            else {
+                evmContext.externalContracts = new Address[0];
+            }
             evmContext.externalCallback = nativeContractProxy;
             evmContext.tracer = block.getTracer().orElse(null);
             // Minus one because the depth is incremented for the call to the EvmMessageProcessor itself.

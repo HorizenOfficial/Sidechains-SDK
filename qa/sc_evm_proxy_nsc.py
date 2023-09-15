@@ -13,7 +13,7 @@ from SidechainTestFramework.account.ac_utils import deploy_smart_contract, ac_in
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Transaction import \
     createLegacyEIP155Transaction
-from SidechainTestFramework.account.utils import PROXY_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import PROXY_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, assert_false, assert_true, hex_str_to_bytes
@@ -45,13 +45,12 @@ def get_contract_input_data_from_mempool_tx(sc_node, tx_hash):
 NUM_OF_RECURSIONS = 10
 
 # The activation epoch of the Contracts Interoperability feature, as coded in the sdk
-# TODO It may change
-FORK_EPOCH = 50
+
 
 class SCEvmProxyNsc(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * FORK_EPOCH,
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
                          withdrawalEpochLength=100, max_account_slots=NUM_OF_RECURSIONS + 1,
                          max_nonce_gap=2 * NUM_OF_RECURSIONS + 1)
 
@@ -141,7 +140,7 @@ class SCEvmProxyNsc(AccountChainSetup):
         # reach the fork
         current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, FORK_EPOCH - current_best_epoch):
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 

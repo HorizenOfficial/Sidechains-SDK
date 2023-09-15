@@ -14,11 +14,12 @@ from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests im
 from SidechainTestFramework.account.httpCalls.transaction.createKeyRotationTransaction import \
     http_create_key_rotation_transaction_evm
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
-from SidechainTestFramework.account.utils import CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS, \
+    INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_cert_signer_secrets, \
-    get_withdrawal_epoch
+    get_withdrawal_epoch, EVM_APP_SLOT_TIME
 from SidechainTestFramework.secure_enclave_http_api_server import SecureEnclaveApiServer
 from httpCalls.submitter.getCertifiersKeys import http_get_certifiers_keys
 from httpCalls.submitter.getKeyRotationMessageToSign import http_get_key_rotation_message_to_sign_for_signing_key, \
@@ -103,7 +104,8 @@ class SCKeyRotationTest(AccountChainSetup):
         # self.submitter_private_keys_indexes = list(range(self.cert_max_keys))
         # self.cert_sig_threshold = 24
 
-        super().__init__(withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
+                         withdrawalEpochLength=10, circuittype_override=KEY_ROTATION_CIRCUIT,
                          remote_keys_manager_enabled=True, remote_keys_server_addresses=[self.remote_keys_address],
                          cert_max_keys=self.cert_max_keys, cert_sig_threshold=self.cert_sig_threshold,
                          submitters_private_keys_indexes=[self.submitter_private_keys_indexes])
@@ -744,6 +746,24 @@ class SCKeyRotationTest(AccountChainSetup):
                                                                   master_signature_interop_bytes[32:],
                                                                   new_key_signature_interop_bytes[:32],
                                                                   new_key_signature_interop_bytes[32:]))
+
+        # Test before interoperability fork
+        try:
+            proxy_contract.do_call(evm_address_interop, 1, native_contract_address, 0, native_input)
+            fail("Interoperability call should fail before fork point")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("reverted" in str(err))
+
+
+        # reach the Interoperability fork
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
 
         # Estimate gas. The result will be compared with the actual used gas
         exp_gas = proxy_contract.estimate_gas(evm_address_interop, 1, native_contract_address,

@@ -1,15 +1,22 @@
 package io.horizen.account.state
 
 import io.horizen.account.abi.ABIUtil.getABIMethodId
+import io.horizen.account.fork.ContractInteroperabilityFork
 import io.horizen.account.utils.BigIntegerUtil.toUint256Bytes
 import io.horizen.account.utils.{FeeUtils, Secp256k1}
 import io.horizen.evm._
-import io.horizen.utils.BytesUtils
+import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
+import io.horizen.utils.{BytesUtils, Pair}
 import org.junit.{After, Before}
 
 import java.math.BigInteger
+import java.util
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
 abstract class ContractInteropTestBase extends MessageProcessorFixture {
+
+  // TODO the actual fork point is to be confirmed
+  val Fork_Point = 50
   val initialBalance = new BigInteger("2000000000000")
 
   // note: the gas limit has to be ridiculously high for some tests to reach the maximum call depth of 1024 because of
@@ -21,7 +28,7 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
   val gasLimitHexString = s"0x${gasLimit.toString(16)}"
 
   val blockContext =
-    new BlockContext(Address.ZERO, 0, FeeUtils.INITIAL_BASE_FEE, gasLimit, 1, 1, 1, 1234, null, Hash.ZERO)
+    new BlockContext(Address.ZERO, 0, FeeUtils.INITIAL_BASE_FEE, gasLimit, 1, Fork_Point, 1, 1234, null, Hash.ZERO)
 
   /**
    * Derived tests have to supply a native contract to the test setup.
@@ -34,7 +41,18 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
 
   @Before
   def setup(): Unit = {
+    class TestOptionalForkConfigurator extends ForkConfigurator {
+      override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 0)
+
+      override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+        Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
+          new Pair(SidechainForkConsensusEpoch(Fork_Point, Fork_Point, Fork_Point), ContractInteroperabilityFork(true)),
+        ).asJava
+    }
+
+    ForkManagerUtil.initializeForkManager(new TestOptionalForkConfigurator(), "regtest")
     processors = Seq(
+      EoaMessageProcessor,
       processorToTest,
       new EvmMessageProcessor()
     )
@@ -42,6 +60,7 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
     stateView = new AccountStateView(metadataStorageView, new StateDB(db, Hash.ZERO), processors)
     stateView.addBalance(origin, initialBalance)
     processorToTest.init(stateView, 0)
+    // by default start with fork active
   }
 
   @After
@@ -59,8 +78,8 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
     Secp256k1.generateContractAddress(origin, nonce)
   }
 
-  protected def transition(msg: Message): Array[Byte] = {
-    val transition = new StateTransition(stateView, processors, new GasPool(gasLimit), blockContext, msg)
+  protected def transition(msg: Message, blckContext: BlockContext = blockContext): Array[Byte] = {
+    val transition = new StateTransition(stateView, processors, new GasPool(gasLimit), blckContext, msg)
     transition.execute(Invocation.fromMessage(msg, new GasPool(gasLimit)))
   }
 }

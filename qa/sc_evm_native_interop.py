@@ -7,8 +7,10 @@ from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract, format_evm
-from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS
-from test_framework.util import assert_equal, assert_false, assert_true
+from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS, \
+    INTEROPERABILITY_FORK_EPOCH
+from SidechainTestFramework.scutil import EVM_APP_SLOT_TIME, generate_next_block
+from test_framework.util import assert_equal, assert_false, assert_true, fail
 
 """
 Check contracts interoperability, i.e an EVM Contract calling a native contract or vice-versa.
@@ -34,7 +36,8 @@ Test:
 class SCEvmNativeInterop(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=100)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
+                         withdrawalEpochLength=100)
 
     def deploy(self, contract_name, *args):
         logging.info(f"Creating smart contract utilities for {contract_name}")
@@ -58,6 +61,26 @@ class SCEvmNativeInterop(AccountChainSetup):
         _, contract_address = self.deploy("NativeInterop")
 
         NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"
+
+        # Test before interoperability fork
+        actual_value = node.rpc_eth_call(
+                {
+                    "to": contract_address,
+                    "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                }, "latest"
+            )
+        assert_true("error" in actual_value)
+        assert_true("reverted" in actual_value["error"]["message"])
+
+        # reach the Interoperability fork
+        current_best_epoch = node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+            generate_next_block(node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+
+
         # Fetch all forger stakes via the NativeInterop contract
         actual_value = node.rpc_eth_call(
             {

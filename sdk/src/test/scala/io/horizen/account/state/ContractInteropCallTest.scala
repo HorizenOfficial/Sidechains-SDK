@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.state.ContractInteropTestBase._
 import io.horizen.account.utils.BigIntegerUtil.toUint256Bytes
-import io.horizen.account.utils.Secp256k1
+import io.horizen.account.utils.{FeeUtils, Secp256k1}
 import io.horizen.evm._
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail}
@@ -20,6 +20,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
 
   val WRITE_PROTECTION_ERR_MSG_FROM_EVM = "write protection"
+  val INVALID_OP_CODE__ERR_MSG_FROM_EVM = "invalid opcode"
   val WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT = "invalid write access to storage"
 
   private object NativeTestContract extends NativeSmartContractMsgProcessor {
@@ -352,11 +353,55 @@ class ContractInteropCallTest extends ContractInteropTestBase {
   def testEvmContractCallingNativeContract(): Unit = {
     val nativeCallerAddress = deploy(ContractInteropTestBase.nativeCallerContractCode)
 
+
     ///////////////////////////////////////////////////////
-    // Test 1: Solidity contract executes a staticcall on a Native Smart Contract, calling a readonly function
-    // In the same call, it executes a call for incrementing the counter, to check that the statedb doesn't remain readonly
+    // Test 1: Solidity contract executes a staticcall on a Native Smart Contract, before reaching the fork point.
+    // It should fail because the EVM tries to execute the "fake" code associated with the native smart contract
     ///////////////////////////////////////////////////////
     val retrieveInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_READONLY_ABI_ID)
+
+    var tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    val blockContextForFork =
+      new BlockContext(Address.ZERO, 0, FeeUtils.INITIAL_BASE_FEE, gasLimit, 1, 1, 1, 1234, null, Hash.ZERO)
+    blockContextForFork.setTracer(tracer)
+
+    Try(transition(getMessage(nativeCallerAddress, data = retrieveInput), blockContextForFork)) match {
+      case Failure(ex: ExecutionRevertedException) => //OK
+      case res => fail(s"Wrong result: $res")
+    }
+
+    var traceResult = tracer.getResult.result
+    // check tracer output
+
+    println(traceResult)
+    assertJsonEquals(
+      s"""{
+                    "type": "CALL",
+                    "from": "$origin",
+                    "to": "${nativeCallerAddress}",
+                    "gas": "$gasLimitHexString",
+                    "gasUsed": "0x6eb6",
+                    "input": "0x${BytesUtils.toHexString(retrieveInput)}",
+                    "value": "0x0",
+                    "error": "execution reverted",
+                    "calls": [{
+                      "type": "STATICCALL",
+                      "from": "$nativeCallerAddress",
+                      "to": "${NativeTestContract.contractAddress}",
+                      "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
+                      "gasUsed": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
+                      "input": "0x$NATIVE_CONTRACT_RETRIEVE_ABI_ID",
+                      "error": "invalid opcode: opcode 0xce not defined"
+                    }]
+                  }""",
+        traceResult
+      )
+
+
+    ///////////////////////////////////////////////////////
+    // Test 2: Solidity contract executes a staticcall on a Native Smart Contract, calling a readonly function
+    // In the same call, it executes a call for incrementing the counter, to check that the statedb doesn't remain readonly
+    ///////////////////////////////////////////////////////
 
     var currentCounterValue = 0
     var returnData = transition(getMessage(nativeCallerAddress, data = retrieveInput))
@@ -366,7 +411,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     var expectedTxResult = 0
     assertEquals("Wrong result from first retrieve", expectedTxResult, numericResult)
 
-    var tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
     blockContext.setTracer(tracer)
 
     // repeat the call again
@@ -378,7 +423,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     var numericResultTraced = org.web3j.utils.Numeric.toBigInt(returnDataTraced).intValueExact()
     assertEquals("Wrong result from first retrieve", expectedTxResult, numericResultTraced)
 
-    var traceResult = tracer.getResult.result
+    traceResult = tracer.getResult.result
 
     var expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
     var currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
@@ -419,7 +464,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
 
     ///////////////////////////////////////////////////////
-    // Test 2: Solidity contract calls inc() method on Native Smart Contract, first using staticcall and then using call.
+    // Test 3: Solidity contract calls inc() method on Native Smart Contract, first using staticcall and then using call.
     // Staticcall should fail but the transaction is not reverted because the Solidity contract doesn't check the staticcall result.
     // call should works so the counter will be increment by 1.
     ///////////////////////////////////////////////////////
@@ -490,7 +535,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       )
 
       ///////////////////////////////////////////////////////
-      // Test 3: Solidity contract calls a method on a Native Smart Contract using the contract interface. The method
+      // Test 4: Solidity contract calls a method on a Native Smart Contract using the contract interface. The method
       // is declared in the contract interface as view but it actually is a readwrite function.
       // The transaction should fail.
       ///////////////////////////////////////////////////////

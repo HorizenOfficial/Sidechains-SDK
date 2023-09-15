@@ -16,8 +16,8 @@ from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import convertZenToWei, \
     convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS
-from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
+    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
+from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
     assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes, bytes_to_hex_str, assert_false,
@@ -99,7 +99,7 @@ def check_spend_forger_stake_event(event, owner, stake_id):
 class SCEvmForger(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 10)
+                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH)
 
     def run_test(self):
 
@@ -504,9 +504,28 @@ class SCEvmForger(AccountChainSetup):
 
         native_contract = SmartContract("ForgerStakes")
 
-        # Test getAllForgersStakes()
+
+        # Test before interoperability fork
         method = "getAllForgersStakes()"
         native_input = format_eoa(native_contract.raw_encode_call(method,))
+        try:
+            proxy_contract.do_static_call(evm_address_interop, 1, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+            fail("Interoperability call should fail before fork point")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("reverted" in str(err))
+
+
+        # reach the Interoperability fork
+        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+
+        # Test getAllForgersStakes()
 
         res = proxy_contract.do_static_call(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
 
@@ -552,7 +571,7 @@ class SCEvmForger(AccountChainSetup):
 
         tx_id = proxy_contract.call_transaction(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
                                                 stake_amount_in_wei, native_input)
-        receipt = generate_block_and_get_tx_receipt(sc_node_1, tx_id)
+        receipt = generate_block_and_get_tx_receipt(sc_node_2, tx_id)
         logging.info("receipt: {}".format(receipt))
         logging.info("gas used in receipt: {}".format(receipt['result']['gasUsed']))
 
@@ -613,7 +632,7 @@ class SCEvmForger(AccountChainSetup):
             logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
 
-        # Generate SC block on SC node 1
+        # Generate SC block on SC node 2
         generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
 

@@ -17,7 +17,7 @@ from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership impor
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
-from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
@@ -144,8 +144,8 @@ ZENDAO_FORK_EPOCH = 7
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=2,
-                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * ZENDAO_FORK_EPOCH)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
+                         number_of_sidechain_nodes=2)
 
     def run_test(self):
         ft_amount_in_zen = Decimal('500.0')
@@ -236,7 +236,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         gas_used = int(receipt['result']['gasUsed'], 16)
         assert_true(gas_used > 21000)
 
-        # reach the fork
+        # reach the ZenDao fork
         current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
         for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
@@ -609,9 +609,26 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # Create native contract interface, useful encoding/decoding params. Note this doesn't deploy a contract.
         native_contract = SmartContract("McAddrOwnership")
 
-        # Test getAllKeyOwnerships()
+        # Test before interoperability fork
         method = 'getAllKeyOwnerships()'
         native_input = format_eoa(native_contract.raw_encode_call(method))
+        try:
+            proxy_contract.do_static_call(evm_address_interop, 1, native_contract_address, native_input)
+            fail("Interoperability call should fail before fork point")
+        except RuntimeError as err:
+            print("Expected exception thrown: {}".format(err))
+            # error is raised from API since the address has no balance
+            assert_true("reverted" in str(err))
+
+
+        # reach the Interoperability fork
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        # Test getAllKeyOwnerships()
 
         res = proxy_contract.do_static_call(evm_address_interop, 1, native_contract_address, native_input)
 
