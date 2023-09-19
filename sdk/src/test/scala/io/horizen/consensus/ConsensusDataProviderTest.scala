@@ -129,18 +129,13 @@ class BlocksInfoProvider extends SidechainBlockInfoProvider {
   override def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage(blockId)
   def addBlockInfo(blockId: ModifierId, sidechainBlockInfo: SidechainBlockInfo): Unit = storage.put(blockId, sidechainBlockInfo)
 }
-/*
-* "This class test the correctness of the stake root and nonce calculation between the various epochs.
-* The PR developments introduce only the fixes needed to manage the new method signatures of the Consensus.
-*
-* We need to introduce a change in the consensus params during the 10 epoch tested,
-* something that will also change the slot number for every epoch. Investigate this point and its implementation."
-* */
+
 class ConsensusDataProviderTest extends CompanionsFixture{
   val generator: SidechainBlockFixture = new SidechainBlockFixture {}
   val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
   val slotsInEpoch = 10
   val secondsInSlot = 10
+  val startFork0 = 0
 
   val slotsInEpoch3 = 11
   val secondsInSlot3 = 12
@@ -179,7 +174,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ForkManagerUtil.initializeForkManager(
       CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(
         Seq(
-          0,startFork3,startFork4,startFork5,startFork6,startFork7,startFork8, startFork9, startFork10
+          startFork0,startFork3,startFork4,startFork5,startFork6,startFork7,startFork8, startFork9, startFork10
         ),
         Seq(
           slotsInEpoch, slotsInEpoch3,slotsInEpoch4,slotsInEpoch5,slotsInEpoch6,slotsInEpoch7,slotsInEpoch8,slotsInEpoch9, slotsInEpoch10
@@ -189,9 +184,6 @@ class ConsensusDataProviderTest extends CompanionsFixture{
         )), "regtest")
   }
 
-  // epoch 7 impacts nonce epoch 8
-  // nonce changes when non-quiet slots change (1 to 0)
-  // stake changes when last block id changes in epochs (e.g 6 7 8) 1, 0, 0  to 0, 1, 1
   @Test
   def test(): Unit = {
     val slotsPresentationForFirstDataProvider: List[List[Int]] = List(
@@ -208,13 +200,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
       List(0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0), //9 epoch
       List(0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0), //10 epoch
-
-//quiet slots - oni koji nisu u rangu 4-6, a rangovi idu 1-10
-      //non quiet - oni u 4-6
     )
-
-
-    // todo consensus nonce shall be the same in case if changed quiet slots only
 
     val genesisBlockId = bytesToId(Utils.doubleSHA256Hash("genesis".getBytes(StandardCharsets.UTF_8)))
     val genesisBlockTimestamp = 1000000
@@ -224,7 +210,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes(StandardCharsets.UTF_8)))}
 
     ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot)),
+      ConsensusParamsForkInfo(startFork0, new ConsensusParamsFork(slotsInEpoch, secondsInSlot)),
       ConsensusParamsForkInfo(startFork3, new ConsensusParamsFork(slotsInEpoch3, secondsInSlot3)),
       ConsensusParamsForkInfo(startFork4, new ConsensusParamsFork(slotsInEpoch4, secondsInSlot4)),
       ConsensusParamsForkInfo(startFork5, new ConsensusParamsFork(slotsInEpoch5, secondsInSlot5)),
@@ -270,26 +256,25 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     assertEquals(consensusInfoForEndSecondEpoch.stakeConsensusEpochInfo, consensusInfoForGenesisEpoch.stakeConsensusEpochInfo)
     //and stake is as expected
     assertEquals(1000, consensusInfoForEndSecondEpoch.stakeConsensusEpochInfo.totalStake)
-    //nd stake root hash as expected
+    //and stake root hash as expected
     assertTrue(epochIdsForFirstDataProvider.head.getBytes(StandardCharsets.UTF_8).take(merkleTreeHashLen).sameElements(consensusInfoForGenesisEpoch.stakeConsensusEpochInfo.rootHash))
     //but nonce is the same as well // Is it acceptable? //
     assertEquals(consensusInfoForEndSecondEpoch.nonceConsensusEpochInfo, consensusInfoForGenesisEpoch.nonceConsensusEpochInfo)
 
     //Stake and root hash is the same for second and third epoch
     assertEquals(consensusInfoForStartSecondEpoch.stakeConsensusEpochInfo, consensusInfoForEndThirdEpoch.stakeConsensusEpochInfo)
-    //but nonce is differ todo why?
+    //but nonce is different
     assertNotEquals(consensusInfoForStartSecondEpoch.nonceConsensusEpochInfo, consensusInfoForEndThirdEpoch.nonceConsensusEpochInfo)
 
-    //Stake and root hash is differ starting from fourth epoch
-    //todo david - why is it different starting from the fourth epoch?
+    //Stake and root hash is the same
     assertEquals(consensusInfoForGenesisEpoch.stakeConsensusEpochInfo, consensusInfoForEndFourthEpoch.stakeConsensusEpochInfo)
-    //and nonce is also differ
+    //but nonce is different
     assertNotEquals(consensusInfoForGenesisEpoch.nonceConsensusEpochInfo, consensusInfoForEndFourthEpoch.nonceConsensusEpochInfo)
 
     // regression test
     val nonceConsensusInfoForTenEpoch: NonceConsensusEpochInfo = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10).nonceConsensusEpochInfo
     //Set to true and run if you want to update regression data.
-    if (true) {
+    if (false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/nonce_calculation_hex"))
       out.write(BytesUtils.toHexString(nonceConsensusInfoForTenEpoch.bytes))
       out.close()
@@ -306,7 +291,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
         return
     }
 
-//    assertEquals(bytes.deep, nonceConsensusInfoForTenEpoch.bytes.deep)
+    assertEquals(bytes.deep, nonceConsensusInfoForTenEpoch.bytes.deep)
 
     // Determinism and calculation tests
     val slotsPresentationForSecondDataProvider: List[List[Int]] = List(
@@ -315,9 +300,9 @@ class ConsensusDataProviderTest extends CompanionsFixture{
       slotsPresentationForFirstDataProvider(2), //4 epoch
       slotsPresentationForFirstDataProvider(3), //5 epoch
 
-      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0), //6 epoch, changed quiet slots compared to original 14
-      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0), //7 epoch, changed quiet slots 15
-      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0), //8 epoch, changed non-quiet slot 16
+      List(0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0), //6 epoch, changed quiet slots compared to original
+      List(0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0), //7 epoch, changed quiet slots
+      List(0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0), //8 epoch, changed non-quiet slot
 
       slotsPresentationForFirstDataProvider(7), //9 epoch
       slotsPresentationForFirstDataProvider(8) //10 epoch
