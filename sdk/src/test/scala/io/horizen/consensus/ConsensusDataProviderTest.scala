@@ -79,10 +79,8 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                          lastBlockInPreviousConsensusEpoch: ModifierId,
                                          acc: ListBuffer[(ModifierId, SidechainBlockInfo)],
                                          vrfData: List[Option[(VrfProof, VrfOutput)]]): Seq[(ModifierId, SidechainBlockInfo)] = {
-    val seqTimestampsForActivation = ConsensusParamsUtil.getConsensusParamsForkTimestampActivation()
-    var secondsInSlot = ConsensusParamsUtil.getConsensusParamsForkActivation.head.consensusParamsFork.consensusSecondsInSlot
-//    if (nextTimestamp > seqTimestampsForActivation(1))
-//      secondsInSlot = ConsensusParamsUtil.getConsensusParamsForkActivation(1).consensusParamsFork.consensusSecondsInSlot
+    val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, nextTimestamp)
+    val secondsInSlot = ConsensusParamsUtil.getConsensusSecondsInSlotsPerEpoch(epochNumber)
     vrfData.headOption match {
       case Some(Some((vrfProof, vrfOutput))) => {
         val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfOutput, lastBlockInPreviousConsensusEpoch)
@@ -145,11 +143,11 @@ class ConsensusDataProviderTest extends CompanionsFixture{
   val secondsInSlot = 100
 
   val slotsInEpoch2 = 12  //eligible range 5-7
-  val secondsInSlot2 = 100
+  val secondsInSlot2 = 10
   val startFork2 = 5
 
   val slotsInEpoch3 = 10
-  val secondsInSlot3 = 100
+  val secondsInSlot3 = 13
   val startFork3 = 8
 
   @Before
