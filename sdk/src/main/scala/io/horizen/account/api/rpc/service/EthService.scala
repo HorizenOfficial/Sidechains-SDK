@@ -908,20 +908,6 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        //TODO I don't know how to merge this yet, so I'll keep both versions until I have figured it out
-//        // enable tracing
-//        blockContext.enableTracer(config)
-//
-//        // apply requested transaction with tracing enabled
-//        tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
-//
-//        // return the tracer result from the evm
-//        if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
-//          blockContext.getEvmResult.tracerResult
-//        else {
-//          logger.warn("Unable to get tracer result from EVM")
-//          JsonNodeFactory.instance.objectNode()
-//        }
         using(new Tracer(config)) { tracer =>
           // enable tracing
           blockContext.setTracer(tracer)
@@ -944,29 +930,15 @@ class EthService(
       // get state at selected block
       getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
         (tagStateView, blockContext) =>
-          //TODO see similar comment
-//          // enable tracing
-//          blockContext.enableTracer(config)
-//
-//          // apply requested message with tracing enabled
-//          val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
-//          tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
-//
-//          // return the tracer result from the evm
-//          if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
-//            blockContext.getEvmResult.tracerResult
-//          else {
-//            logger.warn("Unable to get tracer result from EVM")
-//            JsonNodeFactory.instance.objectNode()
-//          }
           using(new Tracer(config)) { tracer =>
             // enable tracing
             blockContext.setTracer(tracer)
             // apply requested message with tracing enabled
             val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
-            tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
-            // return the tracer result
-            tracer.getResult.result
+            Try(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)) match {
+              case Failure(ex) if !ex.isInstanceOf[ExecutionFailedException] => throw ex
+              case _ => tracer.getResult.result // return the tracer result
+             }
           }
       }
     }

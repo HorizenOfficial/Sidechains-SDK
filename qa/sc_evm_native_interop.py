@@ -324,34 +324,34 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_true('write protection' in result['error']['message'])
 
         # TODO traceCall seems to have problems with failed txs. Needs to check what is the correct behavior
-        # # Verify tracing
-        # trace_response = node.rpc_debug_traceCall(
-        #     {
-        #         "to": native_contract_address,
-        #         "input": data_input_failed
-        #     }, "latest", {
-        #         "tracer": "callTracer"
-        #     }
-        # )
-        # logging.info("trace result: {}".format(trace_response))
-        # assert_false("error" in trace_response)
-        # assert_true("result" in trace_response)
-        # trace_result = trace_response["result"]
-        # logging.info("trace result: {}".format(trace_result))
-        #
-        # assert_equal(native_contract_address.lower(), trace_result["to"].lower())
-        # assert_equal(1, len(trace_result["calls"]))
-        # assert_equal(data_input_failed.lower(), trace_result["input"].lower())
-        # assert_equal("write protection", trace_result["error"])
-        # evm_call = trace_result["calls"][0]
-        # assert_equal("STATICCALL", evm_call["type"])
-        # assert_equal(native_contract_address.lower(), evm_call["from"].lower())
-        # assert_equal(storage_contract_address.lower(), evm_call["to"].lower())
-        # assert_true(int(native_call["gas"], 16) > 0)
-        # assert_true(int(native_call["gasUsed"], 16) > 0)
-        # assert_equal(sol_contract_call_data_inc.lower(), evm_call["input"].lower())
-        # assert_equal("write protection", evm_call["error"])
-        # assert_false("calls" in evm_call)
+        # Verify tracing
+        trace_response = node.rpc_debug_traceCall(
+            {
+                "to": native_contract_address,
+                "input": data_input_failed
+            }, "latest", {
+                "tracer": "callTracer"
+            }
+        )
+        logging.info("trace result: {}".format(trace_response))
+        assert_false("error" in trace_response)
+        assert_true("result" in trace_response)
+        trace_result = trace_response["result"]
+        logging.info("trace result: {}".format(trace_result))
+
+        assert_equal(native_contract_address.lower(), trace_result["to"].lower())
+        assert_equal(1, len(trace_result["calls"]))
+        assert_equal(data_input_failed.lower(), trace_result["input"].lower())
+        assert_equal("write protection", trace_result["error"])
+        evm_call = trace_result["calls"][0]
+        assert_equal("STATICCALL", evm_call["type"])
+        assert_equal(native_contract_address.lower(), evm_call["from"].lower())
+        assert_equal(storage_contract_address.lower(), evm_call["to"].lower())
+        assert_true(int(native_call["gas"], 16) > 0)
+        assert_true(int(native_call["gasUsed"], 16) > 0)
+        assert_equal(sol_contract_call_data_inc.lower(), evm_call["input"].lower())
+        assert_equal("write protection", evm_call["error"])
+        assert_false("calls" in evm_call)
 
 
 

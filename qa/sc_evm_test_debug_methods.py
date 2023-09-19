@@ -249,6 +249,19 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "theBestTracer"})
         assert_true(res['error'] is not None, "invalid tracer should fail")
 
+        # traceCall with an invalid transaction should return an error
+        trace_call_args['gas'] = "0x0"  # 0 gas is invalid
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "latest", {"tracer": "callTracer"})
+
+        assert_true(res['error'] is not None, "invalid transaction should fail")
+        assert_true('intrinsic gas too low' in res['error']['message'], "wrong message")
+
+        # traceCall with a failed transaction should return the stack trace
+        trace_call_args['gas'] = "0x15865"  # just enough gas to cover for intrinsic gas
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "latest", {"tracer": "callTracer"})
+        assert_true("error" not in res, "failed transaction should not fail")
+
+
 
 if __name__ == "__main__":
     SCEvmDebugMethods().main()
