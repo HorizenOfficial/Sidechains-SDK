@@ -18,9 +18,15 @@ echo "Executing script for integration tests..."
 
 # Step 4: Generate the JaCoCo code coverage report
 echo "Generating JaCoCo code coverage report..."
-java -jar /home/david/.m2/repository/org/jacoco/org.jacoco.cli/0.8.9/org.jacoco.cli-0.8.9-nodeps.jar \
-  report /home/david/Desktop/Sidechains-SDK/coverage-reports/sidechains-sdk-${SNAPSHOT_VERSION_TAG}/sidechains-sdk-${SNAPSHOT_VERSION_TAG}-jacoco-report.exec \
-  --classfiles /home/david/Desktop/Sidechains-SDK/sdk/target/classes \
-  --html /home/david/Desktop/Sidechains-SDK/coverage-reports/sidechains-sdk-${SNAPSHOT_VERSION_TAG}/sidechains-sdk-${SNAPSHOT_VERSION_TAG}-jacoco-report
+
+JACOCO_JAR_PATH="$HOME/.m2/repository/org/jacoco/org.jacoco.cli/0.8.9/org.jacoco.cli-0.8.9-nodeps.jar"
+EXEC_PATH="$SIDECHAIN_SDK/coverage-reports/sidechains-sdk-${SNAPSHOT_VERSION_TAG}/sidechains-sdk-${SNAPSHOT_VERSION_TAG}-jacoco-report.exec"
+CLASSFILES_PATH="$SIDECHAIN_SDK/sdk/target/classes"
+HTML_PATH="$SIDECHAIN_SDK/coverage-reports/sidechains-sdk-${SNAPSHOT_VERSION_TAG}/sidechains-sdk-${SNAPSHOT_VERSION_TAG}-jacoco-report"
+
+java -jar "$JACOCO_JAR_PATH" \
+  report "$EXEC_PATH" \
+  --classfiles "$CLASSFILES_PATH" \
+  --html "$HTML_PATH"
 
 echo "Code coverage report generation complete."
