@@ -77,6 +77,9 @@ def set_sc_parallel_test(n):
     global parallel_test
     parallel_test = n
 
+def set_jacoco(value):
+    global is_jacoco_included
+    is_jacoco_included = value
 
 def start_port_modifier():
     if parallel_test > 0:
