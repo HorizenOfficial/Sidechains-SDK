@@ -58,7 +58,7 @@ DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 
 parallel_test = 0
 
 # flag for jacoco code coverage analysis
-is_jacoco_included = True
+is_jacoco_included = False
 
 
 class TimeoutException(Exception):
