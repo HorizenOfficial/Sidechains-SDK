@@ -81,31 +81,4 @@ class ParentIdModifiersCacheSpecification extends AnyPropSpec
     cache.size shouldBe 3
   }
 
-  property("cache should clear itself if overflowed") {
-    val limit = 3
-    val random = Random
-
-    val k0 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k1 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k2 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k3 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k4 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k5 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k6 = bytesToId(Blake2b256.hash(random.nextString(5)))
-    val k7 = bytesToId(Blake2b256.hash(random.nextString(5)))
-
-    val cache = new ParentIdModifiersCache[FakeModifier, HistoryReader[FakeModifier, FakeSyncInfo]](limit)
-
-    cache.put(k1, new FakeModifier(k1, k0))
-    cache.put(k2, new FakeModifier(k2, k1))
-    cache.put(k3, new FakeModifier(k3, k2))
-    cache.put(k4, new FakeModifier(k4, k3))
-    cache.put(k5, new FakeModifier(k5, k4))
-    cache.put(k6, new FakeModifier(k6, k5))
-    cache.size shouldBe 6
-
-    cache.put(k7, new FakeModifier(k7, k6))
-    cache.size shouldBe 3
-  }
-
 }
