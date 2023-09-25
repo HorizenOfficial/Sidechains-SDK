@@ -9,7 +9,6 @@ import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToCo
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.SidechainTypes
-import io.horizen.account.block.AccountBlock
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.ZenBox

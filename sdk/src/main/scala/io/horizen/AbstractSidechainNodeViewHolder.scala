@@ -175,7 +175,10 @@ abstract class AbstractSidechainNodeViewHolder[
         val bestBlockTimestampPlus24H = history().bestBlock.timestamp + TimeUnit.HOURS.toSeconds(24)
         val (modsToApply, modsToSkip) = mods.partition(m => m.timestamp <= bestBlockTimestampPlus24H)
         modsToApply.foreach(m => modifiersCache.put(m.id, m))
-        if (modsToSkip.nonEmpty) context.system.eventStream.publish(ModifiersProcessingResult(Seq(), modsToSkip))
+        if (modsToSkip.nonEmpty) {
+          // reset the status of the modifiers to Unknown, so that we try to fetch them again in the future
+          context.system.eventStream.publish(ModifiersProcessingResult(Seq(), modsToSkip))
+        }
       } else {
         mods.foreach(m => modifiersCache.put(m.id, m))
       }
