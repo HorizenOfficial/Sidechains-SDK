@@ -32,6 +32,7 @@ import sparkz.core.{VersionTag, idToVersion}
 import sparkz.util.{ModifierId, SparkzEncoding}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
@@ -428,6 +429,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -488,6 +492,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -619,6 +626,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
