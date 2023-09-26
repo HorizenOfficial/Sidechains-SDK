@@ -31,7 +31,7 @@ Test:
 """
 
 
-class MCSCForging4(AccountChainSetup):
+class MCSCEvmForging4(AccountChainSetup):
 
     inclusion_per_block = 48  # This value depends on amount of block hashes Sidechain can retrieve from the Mainchain
                               # in one request and MC Block Reference which reduces number of MC Headers to include
@@ -110,4 +110,4 @@ class MCSCForging4(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    MCSCForging4().main()
+    MCSCEvmForging4().main()

@@ -44,7 +44,7 @@ Test:
 """
 
 
-class MCSCForging3(AccountChainSetup):
+class MCSCEvmForging3(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=1,
                          number_of_mc_nodes=3
@@ -183,4 +183,4 @@ class MCSCForging3(AccountChainSetup):
 
 
 if __name__ == "__main__":
-    MCSCForging3().main()
+    MCSCEvmForging3().main()
