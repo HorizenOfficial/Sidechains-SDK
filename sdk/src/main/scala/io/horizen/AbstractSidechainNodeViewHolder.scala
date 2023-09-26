@@ -216,14 +216,16 @@ abstract class AbstractSidechainNodeViewHolder[
   def applyModifier: Receive = {
     case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) =>
       modifiersCache.popCandidate(history()) match {
-        case Some(mod) if applied.size > 1024 =>
-          pmodModify(mod)
-          val cleared = modifiersCache.cleanOverfull()
-          context.system.eventStream.publish(ModifiersProcessingResult(mod +: applied, cleared))
-          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
         case Some(mod) =>
           pmodModify(mod)
-          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
+          var accumulator = mod +: applied
+          //if accumulator(applied) is too big, clear cache, publish result and start applying from empty sequence again
+          if (accumulator.size >= 100) {
+            val cleared = modifiersCache.cleanOverfull()
+            context.system.eventStream.publish(ModifiersProcessingResult(accumulator, cleared))
+            accumulator = Seq()
+          }
+          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(accumulator)
         case None =>
           val cleared = modifiersCache.cleanOverfull()
           context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
