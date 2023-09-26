@@ -51,7 +51,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
            @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
-           @Named("AppVersion") appVersion: String
+           @Named("AppVersion") appVersion: String,
+           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {
@@ -65,7 +66,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           applicationStopper,
           forkConfigurator,
           chainInfo,
-          appVersion
+          appVersion,
+          mcBlockReferenceDelay
         )
       }
     }

@@ -56,7 +56,8 @@ class AccountSidechainApp @Inject()
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
-   @Named("AppVersion") appVersion: String
+   @Named("AppVersion") appVersion: String,
+   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -64,7 +65,8 @@ class AccountSidechainApp @Inject()
     rejectedApiPaths,
     applicationStopper,
     forkConfigurator,
-    chainInfo
+    chainInfo,
+    mcBlockReferenceDelay
   )
 {
 
@@ -155,7 +157,7 @@ class AccountSidechainApp @Inject()
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init Sync Status actor
-  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef, params, timeProvider)
 
   //rpcHandler
   val rpcHandler = new RpcHandler(

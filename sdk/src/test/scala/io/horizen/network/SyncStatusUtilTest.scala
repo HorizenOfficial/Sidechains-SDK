@@ -72,6 +72,7 @@ class SyncStatusUtilTest {
     val currentBlockHeight: Int = 63500
     // 1677245328 --> February 24, 2023 1:28:48 PM
     val currentBlockTimestamp: Long = 1677245328L
+    val activeSlotCoefficient: Double = -1
 
     // time provider mock, return a mocked timestamp in millisecond
     // 1677850291000 --> March 3, 2023 1:31:31 PM
@@ -113,7 +114,8 @@ class SyncStatusUtilTest {
         consensusSecondsInSlot,
         genesisBlockTimestamp,
         currentBlockHeight,
-        currentBlockTimestamp
+        currentBlockTimestamp,
+        activeSlotCoefficient
       )), timeoutDuration)
       .asInstanceOf[Int]
 
@@ -145,6 +147,7 @@ class SyncStatusUtilTest {
     val currentBlockHeight: Int = 8500
     // 1677245328 --> February 24, 2023 1:28:48 PM
     val currentBlockTimestamp: Long = 1677688387L
+    val activeSlotCoefficient: Double = -1
 
     // time provider mock, return a mocked timestamp in millisecond
     // 1677850291000 --> March 3, 2023 1:31:31 PM
@@ -174,7 +177,8 @@ class SyncStatusUtilTest {
         consensusSecondsInSlot,
         genesisBlockTimestamp,
         currentBlockHeight,
-        currentBlockTimestamp
+        currentBlockTimestamp,
+        activeSlotCoefficient
       )), timeoutDuration)
       .asInstanceOf[Int]
 

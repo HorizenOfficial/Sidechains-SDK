@@ -41,7 +41,8 @@ case class MainNetParams(
                           override val chainId: Long = 33333333,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val isHandlingTransactionsEnabled: Boolean = true
+                          override val isHandlingTransactionsEnabled: Boolean = true,
+                          override val mcBlockRefDelay: Int = 0
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

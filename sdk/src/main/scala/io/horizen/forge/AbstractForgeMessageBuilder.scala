@@ -176,7 +176,7 @@ abstract class AbstractForgeMessageBuilder[
   protected def getBranchPointInfo(history: HIS): Try[BranchPointInfo] = Try {
     val bestMainchainHeaderInfo = history.getBestMainchainHeaderInfo.get
 
-    val (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
+    var (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
       mainchainSynchronizer.getMainchainDivergentSuffix(history, MainchainSynchronizer.MAX_BLOCKS_REQUEST) match {
         case Success((height, hashes)) => (height, hashes.head, hashes.tail) // hashes contains also the hash of best known block
         case Failure(ex) =>
@@ -187,6 +187,8 @@ abstract class AbstractForgeMessageBuilder[
             throw ex
       }
 
+    newHeaderHashes = if(newHeaderHashes.size != 0 && newHeaderHashes.size > params.mcBlockRefDelay) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
+
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
     if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
       val branchPointId: ModifierId = history.bestBlockId
@@ -194,11 +196,11 @@ abstract class AbstractForgeMessageBuilder[
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-      // to not to include mcblock references data from different withdrawal epochs
-      val maxReferenceDataNumber: Int = withdrawalEpochMcBlocksLeft
-
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
       val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
+
+      // to not to include mcblock references data from different withdrawal epochs
+      val maxReferenceDataNumber: Int = Math.min(withdrawalEpochMcBlocksLeft, nextMainchainReferenceDataHeaderHashes.size)
 
       val mainchainReferenceDataHeaderHashesToInclude = nextMainchainReferenceDataHeaderHashes.take(maxReferenceDataNumber)
       val mainchainHeadersHashesToInclude = newHeaderHashes

@@ -50,6 +50,7 @@ trait NetworkParams {
   val sidechainCreationVersion: SidechainCreationVersion
   val isCSWEnabled: Boolean
   val isHandlingTransactionsEnabled: Boolean = true
+  val mcBlockRefDelay:Int
 
   val maxHistoryRewritingLength: Int = 100
 
