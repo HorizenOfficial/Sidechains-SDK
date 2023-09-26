@@ -91,7 +91,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     // Mock state withdrawal epoch methods
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
- 
+
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
       val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
@@ -668,6 +668,54 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
           case ModifiersProcessingResult(applied, cleared) =>
             assertEquals("Different number of applied blocks", 0, applied.length)
             assertEquals("Different number of cleared blocks from cached", 200, cleared.length)
+            true
+          case _ => false
+        }
+    }
+  }
+
+  /*
+  * This test check that the sequence of applied modifiers gets flushed every 100 modifiers to avoid memory leaks.
+  */
+  @Test
+  def flushAppliedModifiers(): Unit = {
+    val twoHundredBlocks = generateAccountBlockSeq(200, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[AccountBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli / 1000)
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Success(Unit)
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[AccountBlock]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(twoHundredBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
+            true
+          case _ => false
+        }
+    }
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
             true
           case _ => false
         }
