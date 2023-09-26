@@ -216,6 +216,11 @@ abstract class AbstractSidechainNodeViewHolder[
   def applyModifier: Receive = {
     case AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[PMOD]) =>
       modifiersCache.popCandidate(history()) match {
+        case Some(mod) if applied.size > 1024 =>
+          pmodModify(mod)
+          val cleared = modifiersCache.cleanOverfull()
+          context.system.eventStream.publish(ModifiersProcessingResult(mod +: applied, cleared))
+          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
         case Some(mod) =>
           pmodModify(mod)
           self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
