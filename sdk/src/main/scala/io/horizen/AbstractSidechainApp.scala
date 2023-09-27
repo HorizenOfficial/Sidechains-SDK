@@ -137,7 +137,6 @@ abstract class AbstractSidechainApp
 
   val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
-  val maxConsensusSlotsInEpoch = ConsensusParamsFork.getMaxPossibleSlotsEver(consensusParamsForkList.asJava)
 
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
