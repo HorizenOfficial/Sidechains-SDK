@@ -57,7 +57,9 @@ class SCEvmNativeInterop(AccountChainSetup):
         # 585e290d: GetForgerStakesDelegateCall()
         _, contract_address = self.deploy("NativeInterop")
 
-        NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"
+        NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"  # GetForgerStakes signature on native_interop EVM contract
+        FORGER_STAKE_GETFORGERSTAKES_SIG = "0xf6ad3c23"  # GetForgerStakes signature on forger stake native contract
+
         # Fetch all forger stakes via the NativeInterop contract
         actual_value = node.rpc_eth_call(
             {
@@ -70,7 +72,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         expected_value = node.rpc_eth_call(
             {
                 "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                "input": "0xf6ad3c23"
+                "input": FORGER_STAKE_GETFORGERSTAKES_SIG
             }, "latest"
         )
 
@@ -144,7 +146,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_equal("0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_call["to"])
         assert_true(int(native_call["gas"], 16) > 0)
         assert_true(int(native_call["gasUsed"], 16) > 0)
-        assert_equal("0xf6ad3c23", native_call["input"])
+        assert_equal(FORGER_STAKE_GETFORGERSTAKES_SIG, native_call["input"])
         assert_true(len(native_call["output"]) > 512)
         assert_false("calls" in native_call)
 
@@ -158,7 +160,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         estimation_native = node.rpc_eth_estimateGas(
             {
                 "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                "input": "0xf6ad3c23"
+                "input": FORGER_STAKE_GETFORGERSTAKES_SIG
             }
         )
         logging.info("estimated gas interop: {}".format(estimation_interop))
@@ -173,6 +175,35 @@ class SCEvmNativeInterop(AccountChainSetup):
 
         # Verify gas usage of the nested call to the native contract reported by the trace matches with the estimation
         assert_equal(int(native_call["gasUsed"], 16) + intrinsic_gas, int(estimation_native["result"], 16))
+
+        # Default tracer
+        trace_response_1 = node.rpc_debug_traceCall(
+            {
+                "to": contract_address,
+                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+            }, "latest"
+        )
+        assert_false("error" in trace_response_1)
+        assert_true("result" in trace_response_1)
+        assert_equal(int(estimation_interop["result"], 16), trace_response_1["result"]["gas"])
+        assert_false(trace_response_1["result"]["failed"])
+        assert_equal(trace_result["output"], "0x" + trace_response_1["result"]["returnValue"])
+
+        # Default 4byteTracer
+        trace_response_1 = node.rpc_debug_traceCall(
+            {
+                "to": contract_address,
+                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+            }, "latest",
+            {"tracer": "4byteTracer"}
+        )
+
+        assert_false("error" in trace_response_1)
+        assert_true("result" in trace_response_1)
+        assert_equal(2, len(trace_response_1["result"]))
+        # Each element has as key SELECTOR-CALLDATASIZE and value number of occurrences of this key.
+        assert_equal(1, trace_response_1["result"][NATIVE_INTEROP_GETFORGERSTAKES_SIG + '-0'])
+        assert_equal(1, trace_response_1["result"][FORGER_STAKE_GETFORGERSTAKES_SIG + '-0'])
 
         """
         Tests from Native Smart contract to EVM Smart contract
@@ -275,7 +306,35 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Verify gas usage of the nested call to the native contract reported by the trace matches with the estimation
         assert_equal(int(evm_call["gasUsed"], 16) + intrinsic_gas, int(estimation_evm["result"], 16))
 
+        # Default tracer
+        trace_response_1 = node.rpc_debug_traceCall(
+            {
+                "to": native_contract_address,
+                "input": data_input
+            }, "latest"
+        )
 
+        assert_false("error" in trace_response_1)
+        assert_true("result" in trace_response_1)
+        assert_equal(int(estimation_interop["result"], 16), trace_response_1["result"]["gas"])
+        assert_false(trace_response_1["result"]["failed"])
+        assert_equal(trace_result["output"], "0x" + trace_response_1["result"]["returnValue"])
+
+        # Default 4byteTracer
+        trace_response_1 = node.rpc_debug_traceCall(
+            {
+                "to": native_contract_address,
+                "input": data_input
+            }, "latest",
+            {"tracer": "4byteTracer"}
+        )
+
+        assert_false("error" in trace_response_1)
+        assert_true("result" in trace_response_1)
+        assert_equal(2, len(trace_response_1["result"]))
+        # Each element has as key SELECTOR-CALLDATASIZE and value number of occurrences of this key.
+        assert_equal(1, trace_response_1["result"][sol_contract_call_data_retrieve + '-0'])
+        assert_equal(1, trace_response_1["result"][encoded_abi_method_signature + '-128'])
 
 
         # Verify STATICCALL to a readwrite EVM contract method throws an error
