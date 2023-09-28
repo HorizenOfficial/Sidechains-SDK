@@ -35,7 +35,12 @@ jobs:
     - language: python
       before_script:
         - sudo apt-get -y install python3-pip
-        - pip install -r ./SidechainTestFramework/account/requirements.txt
+        - pip install eth_abi
+        - pip install pycryptodome
+        - pip install rlp
+        - pip install eth_utils
+        - pip install eth_bloom
+        - pip install base58
         - cd qa
       script:
         - python test.py
