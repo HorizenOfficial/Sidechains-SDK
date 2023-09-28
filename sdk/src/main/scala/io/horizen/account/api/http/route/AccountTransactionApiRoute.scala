@@ -70,8 +70,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override val route: Route = pathPrefix(transactionPathPrefix) {
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
-      sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~ getKeysOwnerScAddresses
+      allForgingStakes ~ myForgingStakes ~ ownedForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~
+      createKeyRotationTransaction ~ sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~ getKeysOwnerScAddresses
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -549,6 +549,31 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             ApiResponseUtil.toResponse(RespForgerStakes(ownedStakes.toList))
           } else {
             ApiResponseUtil.toResponse(RespForgerStakes(Seq().toList))
+          }
+        }
+      }
+    }
+  }
+
+
+  def ownedForgingStakes: Route = (post & path("ownedForgingStakes")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqOwnedForgingStakes]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val accountState = sidechainNodeView.getNodeState
+            val listOfForgerStakes = accountState.getListOfForgersStakes
+
+            if (listOfForgerStakes.nonEmpty) {
+              val ownerPubKey : AddressProposition = new AddressProposition(new Address(body.ownerAddress))
+              val ownedStakes = listOfForgerStakes.view.filter(stake => {
+                ownerPubKey.equals(stake.forgerStakeData.ownerPublicKey)
+              })
+              ApiResponseUtil.toResponse(RespForgerStakes(ownedStakes.toList))
+            } else {
+              ApiResponseUtil.toResponse(RespForgerStakes(Seq().toList))
+            }
           }
         }
       }
@@ -1153,11 +1178,17 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-   private[horizen] case class ReqSpendForgingStake(
-                                                nonce: Option[BigInteger],
-                                                stakeId: String,
-                                                gasInfo: Option[EIP1559GasInfo]) {
+  private[horizen] case class ReqSpendForgingStake(
+                                                    nonce: Option[BigInteger],
+                                                    stakeId: String,
+                                                    gasInfo: Option[EIP1559GasInfo]) {
     require(stakeId.nonEmpty, "Signature data must be provided")
+  }
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqOwnedForgingStakes(ownerAddress: String) {
+    require(ownerAddress.nonEmpty, "Owner address must be provided")
   }
 
   @JsonView(Array(classOf[Views.Default]))

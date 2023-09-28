@@ -213,6 +213,37 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     doUncheckedGetListOfForgersStakesCmd(view)
   }
 
+  def doGetListOfOwnedStakesCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null && !msg.getIsFakeMsg) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    val inputParams = getArgumentsFromData(msg.getData)
+    val cmdInput = GetOwnedStaksCmdInputDecoder.decode(inputParams)
+    val ownerAddress: Address = cmdInput.ownerAddress
+
+    var ownedStakesList = Seq[OwnedForgerStakeAmount]()
+    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+
+    while (!linkedListNodeRefIsNull(nodeReference)) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
+      if (item.forgerStakeData.ownerPublicKey.equals(new AddressProposition(ownerAddress))) {
+        val stakeAmount = OwnedForgerStakeAmount(item.forgerStakeData.ownerPublicKey, item.forgerStakeData.stakedAmount)
+        ownedStakesList = stakeAmount +: ownedStakesList
+      }
+      nodeReference = prevNodeReference
+    }
+
+    // TODO maybe we can return just aserialized object (ownerAddress, totalValue)
+    OwnedForgerStakeAmountListEncoder.encode(ownedStakesList.asJava)
+
+  }
+
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
@@ -340,6 +371,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
+      case GetListOfOwnedStakesCmd => doGetListOfOwnedStakesCmd(msg, gasView)
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)
       case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
@@ -381,6 +413,7 @@ object ForgerStakeMsgProcessor {
   val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
 
 
+  val GetListOfOwnedStakesCmd: String = getABIMethodId("getOwnedStakes(address)")
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
@@ -388,10 +421,11 @@ object ForgerStakeMsgProcessor {
 
   // ensure we have strings consistent with size of opcode
   require(
+    GetListOfOwnedStakesCmd.length == 2 * METHOD_ID_LENGTH &&
     GetListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
-      AddNewStakeCmd.length == 2 * METHOD_ID_LENGTH &&
-      RemoveStakeCmd.length == 2 * METHOD_ID_LENGTH &&
-      OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH
+    AddNewStakeCmd.length == 2 * METHOD_ID_LENGTH &&
+    RemoveStakeCmd.length == 2 * METHOD_ID_LENGTH &&
+    OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH
   )
 
   def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Address, nonce: Array[Byte]): Array[Byte] = {

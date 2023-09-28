@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 import json
 import logging
+import pprint
 from decimal import Decimal
 
+from eth_abi import decode
+from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0x_prefix, to_checksum_address, \
+    add_0x_prefix
+
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_evm
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_block
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain
+    assert_equal, fail, forward_transfer_to_sidechain, hex_str_to_bytes, bytes_to_hex_str
 )
 
 """
@@ -38,6 +44,73 @@ def getSignerStakeAmount(myInfoList, inSignerAddress):
             sum += entry['forgerStakeData']['stakedAmount']
     # print("Sum = {}, address={}".format(sum, inSignerAddress))
     return sum
+
+
+def getOwnerStakeAmount(ownedStakesList, inOwnerAddress):
+    sum = 0
+    for entry in ownedStakesList:
+        ownerAddress = entry['forgerStakeData']['ownerPublicKey']['address']
+        if ownerAddress == inOwnerAddress:
+            sum += entry['forgerStakeData']['stakedAmount']
+
+    # print("Sum = {}, address={}".format(sum, inSignerAddress))
+    return sum
+
+def get_all_owned_stakes(abi_return_value):
+    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes
+    # from the start of the return data block. In this case 32 (0x20)
+    start_data_offset = decode(['uint32'], hex_str_to_bytes(abi_return_value[0:64]))[0] * 2
+    assert_equal(start_data_offset, 64)
+
+    end_offset = start_data_offset + 64  # read 32 bytes
+    list_size = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_data_offset:end_offset]))[0]
+
+    owners_dict = {}
+    for i in range(list_size):
+        start_offset = end_offset
+        end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
+        (stake_id, value, address) = decode(['bytes32', 'uint256', 'address'],
+                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+        stake_id_str = bytes_to_hex_str(stake_id)
+        sc_address_checksum_fmt = address #to_checksum_address(address)
+        print("sc addr=" + sc_address_checksum_fmt)
+        if sc_address_checksum_fmt in owners_dict:
+            val = owners_dict.get(sc_address_checksum_fmt)
+        else:
+            owners_dict[sc_address_checksum_fmt] = 0
+            val = 0
+
+        owners_dict[sc_address_checksum_fmt] = val + value
+
+        start_offset = end_offset
+        end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
+        # these are blockSignerPubKey and vrfKey 33 bytes
+        (_, _, _) = decode(['bytes32', 'bytes32', 'bytes1'],
+                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+    pprint.pprint(owners_dict)
+    return owners_dict
+
+def get_owned_stake_value(abi_return_value, ownerAddress):
+    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes
+    # from the start of the return data block. In this case 32 (0x20)
+    start_data_offset = decode(['uint32'], hex_str_to_bytes(abi_return_value[0:64]))[0] * 2
+    assert_equal(start_data_offset, 64)
+
+    end_offset = start_data_offset + 64  # read 32 bytes
+    list_size = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_data_offset:end_offset]))[0]
+
+    tot_value = 0
+    for i in range(list_size):
+        start_offset = end_offset
+        end_offset = start_offset + 128  # read (32 + 32) bytes
+        (value, address) = decode(['uint256', 'address'],
+                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+        assert_equal(remove_0x_prefix(address), ownerAddress)
+        tot_value = tot_value + value
+
+
+    return tot_value
+
 
 
 class SCEvmForgerDelegation(AccountChainSetup):
@@ -174,6 +247,13 @@ class SCEvmForgerDelegation(AccountChainSetup):
         # pprint.pprint(stakeList)
         assert_equal(5, len(stakeList))
 
+        ownerAddress = { "ownerAddress": add_0x_prefix(evm_address_sc_node_1) }
+        ownedStakesList = sc_node_3.transaction_ownedForgingStakes(json.dumps(ownerAddress))['result']['stakes']
+        pprint.pprint(ownedStakesList)
+        sumOwned = getOwnerStakeAmount(ownedStakesList, evm_address_sc_node_1)
+        tot_owned_addr_1 = convertZenToWei(forgerStake12_amount + forgerStake13_amount)
+        assert_equal(sumOwned, tot_owned_addr_1)
+
         # take amounts of forger block signers
         sum1 = getSignerStakeAmount(stakeList, sc1_blockSignPubKey)
         sum2 = getSignerStakeAmount(stakeList, sc2_blockSignPubKey)
@@ -213,6 +293,54 @@ class SCEvmForgerDelegation(AccountChainSetup):
         assert_equal(blockStakeInfo['stakeAmount'], stake_123_to_2)
         assert_equal(blockStakeInfo['blockSignPublicKey']['publicKey'], sc2_blockSignPubKey)
         assert_equal(blockStakeInfo['vrfPublicKey']['publicKey'], sc2_vrfPubKey)
+
+        # call nsc for getting all forger stakes
+        method = 'getAllForgersStakes()'
+        abi_str = function_signature_to_4byte_selector(method)
+        req = {
+            "from": format_evm(evm_address_sc_node_1),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": 3,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": encode_hex(abi_str)
+        }
+        response = sc_node_1.rpc_eth_call(req, 'latest')
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        ownersStakeList = get_all_owned_stakes(abi_return_value)
+        assert_equal(ownersStakeList[add_0x_prefix(evm_address_sc_node_1)], tot_owned_addr_1)
+
+        # call nsc for getting owned forger stakes
+        method = 'getOwnedStakes(address)'
+        abi_str = function_signature_to_4byte_selector(method)
+        addr_padded_str = "000000000000000000000000" + evm_address_sc_node_1
+
+        req = {
+            "from": format_evm(evm_address_sc_node_1),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": 3,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": encode_hex(abi_str) + addr_padded_str
+        }
+        response = sc_node_1.rpc_eth_call(req, 'latest')
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
+        # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
+        exp_len = 32 + 32 + 12 * (3 * 32)
+        #assert_equal(result_string_length, 2 * exp_len)
+
+        tot_value = get_owned_stake_value(abi_return_value, evm_address_sc_node_1)
+
+        assert_equal(tot_value, tot_owned_addr_1)
+
+        balance = int(sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        print(balance)
+        # assert that this balance is the sum of all owned stakes in both ownersStakeList and stakeList
 
 
 if __name__ == "__main__":

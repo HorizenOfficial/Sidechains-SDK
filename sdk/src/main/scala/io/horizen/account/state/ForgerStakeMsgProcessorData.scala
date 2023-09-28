@@ -173,6 +173,33 @@ object AddNewStakeCmdInputDecoder
   }
 }
 
+case class GetOwnedStaksCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(ownerAddress.toString))
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(ownerAddress: %s)"
+    .format(this.getClass.toString, ownerAddress)
+}
+
+object GetOwnedStaksCmdInputDecoder
+  extends ABIDecoder[GetOwnedStaksCmdInput]
+    with MsgProcessorInputDecoder[GetOwnedStaksCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[AbiAddress]() {}
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): GetOwnedStaksCmdInput = {
+    val ownerAddress = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    GetOwnedStaksCmdInput(ownerAddress)
+  }
+}
 
 case class RemoveStakeCmdInput(
                                 stakeId: Array[Byte],
@@ -296,4 +323,50 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
+}
+
+@JsonView(Array(classOf[Views.Default]))
+case class OwnedForgerStakeAmount(
+                            ownerPublicKey: AddressProposition,
+                            stakedAmount: BigInteger)
+  extends BytesSerializable with ABIEncodable[StaticStruct] {
+
+  require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
+
+  override type M = OwnedForgerStakeAmount
+
+  override def serializer: SparkzSerializer[OwnedForgerStakeAmount] = OwnedForgerStakeAmountSerializer
+
+  override def toString: String = "%s(ownerAddress: %s, stakedAmount: %s)"
+    .format(this.getClass.toString, ownerPublicKey, stakedAmount)
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams = new util.ArrayList[Type[_]]()
+
+    listOfParams.add(new Uint256(stakedAmount))
+    listOfParams.add(new AbiAddress(ownerPublicKey.address().toString))
+
+    new StaticStruct(listOfParams)
+  }
+}
+
+object OwnedForgerStakeAmountSerializer extends SparkzSerializer[OwnedForgerStakeAmount] {
+  override def serialize(s: OwnedForgerStakeAmount, w: Writer): Unit = {
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    w.putInt(s.stakedAmount.toByteArray.length)
+    w.putBytes(s.stakedAmount.toByteArray)
+  }
+
+  override def parse(r: Reader): OwnedForgerStakeAmount = {
+    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+    val stakeAmountLength = r.getInt()
+    val stakeAmount = new BigIntegerUInt256(r.getBytes(stakeAmountLength)).getBigInt
+
+    OwnedForgerStakeAmount(ownerPublicKey, stakeAmount)
+  }
+}
+
+object OwnedForgerStakeAmountListEncoder extends ABIListEncoder[OwnedForgerStakeAmount, StaticStruct]{
+  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
 }
