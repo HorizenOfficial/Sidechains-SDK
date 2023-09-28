@@ -32,6 +32,18 @@ jobs:
       - TESTS_IMAGE_NAME='sc-ci-base'
       - TESTS_IMAGE_TAG='focal_jdk-11_latest'
       - TESTS='000'
+    - language: python
+      python: 3.5
+      before_script:
+        - cd qa
+      script:
+        - python test.py
+    - language: node_js
+      node_js: 16.19.1
+      before_script:
+        - cd qa
+      script:
+        - node test.js
 
 deploy:
   provider: releases
