@@ -33,13 +33,13 @@ jobs:
       - TESTS_IMAGE_TAG='focal_jdk-11_latest'
       - TESTS='000'
     - language: python
-      python: 3.5
       before_script:
+        - sudo apt-get -y install python3-pip
+        - pip install -r ./SidechainTestFramework/account/requirements.txt
         - cd qa
       script:
         - python test.py
     - language: node_js
-      node_js: 16.19.1
       before_script:
         - cd qa
       script:
