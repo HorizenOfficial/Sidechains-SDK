@@ -19,7 +19,6 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
   override val contractAddress: Address = PROXY_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ProxySmartContractCode")
 
-  // TODO this must be updated when merging with 0.8.0, we should support consensusEpochNumber for hard fork activation
   override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
     super.init(view, consensusEpochNumber)
   }
@@ -33,13 +32,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
   }
 
   private def doInvokeSmartContractCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext, readOnly : Boolean): Array[Byte] = {
-
-    val msg = context.msg
     log.debug(s"Entering with invocation: $invocation")
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-//    if (msg.getNonce == null) {
-//      throw new ExecutionRevertedException("Call must include a nonce")
-//    }
 
     val value = invocation.value
 
