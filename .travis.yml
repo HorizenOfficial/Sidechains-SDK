@@ -35,12 +35,9 @@ jobs:
     - language: python
       before_script:
         - sudo apt-get -y install python3-pip
-        - pip install eth_abi
-        - pip install pycryptodome
-        - pip install rlp
-        - pip install eth_utils
-        - pip install eth_bloom
-        - pip install base58
+        - pip3 install -r ./qa/SidechainTestFramework/account/requirements.txt
+        - git clone https://github.com/HorizenOfficial/zen.git
+        - ls zen
         - cd qa
       script:
         - python test.py
