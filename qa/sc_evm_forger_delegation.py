@@ -91,25 +91,9 @@ def get_all_owned_stakes(abi_return_value):
     return owners_dict
 
 def get_owned_stake_value(abi_return_value, ownerAddress):
-    # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes
-    # from the start of the return data block. In this case 32 (0x20)
-    start_data_offset = decode(['uint32'], hex_str_to_bytes(abi_return_value[0:64]))[0] * 2
-    assert_equal(start_data_offset, 64)
-
-    end_offset = start_data_offset + 64  # read 32 bytes
-    list_size = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_data_offset:end_offset]))[0]
-
-    tot_value = 0
-    for i in range(list_size):
-        start_offset = end_offset
-        end_offset = start_offset + 128  # read (32 + 32) bytes
-        (value, address) = decode(['uint256', 'address'],
-                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
-        assert_equal(remove_0x_prefix(address), ownerAddress)
-        tot_value = tot_value + value
-
-
-    return tot_value
+    (value, address) = decode(['uint256', 'address'], hex_str_to_bytes(abi_return_value))
+    assert_equal(remove_0x_prefix(address), ownerAddress)
+    return value
 
 
 
@@ -162,12 +146,13 @@ class SCEvmForgerDelegation(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
+        block_number_x = sc_node_1.rpc_eth_blockNumber()["result"]
+
         sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
         # SC1 delegates 50 zen to SC2
         forgerStake12_amount = 50
-
         result = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_blockSignPubKey, sc2_vrfPubKey,
                                     convertZenToZennies(forgerStake12_amount))
         if "result" not in result:
@@ -181,16 +166,6 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC1 delegates 4 zen to SC3
         forgerStake13_amount = 4
-        forgerStakes = {
-            "forgerStakeInfo": {
-                "ownerAddress": evm_address_sc_node_1,
-                "blockSignPublicKey": sc3_blockSignPubKey,
-                "vrfPubKey": sc3_vrfPubKey,
-                "value": convertZenToZennies(forgerStake13_amount)
-            },
-            "nonce": 1  # second tx from this evm address
-        }
-
         result = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc3_blockSignPubKey, sc3_vrfPubKey,
                                     convertZenToZennies(forgerStake13_amount), 1)
         # result = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
@@ -202,7 +177,6 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC3 delegates 60 zen to SC2
         forgerStake32_amount = 60  # Zen
-
         result = ac_makeForgerStake(sc_node_3, evm_address_sc_node_3, sc2_blockSignPubKey, sc2_vrfPubKey,
                                     convertZenToZennies(forgerStake32_amount))
         if "result" not in result:
@@ -213,7 +187,6 @@ class SCEvmForgerDelegation(AccountChainSetup):
 
         # SC2 delegates 33 zen to itself
         forgerStake22_amount = 33  # Zen
-
         result = ac_makeForgerStake(sc_node_2, evm_address_sc_node_2, sc2_blockSignPubKey, sc2_vrfPubKey,
                                     convertZenToZennies(forgerStake22_amount))
         if "result" not in result:
@@ -300,15 +273,14 @@ class SCEvmForgerDelegation(AccountChainSetup):
         req = {
             "from": format_evm(evm_address_sc_node_1),
             "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
-            "nonce": 3,
-            "gasLimit": 2300000,
-            "gasPrice": 850000000,
             "value": 0,
             "data": encode_hex(abi_str)
         }
         response = sc_node_1.rpc_eth_call(req, 'latest')
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
+        # decode the ABI list creating a dictionary ownerAddress/value, and verify we have the expected amount for
+        # the first owner address
         ownersStakeList = get_all_owned_stakes(abi_return_value)
         assert_equal(ownersStakeList[add_0x_prefix(evm_address_sc_node_1)], tot_owned_addr_1)
 
@@ -320,28 +292,29 @@ class SCEvmForgerDelegation(AccountChainSetup):
         req = {
             "from": format_evm(evm_address_sc_node_1),
             "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
-            "nonce": 3,
-            "gasLimit": 2300000,
-            "gasPrice": 850000000,
             "value": 0,
             "data": encode_hex(abi_str) + addr_padded_str
         }
+
         response = sc_node_1.rpc_eth_call(req, 'latest')
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
-        result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + 12 * (3 * 32)
-        #assert_equal(result_string_length, 2 * exp_len)
-
         tot_value = get_owned_stake_value(abi_return_value, evm_address_sc_node_1)
-
         assert_equal(tot_value, tot_owned_addr_1)
-
         balance = int(sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
-        print(balance)
-        # assert that this balance is the sum of all owned stakes in both ownersStakeList and stakeList
+        print("balances at latest: nsc bal={}, owned bal={}".format(balance, tot_value))
 
+        # test that eth call works with a reference block in the past. At that block we should have only the genesis stake
+        # and not any stake at the owner address
+        response = sc_node_1.rpc_eth_call(req, block_number_x)
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        tot_value = get_owned_stake_value(abi_return_value, evm_address_sc_node_1)
+        balance = int(sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), block_number_x)['result'], 16)
+        print("balances at {}: nsc bal={}, owned bal={}".format(block_number_x, balance, tot_value))
+        print("gen staked amount = {}".format(genStakeAmount))
+        assert_equal(0, tot_value)
+        assert_equal(convertZenniesToWei(genStakeAmount), balance)
 
 if __name__ == "__main__":
     SCEvmForgerDelegation().main()

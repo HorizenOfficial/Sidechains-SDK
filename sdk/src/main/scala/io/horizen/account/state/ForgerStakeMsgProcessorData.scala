@@ -366,7 +366,3 @@ object OwnedForgerStakeAmountSerializer extends SparkzSerializer[OwnedForgerStak
     OwnedForgerStakeAmount(ownerPublicKey, stakeAmount)
   }
 }
-
-object OwnedForgerStakeAmountListEncoder extends ABIListEncoder[OwnedForgerStakeAmount, StaticStruct]{
-  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
-}

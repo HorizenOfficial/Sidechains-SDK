@@ -214,10 +214,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   }
 
   def doGetListOfOwnedStakesCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-    if (msg.getNonce == null && !msg.getIsFakeMsg) {
-      throw new ExecutionRevertedException("Call must include a nonce")
-    }
 
     if (msg.getValue.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
@@ -227,21 +223,19 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val cmdInput = GetOwnedStaksCmdInputDecoder.decode(inputParams)
     val ownerAddress: Address = cmdInput.ownerAddress
 
-    var ownedStakesList = Seq[OwnedForgerStakeAmount]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
+    val ownerProposition = new AddressProposition(ownerAddress)
+    var totOwnedAmount = BigInteger.ZERO
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
-      if (item.forgerStakeData.ownerPublicKey.equals(new AddressProposition(ownerAddress))) {
-        val stakeAmount = OwnedForgerStakeAmount(item.forgerStakeData.ownerPublicKey, item.forgerStakeData.stakedAmount)
-        ownedStakesList = stakeAmount +: ownedStakesList
+      if (item.forgerStakeData.ownerPublicKey.equals(ownerProposition)) {
+        totOwnedAmount = totOwnedAmount.add(item.forgerStakeData.stakedAmount)
       }
       nodeReference = prevNodeReference
     }
 
-    // TODO maybe we can return just aserialized object (ownerAddress, totalValue)
-    OwnedForgerStakeAmountListEncoder.encode(ownedStakesList.asJava)
-
+    OwnedForgerStakeAmount(ownerProposition, totOwnedAmount).encode()
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
