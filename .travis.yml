@@ -3,35 +3,9 @@ dist: focal
 vm:
   size: x-large
 language: generic
-addons:
-  apt:
-    packages:
-      - libxml-xpath-perl
-services:
-  - docker
-
-git:
-  depth: false
-
-env:
-  global:
-    # Separate branches by space
-    - PROD_RELEASE_BRANCHES='master'
-
-before_script:
-  - source ci/setup_env.sh
-  - ci/travis_keep_alive.sh
 
 jobs:
   include:
-    # - stage: java project
-    #  name: jdk-11_latest
-    #  script: ci/script.sh
-    #  env:
-    #  - TESTS_DOCKER_ORG='zencash'
-    #  - TESTS_IMAGE_NAME='sc-ci-base'
-    #  - TESTS_IMAGE_TAG='focal_jdk-11_latest'
-    #  - TESTS='000'
     - language: python
       before_script:
         - sudo apt-get -y install python3-pip
@@ -46,12 +20,3 @@ jobs:
         - cd qa/test
       script:
         - node test.js
-
-deploy:
-  provider: releases
-  token: $GH_TOKEN_RELEASES
-  prerelease: $IS_A_GH_PRERELEASE
-  overwrite: true
-  on:
-    tags: true
-    condition: $IS_A_RELEASE = true
