@@ -17,6 +17,6 @@ jobs:
         - ./zcutil/build.sh --legacy-cpu -j$(nproc)
         - ./zcutil/fetch-params.sh
         - ./src/zend
-        - cd qa/test
       script:
+        - cd qa/test
         - python test.py
