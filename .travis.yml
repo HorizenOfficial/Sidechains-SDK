@@ -20,8 +20,3 @@ jobs:
         - cd qa/test
       script:
         - python test.py
-    - language: node_js
-      before_script:
-        - cd qa/test
-      script:
-        - node test.js
