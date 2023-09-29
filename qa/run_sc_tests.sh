@@ -126,6 +126,7 @@ testScriptsEvm=(
     'sc_evm_seedernode.py'
     'sc_evm_consensus_parameters_fork.py'
     'sc_evm_active_slot_coefficient.py'
+    'sc_evm_rpc_eth'
 );
 
 testScriptsUtxo=(
