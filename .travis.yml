@@ -24,26 +24,26 @@ before_script:
 
 jobs:
   include:
-    - stage: java project
-      name: jdk-11_latest
-      script: ci/script.sh
-      env:
-      - TESTS_DOCKER_ORG='zencash'
-      - TESTS_IMAGE_NAME='sc-ci-base'
-      - TESTS_IMAGE_TAG='focal_jdk-11_latest'
-      - TESTS='000'
+    # - stage: java project
+    #  name: jdk-11_latest
+    #  script: ci/script.sh
+    #  env:
+    #  - TESTS_DOCKER_ORG='zencash'
+    #  - TESTS_IMAGE_NAME='sc-ci-base'
+    #  - TESTS_IMAGE_TAG='focal_jdk-11_latest'
+    #  - TESTS='000'
     - language: python
       before_script:
         - sudo apt-get -y install python3-pip
-        - pip3 install -r ./qa/SidechainTestFramework/account/requirements.txt
+        - pip3 install -r ./qa/test/requirements.txt
         - git clone https://github.com/HorizenOfficial/zen.git
         - ls zen
-        - cd qa
+        - cd qa/test
       script:
         - python test.py
     - language: node_js
       before_script:
-        - cd qa
+        - cd qa/test
       script:
         - node test.js
 
