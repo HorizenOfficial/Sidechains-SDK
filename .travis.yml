@@ -7,9 +7,10 @@ language: generic
 jobs:
   include:
     - language: python
-      before_script:
+      install:
         - sudo apt-get -y install python3-pip
         - pip3 install -r ./qa/test/requirements.txt
+      before_script:
         - git clone https://github.com/HorizenOfficial/zen.git
         - cd zen
         - ./zcutil/build.sh -j$(nproc)
