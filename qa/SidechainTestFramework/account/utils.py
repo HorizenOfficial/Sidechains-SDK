@@ -42,8 +42,11 @@ PROXY_SMART_CONTRACT_ADDRESS = "00000000000000000000AAAAAAAAAAAAAAAAAAAA"
 #   address used for burning coins
 NULL_ADDRESS = "0000000000000000000000000000000000000000"
 
-# TODO It may change
+# TODO It may change. It should have the same value as in src/main/java/io/horizen/examples/AppForkConfigurator.java
 INTEROPERABILITY_FORK_EPOCH = 50
+
+# The activation epoch of the zendao feature, as coded in the sdk
+ZENDAO_FORK_EPOCH = 7
 
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000

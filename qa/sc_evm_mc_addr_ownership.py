@@ -17,8 +17,9 @@ from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership impor
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
-from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
-from SidechainTestFramework.scutil import generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
+from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH, \
+    ZENDAO_FORK_EPOCH
+from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
@@ -136,10 +137,6 @@ def extract_sc_associations_list(abi_return_value_bytes):
         print("mc addr=" + mc_addr)
         sc_associations_dict[sc_address_checksum_fmt] = mc_addr_list
     return sc_associations_dict
-
-
-# The activation epoch of the zendao feature, as coded in the sdk
-ZENDAO_FORK_EPOCH = 7
 
 
 class SCEvmMcAddressOwnership(AccountChainSetup):
@@ -819,5 +816,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
         # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
+
 if __name__ == "__main__":
     SCEvmMcAddressOwnership().main()
+

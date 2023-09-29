@@ -372,6 +372,9 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     var traceResult = tracer.getResult.result
     // check tracer output
+    // Expected error from the EVM. The EVM doesn't know any native contract before the fork, it will treat them as EVM
+    // contracts: it will try to execute the "fake" code saved inside the stateDb and this causes an invalid opcode.
+    var expectedErrorMsg = "invalid opcode: opcode 0xce not defined"
 
     println(traceResult)
     assertJsonEquals(
@@ -391,7 +394,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
                       "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
                       "gasUsed": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
                       "input": "0x$NATIVE_CONTRACT_RETRIEVE_ABI_ID",
-                      "error": "invalid opcode: opcode 0xce not defined"
+                      "error": "$expectedErrorMsg"
                     }]
                   }""",
         traceResult
@@ -496,7 +499,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
       traceResult = tracer.getResult.result
 
-      val expectedErrorMsg = WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT
+      expectedErrorMsg = WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT
       expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
       var failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
 
