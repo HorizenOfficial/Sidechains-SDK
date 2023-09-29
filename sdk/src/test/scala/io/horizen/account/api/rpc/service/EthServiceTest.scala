@@ -221,30 +221,35 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
     }"""
 
-  private val txPoolContentFromOutput =
+
+  private val expectedPendingTx =
     """{
+         "blockHash":null,
+         "blockNumber":null,
+         "transactionIndex":null,
+         "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+         "type":"0x2",
+         "nonce":"0x10",
+         "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+         "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+         "value":"0xe4e1c0",
+         "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+         "gas":"0xec0564",
+         "gasPrice":"0x3b9aca64",
+         "maxPriorityFeePerGas":"0x6ef91",
+         "maxFeePerGas":"0x3b9aca64",
+         "chainId":"0x7cd",
+         "v":"0x1c",
+         "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+         "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+         "accessList":[]
+      }
+      """
+
+  private val txPoolContentFromOutput =
+    s"""{
        "pending":{
-          "16":{
-             "blockHash":null,
-             "blockNumber":null,
-             "transactionIndex":null,
-             "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
-             "type":"0x2",
-             "nonce":"0x10",
-             "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
-             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
-             "value":"0xe4e1c0",
-             "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-             "gas":"0xec0564",
-             "gasPrice":"0x3b9aca64",
-             "maxPriorityFeePerGas":"0x6ef91",
-             "maxFeePerGas":"0x3b9aca64",
-             "chainId":"0x7cd",
-             "v":"0x1c",
-             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
-             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
-             "accessList":[]
-          },
+          "16":$expectedPendingTx,
           "24":{
              "blockHash":null,
              "blockNumber":null,
@@ -524,7 +529,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Transaction hash", "Expected output"),
       ("0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253", expectedTxView),
-      ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null")
+      ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null"),
+      ("0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044", expectedPendingTx)
     )
 
     forAll(validCases) { (input, expectedOutput) =>
