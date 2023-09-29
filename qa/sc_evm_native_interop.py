@@ -323,7 +323,6 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_true('error' in result)
         assert_true('write protection' in result['error']['message'])
 
-        # TODO traceCall seems to have problems with failed txs. Needs to check what is the correct behavior
         # Verify tracing
         trace_response = node.rpc_debug_traceCall(
             {
