@@ -5,16 +5,15 @@ import pprint
 from decimal import Decimal
 
 from eth_abi import decode
-from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0x_prefix, to_checksum_address, \
-    add_0x_prefix
+from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0x_prefix, add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_evm
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
     FORGER_STAKE_SMART_CONTRACT_ADDRESS
-from SidechainTestFramework.scutil import generate_next_block
+from SidechainTestFramework.scutil import generate_next_block, assert_true
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, hex_str_to_bytes, bytes_to_hex_str
+    assert_equal, fail, forward_transfer_to_sidechain, hex_str_to_bytes
 )
 
 """
@@ -37,24 +36,25 @@ Test:
 
 
 def getSignerStakeAmount(myInfoList, inSignerAddress):
-    sum = 0
+    tot_sum = 0
     for entry in myInfoList:
         signerAddress = entry['forgerStakeData']['forgerPublicKeys']['blockSignPublicKey']['publicKey']
         if signerAddress == inSignerAddress:
-            sum += entry['forgerStakeData']['stakedAmount']
+            tot_sum += entry['forgerStakeData']['stakedAmount']
     # print("Sum = {}, address={}".format(sum, inSignerAddress))
-    return sum
+    return tot_sum
 
 
 def getOwnerStakeAmount(ownedStakesList, inOwnerAddress):
-    sum = 0
+    tot_sum = 0
     for entry in ownedStakesList:
         ownerAddress = entry['forgerStakeData']['ownerPublicKey']['address']
         if ownerAddress == inOwnerAddress:
-            sum += entry['forgerStakeData']['stakedAmount']
+            tot_sum += entry['forgerStakeData']['stakedAmount']
 
     # print("Sum = {}, address={}".format(sum, inSignerAddress))
-    return sum
+    return tot_sum
+
 
 def get_all_owned_stakes(abi_return_value):
     # the location of the data part of the first (the only one in this case) parameter (dynamic type), measured in bytes
@@ -69,10 +69,10 @@ def get_all_owned_stakes(abi_return_value):
     for i in range(list_size):
         start_offset = end_offset
         end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
-        (stake_id, value, address) = decode(['bytes32', 'uint256', 'address'],
-                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
-        stake_id_str = bytes_to_hex_str(stake_id)
-        sc_address_checksum_fmt = address #to_checksum_address(address)
+        # stake id not used
+        (_, value, address) = decode(['bytes32', 'uint256', 'address'],
+                                     hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+        sc_address_checksum_fmt = address  # to_checksum_address(address)
         print("sc addr=" + sc_address_checksum_fmt)
         if sc_address_checksum_fmt in owners_dict:
             val = owners_dict.get(sc_address_checksum_fmt)
@@ -86,15 +86,9 @@ def get_all_owned_stakes(abi_return_value):
         end_offset = start_offset + 192  # read (32 + 32 + 32) bytes
         # these are blockSignerPubKey and vrfKey 33 bytes
         (_, _, _) = decode(['bytes32', 'bytes32', 'bytes1'],
-                                             hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
+                           hex_str_to_bytes(abi_return_value[start_offset:end_offset]))
     pprint.pprint(owners_dict)
     return owners_dict
-
-def get_owned_stake_value(abi_return_value, ownerAddress):
-    (value, address) = decode(['uint256', 'address'], hex_str_to_bytes(abi_return_value))
-    assert_equal(remove_0x_prefix(address), ownerAddress)
-    return value
-
 
 
 class SCEvmForgerDelegation(AccountChainSetup):
@@ -220,13 +214,6 @@ class SCEvmForgerDelegation(AccountChainSetup):
         # pprint.pprint(stakeList)
         assert_equal(5, len(stakeList))
 
-        ownerAddress = { "ownerAddress": add_0x_prefix(evm_address_sc_node_1) }
-        ownedStakesList = sc_node_3.transaction_ownedForgingStakes(json.dumps(ownerAddress))['result']['stakes']
-        pprint.pprint(ownedStakesList)
-        sumOwned = getOwnerStakeAmount(ownedStakesList, evm_address_sc_node_1)
-        tot_owned_addr_1 = convertZenToWei(forgerStake12_amount + forgerStake13_amount)
-        assert_equal(sumOwned, tot_owned_addr_1)
-
         # take amounts of forger block signers
         sum1 = getSignerStakeAmount(stakeList, sc1_blockSignPubKey)
         sum2 = getSignerStakeAmount(stakeList, sc2_blockSignPubKey)
@@ -267,6 +254,13 @@ class SCEvmForgerDelegation(AccountChainSetup):
         assert_equal(blockStakeInfo['blockSignPublicKey']['publicKey'], sc2_blockSignPubKey)
         assert_equal(blockStakeInfo['vrfPublicKey']['publicKey'], sc2_vrfPubKey)
 
+        ownerAddress = {"ownerAddress": add_0x_prefix(evm_address_sc_node_1)}
+        ownedStakesList = sc_node_3.transaction_ownedForgingStakes(json.dumps(ownerAddress))['result']['stakes']
+        pprint.pprint(ownedStakesList)
+        sumOwned = getOwnerStakeAmount(ownedStakesList, evm_address_sc_node_1)
+        tot_owned_addr_1 = convertZenToWei(forgerStake12_amount + forgerStake13_amount)
+        assert_equal(sumOwned, tot_owned_addr_1)
+
         # call nsc for getting all forger stakes
         method = 'getAllForgersStakes()'
         abi_str = function_signature_to_4byte_selector(method)
@@ -284,37 +278,24 @@ class SCEvmForgerDelegation(AccountChainSetup):
         ownersStakeList = get_all_owned_stakes(abi_return_value)
         assert_equal(ownersStakeList[add_0x_prefix(evm_address_sc_node_1)], tot_owned_addr_1)
 
-        # call nsc for getting owned forger stakes
-        method = 'getOwnedStakes(address)'
-        abi_str = function_signature_to_4byte_selector(method)
-        addr_padded_str = "000000000000000000000000" + evm_address_sc_node_1
+        balance = int(
+            sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
+        print("balances at latest: nsc bal={}".format(balance))
 
-        req = {
-            "from": format_evm(evm_address_sc_node_1),
-            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
-            "value": 0,
-            "data": encode_hex(abi_str) + addr_padded_str
-        }
-
-        response = sc_node_1.rpc_eth_call(req, 'latest')
-        abi_return_value = remove_0x_prefix(response['result'])
-        print(abi_return_value)
-        tot_value = get_owned_stake_value(abi_return_value, evm_address_sc_node_1)
-        assert_equal(tot_value, tot_owned_addr_1)
-        balance = int(sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), 'latest')['result'], 16)
-        print("balances at latest: nsc bal={}, owned bal={}".format(balance, tot_value))
-
-        # test that eth call works with a reference block in the past. At that block we should have only the genesis stake
-        # and not any stake at the owner address
+        # test that eth call works with a reference block leaving in the past. At that block we should have only the
+        # genesis stake and not any stake for the owner address
         response = sc_node_1.rpc_eth_call(req, block_number_x)
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
-        tot_value = get_owned_stake_value(abi_return_value, evm_address_sc_node_1)
-        balance = int(sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), block_number_x)['result'], 16)
-        print("balances at {}: nsc bal={}, owned bal={}".format(block_number_x, balance, tot_value))
+        ownersStakeList = get_all_owned_stakes(abi_return_value)
+        assert_true(add_0x_prefix(evm_address_sc_node_1) not in ownersStakeList)
+        balance = int(
+            sc_node_1.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), block_number_x)['result'],
+            16)
+        print("balances at {}: nsc bal={}".format(block_number_x, balance))
         print("gen staked amount = {}".format(genStakeAmount))
-        assert_equal(0, tot_value)
         assert_equal(convertZenniesToWei(genStakeAmount), balance)
+
 
 if __name__ == "__main__":
     SCEvmForgerDelegation().main()
