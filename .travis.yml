@@ -11,7 +11,11 @@ jobs:
         - sudo apt-get -y install python3-pip
         - pip3 install -r ./qa/test/requirements.txt
         - git clone https://github.com/HorizenOfficial/zen.git
-        - ls zen
+        - cd zen
+        - ./zcutil/build.sh -j$(nproc)
+        - ./zcutil/build.sh --legacy-cpu -j$(nproc)
+        - ./zcutil/fetch-params.sh
+        - ./src/zend
         - cd qa/test
       script:
         - python test.py
