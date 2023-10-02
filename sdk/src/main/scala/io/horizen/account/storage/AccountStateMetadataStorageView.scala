@@ -400,7 +400,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
-    val x = calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
     calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
