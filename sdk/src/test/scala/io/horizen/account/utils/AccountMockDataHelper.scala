@@ -18,19 +18,21 @@ import io.horizen.block.SidechainBlockBase.GENESIS_BLOCK_PARENT_ID
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData}
 import io.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import io.horizen.companion.SidechainSecretsCompanion
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.utils.FieldElementUtils
 import io.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import io.horizen.evm.results.ProofAccountResult
 import io.horizen.evm.{Address, Hash, StateDB}
 import io.horizen.fixtures.SidechainBlockFixture.{generateMainchainBlockReference, generateMainchainHeaderHash}
 import io.horizen.fixtures.{FieldElementFixture, SidechainRelatedMainchainOutputFixture, StoreFixture, VrfGenerator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo}
 import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.proposition.Proposition
 import io.horizen.secret.{Secret, SecretSerializer}
 import io.horizen.storage.{SidechainSecretStorage, Storage}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, WithdrawalEpochInfo}
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Pair, TimeToEpochUtils, WithdrawalEpochInfo}
 import io.horizen.utxo.box.Box
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -209,6 +211,17 @@ case class AccountMockDataHelper(genesis: Boolean)
     // mock getNonExecutableTransactionsMapInspect method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMapInspect).thenReturn(nonExecutableTxsMapInspect)
 
+    // mock getTransactionById
+    Mockito.when(memoryPool.getTransactionById(ArgumentMatchers.anyString())).thenAnswer { answer =>
+      val input: String = answer.getArgument(0)
+      input match {
+        case v if (v == executableTx1.id) => Optional.of(executableTx1.asInstanceOf[SidechainTypes#SCAT])
+        case v if (v == executableTx2.id) => Optional.of(executableTx2.asInstanceOf[SidechainTypes#SCAT])
+        case v if (v == executableTx3.id) => Optional.of(executableTx3.asInstanceOf[SidechainTypes#SCAT])
+        case _ => Optional.empty()
+      }
+    }
+
     // return the mocked memory pool
     memoryPool
   }
@@ -231,8 +244,10 @@ case class AccountMockDataHelper(genesis: Boolean)
 
     Mockito.when(history.params).thenReturn(mock[NetworkParams])
     val regTestParams = RegTestParams()
-    Mockito.when(history.params.consensusSecondsInSlot).thenReturn(regTestParams.consensusSecondsInSlot)
-    Mockito.when(history.params.consensusSlotsInEpoch).thenReturn(regTestParams.consensusSlotsInEpoch)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(regTestParams.sidechainGenesisBlockTimestamp)))
 
     Mockito.when(history.blockIdByHeight(any())).thenReturn(None)
     Mockito.when(history.blockIdByHeight(2)).thenReturn(Option(blockId))
@@ -437,7 +452,7 @@ case class AccountMockDataHelper(genesis: Boolean)
   private def setupMockMessageProcessor = {
     val mockMsgProcessor = mock[MessageProcessor]
     Mockito
-      .when(mockMsgProcessor.canProcess(any[Message], any[BaseAccountStateView]))
+      .when(mockMsgProcessor.canProcess(any[Message], any[BaseAccountStateView], any[Int]))
       .thenReturn(true)
     Mockito
       .when(mockMsgProcessor.process(any[Message], any[BaseAccountStateView], any[GasPool], any[BlockContext]))

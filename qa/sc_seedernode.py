@@ -143,8 +143,8 @@ class SCSeederNode(SidechainTestFramework):
 
         forging_info = sc_node_seeder.block_forgingInfo()["result"]
         slots_in_epoch = forging_info["consensusSlotsInEpoch"]
-        best_slot = forging_info["bestSlotNumber"]
-        best_epoch = forging_info["bestEpochNumber"]
+        best_slot = forging_info["bestBlockSlotNumber"]
+        best_epoch = forging_info["bestBlockEpochNumber"]
 
         next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, False)
 

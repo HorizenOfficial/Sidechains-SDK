@@ -118,7 +118,7 @@ case class AccountBlockHeader(
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: baseFee=$baseFee is non positive and therefore invalid.")
 
         // check, that gas limit is valid
-        val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+        val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp))
         if(gasLimit.compareTo(feeFork.blockGasLimit) != 0)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id: gasLimit=$gasLimit is invalid.")
         if(gasUsed.signum() < 0)

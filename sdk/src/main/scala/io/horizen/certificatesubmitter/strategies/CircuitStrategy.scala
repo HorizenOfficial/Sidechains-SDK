@@ -48,7 +48,7 @@ abstract class CircuitStrategy[
     val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, state, withdrawalEpochNumber)
 
     val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(headerInfo.sidechainBlockId)
-    TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
+    TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, parentBlockInfo.timestamp)
   }
 
   protected def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: HIS, state: MS, withdrawalEpochNumber: Int): MainchainHeaderInfo = {

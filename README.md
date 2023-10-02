@@ -1,8 +1,14 @@
 **Sidechains-SDK Blaze**
 -------------------
+
 Sidechains are an innovation devised to enable blockchain scalability and extensibility by creating parallel platform and application layers that are bound to the mainchain without imposing a significant burden. Each sidechain implements the desired features and custom business logic, rooted in a protocol that offers a way to transfer coins from and to the original mainchain and each sidechain.
 
 Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo sidechain SDK is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain. A detailed description of the concept, the protocol, and details about mainchain/sidechain interaction can be found in the [Zendoo Whitepaper](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf).
+
+
+[Public Release Notes](/doc/index.md)
+
+[Changelog](/CHANGELOG.md)
 
 **Blaze Features**
 
@@ -42,7 +48,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.7.2.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.8.0.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
@@ -102,3 +108,4 @@ In order to build and use `SNAPSHOT.jar` package version refer to the following 
 
 Version 0.7.0 is not backward compatible with any previous versions.
 Due to a change in the consensus protocol, you cannot update any existing Sidechain of version <=0.6.1 into a >=0.7.0
+

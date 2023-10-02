@@ -260,7 +260,7 @@ abstract class AbstractHistory[
 
   override def isEmpty: Boolean = height <= 0
 
-  override def contains(id: ModifierId): Boolean = storage.blockInfoOptionById(id).isDefined
+  override def contains(id: ModifierId): Boolean = storage.contains(id)
 
   override def applicableTry(block: PM): Try[Unit] = {
     if (!contains(block.parentId)) {

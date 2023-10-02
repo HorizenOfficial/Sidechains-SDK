@@ -5,7 +5,6 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.request.RpcRequest
-import io.horizen.account.api.rpc.utils.RpcCode
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.history.AccountHistory
@@ -21,17 +20,17 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.evm.Address
 import io.horizen.fixtures.FieldElementFixture
 import io.horizen.fixtures.SidechainBlockFixture.getDefaultAccountTransactionsCompanion
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
 import io.horizen.params.RegTestParams
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.{EthServiceSettings, SidechainTypes}
-import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Assert, Before, Test}
+import org.junit.{Before, Test}
 import org.mockito.Mockito
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatestplus.junit.JUnitSuite
@@ -39,7 +38,6 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
-import sparkz.core.block.Block
 import sparkz.core.bytesToId
 import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
@@ -223,30 +221,35 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       }
     }"""
 
-  private val txPoolContentFromOutput =
+
+  private val expectedPendingTx =
     """{
+         "blockHash":null,
+         "blockNumber":null,
+         "transactionIndex":null,
+         "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
+         "type":"0x2",
+         "nonce":"0x10",
+         "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
+         "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
+         "value":"0xe4e1c0",
+         "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
+         "gas":"0xec0564",
+         "gasPrice":"0x3b9aca64",
+         "maxPriorityFeePerGas":"0x6ef91",
+         "maxFeePerGas":"0x3b9aca64",
+         "chainId":"0x7cd",
+         "v":"0x1c",
+         "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
+         "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
+         "accessList":[]
+      }
+      """
+
+  private val txPoolContentFromOutput =
+    s"""{
        "pending":{
-          "16":{
-             "blockHash":null,
-             "blockNumber":null,
-             "transactionIndex":null,
-             "hash":"0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044",
-             "type":"0x2",
-             "nonce":"0x10",
-             "from":"0x5b19616a7277d58ea1040a5f44c54d41853ccde3",
-             "to":"0x15532e34426cd5c37371ff455a5ba07501c0f522",
-             "value":"0xe4e1c0",
-             "input":"0xbd54d1f34e34a90f7dc5efe0b3d65fa4",
-             "gas":"0xec0564",
-             "gasPrice":"0x3b9aca64",
-             "maxPriorityFeePerGas":"0x6ef91",
-             "maxFeePerGas":"0x3b9aca64",
-             "chainId":"0x7cd",
-             "v":"0x1c",
-             "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
-             "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
-             "accessList":[]
-          },
+          "16":$expectedPendingTx,
           "24":{
              "blockHash":null,
              "blockNumber":null,
@@ -314,7 +317,11 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   private var ethService: EthService = _
   protected var senderWithSecret: String = _
-  protected var networkParams: RegTestParams = _
+  protected var networkParams: RegTestParams = RegTestParams()
+  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+  ))
+  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(networkParams.sidechainGenesisBlockTimestamp)))
 
   @Before
   def setUp(): Unit = {
@@ -522,7 +529,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     val validCases = Table(
       ("Transaction hash", "Expected output"),
       ("0x6411db6b0b891abd9bd970562f71d4bd69b1ee3359d627c98856f024dec16253", expectedTxView),
-      ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null")
+      ("0x123cfae639e9fcab216904adf931d55cc2cc54668dab04365437927b9cb2c7ba", "null"),
+      ("0x68366d9034c74adb5d6e584116bc20838aedc15218a1d49eea43e04f31072044", expectedPendingTx)
     )
 
     forAll(validCases) { (input, expectedOutput) =>

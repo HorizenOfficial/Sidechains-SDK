@@ -23,16 +23,16 @@ class EvmMessageProcessorIntegrationTest extends EvmMessageProcessorTestBase {
       stateView.addBalance(eoaAddress, BigInteger.TEN)
 
       val processor = new EvmMessageProcessor()
-      assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), stateView))
+      assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), stateView, 0))
       assertTrue(
         "should process calls to existing smart contracts",
-        processor.canProcess(getMessage(contractAddress), stateView))
+        processor.canProcess(getMessage(contractAddress), stateView, 0))
       assertFalse(
         "should not process EOA to EOA transfer (empty account)",
-        processor.canProcess(getMessage(emptyAddress), stateView))
+        processor.canProcess(getMessage(emptyAddress), stateView, 0))
       assertFalse(
         "should not process EOA to EOA transfer (non-empty account)",
-        processor.canProcess(getMessage(eoaAddress), stateView))
+        processor.canProcess(getMessage(eoaAddress), stateView, 0))
     }
   }
 

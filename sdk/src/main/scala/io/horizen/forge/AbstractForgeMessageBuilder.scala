@@ -4,7 +4,7 @@ import akka.util.Timeout
 import io.horizen.block._
 import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import io.horizen.consensus._
-import io.horizen.fork.ForkManager
+import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 import io.horizen.history.AbstractHistory
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
@@ -75,7 +75,7 @@ abstract class AbstractForgeMessageBuilder[
       case _ => // checks passed
     }
 
-    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextConsensusEpochNumber, nextConsensusSlotNumber)
+    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, nextConsensusEpochNumber, nextConsensusSlotNumber)
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
@@ -92,9 +92,10 @@ abstract class AbstractForgeMessageBuilder[
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
 
       val percentageForkApplied = ForkManager.getSidechainFork(nextConsensusEpochNumber).stakePercentageForkApplied
+      val activeSlotCoefficient = ActiveSlotCoefficientFork.get(nextConsensusEpochNumber).activeSlotCoefficient
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied, activeSlotCoefficient)
       }
 
 
@@ -149,8 +150,8 @@ abstract class AbstractForgeMessageBuilder[
     // Parent block and current tip block can be the same in case of extension the Active chain.
     // But can be different in case of sidechain fork caused by mainchain fork.
     // In this case parent block is before the tip, and tip block will be the last Ommer included into the next block.
-    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, parentBlockTimestamp)
-    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTipBlockTimestamp)
+    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, parentBlockTimestamp)
+    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
     if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
@@ -175,7 +176,7 @@ abstract class AbstractForgeMessageBuilder[
   protected def getBranchPointInfo(history: HIS): Try[BranchPointInfo] = Try {
     val bestMainchainHeaderInfo = history.getBestMainchainHeaderInfo.get
 
-    val (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
+    var (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
       mainchainSynchronizer.getMainchainDivergentSuffix(history, MainchainSynchronizer.MAX_BLOCKS_REQUEST) match {
         case Success((height, hashes)) => (height, hashes.head, hashes.tail) // hashes contains also the hash of best known block
         case Failure(ex) =>
@@ -186,6 +187,8 @@ abstract class AbstractForgeMessageBuilder[
             throw ex
       }
 
+    newHeaderHashes = if(newHeaderHashes.size != 0 && newHeaderHashes.size > params.mcBlockRefDelay) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
+
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
     if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
       val branchPointId: ModifierId = history.bestBlockId
@@ -193,11 +196,11 @@ abstract class AbstractForgeMessageBuilder[
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-      // to not to include mcblock references data from different withdrawal epochs
-      val maxReferenceDataNumber: Int = withdrawalEpochMcBlocksLeft
-
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
       val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
+
+      // to not to include mcblock references data from different withdrawal epochs
+      val maxReferenceDataNumber: Int = Math.min(withdrawalEpochMcBlocksLeft, nextMainchainReferenceDataHeaderHashes.size)
 
       val mainchainReferenceDataHeaderHashesToInclude = nextMainchainReferenceDataHeaderHashes.take(maxReferenceDataNumber)
       val mainchainHeadersHashesToInclude = newHeaderHashes

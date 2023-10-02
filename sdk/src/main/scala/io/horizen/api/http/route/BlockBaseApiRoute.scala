@@ -18,9 +18,10 @@ import io.horizen.json.Views
 import io.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.ModifierId
 
 import java.util.{Optional => JOptional}
@@ -45,7 +46,8 @@ abstract class BlockBaseApiRoute[
                                   sidechainBlockActorRef: ActorRef,
                                   companion: SparkzSerializer[TX],
                                   forgerRef: ActorRef,
-                                  params: NetworkParams)
+                                  params: NetworkParams,
+                                  timeProvider: NetworkTimeProvider)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] with DisableApiRoute {
 
@@ -195,12 +197,17 @@ abstract class BlockBaseApiRoute[
     val future = forgerRef ? GetForgingInfo
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
     result match {
-      case Success(forgingInfo) => ApiResponseUtil.toResponse(
+      case Success(forgingInfo) =>
+        val currentTime: Long = timeProvider.time() / 1000
+        val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
+        ApiResponseUtil.toResponse(
         RespForgingInfo(
           forgingInfo.consensusSecondsInSlot,
           forgingInfo.consensusSlotsInEpoch,
           forgingInfo.currentBestEpochAndSlot.epochNumber,
           forgingInfo.currentBestEpochAndSlot.slotNumber,
+          epochAndSlot.epochNumber,
+          epochAndSlot.slotNumber,
           forgingInfo.forgingEnabled
         )
       )
@@ -311,8 +318,10 @@ object BlockBaseRestSchema {
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class RespForgingInfo(consensusSecondsInSlot: Int,
                                           consensusSlotsInEpoch: Int,
-                                          bestEpochNumber: Int,
-                                          bestSlotNumber: Int,
+                                          bestBlockEpochNumber: Int,
+                                          bestBlockSlotNumber: Int,
+                                          currentEpochNumber: Int,
+                                          currentSlotNumber: Int,
                                           forgingEnabled: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))

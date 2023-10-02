@@ -15,15 +15,16 @@ import io.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDa
 import io.horizen.certificatesubmitter.keys.CertifiersKeys
 import io.horizen.certificatesubmitter.strategies.{CeasingSidechain, CertificateSubmissionStrategy, CircuitStrategy, WithoutKeyRotationCircuitStrategy}
 import io.horizen.chain.{MainchainBlockReferenceInfo, MainchainHeaderInfo, SidechainBlockInfo}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.fixtures.FieldElementFixture
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{CommonParams, NetworkParams, RegTestParams}
 import io.horizen.proposition.{Proposition, SchnorrProposition}
 import io.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import io.horizen.transaction.MC2SCAggregatedTransaction
 import io.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
-import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo, ZenCoinsUtils}
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, ZenCoinsUtils}
 import io.horizen.utxo.block.{SidechainBlock, SidechainBlockHeader}
 import io.horizen.utxo.box.Box
 import io.horizen.utxo.history.SidechainHistory
@@ -398,6 +399,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       signersPublicKeys = schnorrSecrets.map(_.publicImage()),
       signersThreshold = signersThreshold
     )
+
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+
 
     val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
