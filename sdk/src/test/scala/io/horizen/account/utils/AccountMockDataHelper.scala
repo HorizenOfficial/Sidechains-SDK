@@ -211,6 +211,17 @@ case class AccountMockDataHelper(genesis: Boolean)
     // mock getNonExecutableTransactionsMapInspect method call
     Mockito.when(memoryPool.getNonExecutableTransactionsMapInspect).thenReturn(nonExecutableTxsMapInspect)
 
+    // mock getTransactionById
+    Mockito.when(memoryPool.getTransactionById(ArgumentMatchers.anyString())).thenAnswer { answer =>
+      val input: String = answer.getArgument(0)
+      input match {
+        case v if (v == executableTx1.id) => Optional.of(executableTx1.asInstanceOf[SidechainTypes#SCAT])
+        case v if (v == executableTx2.id) => Optional.of(executableTx2.asInstanceOf[SidechainTypes#SCAT])
+        case v if (v == executableTx3.id) => Optional.of(executableTx3.asInstanceOf[SidechainTypes#SCAT])
+        case _ => Optional.empty()
+      }
+    }
+
     // return the mocked memory pool
     memoryPool
   }
