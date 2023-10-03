@@ -19,7 +19,7 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 
 WAIT_CONST = 1
 
-SNAPSHOT_VERSION_TAG = "0.8.0"
+SNAPSHOT_VERSION_TAG = "0.8.1"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
