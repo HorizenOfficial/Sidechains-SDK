@@ -34,6 +34,12 @@ else
     echo "Warning: Either BITCOIND or BITCOINCLI is not set or is empty. Please set both environment variables."
 fi
 
+# Step 3: Execute run_sc_tests.sh
+# this phase runs python tests which append to the previously created .exec file to get the full code coverage report
+echo "Executing script for integration tests..."
+cd ../qa || exit 1
+./run_sc_tests.sh -jacoco
+
 # Step 4: Generate the JaCoCo code coverage report
 # this phase creates the detailed report with html files for easier browsing
 echo "Generating JaCoCo code coverage report..."
