@@ -3,6 +3,12 @@
 # Specify snapshot version
 SNAPSHOT_VERSION_TAG="0.8.0-SNAPSHOT"
 
+# Check if SIDECHAIN_SDK is set and not empty
+if [ -z "$SIDECHAIN_SDK" ]; then
+  echo "Error: SIDECHAIN_SDK is not set or is empty. Please set the environment variable."
+  exit 1
+fi
+
 # Step 1: Change to the project directory
 echo "Changing to the project directory..."
 cd ../sdk || exit 1
@@ -10,6 +16,12 @@ cd ../sdk || exit 1
 # Step 2: Run 'mvn clean install' in the project directory
 echo "Running 'mvn clean install' in the project directory..."
 mvn clean install
+
+# Check if BITCOIND and BITCOINCLI are set and not empty before running python tests
+if [ -z "$BITCOIND" ] || [ -z "$BITCOINCLI" ]; then
+  echo "Error: Either BITCOIND or BITCOINCLI is not set or is empty. Please set both environment variables."
+  exit 1
+fi
 
 # Step 3: Execute run_sc_tests.sh
 echo "Executing script for integration tests..."
