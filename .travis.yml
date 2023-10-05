@@ -22,8 +22,64 @@ before_script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
 
+.com.github.horizenofficial.sidechain-sdk.job-definitions:
+  - &test_docker_amd64_x-large
+    if: NOT env(SKIP_TESTS)
+    os: linux
+    dist: focal
+    vm:
+      size: x-large
+    script:
+      - bash -c "chmod +x ${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh"
+      - bash -c "${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh ${TEST_CMD} ${TEST_ARGS}"
+
 jobs:
   include:
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:1"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:2"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:3"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:4"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:5"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:6"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:7"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:8"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_CMD="./run_sc_tests.sh"
+        - TEST_ARGS="-split=9:9"
     - stage: java project
       name: jdk-11_latest
       script: ci/script.sh
