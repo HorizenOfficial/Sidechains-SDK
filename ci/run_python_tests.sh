@@ -2,8 +2,10 @@
 
 set -euo pipefail
 
-TEST_CMD=$1
-TEST_ARGS=$2
+test_cmd="${1:-}"
+test_args="${2:-}"
+
+[ "$#" -ne 2 ] && { echo -e "Error: function requires exactly two arguments.\n\n"; exit 1;}
 
 # Functions
 function fn_die() {
@@ -16,12 +18,12 @@ if [ -z "${ZEN_REPO_TOKEN:-}" ]; then
   fn_die "ZEN_REPO_TOKEN variable is not set. Exiting ..."
 fi
 
-CURRENT_DIR=$PWD
+CURRENT_DIR="${PWD}"
 
 # Step 1
 echo "" && echo "=== Pull latest zen release ===" && echo ""
 
-json_data=$(curl -L   -H "Accept: application/vnd.github+json"   -H "Authorization: Bearer ${ZEN_REPO_TOKEN}"   -H "X-GitHub-Api-Version: 2022-11-28"   https://api.github.com/repos/HorizenOfficial/zen/releases)
+json_data=$(curl -sL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${ZEN_REPO_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/HorizenOfficial/zen/releases)
 
 deb_url=""
 deb_asc_url=""
@@ -33,17 +35,17 @@ deb_sha256_name=""
 while IFS= read -r main_array_item; do
   is_valid=true
 
-  deb_data=$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")
-  deb_asc_data=$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.asc")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")
-  deb_sha256_data=$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.sha256")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")
+  deb_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
+  deb_asc_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.asc")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
+  deb_sha256_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.sha256")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
 
-  deb_url=$(jq -r '.url' <<< "$deb_data")
-  deb_asc_url=$(jq -r '.url' <<< "$deb_asc_data")
-  deb_sha256_url=$(jq -r '.url' <<< "$deb_sha256_data")
+  deb_url="$(jq -r '.url' <<< "$deb_data")"
+  deb_asc_url="$(jq -r '.url' <<< "$deb_asc_data")"
+  deb_sha256_url="$(jq -r '.url' <<< "$deb_sha256_data")"
 
-  deb_name=$(jq -r '.name' <<< "$deb_data")
-  deb_asc_name=$(jq -r '.name' <<< "$deb_asc_data")
-  deb_sha256_name=$(jq -r '.name' <<< "$deb_sha256_data")
+  deb_name="$(jq -r '.name' <<< "$deb_data")"
+  deb_asc_name="$(jq -r '.name' <<< "$deb_asc_data")"
+  deb_sha256_name="$(jq -r '.name' <<< "$deb_sha256_data")"
 
   [[ "$deb_name" == *"rc"* || "$deb_name" == *"bitcore"* ]] && is_valid=false
   [[ "$deb_asc_name" == *"rc"* || "$deb_asc_name" == *"bitcore"* ]] && is_valid=false
@@ -54,9 +56,9 @@ while IFS= read -r main_array_item; do
   fi
 done < <(jq -c '.[]' <<< "$json_data")
 
-curl -L ${deb_url} --output ${deb_name} || { val="$?"; echo "Error: was not able to download ${deb_name}."; exit $val; }
-curl -L ${deb_asc_url} --output ${deb_asc_name} || { val="$?"; echo "Error: was not able to download ${deb_asc_name}."; exit $val; }
-curl -L ${deb_sha256_url} --output ${deb_sha256_name} || { val="$?"; echo "Error: was not able to download ${deb_sha256_name}."; exit $val; }
+curl -sL "${deb_url}" --output "${deb_name}" || { val="$?"; echo "Error: was not able to download ${deb_name}."; exit $val; }
+curl -sL "${deb_asc_url}" --output "${deb_asc_name}" || { val="$?"; echo "Error: was not able to download ${deb_asc_name}."; exit $val; }
+curl -sL "${deb_sha256_url}" --output "${deb_sha256_name}" || { val="$?"; echo "Error: was not able to download ${deb_sha256_name}."; exit $val; }
 
 echo "" && echo "=== Checksum verification===" && echo ""
 if sha256sum -c "$deb_sha256_name"; then
@@ -69,13 +71,13 @@ fi
 # Step 2
 echo "" && echo "=== Extract debian package content" && echo ""
 ZEN_CONTENT_FOLDER=${deb_name}-contents
-dpkg -x ${deb_name} ${ZEN_CONTENT_FOLDER} || { retval="$?"; echo "Error: was not able to extract package ${deb_name} to directory ${ZEN_CONTENT_FOLDER}."; exit $retval; }
+dpkg -x "${deb_name}" "${ZEN_CONTENT_FOLDER}" || { retval="$?"; echo "Error: was not able to extract package ${deb_name} to directory ${ZEN_CONTENT_FOLDER}."; exit $retval; }
 
 # Step 3
 echo "" && echo "=== Export BITCOINCLI, BITCOIND and SIDECHAIN_SDK path as env vars, needed for python tests" && echo ""
-BITCOINCLI=${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zen-cli
-BITCOIND=${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zend
-SIDECHAIN_SDK=${CURRENT_DIR}
+BITCOINCLI="${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zen-cli"
+BITCOIND="${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zend"
+SIDECHAIN_SDK="${CURRENT_DIR}"
 
 if [[ ! -f "$BITCOINCLI" ]]; then
   fn_die "zen-cli does not exist in the given path. Exiting ..."
@@ -84,8 +86,7 @@ if [[ ! -f "$BITCOIND" ]]; then
   fn_die "zend does not exist in the given path. Exiting ..."
 fi
 if [[ ! -d "$SIDECHAIN_SDK" ]]; then
-  echo "Sidechain-SDK does not exist in the given path. Exiting ..."
-  exit 1
+  fn_die "Sidechain-SDK does not exist in the given path. Exiting ..."
 fi
 
 export BITCOINCLI
@@ -118,4 +119,4 @@ pip install --no-cache-dir -r ./SidechainTestFramework/account/requirements.txt
 
 # Step 9
 echo "" && echo "=== Run tests ===" && echo ""
-${TEST_CMD} ${TEST_ARGS}
+"${test_cmd}" "${test_args}"
