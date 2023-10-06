@@ -34,6 +34,7 @@ before_script:
       - bash -c "${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh ${TEST_CMD} ${TEST_ARGS}"
 
 jobs:
+  fast_finish: true
   include:
     - stage: Test
       <<: *test_docker_amd64_x-large
