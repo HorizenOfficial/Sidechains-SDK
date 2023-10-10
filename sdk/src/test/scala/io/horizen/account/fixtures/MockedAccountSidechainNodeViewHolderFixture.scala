@@ -37,7 +37,7 @@ class MockedAccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
 trait MockedAccountSidechainNodeViewHolderFixture extends MockitoSugar {
-  val maxModifiersCacheSize = 10
+  val maxModifiersCacheSize = 100
 
   def getMockedAccountSidechainNodeViewHolderRef(
                                            history: AccountHistory,
