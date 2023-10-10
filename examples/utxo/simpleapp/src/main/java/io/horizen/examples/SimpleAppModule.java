@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.horizen.fork.ConsensusParamsFork;
 import io.horizen.utxo.SidechainAppModule;
 import io.horizen.SidechainAppStopper;
 import io.horizen.SidechainSettings;
@@ -45,6 +44,7 @@ public class SimpleAppModule extends SidechainAppModule
     public void configureApp() {
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
+        int maxHistoryRewritingLength = 200;
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
@@ -55,18 +55,15 @@ public class SimpleAppModule extends SidechainAppModule
         //Initialize the App Fork Configurator
         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
-        //Get the max number of consensus slots per epoch from the App Fork configurator and use it to set the Storage versions to mantain
-        int maxConsensusEpoch = ConsensusParamsFork.getMaxPossibleSlotsEver(forkConfigurator.getOptionalSidechainForks());
-
         // two distinct storages are used in application state and wallet in order to test a version
         // misalignment during startup and the recover logic
         File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
         File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
-        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2, maxConsensusEpoch * 2 + 1);
+        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2, maxHistoryRewritingLength);
 
         File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
         File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
-        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2, maxConsensusEpoch * 2 + 1);
+        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2, maxHistoryRewritingLength);
 
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
@@ -119,37 +116,37 @@ public class SimpleAppModule extends SidechainAppModule
 
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, 1));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletCswDataStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateForgerBoxStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateUtxoMerkleTreeStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, 1));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, 1));
         bind(Storage.class)
                 .annotatedWith(Names.named("BackupStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(backupStore, maxConsensusEpoch * 2 + 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(backupStore, maxHistoryRewritingLength));
 
         bind(new TypeLiteral<List<SidechainApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
