@@ -13,70 +13,105 @@ function fn_die() {
   exit "${2:-1}"
 }
 
-echo "=== Checking if GITHUB_TOKEN is set ==="
-if [ -z "${ZEN_REPO_TOKEN:-}" ]; then
-  fn_die "ZEN_REPO_TOKEN variable is not set. Exiting ..."
-fi
+function import_gpg_keys() {
+  # shellcheck disable=SC2145
+  printf "%s\n" "Tagged build, fetching keys:" "${@}" ""
+  # shellcheck disable=SC2207
+  declare -r my_arr=( $(echo "${@}" | tr " " "\n") )
+
+  for key in "${my_arr[@]}"; do
+    echo "Importing key: ${key}"
+    gpg -v --batch --keyserver hkps://keys.openpgp.org --recv-keys "${key}" ||
+    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
+    gpg -v --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "${key}" ||
+    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}"
+  done
+}
+
+function check_signed_tag() {
+  # Checking if git tag signed by the maintainers
+  if git verify-tag -v "${1}"; then
+    echo "${1} is a valid signed tag"
+    return 0
+  else
+    echo "Git tag = ${1} signature is NOT valid. Codesigning will be skipped..."
+    return 1
+  fi
+}
 
 CURRENT_DIR="${PWD}"
 
 # Step 1
-echo "" && echo "=== Pull latest zen release ===" && echo ""
+echo "" && echo "=== Get latest prod travis build id and commit sha ===" && echo ""
 
-json_data=$(curl -sL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${ZEN_REPO_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/HorizenOfficial/zen/releases)
+zen_tag="$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/HorizenOfficial/zen/git/refs/tags | jq -r '[.[] | select(.ref | test("refs/tags/v[0-9]\\.[0-9]\\.[0-9]$"))][-1].ref' | sed -e 's|refs/tags/||')"
+check_runs="$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/HorizenOfficial/zen/commits/${zen_tag}/check-runs")"
+travis_build_id="$(basename "$(jq -rc '.check_runs[0].details_url' <<< "${check_runs}")")"
+commit_sha="$(jq -rc '.check_runs[0].head_sha' <<< "${check_runs}")"
+MAINTAINER_KEYS="219f55740bbf7a1ce368ba45fb7053ce4991b669 8EDE560493C65AC1 D3A22623FF9B9F11 1FCA7260796CB902 F136264D7F4A2BB5"
 
-deb_url=""
-deb_asc_url=""
-deb_sha256_url=""
-deb_name=""
-deb_asc_name=""
-deb_sha256_name=""
+travis_urls="
+#amd64
+https://f001.backblazeb2.com/file/ci-horizen/amd64-linux-ubuntu_focal-${travis_build_id}-${commit_sha}.tar.gz.sha256
+https://f001.backblazeb2.com/file/ci-horizen/amd64-linux-ubuntu_focal-${travis_build_id}-${commit_sha}.tar.gz
+"
 
-while IFS= read -r main_array_item; do
-  is_valid=true
-
-  deb_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
-  deb_asc_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.asc")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
-  deb_sha256_data="$(jq -r 'first(.assets[] | select(.name? and (.name | endswith("-amd64.deb.sha256")) and (.name | contains("-legacy-cpu-") | not)) | {name: .name, url: .browser_download_url})' <<< "$main_array_item")"
-
-  deb_url="$(jq -r '.url' <<< "$deb_data")"
-  deb_asc_url="$(jq -r '.url' <<< "$deb_asc_data")"
-  deb_sha256_url="$(jq -r '.url' <<< "$deb_sha256_data")"
-
-  deb_name="$(jq -r '.name' <<< "$deb_data")"
-  deb_asc_name="$(jq -r '.name' <<< "$deb_asc_data")"
-  deb_sha256_name="$(jq -r '.name' <<< "$deb_sha256_data")"
-
-  [[ "$deb_name" == *"rc"* || "$deb_name" == *"bitcore"* ]] && is_valid=false
-  [[ "$deb_asc_name" == *"rc"* || "$deb_asc_name" == *"bitcore"* ]] && is_valid=false
-  [[ "$deb_sha256_name" == *"rc"* || "$deb_sha256_name" == *"bitcore"* ]] && is_valid=false
-
-  if [ "$is_valid" = true ]; then
-    break
-  fi
-done < <(jq -c '.[]' <<< "$json_data")
-
-curl -sL "${deb_url}" --output "${deb_name}" || { val="$?"; echo "Error: was not able to download ${deb_name}."; exit $val; }
-curl -sL "${deb_asc_url}" --output "${deb_asc_name}" || { val="$?"; echo "Error: was not able to download ${deb_asc_name}."; exit $val; }
-curl -sL "${deb_sha256_url}" --output "${deb_sha256_name}" || { val="$?"; echo "Error: was not able to download ${deb_sha256_name}."; exit $val; }
-
-echo "" && echo "=== Checksum verification===" && echo ""
-if sha256sum -c "$deb_sha256_name"; then
-  echo "Checksum verification passed."
-else
-  echo "Checksum verification failed."
-  exit 1
-fi
 
 # Step 2
-echo "" && echo "=== Extract debian package content" && echo ""
-ZEN_CONTENT_FOLDER=${deb_name}-contents
-dpkg -x "${deb_name}" "${ZEN_CONTENT_FOLDER}" || { retval="$?"; echo "Error: was not able to extract package ${deb_name} to directory ${ZEN_CONTENT_FOLDER}."; exit $retval; }
+echo "" && echo "=== Create folder structure ===" && echo ""
+
+base_dir="${CURRENT_DIR}/zen_release_${zen_tag}"
+if [ -d "${base_dir}" ]; then
+  echo "${base_dir} folder already exists, aborting!"
+  exit 1
+fi
+mkdir -p "${base_dir}"/{travis_files,src}
 
 # Step 3
+echo "" && echo "=== Download artifacts ===" && echo ""
+
+cd "${base_dir}"/travis_files
+echo "$travis_urls" > ./travis_urls.txt
+sudo apt-get update
+sudo apt-get -y --no-install-recommends install aria2
+aria2c -x16 -s16 -i ./travis_urls.txt --allow-overwrite=true --always-resume=true --auto-file-renaming=false
+
+# Step 4
+echo "" && echo "=== Checksum verification===" && echo ""
+
+if shasum -a256 -c ./*.sha256; then
+  echo "Checksum verification passed."
+else
+  fn_die "Checksum verification failed."
+fi
+
+# Step 5
+echo "" && echo "=== Extract artifacts from tar" && echo ""
+tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
+
+release_folder="zen-${zen_tag}-amd64"
+mkdir -p "${base_dir}/src/${release_folder}"
+tar -xzf "${tar_file}" -C "${base_dir}/src/${release_folder}"
+
+# Step 6
+echo "" && echo "=== Verify git tag signed by allowlisted maintainer" && echo ""
+
+cd "${base_dir}/src/${release_folder}"
+GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t "GNUPGHOME")"
+export GNUPGHOME
+import_gpg_keys "${MAINTAINER_KEYS}"
+check_signed_tag "${zen_tag}" && IS_RELEASE="true" || IS_RELEASE="false"
+export IS_RELEASE
+( gpgconf --kill dirmngr || true )
+( gpgconf --kill gpg-agent || true )
+rm -rf "${GNUPGHOME:?}"
+unset GNUPGHOME
+
+# Step 7
 echo "" && echo "=== Export BITCOINCLI, BITCOIND and SIDECHAIN_SDK path as env vars, needed for python tests" && echo ""
-BITCOINCLI="${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zen-cli"
-BITCOIND="${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zend"
+
+BITCOINCLI="${base_dir}/src/${release_folder}/src/zen-cli"
+BITCOIND="${base_dir}/src/${release_folder}/src/zen-cli"
 SIDECHAIN_SDK="${CURRENT_DIR}"
 
 if [[ ! -f "$BITCOINCLI" ]]; then
@@ -93,30 +128,31 @@ export BITCOINCLI
 export BITCOIND
 export SIDECHAIN_SDK
 
-# Step 4
+# Step 8
 echo "" && echo "=== Fetch zen params" && echo ""
-${CURRENT_DIR}/${ZEN_CONTENT_FOLDER}/usr/bin/zen-fetch-params || { retval="$?"; echo "Error: was not able to fetch zen params."; exit $retval; }
+${base_dir}/src/${release_folder}/zcutil/fetch-params.sh || { retval="$?"; echo "Error: was not able to fetch zen params."; exit $retval; }
 
-# Step 5
+# Step 9
 echo "" && echo "=== Building SideChain SDK ===" && echo ""
+cd $CURRENT_DIR
 mvn clean install -Dmaven.test.skip=true || { retval="$?"; echo "Error: was not able to complete mvn clean install of Sidechain SDK."; exit $retval; }
 
-# Step 6
+# Step 10
 echo "" && echo "=== Installing node 16.0.0 ===" && echo ""
 source ~/.nvm/nvm.sh
 nvm install v16.0.0 || { retval="$?"; echo "Error: was not able to nvm install node 16.0.0"; exit $retval; }
 
-# Step 7
+# Step 11
 echo "" && echo "=== Installing yarn ===" && echo ""
 npm install --global yarn || { retval="$?"; echo "Error: was not able to install yarn with npm install."; exit $retval; }
 
-# Step 8
+# Step 12
 echo "" && echo "=== Installing Python dependencies ===" && echo ""
 pip install --no-cache-dir --upgrade pip
 pip install --no-cache-dir -r ./requirements.txt
 cd qa/
 pip install --no-cache-dir -r ./SidechainTestFramework/account/requirements.txt
 
-# Step 9
+# Step 13
 echo "" && echo "=== Run tests ===" && echo ""
 "${test_cmd}" "${test_args}"
