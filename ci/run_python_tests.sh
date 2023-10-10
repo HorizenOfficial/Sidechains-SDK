@@ -111,7 +111,7 @@ unset GNUPGHOME
 echo "" && echo "=== Export BITCOINCLI, BITCOIND and SIDECHAIN_SDK path as env vars, needed for python tests" && echo ""
 
 BITCOINCLI="${base_dir}/src/${release_folder}/src/zen-cli"
-BITCOIND="${base_dir}/src/${release_folder}/src/zen-cli"
+BITCOIND="${base_dir}/src/${release_folder}/src/zend"
 SIDECHAIN_SDK="${CURRENT_DIR}"
 
 if [[ ! -f "$BITCOINCLI" ]]; then
