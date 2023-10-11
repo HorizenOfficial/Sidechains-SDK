@@ -7,7 +7,7 @@ import io.horizen.account.utils.BigIntegerUtil.toUint256Bytes
 import io.horizen.account.utils.{FeeUtils, Secp256k1}
 import io.horizen.evm._
 import io.horizen.utils.BytesUtils
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertArrayEquals, assertEquals, fail}
 import org.junit.Test
 import sparkz.crypto.hash.Keccak256
 
@@ -43,20 +43,19 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
 
     override def process(
-        invocation: Invocation,
-        view: BaseAccountStateView,
-        context: ExecutionContext
-    ): Array[Byte] = {
-
+                          invocation: Invocation,
+                          view: BaseAccountStateView,
+                          context: ExecutionContext
+                        ): Array[Byte] = {
       val gasView = view.getGasTrackedView(invocation.gasPool)
       //read method signature
-     getFunctionSignature(invocation.input) match {
-        case STATICCALL_READONLY_TEST_SIG => testStaticCallOnReadonlyMethod(invocation, gasView, context)
+      getFunctionSignature(invocation.input) match {
+        case STATICCALL_READONLY_TEST_SIG => testStaticCallOnReadonlyMethod(invocation, context)
         case NATIVE_CONTRACT_RETRIEVE_ABI_ID => retrieve(gasView)
-        case STATICCALL_READWRITE_TEST_SIG => testStaticCallOnReadwriteMethod(invocation, gasView, context)
+        case STATICCALL_READWRITE_TEST_SIG => testStaticCallOnReadwriteMethod(invocation, context)
         case NATIVE_CONTRACT_INC_ABI_ID => inc(gasView)
-        case STATICCALL_READWRITE_WITH_TRY_TEST_SIG => testStaticCallOnReadwriteMethodWithTry(invocation, gasView, context)
-        case STATICCALL_NESTED_CALLS_TEST_SIG => testStaticCallNestedCalls(invocation, gasView, context)
+        case STATICCALL_READWRITE_WITH_TRY_TEST_SIG => testStaticCallOnReadwriteMethodWithTry(invocation, context)
+        case STATICCALL_NESTED_CALLS_TEST_SIG => testStaticCallNestedCalls(invocation, context)
         case CREATE_TEST_SIG => testDeployContract(invocation, gasView, context)
         case _ => throw new IllegalArgumentException("Unknown method call")
       }
@@ -64,7 +63,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     def testStaticCallOnReadonlyMethod(
                                   invocation: Invocation,
-                                  view: BaseAccountStateView,
                                   context: ExecutionContext
                                 ): Array[Byte] = {
       val evmContractAddress = new Address(getArgumentsFromData(invocation.input))
@@ -81,7 +79,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     def testStaticCallOnReadwriteMethod(
                                         invocation: Invocation,
-                                        view: BaseAccountStateView,
                                         context: ExecutionContext
                                       ): Array[Byte] = {
       val evmContractAddress = new Address(getArgumentsFromData(invocation.input))
@@ -95,7 +92,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     def testStaticCallNestedCalls(
                                          invocation: Invocation,
-                                         view: BaseAccountStateView,
                                          context: ExecutionContext
                                        ): Array[Byte] = {
       val evmContractAddress = new Address(getArgumentsFromData(invocation.input))
@@ -109,7 +105,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     def testStaticCallOnReadwriteMethodWithTry(
                                          invocation: Invocation,
-                                         view: BaseAccountStateView,
                                          context: ExecutionContext
                                        ): Array[Byte] = {
       val evmContractAddress = new Address(getArgumentsFromData(invocation.input))
@@ -252,7 +247,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     traceResult = tracer.getResult.result
 
-    var failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
+    val failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
 
     // check tracer output
     assertJsonEquals(
@@ -429,14 +424,14 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     traceResult = tracer.getResult.result
 
     var expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
-    var currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
+    val currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
     // check tracer output
 
     assertJsonEquals(
       s"""{
     "type": "CALL",
     "from": "$origin",
-    "to": "${nativeCallerAddress}",
+    "to": "$nativeCallerAddress",
     "gas": "$gasLimitHexString",
     "gasUsed": "0x794",
     "input": "0x${BytesUtils.toHexString(retrieveInput)}",
@@ -472,43 +467,43 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     // call should works so the counter will be increment by 1.
     ///////////////////////////////////////////////////////
 
-      val readwriteInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_READWRITE_ABI_ID)
+    val readwriteInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_READWRITE_ABI_ID)
 
-      returnData = transition(getMessage(nativeCallerAddress, data = readwriteInput))
-      numericResult = org.web3j.utils.Numeric.toBigInt(returnData).intValueExact()
-      currentCounterValue = currentCounterValue + 1
-      expectedTxResult = currentCounterValue
-      assertEquals("Wrong result", expectedTxResult, numericResult)
+    returnData = transition(getMessage(nativeCallerAddress, data = readwriteInput))
+    numericResult = org.web3j.utils.Numeric.toBigInt(returnData).intValueExact()
+    currentCounterValue = currentCounterValue + 1
+    expectedTxResult = currentCounterValue
+    assertEquals("Wrong result", expectedTxResult, numericResult)
 
-      // Check that the counter inside the native smart contract didn't change
-      var result = transition(getMessage(nativeCallerAddress, data = retrieveInput))
-      // verify that the result is still correct.
-      assertEquals("Wrong result from retrieve", currentCounterValue, org.web3j.utils.Numeric.toBigInt(result).intValueExact())
-      currentCounterValue = currentCounterValue + 1
+    // Check that the counter inside the native smart contract didn't change
+    var result = transition(getMessage(nativeCallerAddress, data = retrieveInput))
+    // verify that the result is still correct.
+    assertEquals("Wrong result from retrieve", currentCounterValue, org.web3j.utils.Numeric.toBigInt(result).intValueExact())
+    currentCounterValue = currentCounterValue + 1
 
-      tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
-      blockContext.setTracer(tracer)
+    tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    blockContext.setTracer(tracer)
 
-      // repeat the call again
-      returnDataTraced = transition(getMessage(nativeCallerAddress, data = readwriteInput))
-      currentCounterValue = currentCounterValue + 1
-      expectedTxResult = currentCounterValue
-      // verify that the result is still correct.
-      numericResultTraced = org.web3j.utils.Numeric.toBigInt(returnDataTraced).intValueExact()
-      assertEquals("Wrong result from tracer call", expectedTxResult, numericResultTraced)
+    // repeat the call again
+    returnDataTraced = transition(getMessage(nativeCallerAddress, data = readwriteInput))
+    currentCounterValue = currentCounterValue + 1
+    expectedTxResult = currentCounterValue
+    // verify that the result is still correct.
+    numericResultTraced = org.web3j.utils.Numeric.toBigInt(returnDataTraced).intValueExact()
+    assertEquals("Wrong result from tracer call", expectedTxResult, numericResultTraced)
 
-      traceResult = tracer.getResult.result
+    traceResult = tracer.getResult.result
 
-      expectedErrorMsg = WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT
-      expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
-      var failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
+    expectedErrorMsg = WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT
+    expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
+    val failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
 
 
     assertJsonEquals(
-        s"""{
+      s"""{
           "type": "CALL",
           "from": "$origin",
-          "to": "${nativeCallerAddress}",
+          "to": "$nativeCallerAddress",
           "gas": "$gasLimitHexString",
           "gasUsed": "0x68ab",
           "input": "0x${BytesUtils.toHexString(readwriteInput)}",
@@ -534,42 +529,42 @@ class ContractInteropCallTest extends ContractInteropTestBase {
             "output": "$expectedTxOutputHex"
           }]
           }""",
-        traceResult
-      )
+      traceResult
+    )
 
-      ///////////////////////////////////////////////////////
-      // Test 4: Solidity contract calls a method on a Native Smart Contract using the contract interface. The method
-      // is declared in the contract interface as view but it actually is a readwrite function.
-      // The transaction should fail.
-      ///////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////
+    // Test 4: Solidity contract calls a method on a Native Smart Contract using the contract interface. The method
+    // is declared in the contract interface as view but it actually is a readwrite function.
+    // The transaction should fail.
+    ///////////////////////////////////////////////////////
 
-      val readwriteContractCallInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_RW_CONTRACT_ABI_ID)
+    val readwriteContractCallInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_RW_CONTRACT_ABI_ID)
 
-      Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput))) match {
-        case Failure(ex: ExecutionRevertedException) =>//OK
-        case res => fail(s"Wrong result: $res")
-      }
+    Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput))) match {
+      case Failure(ex: ExecutionRevertedException) => //OK
+      case res => fail(s"Wrong result: $res")
+    }
 
-      // Check that the counter inside the native smart contract didn't change
-      result = transition(getMessage(nativeCallerAddress, data = retrieveInput))
-      // verify that the result is still correct.
-      assertEquals("Wrong result from first retrieve", currentCounterValue, org.web3j.utils.Numeric.toBigInt(result).intValueExact())
-      currentCounterValue = currentCounterValue + 1
+    // Check that the counter inside the native smart contract didn't change
+    result = transition(getMessage(nativeCallerAddress, data = retrieveInput))
+    // verify that the result is still correct.
+    assertEquals("Wrong result from first retrieve", currentCounterValue, org.web3j.utils.Numeric.toBigInt(result).intValueExact())
+    currentCounterValue = currentCounterValue + 1
 
-      tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
-      blockContext.setTracer(tracer)
+    tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    blockContext.setTracer(tracer)
 
-      // repeat the call again
-      Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput)))
+    // repeat the call again
+    Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput)))
 
-      traceResult = tracer.getResult.result
+    traceResult = tracer.getResult.result
 
 
-      assertJsonEquals(
-        s"""{
+    assertJsonEquals(
+      s"""{
                 "type": "CALL",
                 "from": "$origin",
-                "to": "${nativeCallerAddress}",
+                "to": "$nativeCallerAddress",
                 "gas": "$gasLimitHexString",
                 "gasUsed": "0x63d9",
                 "input": "0x${BytesUtils.toHexString(readwriteContractCallInput)}",
@@ -585,8 +580,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
                   "error": "$expectedErrorMsg"
                 }]
                 }""",
-        traceResult
-      )
+      traceResult
+    )
 
   }
 
@@ -619,8 +614,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     val traceResult = tracer.getResult.result
     val invalidWriteErrorMsg = WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT
 
-    var failedSubCallGas = BigInteger.valueOf(25000)
-    var failedSubCallGasHexString = "0x" + failedSubCallGas.toString(16)
+    val failedSubCallGas = BigInteger.valueOf(25000)
+    val failedSubCallGasHexString = "0x" + failedSubCallGas.toString(16)
 
     // check tracer output
     assertJsonEquals(
@@ -686,8 +681,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     var returnDataTraced = transition(getMessage(NativeTestContract.contractAddress, data = inputRetrieveRequest))
     // verify that the result is still correct. Calculate new expected value because before we called inc()
     currentCounterValue = currentCounterValue + 1
-    var expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
-    var currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
+    val expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
+    val currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
 
     var traceResult = tracer.getResult.result
 
@@ -758,7 +753,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     traceResult = tracer.getResult.result
 
-    var failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
+    val failedSubCallGasHexString = NativeTestContract.SUB_CALLS_GAS_HEX_STRING
 
     // check tracer output
     assertJsonEquals(

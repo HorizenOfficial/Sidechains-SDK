@@ -124,6 +124,7 @@ testScriptsEvm=(
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
     'sc_evm_mc_addr_ownership_perf_test.py'
+    'sc_evm_proxy_nsc.py'
     'sc_evm_seedernode.py'
     'sc_evm_consensus_parameters_fork.py'
     'sc_evm_active_slot_coefficient.py'
