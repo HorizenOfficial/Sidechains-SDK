@@ -4,8 +4,9 @@ set -euo pipefail
 
 test_cmd="${1:-}"
 test_args="${2:-}"
+node_version="${3:-}"
 
-[ "$#" -ne 2 ] && { echo -e "Error: function requires exactly two arguments.\n\n"; exit 1;}
+[ "$#" -ne 3 ] && { echo -e "Error: function requires exactly three arguments.\n\n"; exit 1;}
 
 # Functions
 function fn_die() {
@@ -138,9 +139,9 @@ cd $CURRENT_DIR
 mvn clean install -Dmaven.test.skip=true || { retval="$?"; echo "Error: was not able to complete mvn clean install of Sidechain SDK."; exit $retval; }
 
 # Step 10
-echo "" && echo "=== Installing node 16.0.0 ===" && echo ""
+echo "" && echo "=== Installing node ===" && echo ""
 source ~/.nvm/nvm.sh
-nvm install v16.0.0 || { retval="$?"; echo "Error: was not able to nvm install node 16.0.0"; exit $retval; }
+nvm install ${node_version} || { retval="$?"; echo "Error: was not able to nvm install node 16.0.0"; exit $retval; }
 
 # Step 11
 echo "" && echo "=== Installing yarn ===" && echo ""
