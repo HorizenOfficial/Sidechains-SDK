@@ -76,7 +76,7 @@ echo "" && echo "=== Create folder structure ===" && echo ""
 base_dir="${CURRENT_DIR}/zen_release"
 is_cached=false
 
-if [ -d "${base_dir}" ]; then
+if [ -d "${base_dir}/travis_files" ]; then
   echo "${base_dir} folder already exists, using cache!"
   cd "${base_dir}"/travis_files
   is_cached=true
