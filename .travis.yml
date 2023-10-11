@@ -22,6 +22,10 @@ before_script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
 
+cache:
+  directories:
+    - $CACHE_DIR
+
 .com.github.horizenofficial.sidechain-sdk.job-definitions:
   - &test_docker_amd64_x-large
     if: NOT env(SKIP_TESTS)

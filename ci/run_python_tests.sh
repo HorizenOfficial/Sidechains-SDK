@@ -62,20 +62,27 @@ https://f001.backblazeb2.com/file/ci-horizen/amd64-linux-ubuntu_focal-${travis_b
 echo "" && echo "=== Create folder structure ===" && echo ""
 
 base_dir="${CURRENT_DIR}/zen_release_${zen_tag}"
+CACHE_DIR="$base_dir"
+export CACHE_DIR
+
 if [ -d "${base_dir}" ]; then
-  echo "${base_dir} folder already exists, aborting!"
-  exit 1
+  echo "${base_dir} folder already exists, using cache!"
+  cd "${base_dir}"/travis_files
+
+else
+  mkdir -p "${base_dir}"/{travis_files,src}
+
+  # Step 3
+  echo "" && echo "=== Download artifacts ===" && echo ""
+
+  cd "${base_dir}"/travis_files
+  echo "$travis_urls" > ./travis_urls.txt
+  sudo apt-get update
+  sudo apt-get -y --no-install-recommends install aria2
+  aria2c -x16 -s16 -i ./travis_urls.txt --allow-overwrite=true --always-resume=true --auto-file-renaming=false
+
 fi
-mkdir -p "${base_dir}"/{travis_files,src}
 
-# Step 3
-echo "" && echo "=== Download artifacts ===" && echo ""
-
-cd "${base_dir}"/travis_files
-echo "$travis_urls" > ./travis_urls.txt
-sudo apt-get update
-sudo apt-get -y --no-install-recommends install aria2
-aria2c -x16 -s16 -i ./travis_urls.txt --allow-overwrite=true --always-resume=true --auto-file-renaming=false
 
 # Step 4
 echo "" && echo "=== Checksum verification===" && echo ""
@@ -87,12 +94,14 @@ else
 fi
 
 # Step 5
-echo "" && echo "=== Extract artifacts from tar" && echo ""
-tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
+if [ ! -d "${base_dir}" ]; then
+  echo "" && echo "=== Extract artifacts from tar" && echo ""
+  tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
 
-release_folder="zen-${zen_tag}-amd64"
-mkdir -p "${base_dir}/src/${release_folder}"
-tar -xzf "${tar_file}" -C "${base_dir}/src/${release_folder}"
+  release_folder="zen-${zen_tag}-amd64"
+  mkdir -p "${base_dir}/src/${release_folder}"
+  tar -xzf "${tar_file}" -C "${base_dir}/src/${release_folder}"
+fi
 
 # Step 6
 echo "" && echo "=== Verify git tag signed by allowlisted maintainer" && echo ""
