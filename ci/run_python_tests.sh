@@ -13,7 +13,7 @@ function import_gpg_keys() {
   declare -r my_arr=( $(echo "${@}" | tr " " "\n") )
 
   if [ "${#my_arr[@]}" -eq 0 ]; then
-    fn_die "Error: There are ZERO gpg keys to import. MAINTAINER_KEYS variable is not set. Exiting ..."
+    fn_die "Error: There are ZERO gpg keys to import. ZEN_REPO_MAINTAINER_KEYS variable is not set. Exiting ..."
   else
     # shellcheck disable=SC2145
     printf "%s\n" "Tagged build, fetching keys:" "${@}" ""
@@ -54,8 +54,8 @@ if [ -z "${API_ZEN_REPO_URL:-}" ]; then
   fn_die "Error: API_ZEN_REPO_URL variable is not set. Exiting ..."
 fi
 
-if [ -z "${MAINTAINER_KEYS:-}" ]; then
-  fn_die "Error: MAINTAINER_KEYS variable is not set. Exiting ..."
+if [ -z "${ZEN_REPO_MAINTAINER_KEYS:-}" ]; then
+  fn_die "Error: ZEN_REPO_MAINTAINER_KEYS variable is not set. Exiting ..."
 fi
 
 CURRENT_DIR="${PWD}"
@@ -124,7 +124,7 @@ echo "" && echo "=== Verify git tag signed by allowlisted maintainer ===" && ech
 cd "${base_dir}/src/${release_folder}"
 GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t "GNUPGHOME")"
 export GNUPGHOME
-import_gpg_keys "${MAINTAINER_KEYS}"
+import_gpg_keys "${ZEN_REPO_MAINTAINER_KEYS}"
 check_signed_tag "${zen_tag}" && IS_RELEASE="true" || IS_RELEASE="false"
 export IS_RELEASE
 ( gpgconf --kill dirmngr || true )
