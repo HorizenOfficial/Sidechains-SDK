@@ -61,6 +61,7 @@ Test:
     - Call the getCertificateSigners endpoint and verify that all the signing and master keys are updated.
      ######## WITHDRAWAL EPOCH 4 ##########
     - Verify that certificate was created using all new keys
+    - Verify that CertificateKeyRotation native contract can be called by an EVM smart contract
 """
 
 

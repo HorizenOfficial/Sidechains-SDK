@@ -30,7 +30,6 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractW
   }
 
   private def doInvokeSmartContractCmd(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext, readOnly : Boolean): Array[Byte] = {
-
     log.debug(s"Entering with invocation: $invocation")
 
     val value = invocation.value

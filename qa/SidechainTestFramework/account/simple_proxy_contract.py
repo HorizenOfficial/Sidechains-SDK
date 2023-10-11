@@ -22,7 +22,7 @@ class SimpleProxyContract:
     def do_call(self, from_address, nonce, target_addr, value, data):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         data_input = self.contract.raw_encode_call(self.call_sig, target_addr, value,
                                                    data)
@@ -45,7 +45,7 @@ class SimpleProxyContract:
     def do_call_trace(self, from_address, nonce, target_addr, value, data):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         data_input = self.contract.raw_encode_call(self.call_sig, target_addr, value,
                                                    data)
@@ -65,7 +65,7 @@ class SimpleProxyContract:
     def do_static_call(self, from_address, nonce, target_addr, data):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         data_input = self.contract.raw_encode_call(self.static_call_sig, target_addr, data)
         result = self.sc_node.rpc_eth_call(
@@ -87,7 +87,7 @@ class SimpleProxyContract:
     def do_static_call_trace(self, from_address, nonce, target_addr, data):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         data_input = self.contract.raw_encode_call(self.static_call_sig, target_addr,
                                                    data)
@@ -107,7 +107,7 @@ class SimpleProxyContract:
     def call_transaction(self, from_add, nonce: int, target_addr, value, data, gas_limit=20000000):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         tx_id = self.contract.call_function(self.sc_node, self.call_sig, target_addr,
                                             value, data, fromAddress=from_add,
@@ -120,7 +120,7 @@ class SimpleProxyContract:
     def estimate_gas(self, from_add, nonce: int, target_addr, value, data, gas_limit=20000000):
         if isinstance(data, str):
             data = hex_str_to_bytes(data)
-        if not isinstance(data, bytes):
+        elif not isinstance(data, bytes):
             raise Exception("Only valid data types are byte arrays or string")
         data_input = self.contract.raw_encode_call(self.call_sig, target_addr, value,
                                                    data)
