@@ -17,7 +17,7 @@ env:
   global:
     # Separate branches by space
     - PROD_RELEASE_BRANCHES='master'
-    - NODE_VERSION="v16.0.0"
+    - NODE_VERSION="v16"
     - TEST_CMD="./run_sc_tests.sh"
     - API_ZEN_REPO_URL="https://api.github.com/repos/HorizenOfficial/zen"
 

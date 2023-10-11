@@ -9,28 +9,31 @@ function fn_die() {
 }
 
 function import_gpg_keys() {
-  # shellcheck disable=SC2145
-  printf "%s\n" "Tagged build, fetching keys:" "${@}" ""
   # shellcheck disable=SC2207
   declare -r my_arr=( $(echo "${@}" | tr " " "\n") )
 
-  for key in "${my_arr[@]}"; do
-    echo "Importing key: ${key}"
-    gpg -v --batch --keyserver hkps://keys.openpgp.org --recv-keys "${key}" ||
-    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
-    gpg -v --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "${key}" ||
-    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}"
-  done
+  if [ "${#my_arr[@]}" -eq 0 ]; then
+    fn_die "Error: There are ZERO gpg keys to import. MAINTAINER_KEYS variable is not set. Exiting ..."
+  else
+    # shellcheck disable=SC2145
+    printf "%s\n" "Tagged build, fetching keys:" "${@}" ""
+    for key in "${my_arr[@]}"; do
+      gpg -v --batch --keyserver hkps://keys.openpgp.org --recv-keys "${key}" ||
+      gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
+      gpg -v --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "${key}" ||
+      gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}" ||
+      { echo -e "Warning: ${key} can not be found on GPG key servers. Please upload it to at least one of the following GPG key servers:\nhttps://keys.openpgp.org/\nhttps://keyserver.ubuntu.com/\nhttps://pgp.mit.edu/"; export IS_A_RELEASE="false"; }
+    done
+  fi
 }
 
 function check_signed_tag() {
-  # Checking if git tag signed by the maintainers
-  if git verify-tag -v "${1}"; then
-    echo "${1} is a valid signed tag"
-    return 0
+  local tag="${1}"
+
+  if git verify-tag -v "${tag}"; then
+    echo "${tag} is a valid signed tag"
   else
-    echo "Git tag = ${1} signature is NOT valid. Codesigning will be skipped..."
-    return 1
+    fn_die "Error: ${tag} signature is NOT valid. Exiting ..."
   fi
 }
 
@@ -51,6 +54,9 @@ if [ -z "${API_ZEN_REPO_URL:-}" ]; then
   fn_die "Error: API_ZEN_REPO_URL variable is not set. Exiting ..."
 fi
 
+if [ -z "${MAINTAINER_KEYS:-}" ]; then
+  fn_die "Error: MAINTAINER_KEYS variable is not set. Exiting ..."
+fi
 
 CURRENT_DIR="${PWD}"
 
@@ -61,7 +67,6 @@ zen_tag="$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.c
 check_runs="$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${API_ZEN_REPO_URL}/commits/${zen_tag}/check-runs")"
 travis_build_id="$(basename "$(jq -rc '.check_runs[0].details_url' <<< "${check_runs}")")"
 commit_sha="$(jq -rc '.check_runs[0].head_sha' <<< "${check_runs}")"
-MAINTAINER_KEYS="219f55740bbf7a1ce368ba45fb7053ce4991b669 8EDE560493C65AC1 D3A22623FF9B9F11 1FCA7260796CB902 F136264D7F4A2BB5"
 
 travis_urls="
 #amd64
