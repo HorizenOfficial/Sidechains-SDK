@@ -64,10 +64,12 @@ echo "" && echo "=== Create folder structure ===" && echo ""
 base_dir="${CURRENT_DIR}/zen_release_${zen_tag}"
 CACHE_DIR="$base_dir"
 export CACHE_DIR
+is_cached=false
 
 if [ -d "${base_dir}" ]; then
   echo "${base_dir} folder already exists, using cache!"
   cd "${base_dir}"/travis_files
+  is_cached=true
 
 else
   mkdir -p "${base_dir}"/{travis_files,src}
@@ -94,7 +96,7 @@ else
 fi
 
 # Step 5
-if [ ! -d "${base_dir}" ]; then
+if [ "$is_cached" = false ]; then
   echo "" && echo "=== Extract artifacts from tar" && echo ""
   tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
 
