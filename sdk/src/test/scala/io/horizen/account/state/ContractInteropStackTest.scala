@@ -1,6 +1,6 @@
 package io.horizen.account.state
 
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, TraceOptions, Tracer}
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.assertEquals
 import org.junit.{Ignore, Test}
@@ -58,7 +58,7 @@ class ContractInteropStackTest extends ContractInteropTestBase {
 //      println(s"nested call to $target with $nestedGas gas and input (${nestedInput.length}): ${BytesUtils.toHexString(nestedInput)}")
       val result = Try.apply(context.execute(invocation.staticCall(target, nestedInput, nestedGas)))
       // return result or the current counter in case the nested call failed
-      result.getOrElse(intToBytes(counter))
+      result.getOrElse(new Array[Byte](28) ++ intToBytes(counter))
     }
   }
 
@@ -101,12 +101,18 @@ class ContractInteropStackTest extends ContractInteropTestBase {
    * iterations, long before the call depth limit can be reached.
    */
   @Test
-  @Ignore("current leads to a stack overflow in libevm")
+//  @Ignore("current leads to a stack overflow in libevm")
   def testInteropCallDepth(): Unit = {
     val address = deploy(ContractInteropTestBase.nativeInteropContractCode)
     // cause a call loop: native contract => EVM-based contract => native contract => ...
+    var tracer = new Tracer(new TraceOptions(false, false, false,
+      false, "callTracer", null))
+    blockContext.setTracer(tracer)
+
     val returnData =
       transition(getMessage(NativeTestContract.contractAddress, data = abiEncode(address)))
+      println(tracer.getResult.result)
+
     // cause a call loop: EVM-based contract => native contract => EVM-based contract => ...
 //    val returnData =
 //      transition(getMessage(interopContractAddress, data = abiEncode(NativeInteropStackContract.contractAddress)))
