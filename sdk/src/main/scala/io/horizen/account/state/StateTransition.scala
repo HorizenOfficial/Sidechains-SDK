@@ -1,16 +1,31 @@
 package io.horizen.account.state
 
 import io.horizen.account.utils.BigIntegerUtil
+import io.horizen.evm.EvmContext
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
+import scala.collection.mutable.ListBuffer
+import scala.jdk.OptionConverters.RichOptional
+import scala.util.{Failure, Success, Try}
 
 class StateTransition(
     view: StateDbAccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
-    blockContext: BlockContext
-                     ) extends SparkzLogging {
+    val blockContext: BlockContext,
+    val msg: Message,
+                     ) extends SparkzLogging with ExecutionContext {
+
+  // the current stack of invocations
+  private val invocationStack = new ListBuffer[Invocation]
+
+  // short hand to access the tracer
+  private val tracer = blockContext.getTracer.toScala
+
+  // the current call depth, might be more than invocationStack.length of a message processor handled multiple levels,
+  // e.g. multiple internal calls withing the EVM
+  var depth = 0
 
   /**
    * Perform a state transition by applying the given message to the current state view. Afterwards, the state will
@@ -23,63 +38,45 @@ class StateTransition(
    */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def transition(msg: Message): Array[Byte] = {
+  def transition(): Array[Byte] = {
     // do preliminary checks
     preCheck(msg)
     // save the remaining block gas before any changes
     val initialBlockGas = blockGasPool.getGas
     // create a snapshot before any changes are made
-    val initialRevision = view.snapshot
+    val rollback = view.snapshot
+    var skipRefund = false
+    // allocate gas for processing this message
+    val gasPool = buyGas(msg)
+    // trace TX start
+    tracer.foreach(_.CaptureTxStart(gasPool.initialGas))
     try {
-      // allocate gas for processing this message
-      val gasPool = buyGas(msg)
       // consume intrinsic gas
       val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
       // reset and prepare account access list
       view.setupAccessList(msg)
-      // find and execute the first matching processor
-      messageProcessors.find(_.canProcess(msg, view, blockContext.consensusEpochNumber)) match {
-        case None =>
-          log.error(s"No message processor found for executing message $msg")
-          throw new IllegalArgumentException(s"No message processor found for executing message: $msg")
-        case Some(processor) =>
-          // increase the nonce by 1
-          view.increaseNonce(msg.getFrom)
-          // create a snapshot before any changes are made by the processor
-          val revisionProcessor = view.snapshot
-          var skipRefund = false
-          try {
-            processor.process(msg, view, gasPool, blockContext)
-          } catch {
-            // if the processor throws ExecutionRevertedException we revert changes
-            case err: ExecutionRevertedException =>
-              view.revertToSnapshot(revisionProcessor)
-              throw err
-            // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
-            case err: ExecutionFailedException =>
-              view.revertToSnapshot(revisionProcessor)
-              gasPool.subGas(gasPool.getGas)
-              throw err
-            case err : Throwable =>
-              // do not process refunds in this case, all changes will be reverted
-              skipRefund = true
-              throw err
-          } finally {
-            if (!skipRefund) refundGas(msg, gasPool)
-          }
-      }
+      // increase the nonce by 1
+      view.increaseNonce(msg.getFrom)
+      // execute top-level call frame
+      execute(Invocation.fromMessage(msg, gasPool))
     } catch {
       // execution failed was already handled
       case err: ExecutionFailedException => throw err
       // any other exception will bubble up and invalidate the block
-      case err: Throwable =>
+      case err: Exception =>
+        // do not process refunds in this case, all changes will be reverted
+        skipRefund = true
         // revert all changes, even buying gas and increasing the nonce
-        view.revertToSnapshot(initialRevision)
+        view.revertToSnapshot(rollback)
         // revert any changes to the block gas pool
         blockGasPool.addGas(initialBlockGas.subtract(blockGasPool.getGas))
         throw err
+    } finally {
+      if (!skipRefund) refundGas(msg, gasPool)
+      // trace TX end
+      tracer.foreach(_.CaptureTxEnd(gasPool.getGas))
     }
   }
 
@@ -145,5 +142,139 @@ class StateTransition(
     view.addBalance(msg.getFrom, remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
+  }
+
+  /**
+   * Execute given invocation on the current call stack.
+   */
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
+  def execute(invocation: Invocation): Array[Byte] = {
+    // limit call depth to 1024
+    if (depth > 1024) throw new ExecutionRevertedException("max call depth exceeded")
+    // get caller gas pool, for the top-level call this is empty
+    // TODO: this will be wrong after a call to `executeDepth()` because it does not add a new invocation to the stack.
+    //  As gas can only decrease, using a gaspool "too high" up the stack will only ever have "too much" gas, i.e.
+    //  this will never throw a false out-of-gas error, but the gas limit might not be checked correctly.
+    val callerGas = invocationStack.headOption.map(_.gasPool)
+    // allocate gas from caller to the nested invocation, this can throw if the caller does not have enough gas
+    callerGas.foreach(_.subGas(invocation.gasPool.getGas))
+    // enable write protection if it is not already on
+    // every nested invocation after a read-only invocation must remain read-only
+    val firstReadOnlyInvocation = invocation.readOnly && !view.readOnly
+    if (firstReadOnlyInvocation) view.enableWriteProtection()
+    try {
+      // Verify that there is no value transfer during a read-only invocation. This would also throw later because
+      // view.addBalance and view.subBalance would throw, this just makes it fail faster.
+      if (invocation.readOnly && invocation.value.signum() != 0) {
+        throw new WriteProtectionException("invalid value transfer during read-only invocation")
+      }
+      // find and execute the first matching processor
+      messageProcessors.find(_.canProcess(invocation, view, blockContext.consensusEpochNumber)) match {
+        case None =>
+          log.error(s"No message processor found for invocation: $invocation")
+          throw new IllegalArgumentException("Unable to execute invocation.")
+        case Some(processor) => invoke(processor, invocation)
+      }
+    } finally {
+      // disable write protection only if it was disabled before this invocation
+      if (firstReadOnlyInvocation) view.disableWriteProtection()
+      // return remaining gas to the caller
+      callerGas.foreach(_.addGas(invocation.gasPool.getGas))
+    }
+  }
+
+  private def invoke(processor: MessageProcessor, invocation: Invocation): Array[Byte] = {
+    val startTime = System.nanoTime()
+    if (!processor.customTracing()) {
+      tracer.foreach(tracer => {
+        if (depth == 0) {
+          // trace start of top-level call frame
+          val context = new EvmContext
+          context.chainID = BigInteger.valueOf(blockContext.chainID)
+          context.coinbase = blockContext.forgerAddress
+          context.gasLimit = blockContext.blockGasLimit
+          context.gasPrice = msg.getGasPrice
+          context.blockNumber = BigInteger.valueOf(blockContext.blockNumber)
+          context.time = BigInteger.valueOf(blockContext.timestamp)
+          context.baseFee = blockContext.baseFee
+          context.random = blockContext.random
+          tracer.CaptureStart(
+            view.getStateDbHandle,
+            context,
+            invocation.caller,
+            invocation.callee.orNull,
+            invocation.callee.isEmpty,
+            invocation.input,
+            invocation.gasPool.initialGas,
+            invocation.value
+          )
+        } else {
+          // trace start of nested call frame
+          tracer.CaptureEnter(
+            invocation.guessOpCode(),
+            invocation.caller,
+            invocation.callee.orNull,
+            invocation.input,
+            invocation.gasPool.initialGas,
+            invocation.value
+          )
+        }
+      })
+    }
+
+    // add new invocation to the stack
+    invocationStack.prepend(invocation)
+    // increase call depth
+    depth += 1
+    // create a snapshot before any changes are made by the processor
+    val revert = view.snapshot
+    // execute the message processor
+    val result = Try.apply(processor.process(invocation, view, this))
+    // handle errors
+    result match {
+      // if the processor throws ExecutionRevertedException we revert changes
+      case Failure(_: ExecutionRevertedException) =>
+        view.revertToSnapshot(revert)
+      // if the processor throws ExecutionFailedException we revert changes and consume any remaining gas
+      case Failure(_: ExecutionFailedException) =>
+        view.revertToSnapshot(revert)
+        invocation.gasPool.subGas(invocation.gasPool.getGas)
+      // other errors will be handled further up the stack
+      case _ =>
+    }
+    // reduce call depth
+    depth -= 1
+    // remove the current invocation from the stack
+    invocationStack.remove(0)
+
+    if (!processor.customTracing()) {
+      tracer.foreach(tracer => {
+        val output = result match {
+          // revert reason returned from message processor
+          case Failure(err: ExecutionRevertedException) => err.returnData
+          // successful result
+          case Success(value) => value
+          // other errors do not have a return value
+          case _ => Array.emptyByteArray
+        }
+        // get error message if any
+        val error = result match {
+          case Failure(exception) => exception.getMessage
+          case _ => ""
+        }
+        if (depth == 0) {
+          // trace end of top-level call frame
+          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, System.nanoTime() - startTime, error)
+        } else {
+          // trace end of nested call frame
+          tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)
+        }
+      })
+    }
+
+    // note: this will either return the output of the message processor
+    // or rethrow any exception caused during execution
+    result.get
   }
 }
