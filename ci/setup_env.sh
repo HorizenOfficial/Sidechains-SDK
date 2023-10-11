@@ -2,7 +2,7 @@
 set -eo pipefail
 
 IS_A_RELEASE="false"
-IS_A_GH_PRERELEASE="false"
+IS_A_GH_PRERELEASE=false
 PROD_RELEASE="false"
 
 mapfile -t prod_release_br_list < <(echo "${PROD_RELEASE_BRANCHES}" | tr " " "\n")
@@ -141,7 +141,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
       # Announcing PROD release
       if [ "${IS_A_RELEASE}" = "true" ]; then
         export PROD_RELEASE="true"
-        export IS_A_GH_PRERELEASE="false"
+        export IS_A_GH_PRERELEASE=false
 
         release_prep Production
       fi
@@ -166,7 +166,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
     # Announcing DEV release
     if [ "${IS_A_RELEASE}" = "true" ]; then
       export PROD_RELEASE="false"
-      export IS_A_GH_PRERELEASE="true"
+      export IS_A_GH_PRERELEASE=true
 
       release_prep Development
     fi
