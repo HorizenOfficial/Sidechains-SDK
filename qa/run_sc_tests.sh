@@ -130,6 +130,8 @@ testScriptsEvm=(
     'sc_evm_active_slot_coefficient.py'
     'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
     'sc_evm_rpc_eth.py'
+    'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
+    'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
 );
 
 testScriptsUtxo=(
