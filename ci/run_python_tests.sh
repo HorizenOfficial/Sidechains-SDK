@@ -2,12 +2,6 @@
 
 set -euo pipefail
 
-test_cmd="${1:-}"
-test_args="${2:-}"
-node_version="${3:-}"
-
-[ "$#" -ne 3 ] && { echo -e "Error: function requires exactly three arguments.\n\n"; exit 1;}
-
 # Functions
 function fn_die() {
   echo -e "$1" >&2
@@ -40,13 +34,31 @@ function check_signed_tag() {
   fi
 }
 
+
+if [ -z "${NODE_VERSION:-}" ]; then
+  fn_die "Error: NODE_VERSION variable is not set. Exiting ..."
+fi
+
+if [ -z "${TEST_CMD:-}" ]; then
+  fn_die "Error: TEST_CMD variable is not set. Exiting ..."
+fi
+
+if [ -z "${TEST_ARGS:-}" ]; then
+  fn_die "Error: TEST_ARGS variable is not set. Exiting ..."
+fi
+
+if [ -z "${API_ZEN_REPO_URL:-}" ]; then
+  fn_die "Error: API_ZEN_REPO_URL variable is not set. Exiting ..."
+fi
+
+
 CURRENT_DIR="${PWD}"
 
 # Step 1
-echo "" && echo "=== Get latest prod travis build id and commit sha ===" && echo ""
+echo "" && echo "=== GGet latest ZEN repo PROD build id and commit hash ===" && echo ""
 
 zen_tag="$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/HorizenOfficial/zen/git/refs/tags | jq -r '[.[] | select(.ref | test("refs/tags/v[0-9]\\.[0-9]\\.[0-9]$"))][-1].ref' | sed -e 's|refs/tags/||')"
-check_runs="$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/HorizenOfficial/zen/commits/${zen_tag}/check-runs")"
+check_runs="$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${API_ZEN_REPO_URL}/commits/${zen_tag}/check-runs")"
 travis_build_id="$(basename "$(jq -rc '.check_runs[0].details_url' <<< "${check_runs}")")"
 commit_sha="$(jq -rc '.check_runs[0].head_sha' <<< "${check_runs}")"
 MAINTAINER_KEYS="219f55740bbf7a1ce368ba45fb7053ce4991b669 8EDE560493C65AC1 D3A22623FF9B9F11 1FCA7260796CB902 F136264D7F4A2BB5"
@@ -69,34 +81,32 @@ if [ -d "${base_dir}" ]; then
   echo "${base_dir} folder already exists, using cache!"
   cd "${base_dir}"/travis_files
   is_cached=true
-
 else
   mkdir -p "${base_dir}"/{travis_files,src}
 
   # Step 3
-  echo "" && echo "=== Download artifacts ===" && echo ""
+  echo "" && echo "=== Downloading ZEN artifacts from remote bucket ===" && echo ""
 
   cd "${base_dir}"/travis_files
   echo "$travis_urls" > ./travis_urls.txt
   sudo apt-get update
   sudo apt-get -y --no-install-recommends install aria2
   aria2c -x16 -s16 -i ./travis_urls.txt --allow-overwrite=true --always-resume=true --auto-file-renaming=false
-
 fi
 
 
 # Step 4
-echo "" && echo "=== Checksum verification===" && echo ""
+echo "" && echo "=== Checksum verification ===" && echo ""
 
 if shasum -a256 -c ./*.sha256; then
   echo "Checksum verification passed."
 else
-  fn_die "Checksum verification failed."
+  fn_die "Error: checksum verification failed. Exiting ..."
 fi
 
 # Step 5
 if [ "$is_cached" = false ]; then
-  echo "" && echo "=== Extract artifacts from tar" && echo ""
+  echo "" && echo "=== Extract artifacts from tar ===" && echo ""
   tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
 
   release_folder="zen-${zen_tag}-amd64"
@@ -107,7 +117,7 @@ fi
 export CACHE_DIR
 
 # Step 6
-echo "" && echo "=== Verify git tag signed by allowlisted maintainer" && echo ""
+echo "" && echo "=== Verify git tag signed by allowlisted maintainer ===" && echo ""
 
 cd "${base_dir}/src/${release_folder}"
 GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t "GNUPGHOME")"
@@ -121,20 +131,20 @@ rm -rf "${GNUPGHOME:?}"
 unset GNUPGHOME
 
 # Step 7
-echo "" && echo "=== Export BITCOINCLI, BITCOIND and SIDECHAIN_SDK path as env vars, needed for python tests" && echo ""
+echo "" && echo "=== Export BITCOINCLI, BITCOIND and SIDECHAIN_SDK path as env vars, needed for python tests ===" && echo ""
 
 BITCOINCLI="${base_dir}/src/${release_folder}/src/zen-cli"
 BITCOIND="${base_dir}/src/${release_folder}/src/zend"
 SIDECHAIN_SDK="${CURRENT_DIR}"
 
 if [[ ! -f "$BITCOINCLI" ]]; then
-  fn_die "zen-cli does not exist in the given path. Exiting ..."
+  fn_die "Error: zen-cli does not exist in the given path. Exiting ..."
 fi
 if [[ ! -f "$BITCOIND" ]]; then
-  fn_die "zend does not exist in the given path. Exiting ..."
+  fn_die "Error: zend does not exist in the given path. Exiting ..."
 fi
 if [[ ! -d "$SIDECHAIN_SDK" ]]; then
-  fn_die "Sidechain-SDK does not exist in the given path. Exiting ..."
+  fn_die "Error: Sidechain-SDK does not exist in the given path. Exiting ..."
 fi
 
 export BITCOINCLI
@@ -142,7 +152,7 @@ export BITCOIND
 export SIDECHAIN_SDK
 
 # Step 8
-echo "" && echo "=== Fetch zen params" && echo ""
+echo "" && echo "=== Fetch zen params ===" && echo ""
 ${base_dir}/src/${release_folder}/zcutil/fetch-params.sh || { retval="$?"; echo "Error: was not able to fetch zen params."; exit $retval; }
 
 # Step 9
@@ -151,9 +161,9 @@ cd $CURRENT_DIR
 mvn clean install -Dmaven.test.skip=true || { retval="$?"; echo "Error: was not able to complete mvn clean install of Sidechain SDK."; exit $retval; }
 
 # Step 10
-echo "" && echo "=== Installing node ===" && echo ""
+echo "" && echo "=== Installing nodejs ===" && echo ""
 source ~/.nvm/nvm.sh
-nvm install ${node_version} || { retval="$?"; echo "Error: was not able to nvm install node 16.0.0"; exit $retval; }
+nvm install "${NODE_VERSION}" || { retval="$?"; echo "Error: was not able to nvm install node ${NODE_VERSION}"; exit $retval; }
 
 # Step 11
 echo "" && echo "=== Installing yarn ===" && echo ""
@@ -168,4 +178,4 @@ pip install --no-cache-dir -r ./SidechainTestFramework/account/requirements.txt
 
 # Step 13
 echo "" && echo "=== Run tests ===" && echo ""
-"${test_cmd}" "${test_args}"
+"${TEST_CMD}" "${TEST_ARGS}"
