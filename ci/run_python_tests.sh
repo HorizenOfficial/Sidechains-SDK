@@ -104,11 +104,11 @@ else
 fi
 
 # Step 5
+release_folder="zen-${zen_tag}-amd64"
 if [ "$is_cached" = false ]; then
   echo "" && echo "=== Extract artifacts from tar ===" && echo ""
   tar_file="$(find "$(realpath ${base_dir}/travis_files/)" -type f -name "*.tar.gz")"
 
-  release_folder="zen-${zen_tag}-amd64"
   mkdir -p "${base_dir}/src/${release_folder}"
   tar -xzf "${tar_file}" -C "${base_dir}/src/${release_folder}"
 fi
