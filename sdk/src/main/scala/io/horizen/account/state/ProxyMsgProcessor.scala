@@ -57,8 +57,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
     }
 
     val dataBytes = Numeric.hexStringToByteArray(data)
-    val additionalDepth = 0
-    val res = context.executeDepth(
+    val res = context.execute(
       if (readOnly) {
         log.info(s"static call to smart contract, address=$contractAddress, data=$data")
         invocation.staticCall(
@@ -74,8 +73,7 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractM
           dataBytes,
           invocation.gasPool.getGas // we use all the amount we currently have
         )
-      },
-      additionalDepth
+      }
     )
 
     val proxyInvocationEvent = ProxyInvocation(invocation.caller, contractAddress, dataBytes)
