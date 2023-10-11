@@ -27,7 +27,7 @@ before_script:
 
 cache:
   directories:
-    - $CACHE_DIR
+    - ${TRAVIS_BUILD_DIR}/zen_release
 
 .com.github.horizenofficial.sidechain-sdk.job-definitions:
   - &test_docker_amd64_x-large

@@ -73,8 +73,7 @@ https://f001.backblazeb2.com/file/ci-horizen/amd64-linux-ubuntu_focal-${travis_b
 # Step 2
 echo "" && echo "=== Create folder structure ===" && echo ""
 
-base_dir="${CURRENT_DIR}/zen_release_${zen_tag}"
-CACHE_DIR="$base_dir"
+base_dir="${CURRENT_DIR}/zen_release"
 is_cached=false
 
 if [ -d "${base_dir}" ]; then
@@ -113,8 +112,6 @@ if [ "$is_cached" = false ]; then
   mkdir -p "${base_dir}/src/${release_folder}"
   tar -xzf "${tar_file}" -C "${base_dir}/src/${release_folder}"
 fi
-
-export CACHE_DIR
 
 # Step 6
 echo "" && echo "=== Verify git tag signed by allowlisted maintainer ===" && echo ""
