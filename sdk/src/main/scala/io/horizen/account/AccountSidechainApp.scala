@@ -93,12 +93,12 @@ class AccountSidechainApp @Inject()
 
   // Init all storages
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 1)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 5)),
     sidechainTransactionsCompanion,
     params)
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, 1)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, 5)),
     sidechainSecretsCompanion)
 
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
@@ -107,7 +107,7 @@ class AccountSidechainApp @Inject()
   protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
 
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, 1)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, 5)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
