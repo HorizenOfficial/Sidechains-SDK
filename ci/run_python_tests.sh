@@ -22,7 +22,7 @@ function import_gpg_keys() {
       gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
       gpg -v --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "${key}" ||
       gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}" ||
-      { echo -e "Warning: ${key} can not be found on GPG key servers. Please upload it to at least one of the following GPG key servers:\nhttps://keys.openpgp.org/\nhttps://keyserver.ubuntu.com/\nhttps://pgp.mit.edu/"; export IS_A_RELEASE="false"; }
+      { fn_die "Error: ${key} can not be found on GPG key servers. Please upload it to at least one of the following GPG key servers:\nhttps://keys.openpgp.org/\nhttps://keyserver.ubuntu.com/\nhttps://pgp.mit.edu/ Exiting ...";}
     done
   fi
 }
@@ -61,7 +61,7 @@ fi
 CURRENT_DIR="${PWD}"
 
 # Step 1
-echo "" && echo "=== GGet latest ZEN repo PROD build id and commit hash ===" && echo ""
+echo "" && echo "=== Get latest ZEN repo PROD build id and commit hash ===" && echo ""
 
 zen_tag="$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/HorizenOfficial/zen/git/refs/tags | jq -r '[.[] | select(.ref | test("refs/tags/v[0-9]\\.[0-9]\\.[0-9]$"))][-1].ref' | sed -e 's|refs/tags/||')"
 check_runs="$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${API_ZEN_REPO_URL}/commits/${zen_tag}/check-runs")"
@@ -125,8 +125,7 @@ cd "${base_dir}/src/${release_folder}"
 GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t "GNUPGHOME")"
 export GNUPGHOME
 import_gpg_keys "${ZEN_REPO_MAINTAINER_KEYS}"
-check_signed_tag "${zen_tag}" && IS_RELEASE="true" || IS_RELEASE="false"
-export IS_RELEASE
+check_signed_tag "${zen_tag}"
 ( gpgconf --kill dirmngr || true )
 ( gpgconf --kill gpg-agent || true )
 rm -rf "${GNUPGHOME:?}"
