@@ -2,16 +2,17 @@
 import json
 import logging
 import math
+from decimal import Decimal
 
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, )
@@ -187,6 +188,15 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         self.sc_sync_all()
 
+        # let assume a portion of the MC coinbase is sent to the SC as a contribution to the forger pool
+        ft_pool_amount = 3.5
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      format_eoa(FORGER_POOL_RECIPIENT_ADDRESS),
+                                      ft_pool_amount,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=False)
+
         # Generate some MC block to reach the end of the withdrawal epoch
         mc_node.generate(self.withdrawalEpochLength - 2)
 
@@ -203,24 +213,31 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         sc_node_1_balance_before_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
         sc_node_2_balance_before_payments = sc_node_2.wallet_getTotalBalance()['result']['balance']
 
-        # Generate one more block with no fee by SC node 2 to reach the end of the withdrawal epoch
+        # Generate one more block with no txes by SC node 2, it will include the MC block references one of which is
+        # carrying along the FT for the forger pool
         sc_last_we_block_id = generate_next_block(sc_node_2, "second node")
-        sc_block_fee_info.append(BlockFeeInfo(2, 0, 0))
+        sc_block_fee_info.append(BlockFeeInfo(2, convertZenToWei(ft_pool_amount), 0))
 
         self.sc_sync_all()
 
         # Collect fee values
         total_fee = 0
-        pool_fee = 0.0
-        forger_fees = {}
+        pool_fee = 0
+        forger_tips = 0
+
         for sc_block_fee in sc_block_fee_info:
             total_fee += sc_block_fee.baseFee + sc_block_fee.forgerTips
+            forger_tips += sc_block_fee.forgerTips
             pool_fee += sc_block_fee.baseFee
 
-        logging.info("total fee = {}".format(total_fee))
-        logging.info("pool fee = {}".format(pool_fee))
+        logging.info("pool fee    = {}".format(pool_fee))
+        logging.info("forger tips = {}".format(forger_tips))
+        logging.info("---------------------------------------")
+        logging.info("total fee   = {}".format(total_fee))
 
-        average_fee = math.floor(pool_fee / len(sc_block_fee_info))
+
+        average_fee = math.floor(pool_fee // len(sc_block_fee_info))
+        forger_fees = {}
 
         for idx, sc_block_fee in enumerate(sc_block_fee_info):
             if sc_block_fee.node in forger_fees:

@@ -8,7 +8,8 @@ from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block
 from httpCalls.transaction.allTransactions import allTransactions
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, NULL_ADDRESS
+from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, NULL_ADDRESS, \
+    convertZenToWei, FORGER_STAKE_SMART_CONTRACT_ADDRESS, FORGER_POOL_RECIPIENT_ADDRESS
 from test_framework.util import assert_equal, forward_transfer_to_sidechain, fail, assert_true
 
 """
@@ -105,16 +106,43 @@ class SCEvmForwardTransfer(AccountChainSetup):
 
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
 
-        # verify that the smart contract account balance has not changed
+        # verify that the smart contract account balance has the expected amount credited
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
         logging.info(balance)
-        assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
+        assert_equal(hex(ft_amount_in_wei), balance["result"], "smart contract has non-zero balance")
 
-        # verify that such amount has been burned, that means credited to 0xdead address
+        # verify that no amount has been burned, that means credited to null address
         balance = sc_node.rpc_eth_getBalance(to_checksum_address(NULL_ADDRESS), "latest")
         logging.info(balance)
-        assert_equal(hex(int(forward_transfer['value'])), balance["result"], "dead address has zero balance")
+        assert_equal(hex(0), balance["result"], "dead address has zero balance")
 
+        # execute forward transfer to the smart contract account
+        balance1 = sc_node.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), "latest")
+        logging.info(balance1)
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      format_eoa(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+                                      self.ft_amount_in_zen,
+                                      self.mc_return_address)
+
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+
+        balance2 = sc_node.rpc_eth_getBalance(add_0x_prefix(FORGER_STAKE_SMART_CONTRACT_ADDRESS), "latest")
+        logging.info(balance2)
+
+        # execute forward transfer to the smart contract account
+        balance1 = sc_node.rpc_eth_getBalance(add_0x_prefix(FORGER_POOL_RECIPIENT_ADDRESS), "latest")
+        logging.info(balance1)
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      format_eoa(FORGER_POOL_RECIPIENT_ADDRESS),
+                                      self.ft_amount_in_zen,
+                                      self.mc_return_address)
+
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+
+        balance2 = sc_node.rpc_eth_getBalance(add_0x_prefix(FORGER_POOL_RECIPIENT_ADDRESS), "latest")
+        logging.info(balance2)
 
 if __name__ == "__main__":
     SCEvmForwardTransfer().main()

@@ -96,19 +96,22 @@ class AccountForgeMessageBuilder(
       blockSizeIn: Long
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
-    for (mcBlockRefData <- mainchainBlockReferencesData) {
-      // Since forger still doesn't know the candidate block id we may pass random one.
-      val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
-      stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData)
-    }
-
-    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
-    val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
 
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
+
+    for (mcBlockRefData <- mainchainBlockReferencesData) {
+      // Since forger still doesn't know the candidate block id we may pass random one.
+      val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
+      stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
+      val optFtValue = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+      if (optFtValue.isDefined)
+        cumBaseFee = cumBaseFee.add(optFtValue.get)
+    }
+
+    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
+    val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
 
     val blockGasPool = new GasPool(blockContext.blockGasLimit)
     var blockSize = blockSizeIn

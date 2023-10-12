@@ -75,7 +75,8 @@ class StateDbAccountStateView(
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Option[BigInteger] = {
+    var mcForwardTransferAmount : Option[BigInteger] = None
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -122,20 +123,32 @@ class StateDbAccountStateView(
             MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes)
           )
 
-          if (isEoaAccount(recipientProposition.address())) {
+          val recipientAddress = recipientProposition.address()
+
+          if (recipientAddress.equals(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)) {
+            // move funds to forger pool
+            log.debug(s"adding FT amount = $value to forger pool")
+            mcForwardTransferAmount = Some(value)
+          } else if (isEoaAccount(recipientAddress)) {
             // stateDb will implicitly create account if not existing yet
-            addBalance(recipientProposition.address(), value)
-            log.debug(s"added FT amount = $value to address=$recipientProposition")
-          } else {
+            log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
+            addBalance(recipientAddress, value)
+          } else if (isSmartContractAccount(recipientAddress)) {
+            log.debug(s"adding FT amount = $value to Smart Contract address=$recipientProposition")
+            // TODO check that in case of Native Smart Contract address, we can receive funds, otherwise burn them
+            /*
             val burnAddress = Address.ZERO
             log.warn(
-              s"ignored FT to non-EOA account, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
+              s"ignored FT, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
             )
             addBalance(burnAddress, value)
-            // TODO: we should return the amount back to mcReturnAddress instead of just burning it
+            */
+            addBalance(recipientAddress, value)
           }
+          log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
+    mcForwardTransferAmount
   }
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {

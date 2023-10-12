@@ -127,19 +127,21 @@ class AccountState(
       val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
+      var cumGasUsed: BigInteger = BigInteger.ZERO
+      var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
+      var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
+
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.addTopQualityCertificates(mcBlockRefData, mod.id)
-        stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        val optFtValue = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        if (optFtValue.isDefined)
+          cumBaseFee = cumBaseFee.add(optFtValue.get)
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
       val receiptList = new ListBuffer[EthereumReceipt]()
       val blockNumber = stateMetadataStorage.getHeight + 1
       val blockHash = idToBytes(mod.id)
-
-      var cumGasUsed: BigInteger = BigInteger.ZERO
-      var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
-      var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
       val blockGasPool = new GasPool(mod.header.gasLimit)
       val blockContext = new BlockContext(
