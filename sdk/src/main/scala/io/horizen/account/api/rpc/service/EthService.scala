@@ -51,6 +51,7 @@ import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
@@ -620,10 +621,36 @@ class EthService(
     }
   }
 
+  // This method looks for the transaction first in the history and then, if not found, in the memory pool.
+  private def getTransaction(transactionHash: Hash)
+  : Option[(Option[AccountBlock], EthereumTransaction, EthereumReceipt)] = {
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        stateView
+          .getTransactionReceipt(transactionHash.toBytes)
+          .flatMap(receipt => {
+            nodeView.history
+              .blockIdByHeight(receipt.blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(block => {
+                val tx = block.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction]
+                (Some(block), tx, receipt)
+              })
+          }).orElse (
+            nodeView.pool.getTransactionById(transactionHash.toStringNoPrefix).asScala.map(tx =>
+              (None, tx.asInstanceOf[EthereumTransaction], null))
+          )
+      }
+    }
+  }
+
+
   @RpcMethod("eth_getTransactionByHash")
   def getTransactionByHash(transactionHash: Hash): EthereumTransactionView = {
-    getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
-      new EthereumTransactionView(tx, receipt, block.header.baseFee)
+    getTransaction(transactionHash).map { case (blockOpt, tx, receipt) =>
+      val baseFee = blockOpt.map(_.header.baseFee).orNull
+      new EthereumTransactionView(tx, receipt, baseFee)
     }.orNull
   }
 

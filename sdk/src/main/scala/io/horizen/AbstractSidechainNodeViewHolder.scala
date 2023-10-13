@@ -19,6 +19,7 @@ import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifiersCache, idToVersion}
 
+import java.util.concurrent.TimeUnit
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
@@ -163,12 +164,24 @@ abstract class AbstractSidechainNodeViewHolder[
   /**
    * Process new modifiers from remote.
    * Put all candidates to modifiersCache and then try to apply as much modifiers from cache as possible.
+   * If the cache is half full, do not include modifiers that are more than 24 hours away from the best block timestamp.
    * Clear cache if it's size exceeds size limit.
    * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
    */
   override def processRemoteModifiers: Receive = {
     case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[PMOD]) =>
-      mods.foreach(m => modifiersCache.put(m.id, m))
+
+      if (modifiersCache.size + mods.size > sparksSettings.network.maxModifiersCacheSize / 2) {
+        val bestBlockTimestampPlus24H = history().bestBlock.timestamp + TimeUnit.HOURS.toSeconds(24)
+        val (modsToApply, modsToSkip) = mods.partition(m => m.timestamp <= bestBlockTimestampPlus24H)
+        modsToApply.foreach(m => modifiersCache.put(m.id, m))
+        if (modsToSkip.nonEmpty) {
+          // reset the status of the modifiers to Unknown, so that we try to fetch them again in the future
+          context.system.eventStream.publish(ModifiersProcessingResult(Seq(), modsToSkip))
+        }
+      } else {
+        mods.foreach(m => modifiersCache.put(m.id, m))
+      }
 
       log.debug(s"Cache size before: ${modifiersCache.size}")
 
@@ -205,7 +218,14 @@ abstract class AbstractSidechainNodeViewHolder[
       modifiersCache.popCandidate(history()) match {
         case Some(mod) =>
           pmodModify(mod)
-          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
+          var accumulator = mod +: applied
+          //if accumulator(applied) is too big, clear cache, publish result and start applying from empty sequence again
+          if (accumulator.size >= 100) {
+            val cleared = modifiersCache.cleanOverfull()
+            context.system.eventStream.publish(ModifiersProcessingResult(accumulator, cleared))
+            accumulator = Seq()
+          }
+          self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(accumulator)
         case None =>
           val cleared = modifiersCache.cleanOverfull()
           context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))

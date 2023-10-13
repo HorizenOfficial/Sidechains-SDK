@@ -13,6 +13,7 @@ import io.horizen.account.state.{AccountEventNotifier, AccountState, AccountStat
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
 import io.horizen.account.wallet.AccountWallet
+import io.horizen.block.SidechainBlockBase
 import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -31,7 +32,9 @@ import sparkz.core.{VersionTag, idToVersion}
 import sparkz.util.{ModifierId, SparkzEncoding}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -88,7 +91,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     // Mock state withdrawal epoch methods
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
- 
+
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
       val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
@@ -579,15 +582,15 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
   /*
    * This test check cache cleaning in case the number of rejected blocks overwhelms cache size.
    * Steps:
-   *  - create 520 blocks
+   *  - create 200 blocks
    *  - apply first 3 blocks
    *  - reject all other blocks
    *  - check that 3 blocks were applied
-   *  - check that number of cleared blocks(520 - numberOfAppliedBlock - cacheSize)
+   *  - check that number of cleared blocks(200 - numberOfAppliedBlock - cacheSize)
    */
   @Test
   def remoteModifiersCacheClean(): Unit = {
-    val blocksNumber = 520
+    val blocksNumber = maxModifiersCacheSize * 2
     val blocks = generateAccountBlockSeq(blocksNumber, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
     var blockIndex = 0
     val blockToApply = 3
@@ -598,6 +601,9 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     })
 
     Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[AccountBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
       val block: AccountBlock = answer.getArgument(0)
@@ -620,6 +626,96 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
           case ModifiersProcessingResult(applied, cleared) =>
             assertEquals("Different number of applied blocks", blockToApply, applied.length)
             assertEquals("Different number of cleared blocks from cached", (blocksNumber - blockToApply - maxModifiersCacheSize), cleared.length)
+            true
+          case _ => false
+        }
+    }
+  }
+
+  /*
+ * This test check that in case the modifier cache is at least half full,
+ *  we will start skipping blocks that are 24h older than the best block.
+ */
+  @Test
+  def remoteModifiersSkipTooFarTimestamp(): Unit = {
+    val halfFullCache = maxModifiersCacheSize / 2
+    val halfFullCacheBlocks = generateAccountBlockSeq(halfFullCache, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+    val twoHundredBlocks = generateAccountBlockSeq(200, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[AccountBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli / 1000 - TimeUnit.HOURS.toSeconds(48))
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[AccountBlock]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(halfFullCacheBlocks)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(twoHundredBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 0, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 200, cleared.length)
+            true
+          case _ => false
+        }
+    }
+  }
+
+  /*
+  * This test check that the sequence of applied modifiers gets flushed every 100 modifiers to avoid memory leaks.
+  */
+  @Test
+  def flushAppliedModifiers(): Unit = {
+    val twoHundredBlocks = generateAccountBlockSeq(200, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[AccountBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[AccountBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli / 1000)
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[AccountBlock])).thenAnswer(answer => {
+      Success(Unit)
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[AccountBlock]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(twoHundredBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
+            true
+          case _ => false
+        }
+    }
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
             true
           case _ => false
         }
