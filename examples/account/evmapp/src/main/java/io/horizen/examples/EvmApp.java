@@ -26,7 +26,7 @@ public class EvmApp {
                 mcBlockReferenceDelay = Integer.parseInt(args[1]);
             }
         } catch (NumberFormatException ex) {
-            System.out.println("MC Block Referenced delay can not be parsed.");
+            System.out.println("MC Block Reference delay can not be parsed.");
         }
 
         String settingsFileName = args[0];
