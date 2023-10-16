@@ -90,15 +90,23 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
 
         logging.info("connecting the two nodes...")
         connect_sc_nodes(sc_node1, 1)
-        logging.info("sleep 5 seconds to let it start Sync ...")
-        time.sleep(5)
 
-        best2_1 = (sc_node2.block_best()['result']['block']['id'])
-        logging.info("Middle check")
-        logging.info("best 1: " + best1)
-        logging.info("best 2_0: " + best2_0)
-        logging.info("best 2_1: " + best2_1)
-        assert_not_equal(best2_1, best2_0, "Sync has not started")
+
+        attempt = 0;
+        synchStarted = False
+        while (attempt < 30 and synchStarted == False):
+            attempt = attempt + 1
+            logging.info("sleep 1 seconds to let it start Sync ...")
+            time.sleep(1)
+            best2_1 = (sc_node2.block_best()['result']['block']['id'])
+            logging.info("Middle check")
+            logging.info("best 1: " + best1)
+            logging.info("best 2_0: " + best2_0)
+            logging.info("best 2_1: " + best2_1)
+            synchStarted = best2_1 != best2_0
+
+        if (synchStarted == False):
+            assert_equal(synchStarted, True, "Sync has not started after 30 seconds")
         assert_not_equal(best2_1, best1, " Too fast to synchronize, they are already sync")  # try to add more block??
         logging.info("Middle check passed")
 
