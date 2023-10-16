@@ -345,8 +345,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           case _ => false
         }
         if (isWithdrawalEpochSwitched) {
-          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
-          removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+          getOldTopCertificatesToBeRemoved(epochInfo) match {
+            case Some(cert) => removeList.add(cert)
+            case _ =>
+          }
 
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
           for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
@@ -371,6 +373,16 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   }
 
+  private[storage] def getOldTopCertificatesToBeRemoved(epochInfo: WithdrawalEpochInfo): Option[ByteArrayWrapper] = {
+    val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+    // We only clean up the storage if the certEpochNumberToRemove has already been used as previous certificate hash
+    // in the certEpochNumberToRemove + 1 epoch certificate
+    if (storage.get(getTopQualityCertificateKey(certEpochNumberToRemove + 1)).isPresent) {
+      Some(getTopQualityCertificateKey(certEpochNumberToRemove))
+    } else {
+      None
+    }
+  }
 
   private def getBlockFeeInfoCounter(withdrawalEpochNumber: Int): Int = {
     storage.get(getBlockFeeInfoCounterKey(withdrawalEpochNumber)).asScala match {

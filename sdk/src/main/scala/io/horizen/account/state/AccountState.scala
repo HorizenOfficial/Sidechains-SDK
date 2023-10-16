@@ -316,7 +316,6 @@ class AccountState(
   override def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimeStamp)
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
-
     blockConsensusEpoch != currentConsensusEpoch
   }
 
