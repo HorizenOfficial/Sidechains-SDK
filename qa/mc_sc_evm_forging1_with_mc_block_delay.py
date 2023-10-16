@@ -11,7 +11,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
 from SidechainTestFramework.sc_forging_util import *
 
 """
-Check Latus forger behavior for:
+Check forger behavior for:
 1. Current SC Tip with no new MC data extension.
 2. Current SC Tip with some new MC References extension.
 3. Current SC Tip with some new MC Headers and/or MC Ref Data extension.
