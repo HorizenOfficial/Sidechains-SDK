@@ -673,7 +673,7 @@ class ConsensusValidatorOmmersTest
        Slots in epoch:   6
        Block slots number:   2/2 - 3/5
                                     |
-       Ommers slots:   [2/4    ,   2/6   ,   3/4]
+       Ommers slots:   [2/4    ,   2/6   ,   3/15]
                          |          |         |
        Subommers slots:[2/3]      [2/5]  [3/2 , 3/3]
                                            |
@@ -708,7 +708,7 @@ class ConsensusValidatorOmmersTest
           getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params.sidechainGenesisBlockTimestamp, preForkEpochNumber, ConsensusSlotNumber @@ 5))
         )),
 
-      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params.sidechainGenesisBlockTimestamp, postForkEpochNumber, ConsensusSlotNumber @@ 4),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params.sidechainGenesisBlockTimestamp, postForkEpochNumber, ConsensusSlotNumber @@ 15),
         Seq(
           getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params.sidechainGenesisBlockTimestamp, postForkEpochNumber, ConsensusSlotNumber @@ 2),
             Seq(
@@ -767,7 +767,7 @@ class ConsensusValidatorOmmersTest
       switchedEpochConsensusValidator.verifyOmmers(verifiedBlock, postForkFullConsensusEpochInfo, Some(preForkFullConsensusEpochInfo), parentId, parentInfo, history, Seq())
     } match {
       case Success(_) =>
-      case Failure(e) => throw e // jFail(s"Block with ommers from both the same and previous epoch expected to be Valid, instead exception: ${e.getMessage}")
+      case Failure(e) => throw e
     }
 
   }
