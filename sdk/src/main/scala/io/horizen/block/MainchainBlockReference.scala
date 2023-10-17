@@ -271,7 +271,7 @@ object MainchainBlockReference extends SparkzLogging {
           offset += certificatesCount.size()
 
           while (certificates.size < certificatesCount.value()) {
-            log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
+            log.debug("Parse Mainchain certificate: {}", (() => BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))).apply)
             val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
             certificates = certificates :+ c
             offset += c.size
