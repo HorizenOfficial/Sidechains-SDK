@@ -19,9 +19,19 @@ public class EvmApp {
             System.out.println("File on path " + args[0] + " doesn't exist");
             return;
         }
+
+        int mcBlockReferenceDelay = 0;
+        try {
+            if (args.length >= 2) {
+                mcBlockReferenceDelay = Integer.parseInt(args[1]);
+            }
+        } catch (NumberFormatException ex) {
+            System.out.println("MC Block Reference delay can not be parsed.");
+        }
+
         String settingsFileName = args[0];
 
-        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName));
+        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay));
         AccountSidechainApp sidechainApp = injector.getInstance(AccountSidechainApp.class);
 
         Logger logger = LogManager.getLogger(EvmApp.class);

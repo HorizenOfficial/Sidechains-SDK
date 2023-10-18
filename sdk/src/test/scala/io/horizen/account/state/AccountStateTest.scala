@@ -6,7 +6,7 @@ import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber}
+import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
@@ -38,11 +38,6 @@ class AccountStateTest
   var params: NetworkParams = mock[NetworkParams]
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
   var state: AccountState = _
-  ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-    ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-  ))
-  ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
-
   private def addMockBalance(account: Address, value: BigInteger) = {
     val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
     stateDB.addBalance(account, value)
@@ -60,12 +55,7 @@ class AccountStateTest
     val messageProcessors: Seq[MessageProcessor] = Seq()
 
     Mockito.when(params.chainId).thenReturn(1997)
-    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(None)
     Mockito.when(metadataStorage.getAccountStateRoot).thenReturn(Hash.ZERO.toBytes)
-    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
-      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
-    ))
-    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     state = new AccountState(
       params,
@@ -184,6 +174,38 @@ class AccountStateTest
     val currentEpochNumber = state.getConsensusEpochNumber
 
     assertEquals(state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(currentEpochNumber.get)), true)
+  }
+
+  @Test
+  def testSwitchingConsensusEpochsWith2Forks(): Unit = {
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+      ConsensusParamsForkInfo(20, ConsensusParamsFork(100,10)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(
+      TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp), //runs for 19 epochs
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(20), intToConsensusSlotNumber(100)), //on the 20th epoch it's activated
+    ))
+
+    // Test 1. check the first consensus params fork epochs match
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(11)))
+    // assert that block with this timestamp belongs to 11th epoch
+    var blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(11), intToConsensusSlotNumber(720)).toInt
+    assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
+
+
+    // Test 2. check the second consensus params fork epochs match
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(25)))
+
+    // assert that block with this timestamp belongs to 25th epoch
+    blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(25), intToConsensusSlotNumber(100)).toInt
+    assertEquals(false, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
+
+
+    // Test 3. check the second consensus params fork epochs don't match
+    // add another epoch to the timestamp and check if there is mismatch between epochs
+    blockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, intToConsensusEpochNumber(26), intToConsensusSlotNumber(100)).toInt
+    assertEquals(true, state.isSwitchingConsensusEpoch(intToConsensusEpochNumber(blockTimestamp)))
   }
 
   @Test
