@@ -26,8 +26,15 @@ import java.util.Optional;
 public class EvmAppModule extends AccountAppModule {
     private final SettingsReader settingsReader;
 
-    public EvmAppModule(String userSettingsFileName) {
+    // It's integer parameter that defines Mainchain Block Reference delay.
+    // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+    // WARNING. It must be constant and should not be changed inside Sidechain network
+    private final int mcBlockRefDelay;
+
+
+    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.mcBlockRefDelay = mcBlockDelayReference;
     }
 
     @Override
@@ -60,10 +67,6 @@ public class EvmAppModule extends AccountAppModule {
         customMessageProcessors.add(new EvmMessageProcessor());
 
         String appVersion = "";
-
-        // It's integer parameter that defines Mainchain Block Reference delay.
-        // 1 or 2 should be enough to avoid SC block reverting in the most cases.
-        int mcBlockReferenceDelay = 0;
 
         // use a custom object which implements the stopAll() method
         SidechainAppStopper applicationStopper = new EvmAppStopper();
@@ -109,6 +112,6 @@ public class EvmAppModule extends AccountAppModule {
                 .toInstance(appVersion);
         bind(Integer.class)
                 .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
-                .toInstance(mcBlockReferenceDelay);
+                .toInstance(mcBlockRefDelay);
     }
 }
