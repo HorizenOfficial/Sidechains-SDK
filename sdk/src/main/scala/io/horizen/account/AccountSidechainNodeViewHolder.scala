@@ -77,11 +77,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
         log.debug(s"history bestBlockId = $historyVersion, stateVersion = $checkedStateVersion")
 
-        log.debug("{}", (() => {
+        log.whenDebugEnabled {
           val height_h = restoredHistory.blockInfoById(restoredHistory.bestBlockId).height
           val height_s = restoredHistory.blockInfoById(checkedStateVersion).height
           s"history height = $height_h, state height = $height_s"
-        }).apply)
+        }
 
         if (historyVersion == checkedStateVersion) {
           log.info("state and history storages are consistent")
