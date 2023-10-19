@@ -40,6 +40,8 @@ cache:
       - bash -c "chmod +x ${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh"
       - bash -c "${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh ${TEST_CMD} ${TEST_ARGS} ${NODE_VERSION}"
 
+if: branch = main OR tag IS present
+
 jobs:
   fast_finish: true
   include:
