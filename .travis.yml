@@ -31,7 +31,7 @@ cache:
 
 .com.github.horizenofficial.sidechain-sdk.job-definitions:
   - &test_docker_amd64_x-large
-    if: NOT env(SKIP_TESTS)
+    if: tag IS present
     os: linux
     dist: focal
     vm:
@@ -39,8 +39,6 @@ cache:
     script:
       - bash -c "chmod +x ${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh"
       - bash -c "${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh ${TEST_CMD} ${TEST_ARGS} ${NODE_VERSION}"
-
-if: branch = main OR tag IS present
 
 jobs:
   fast_finish: true
