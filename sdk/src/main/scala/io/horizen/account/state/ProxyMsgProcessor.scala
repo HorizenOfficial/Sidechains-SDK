@@ -11,7 +11,10 @@ import io.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.Keccak256
 
-
+/*
+ This Message Processor is used for testing invocations of EVM smart contracts from native smart contracts.
+ It can only be used when in regtest.
+ */
 case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractWithFork {
 
   override val contractAddress: Address = PROXY_SMART_CONTRACT_ADDRESS
