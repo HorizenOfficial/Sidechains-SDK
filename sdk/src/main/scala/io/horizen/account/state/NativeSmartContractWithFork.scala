@@ -2,6 +2,11 @@ package io.horizen.account.state
 
 import io.horizen.utils.BytesUtils
 
+/*
+  This abstract class should be used as base class, instead of NativeSmartContractMsgProcessor, when introducing a new
+  Message Processor implementing a native smart contract in an already existing blockchain. In fact, in this case, the
+  Message Processor is initialized and starts working only after having reached the specific fork point.
+ */
 abstract class NativeSmartContractWithFork extends NativeSmartContractMsgProcessor {
 
 
