@@ -2,6 +2,7 @@ package io.horizen.account.state;
 
 import io.horizen.account.fork.ContractInteroperabilityFork;
 import io.horizen.evm.*;
+import io.horizen.evm.results.InvocationResult;
 import io.horizen.utils.BytesUtils;
 import scala.Array;
 import scala.Option;
