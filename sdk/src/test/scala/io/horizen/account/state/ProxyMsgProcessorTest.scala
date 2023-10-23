@@ -6,9 +6,9 @@ import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
-import io.horizen.params.NetworkParams
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import io.horizen.utils.{BytesUtils, Pair}
-import org.junit.Assert._
+import org.junit.Assert.{assertFalse, _}
 import org.junit._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
@@ -59,7 +59,7 @@ class ProxyMsgProcessorTest
 
   val validWeiAmount: BigInteger = new BigInteger("10000000000")
 
-  val mockNetworkParams: NetworkParams = mock[NetworkParams]
+  val mockNetworkParams: NetworkParams = mock[RegTestParams]
   val messageProcessor: ProxyMsgProcessor = ProxyMsgProcessor(mockNetworkParams)
   val contractAddress: Address = messageProcessor.contractAddress
 
@@ -154,7 +154,31 @@ class ProxyMsgProcessorTest
 
 
   @Test
+  def testCanProcessOnTestNetNetwork(): Unit = {
+
+    val messageProcessorOnTestNet: ProxyMsgProcessor = ProxyMsgProcessor(mock[TestNetParams])
+    usingView(messageProcessorOnTestNet) { view =>
+      assertTrue(messageProcessorOnTestNet.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertFalse(TestContext.canProcess(messageProcessorOnTestNet,
+        getMessage(messageProcessorOnTestNet.contractAddress), view, view.getConsensusEpochNumberAsInt))
+    }
+  }
+
+  @Test
+  def testCanProcessOnMainNetNetwork(): Unit = {
+
+    val messageProcessorOnMainNet: ProxyMsgProcessor = ProxyMsgProcessor(mock[MainNetParams])
+    usingView(messageProcessorOnMainNet) { view =>
+      assertTrue(messageProcessorOnMainNet.isForkActive(view.getConsensusEpochNumberAsInt))
+      assertFalse(TestContext.canProcess(messageProcessorOnMainNet,
+        getMessage(messageProcessorOnMainNet.contractAddress), view, view.getConsensusEpochNumberAsInt))
+    }
+  }
+
+
+  @Test
   def testCanProcess(): Unit = {
+
     usingView(messageProcessor) { view =>
 
       // assert no initialization took place yet
@@ -217,50 +241,5 @@ class ProxyMsgProcessorTest
     }
   }
 
-  @Test
-  def testProcessBeforeFork(): Unit = {
-
-    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(
-      Option(intToConsensusEpochNumber(1)))
-
-    usingView(messageProcessor) { view =>
-
-      // create sender account with some fund in it
-      val initialAmount = BigInteger.valueOf(100).multiply(validWeiAmount)
-      val txHash1 = Keccak256.hash("tx")
-      view.setupTxContext(txHash1, 10)
-      createSenderAccount(view, initialAmount, scAddressObj1)
-      val cmdInput = InvokeSmartContractCmdInput(WithdrawalMsgProcessor.contractAddress, WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
-      val data: Array[Byte] = cmdInput.encode()
-      val msg = getMessage(
-        contractAddress,
-        BigInteger.ZERO,
-        BytesUtils.fromHexString(ProxyMsgProcessor.InvokeSmartContractStaticCallCmd) ++ data,
-        randomNonce,
-        scAddressObj1
-      )
-
-      assertFalse(messageProcessor.isForkActive(view.getConsensusEpochNumberAsInt))
-
-      val blockContext = new BlockContext(
-        Address.ZERO,
-        0,
-        0,
-        DefaultGasFeeFork.blockGasLimit,
-        0,
-        view.getConsensusEpochNumberAsInt,
-        0,
-        1,
-        MockedHistoryBlockHashProvider,
-        new io.horizen.evm.Hash(new Array[Byte](32))
-      )
-      val ex = intercept[ExecutionRevertedException] {
-        withGas(TestContext.process(messageProcessor, msg, view, blockContext, _))
-      }
-      assertTrue(ex.getMessage.contains("fork not active"))
-
-      view.commit(bytesToVersion(getVersion.data()))
-    }
-  }
 
 }

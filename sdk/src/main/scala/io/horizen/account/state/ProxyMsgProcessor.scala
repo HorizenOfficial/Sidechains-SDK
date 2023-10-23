@@ -6,7 +6,7 @@ import io.horizen.account.state.ProxyMsgProcessor._
 import io.horizen.account.state.events.ProxyInvocation
 import io.horizen.account.utils.WellKnownAddresses.PROXY_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
-import io.horizen.params.{MainNetParams, NetworkParams}
+import io.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import io.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.crypto.hash.Keccak256
@@ -19,6 +19,10 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractW
 
   override val contractAddress: Address = PROXY_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ProxySmartContractCode")
+
+  override def canProcess(invocation: Invocation, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
+    params.isInstanceOf[RegTestParams] && super.canProcess(invocation, view, consensusEpochNumber)
+  }
 
   override def isForkActive(consensusEpochNumber: Int): Boolean = {
     ContractInteroperabilityFork.get(consensusEpochNumber).active
@@ -91,15 +95,6 @@ case class ProxyMsgProcessor(params: NetworkParams) extends NativeSmartContractW
   @throws(classOf[ExecutionFailedException])
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
     log.debug(s"processing invocation: $invocation")
-    if (!isForkActive(context.blockContext.consensusEpochNumber)) {
-      throw new ExecutionRevertedException(s"fork not active")
-    }
-
-    if (params.isInstanceOf[MainNetParams]) {
-      val errMsg = "Proxy Native Smart Contract is not supported in MainNet"
-      log.warn(errMsg)
-      throw new ExecutionRevertedException(errMsg)
-    }
 
     val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
