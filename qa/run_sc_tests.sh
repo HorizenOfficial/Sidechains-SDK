@@ -414,6 +414,7 @@ function runTestScript
       updateFailList="$testName"
       updateFailureCount
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+      exit 1
     fi
 
     echo | tee /dev/fd/3

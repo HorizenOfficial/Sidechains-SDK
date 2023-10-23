@@ -17,13 +17,68 @@ env:
   global:
     # Separate branches by space
     - PROD_RELEASE_BRANCHES='master'
+    - NODE_VERSION="v16"
+    - TEST_CMD="./run_sc_tests.sh"
+    - API_ZEN_REPO_URL="https://api.github.com/repos/HorizenOfficial/zen"
 
 before_script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
 
+cache:
+  directories:
+    - ${TRAVIS_BUILD_DIR}/zen_release
+
+.com.github.horizenofficial.sidechain-sdk.job-definitions:
+  - &test_docker_amd64_x-large
+    if: tag IS present
+    os: linux
+    dist: focal
+    vm:
+      size: x-large
+    script:
+      - bash -c "chmod +x ${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh"
+      - bash -c "${TRAVIS_BUILD_DIR}/ci/run_python_tests.sh ${TEST_CMD} ${TEST_ARGS} ${NODE_VERSION}"
+
 jobs:
+  fast_finish: true
   include:
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:1"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:2"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:3"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:4"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:5"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:6"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:7"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:8"
+    - stage: Test
+      <<: *test_docker_amd64_x-large
+      env:
+        - TEST_ARGS="-split=9:9"
     - stage: java project
       name: jdk-11_latest
       script: ci/script.sh
