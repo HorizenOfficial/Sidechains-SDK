@@ -612,8 +612,7 @@ class SCEvmForger(AccountChainSetup):
         assert_false("calls" in native_call)
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # TODO There is a bug so that the gas_used_tracer doesn't have the intrinsic gas (see JIRA 1446)
-        assert_true(gas_used >= gas_used_tracer, "Wrong gas")
+        assert_true(gas_used == gas_used_tracer, "Wrong gas")
 
 
         # remove the forger stake
