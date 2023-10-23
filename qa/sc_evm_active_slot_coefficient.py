@@ -113,6 +113,5 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
         assert_equal(node1_best_block, node2_best_block)
 
 
-
 if __name__ == "__main__":
     SCActiveSlotCoefficientTest().main()

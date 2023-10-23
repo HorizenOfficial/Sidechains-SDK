@@ -130,7 +130,8 @@ testScriptsEvm=(
     'mc_sc_evm_forging3_with_mc_block_delay.py'
     'mc_sc_evm_forging4_with_mc_block_delay.py'
     'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
-    'sc_evm_rpc_eth.py'
+    'sc_evm_rpc_eth.py',
+    "sc_evm_sync_deprecated_node.py"
 );
 
 testScriptsUtxo=(

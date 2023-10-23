@@ -12,6 +12,10 @@ import java.math.BigInteger;
 import java.util.List;
 
 public class AppForkConfigurator extends ForkConfigurator {
+    private int gasLimit;
+    public AppForkConfigurator(int gasLimit) {
+        this.gasLimit = gasLimit;
+    }
     @Override
     public SidechainForkConsensusEpoch fork1activation() {
         return new SidechainForkConsensusEpoch(0, 0, 0);
@@ -24,7 +28,7 @@ public class AppForkConfigurator extends ForkConfigurator {
             new Pair<>(
                     new SidechainForkConsensusEpoch(4, 4, 4),
                     new GasFeeFork(
-                            BigInteger.valueOf(20000000),
+                            BigInteger.valueOf(gasLimit),
                             BigInteger.valueOf(2),
                             BigInteger.valueOf(8),
                             BigInteger.ZERO
@@ -37,7 +41,7 @@ public class AppForkConfigurator extends ForkConfigurator {
             new Pair<>(
                 new SidechainForkConsensusEpoch(15, 15, 15),
                 new GasFeeFork(
-                    BigInteger.valueOf(25000000),
+                    BigInteger.valueOf(gasLimit),
                     BigInteger.valueOf(2),
                     BigInteger.valueOf(8),
                     BigInteger.ZERO

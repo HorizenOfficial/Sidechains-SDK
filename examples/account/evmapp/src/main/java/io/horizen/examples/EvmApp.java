@@ -31,7 +31,16 @@ public class EvmApp {
 
         String settingsFileName = args[0];
 
-        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay));
+        int gasLimit = 0;
+        try {
+            if (args.length >= 3) {
+                gasLimit = Integer.parseInt(args[2]);
+            }
+        } catch (Exception ex) {
+            System.out.println("Gas limit has not been set.");
+        }
+
+        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay, gasLimit));
         AccountSidechainApp sidechainApp = injector.getInstance(AccountSidechainApp.class);
 
         Logger logger = LogManager.getLogger(EvmApp.class);

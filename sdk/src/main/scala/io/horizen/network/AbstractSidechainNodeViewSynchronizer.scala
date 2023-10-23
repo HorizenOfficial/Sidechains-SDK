@@ -56,7 +56,7 @@ abstract class AbstractSidechainNodeViewSynchronizer[
           peerOpt.foreach(penalizeMisbehavingPeer)
         case _ => // InvalidBlockException, InvalidSidechainBlockHeaderException and all other exceptions
           // Ban both mod.id and peer
-          deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
+          deliveryTracker.setInvalid(mod.id).foreach(penalizeAndDisconnectPeer)
       }
   }
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import logging
 import time
 
@@ -41,6 +42,7 @@ Test:
     Increase once again the withdrawal epoch
     Wait for the final certificate
 """
+
 
 class WithdrawalCertificateAfterMainchainNodesWereDisconnected(SidechainTestFramework):
 
@@ -249,6 +251,7 @@ class WithdrawalCertificateAfterMainchainNodesWereDisconnected(SidechainTestFram
 
         if check_counter == max_check_times:
             raise Exception(f"Certificate did not appear in mc after {max_check_times} checks")
+
 
 if __name__ == "__main__":
     WithdrawalCertificateAfterMainchainNodesWereDisconnected().main()

@@ -25,16 +25,17 @@ import java.util.Optional;
 
 public class EvmAppModule extends AccountAppModule {
     private final SettingsReader settingsReader;
-
+    private final int gasLimit;
     // It's integer parameter that defines Mainchain Block Reference delay.
     // 1 or 2 should be enough to avoid SC block reverting in the most cases.
     // WARNING. It must be constant and should not be changed inside Sidechain network
     private final int mcBlockRefDelay;
 
 
-    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference) {
+    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference, int gasLimit) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
         this.mcBlockRefDelay = mcBlockDelayReference;
+        this.gasLimit = gasLimit;
     }
 
     @Override
@@ -50,7 +51,7 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
-        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator(gasLimit);
 
         // Here I can add my custom rest api and/or override existing one
         List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
