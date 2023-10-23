@@ -51,34 +51,34 @@ public class EvmMessageProcessor implements MessageProcessor {
         throws ExecutionFailedException {
         // prepare context
         var block = context.blockContext();
-        var evmContext = new EvmContext();
-        evmContext.chainID = BigInteger.valueOf(block.chainID);
-        evmContext.coinbase = block.forgerAddress;
-        evmContext.gasLimit = block.blockGasLimit;
-        evmContext.gasPrice = context.msg().getGasPrice();
-        evmContext.blockNumber = BigInteger.valueOf(block.blockNumber);
-        evmContext.time = BigInteger.valueOf(block.timestamp);
-        evmContext.baseFee = block.baseFee;
-        evmContext.random = block.random;
+        var evmContext = new EvmContext(
+                BigInteger.valueOf(block.chainID),
+                block.forgerAddress,
+                block.blockGasLimit,
+                context.msg().getGasPrice(),
+                BigInteger.valueOf(block.blockNumber),
+                BigInteger.valueOf(block.timestamp),
+                block.baseFee,
+                block.random);
 
         // setup callback for the evm to access the block hash provider
         try (
             var blockHashGetter = new BlockHashGetter(block.blockHashProvider);
             var nativeContractProxy = new NativeContractProxy(context)
         ) {
-            evmContext.blockHashCallback = blockHashGetter;
+            evmContext.setBlockHashCallback(blockHashGetter);
             if (ContractInteroperabilityFork.get(block.consensusEpochNumber).active()){
-                evmContext.externalContracts = getNativeContractAddresses(view);
+                evmContext.setExternalContracts(getNativeContractAddresses(view));
             }
             else {
-                evmContext.externalContracts = new Address[0];
+                evmContext.setExternalContracts(new Address[0]);
             }
-            evmContext.externalCallback = nativeContractProxy;
-            evmContext.tracer = block.getTracer().orElse(null);
+            evmContext.setExternalCallback(nativeContractProxy);
+            evmContext.setTracer(block.getTracer().orElse(null));
             // Minus one because the depth is incremented for the call to the EvmMessageProcessor itself.
             // We want to ignore that as the EVM will increment depth immediately for the first call frame.
             // Basically, the depth would be incremented twice for the first EVM-based call frame without this.
-            evmContext.initialDepth = context.depth() - 1;
+            evmContext.setInitialDepth(context.depth() - 1);
 
             // transform to libevm Invocation type
             var evmInvocation = new io.horizen.evm.Invocation(

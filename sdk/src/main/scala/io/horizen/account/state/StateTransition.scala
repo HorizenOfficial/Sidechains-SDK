@@ -190,15 +190,15 @@ class StateTransition(
       tracer.foreach(tracer => {
         if (depth == 0) {
           // trace start of top-level call frame
-          val context = new EvmContext
-          context.chainID = BigInteger.valueOf(blockContext.chainID)
-          context.coinbase = blockContext.forgerAddress
-          context.gasLimit = blockContext.blockGasLimit
-          context.gasPrice = msg.getGasPrice
-          context.blockNumber = BigInteger.valueOf(blockContext.blockNumber)
-          context.time = BigInteger.valueOf(blockContext.timestamp)
-          context.baseFee = blockContext.baseFee
-          context.random = blockContext.random
+          val context = new EvmContext(
+          BigInteger.valueOf(blockContext.chainID),
+          blockContext.forgerAddress,
+          blockContext.blockGasLimit,
+          msg.getGasPrice,
+          BigInteger.valueOf(blockContext.blockNumber),
+          BigInteger.valueOf(blockContext.timestamp),
+          blockContext.baseFee,
+          blockContext.random)
           tracer.CaptureStart(
             view.getStateDbHandle,
             context,
