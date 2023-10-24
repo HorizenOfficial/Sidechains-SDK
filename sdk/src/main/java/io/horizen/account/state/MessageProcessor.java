@@ -18,16 +18,16 @@ public interface MessageProcessor {
 
     boolean customTracing();
 
-    // Checks if the processor is applicable to the Message. Some message processor can support messages when reaching
+    // Checks if the processor is applicable to the invocation. Some message processor can support messages when reaching
     // a fork point, therefore we pass along the consensus epoch number, which is not stored in stateDb
     boolean canProcess(Invocation invocation, BaseAccountStateView view, int consensusEpochNumber);
 
     /**
-     * Apply message to the given view. Possible results:
+     * Apply invocation to the given view. Possible results:
      * <ul>
      *     <li>applied as expected: return byte[]</li>
-     *     <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
-     *     <li>message invalid and must not exist in a block: throw any other Exception</li>
+     *     <li>invocation valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
+     *     <li>invocation invalid and must not exist in a block: throw any other Exception</li>
      * </ul>
      *
      * @param invocation invocation to execute
