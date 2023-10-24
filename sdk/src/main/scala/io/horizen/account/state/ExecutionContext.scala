@@ -18,6 +18,8 @@ trait ExecutionContext {
 
   /**
    * Manually advance call depth by given amount and continue execution with the given invocation.
+   * This is used to update the overall depth when returning from the EVM, in case multiple nested invocations happened
+   * there.
    */
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
