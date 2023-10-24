@@ -12,7 +12,7 @@ case class InvokeSmartContractCmdInput(
             contractAddress: Address,
             dataStr: String) extends ABIEncodable[DynamicStruct] {
 
- 
+
   override def asABIType(): DynamicStruct = {
 
     val dataBytes: Array[Byte] = org.web3j.utils.Numeric.hexStringToByteArray(dataStr)
