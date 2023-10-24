@@ -18,8 +18,7 @@ import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state.McAddrOwnershipMsgProcessor.{getMcSignature, getOwnershipId}
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS,
-  MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS}
+import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
 import io.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import io.horizen.api.http.JacksonSupport._
 import io.horizen.api.http.route.TransactionBaseErrorResponse.{ErrorBadCircuit, ErrorByteTransactionParsing}
@@ -32,7 +31,7 @@ import io.horizen.cryptolibprovider.CryptoLibProvider
 import io.horizen.evm.Address
 import io.horizen.json.Views
 import io.horizen.node.NodeWalletBase
-import io.horizen.params.NetworkParams
+import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
 import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
@@ -1102,6 +1101,17 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   override def listOfDisabledEndpoints(params: NetworkParams): Seq[(EndpointPrefix, EndpointPath, Option[ErrorMsg])] = {
+
+    val proxyRoutes = params match {
+      case _: RegTestParams => Seq.empty
+      case _ =>
+        val error = Some("This operation is enabled only on RegTest network")
+        Seq(
+        (transactionPathPrefix, "invokeProxyCall", error),
+        (transactionPathPrefix, "invokeProxyStaticCall", error),
+      )
+    }
+
     if (!params.isHandlingTransactionsEnabled) {
       val error = Some(ErrorNotEnabledOnSeederNode.description)
       Seq(
@@ -1116,9 +1126,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         (transactionPathPrefix, "createSmartContract", error),
         (transactionPathPrefix, "openForgerList", error),
         (transactionPathPrefix, "createKeyRotationTransaction", error),
-      )
+      ) ++ proxyRoutes
     } else
-      Seq.empty
+      proxyRoutes
   }
 
 }
