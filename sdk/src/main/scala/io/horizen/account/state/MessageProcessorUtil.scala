@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import io.horizen.cryptolibprovider.CircuitTypes.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.evm.Address
-import io.horizen.params.NetworkParams
+import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.utils.BytesUtils
 import org.web3j.utils.Numeric
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
@@ -17,18 +17,25 @@ object MessageProcessorUtil {
       case NaiveThresholdSignatureCircuit => None
       case NaiveThresholdSignatureCircuitWithKeyRotation => Some(CertificateKeyRotationMsgProcessor(params))
     }
-    Seq(
-      // Since fork dependant native smart contract are not initialized at genesis state, their msg 
-      // processor must be placed before the Eoa msg processor.
-      // This is for having the initialization performed as soon as the fork point is reached, otherwise
-      // the Eoa msg processor would preempt it
-      McAddrOwnershipMsgProcessor(params),
-      ProxyMsgProcessor(params),
-      //--
-      EoaMessageProcessor,
-      WithdrawalMsgProcessor,
-      ForgerStakeMsgProcessor(params),
-    ) ++ maybeKeyRotationMsgProcessor.toSeq ++ customMessageProcessors
+
+    val maybeProxyMsgProcessor = params match {
+      case _ : RegTestParams => Some(ProxyMsgProcessor(params))
+      case _ => None
+    }
+
+    // Since fork dependant native smart contract are not initialized at genesis state, their msg
+    // processor must be placed before the Eoa msg processor.
+    // This is for having the initialization performed as soon as the fork point is reached, otherwise
+    // the Eoa msg processor would preempt it
+
+    Seq(McAddrOwnershipMsgProcessor(params)) ++
+      maybeProxyMsgProcessor.toSeq ++
+      Seq(EoaMessageProcessor,
+        WithdrawalMsgProcessor,
+        ForgerStakeMsgProcessor(params),
+      ) ++
+      maybeKeyRotationMsgProcessor.toSeq ++
+      customMessageProcessors
   }
 
 
