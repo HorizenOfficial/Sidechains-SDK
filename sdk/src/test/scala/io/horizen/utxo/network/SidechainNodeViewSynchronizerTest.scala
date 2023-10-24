@@ -17,7 +17,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
-import sparkz.core.network.ModifiersStatus.Requested
+import sparkz.core.network.ModifiersStatus.{Held, Requested}
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
@@ -188,8 +188,9 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     Mockito.reset(deliveryTracker)
     Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
       val receivedId: ModifierId = answer.getArgument(0)
-      assertEquals("Different block id expected.", deserializedBlock.id, receivedId)
-      Requested
+      if (receivedId == deserializedBlock.parentId) Held
+      else if (receivedId == deserializedBlock.id) Requested
+      else fail("Different block id expected.")
     })
 
     nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Seq(deserializedBlock.id -> blockBytes))), Some(peer)))
