@@ -147,7 +147,7 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
 
   private def execSubmitKeyRotation(invocation: Invocation, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
     //verify
-    checkMessageValidity(invocation)
+    checkInvocationValidity(invocation)
 
     val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(invocation.input))
     val keyRotationProof = inputData.keyRotationProof
@@ -182,9 +182,9 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
     keyRotationProof.encode()
   }
 
-  private def checkMessageValidity(invocation: Invocation): Unit = {
+  private def checkInvocationValidity(invocation: Invocation): Unit = {
     if (invocation.input.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsStaticLengthInBytes) {
-      throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
+      throw new ExecutionRevertedException(s"Wrong invocation data field length: ${invocation.input.length}")
     } else if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException(s"Value is non-zero: $invocation")
     }
