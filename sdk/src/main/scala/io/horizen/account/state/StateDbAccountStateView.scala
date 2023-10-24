@@ -39,6 +39,10 @@ class StateDbAccountStateView(
   lazy val mcAddrOwnershipProvider: McAddrOwnershipsProvider =
     messageProcessors.find(_.isInstanceOf[McAddrOwnershipsProvider]).get.asInstanceOf[McAddrOwnershipsProvider]
 
+  lazy val listOfNativeSmartContractAddresses: Array[Address] = messageProcessors.collect {
+    case msgProcessor: NativeSmartContractMsgProcessor => msgProcessor.contractAddress
+  }.toArray
+
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
   }
@@ -373,6 +377,5 @@ class StateDbAccountStateView(
    */
   def disableWriteProtection(): Unit = readOnly = false
 
-  override def getNativeSmartContractAddressList(): Array[Address] = messageProcessors.collect{
-    case msgProcessor: NativeSmartContractMsgProcessor => msgProcessor.contractAddress}.toArray
+  override def getNativeSmartContractAddressList(): Array[Address] = listOfNativeSmartContractAddresses
 }
