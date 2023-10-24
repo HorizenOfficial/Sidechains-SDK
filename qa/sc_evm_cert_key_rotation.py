@@ -807,8 +807,7 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_true(estimated_gas >= gas_used, "Wrong estimated gas")
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
-        # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
+        assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
         # Check traceTransaction
         trace_response = sc_node.rpc_debug_traceTransaction(tx_hash, {"tracer": "callTracer"})
@@ -829,8 +828,7 @@ class SCKeyRotationTest(AccountChainSetup):
         assert_false("calls" in native_call)
 
         gas_used_tracer = int(trace_result['gasUsed'], 16)
-        # TODO There is a bug so that the gas_used_tracer is not correct (see JIRA 1446)
-        # assert_equal(gas_used, gas_used_tracer, "Wrong gas")
+        assert_equal(gas_used, gas_used_tracer, "Wrong gas")
 
 if __name__ == "__main__":
     SCKeyRotationTest().main()

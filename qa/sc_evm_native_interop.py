@@ -195,7 +195,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         intrinsic_gas = 21000 + 4 * 16
 
         # Verify gas usage reported by the trace matches with the estimated gas for a call to the EVM contract
-        assert_equal(int(trace_result["gasUsed"], 16) + intrinsic_gas, int(estimation_interop["result"], 16))
+        assert_equal(int(trace_result["gasUsed"], 16), int(estimation_interop["result"], 16))
 
         # Verify gas usage of the nested call to the native contract reported by the trace matches with the estimation
         assert_equal(int(native_call["gasUsed"], 16) + intrinsic_gas, int(estimation_native["result"], 16))
