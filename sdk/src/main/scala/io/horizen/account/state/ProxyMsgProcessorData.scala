@@ -12,9 +12,7 @@ case class InvokeSmartContractCmdInput(
             contractAddress: Address,
             dataStr: String) extends ABIEncodable[DynamicStruct] {
 
-  // TODO require this is a valid hex string with minimum 4 bytes
-  // require(data..., s"Invalid smart contract data: $dataStr")
-
+ 
   override def asABIType(): DynamicStruct = {
 
     val dataBytes: Array[Byte] = org.web3j.utils.Numeric.hexStringToByteArray(dataStr)
