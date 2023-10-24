@@ -232,7 +232,7 @@ class CertificateKeyRotationMsgProcessorTest
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
       // negative test: try using an input with a trailing byte
-      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong message data field length")
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong invocation data field length")
       // negative test: try using a message with right length but wrong bytes
       val badBytes1 = Some(BytesUtils.fromHexString(notDecodableData))
       processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes1, errMsg = "Could not decode")
