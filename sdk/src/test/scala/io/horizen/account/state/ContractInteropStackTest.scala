@@ -3,7 +3,7 @@ package io.horizen.account.state
 import io.horizen.evm.{Address, TraceOptions, Tracer}
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.assertEquals
-import org.junit.{Ignore, Test}
+import org.junit.Test
 import sparkz.crypto.hash.Keccak256
 
 import java.nio.ByteBuffer
@@ -44,18 +44,15 @@ class ContractInteropStackTest extends ContractInteropTestBase {
     ): Array[Byte] = {
       // parse input
       val in = invocation.input
-//      println(s"call at depth ${context.depth - 1} with ${invocation.gasPool.getGas} gas and input (${in.length}): ${BytesUtils.toHexString(in)}")
       if (in.length != 4 + 32 + 32) {
         throw new IllegalArgumentException("NativeInteropStackContract called with invalid arguments")
       }
-//      val signature = in.take(4)
       val target = new Address(in.slice(16, 36))
       val counter = bytesToInt(in.slice(64, 68))
       assertEquals("unexpected call depth", context.depth - 1, counter)
       // execute nested call
       val nestedInput = abiEncode(contractAddress, counter + 1)
       val nestedGas = invocation.gasPool.getGas.divide(64).multiply(63)
-//      println(s"nested call to $target with $nestedGas gas and input (${nestedInput.length}): ${BytesUtils.toHexString(nestedInput)}")
       val result = Try.apply(context.execute(invocation.staticCall(target, nestedInput, nestedGas)))
       // return result or the current counter in case the nested call failed
       result.getOrElse(new Array[Byte](28) ++ intToBytes(counter))
@@ -96,26 +93,18 @@ class ContractInteropStackTest extends ContractInteropTestBase {
     assertEquals("unexpected call depth", 1024, callDepthReached)
   }
 
-  /**
-   * TODO: This test is currently skipped because it causes a stack overflow in the libevm library after a few
-   * iterations, long before the call depth limit can be reached.
-   */
   @Test
-//  @Ignore("current leads to a stack overflow in libevm")
   def testInteropCallDepth(): Unit = {
     val address = deploy(ContractInteropTestBase.nativeInteropContractCode)
     // cause a call loop: native contract => EVM-based contract => native contract => ...
-    var tracer = new Tracer(new TraceOptions(false, false, false,
+    val tracer = new Tracer(new TraceOptions(false, false, false,
       false, "callTracer", null))
     blockContext.setTracer(tracer)
 
     val returnData =
       transition(getMessage(NativeTestContract.contractAddress, data = abiEncode(address)))
-      println(tracer.getResult.result)
 
     // cause a call loop: EVM-based contract => native contract => EVM-based contract => ...
-//    val returnData =
-//      transition(getMessage(interopContractAddress, data = abiEncode(NativeInteropStackContract.contractAddress)))
     // at call depth 1024 we expect the call to fail
     // as the function returns the maximum call depth reached we expect 1024
     val callDepthReached = bytesToInt(returnData)
