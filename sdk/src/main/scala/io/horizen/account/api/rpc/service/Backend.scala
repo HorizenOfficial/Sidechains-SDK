@@ -15,7 +15,7 @@ object Backend {
 
   private val MAX_GAS_PRICE = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
 
-  var tipCache : Option[TipCache] = Option.empty
+  private var tipCache : Option[TipCache] = Option.empty
 
 
   /**
