@@ -80,11 +80,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           case Success(checkedState) => {
             val checkedStateVersion = checkedState.version
 
-            log.debug(s"history bestBlockId = ${historyVersion}, stateVersion = ${checkedStateVersion}")
-
-            val height_h = restoredHistory.blockInfoById(restoredHistory.bestBlockId).height
-            val height_s = restoredHistory.blockInfoById(versionToId(checkedStateVersion)).height
-            log.debug(s"history height = ${height_h}, state height = ${height_s}")
+            log.whenDebugEnabled {
+              s"history bestBlockId = $historyVersion, stateVersion = $checkedStateVersion"
+            }
+            log.whenDebugEnabled {
+              val height_h = restoredHistory.blockInfoById(restoredHistory.bestBlockId).height
+              val height_s = restoredHistory.blockInfoById(versionToId(checkedStateVersion)).height
+              s"history height = $height_h, state height = $height_s"
+            }
 
             if (historyVersion == checkedStateVersion) {
               log.info("state and history storages are consistent")
