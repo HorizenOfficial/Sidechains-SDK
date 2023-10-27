@@ -105,7 +105,7 @@ object Backend extends SparkzLogging {
       // meaningful returned, try to query more blocks. But the maximum
       // is 2*checkBlocks.
       if (res.length == 1 && results.length + 1 + exp < blockCount * 2 && number > 0) {
-        prices = prices :+ getBlockPrices(history, number, ignorePrice, 3)
+        prices = prices :+ getBlockPrices(history, number, ignorePrice, SUGGEST_TIP_TX_LIMIT)
         exp += 1
         number -= 1
       }
