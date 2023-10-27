@@ -6,14 +6,15 @@ import io.horizen.account.state.AccountStateView
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.FeeUtils.INITIAL_BASE_FEE
 import io.horizen.utils.BytesUtils
-import sparkz.util.ModifierId
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 
-object Backend {
+object Backend extends SparkzLogging {
 //  private type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   private val MAX_GAS_PRICE = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
+  private val SUGGEST_TIP_TX_LIMIT = 3 //number of tx to consider per block for the tip estimation algorithm
 
   private var tipCache : Option[TipCache] = Option.empty
 
@@ -68,7 +69,7 @@ object Backend {
     )
 
     // If the latest gasprice is still valid, return it.
-    if (lastHead.isDefined && lastHead == headHash){
+    if (lastHead.isDefined && lastHead.get == headHash){
       return lastPrice
     }
 
@@ -77,7 +78,7 @@ object Backend {
     var prices: Seq[Option[Seq[BigInteger]]] =  Seq() //in go-ethereum this is called result
     var results: Seq[BigInteger] = Seq()
     while (sent < blockCount && number > 0){
-      prices = prices :+ getBlockPrices(history, number, ignorePrice, 3)
+      prices = prices :+ getBlockPrices(history, number, ignorePrice, SUGGEST_TIP_TX_LIMIT)
       sent += 1
       exp += 1
       number -= 1
@@ -87,11 +88,12 @@ object Backend {
       prices = prices.drop(1)
       if (pricesOfABlock.isEmpty) {
         //if we are here we had some errors collecting the blocks
+        log.warn("Error retrieving blocks in history while suggesting tip cap, returning the cached one")
         return lastPrice
       }
       exp -= 1
       var res : Seq[BigInteger] = pricesOfABlock.get
-      if (res.length == 0) {
+      if (res.isEmpty) {
         // Nothing returned. There are two special cases here:
         // - The block is empty
         // - All the transactions included are sent by the miner itself.
@@ -104,7 +106,6 @@ object Backend {
       // is 2*checkBlocks.
       if (res.length == 1 && results.length + 1 + exp < blockCount * 2 && number > 0) {
         prices = prices :+ getBlockPrices(history, number, ignorePrice, 3)
-        sent += 1
         exp += 1
         number -= 1
       }
@@ -112,11 +113,11 @@ object Backend {
     }
 
     var resultPrice = lastPrice
-    if (results.length > 0) {
+    if (!results.isEmpty) {
       resultPrice =
         results
           .sorted
-          .lift((prices.length - 1) * percentile / 100)
+          .lift((results.length - 1) * percentile / 100)
           .getOrElse(lastPrice)
           .min(maxPrice)
     }
