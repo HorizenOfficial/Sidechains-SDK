@@ -1,3 +1,6 @@
+**0.8.1**
+1. Improved precision of eth_gasPrice RPC call
+
 **0.8.0**
 1. ZenDao native smart contracts
 2. Added support for consensus parameter change (epoch lenght, slottime, active slot coefficient) using an hardfork 

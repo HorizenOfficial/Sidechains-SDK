@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk-account_sctools</artifactId>
-  <version>0.8.0</version>
+  <version>0.8.1-SNAPSHOT</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>This module offers a way to create a sidechain's configuration file and some utilities (account model).</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>sidechains-sdk-scbootstrappingtools</artifactId>
-      <version>0.8.0</version>
+      <version>0.8.1-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
