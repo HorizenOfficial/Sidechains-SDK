@@ -9,6 +9,7 @@ import io.horizen.evm._
 import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, fail}
 import org.junit.Test
+import org.scalatest.Assertions.intercept
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
@@ -345,6 +346,15 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       traceResult
     )
 
+    ///////////////////////////////////////////////////////
+    // Test 4: Native contract executes a staticcall on a Smart Contract, passing more gas than its input gas.
+    // The transaction should fails with an OutOfGas exception.
+    ///////////////////////////////////////////////////////
+    intercept[OutOfGasException] {
+      transition(getMessage(NativeTestContract.contractAddress, data = inputRetrieveRequest),
+        gasLimit = NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE))
+    }
+
   }
 
   @Test
@@ -379,7 +389,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       s"""{
                     "type": "CALL",
                     "from": "$origin",
-                    "to": "${nativeCallerAddress}",
+                    "to": "$nativeCallerAddress",
                     "gas": "$gasLimitHexString",
                     "gasUsed": "",
                     "input": "0x${BytesUtils.toHexString(retrieveInput)}",
@@ -545,7 +555,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     val readwriteContractCallInput = BytesUtils.fromHexString(NATIVE_CALLER_STATIC_RW_CONTRACT_ABI_ID)
 
     Try(transition(getMessage(nativeCallerAddress, data = readwriteContractCallInput))) match {
-      case Failure(ex: ExecutionRevertedException) => //OK
+      case Failure(_: ExecutionRevertedException) => //OK
       case res => fail(s"Wrong result: $res")
     }
 
@@ -587,6 +597,15 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       traceResult
     )
 
+    ///////////////////////////////////////////////////////
+    // Test 5: In this test, the gas passed to the NativeCaller contract is less than the gas in turn passed in staticcall
+    // (that is 25000 gas). Even if the gas passed to the staticcall is greater than the gas available, this won't throw
+    // a OoG exception because the EVM in this case will just pass 63/64 of the available gas.
+    // See https://eips.ethereum.org/EIPS/eip-150
+    ///////////////////////////////////////////////////////
+
+    transition(getMessage(nativeCallerAddress, data = retrieveInput),
+      gasLimit = NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE))
   }
 
 
@@ -604,7 +623,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     val input = Bytes.concat(BytesUtils.fromHexString(NativeTestContract.STATICCALL_NESTED_CALLS_TEST_SIG), nativeCallerContractAddress.toBytes)
 
     Try(transition(getMessage(NativeTestContract.contractAddress, data = input))) match {
-      case Failure(ex: ExecutionRevertedException) => //OK
+      case Failure(_: ExecutionRevertedException) => //OK
       case e => fail(s"Should have failed with ExecutionRevertedException: $e")
     }
 
@@ -812,7 +831,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
      // repeat the call again
     returnDataTraced = transition(getMessage(NativeTestContract.contractAddress, data = inputCreateRequest))
     traceResult = tracer.getResult.result
-    println("traceResult" + traceResult.toPrettyString)
 
     val deployedContractAddress = Secp256k1.generateContractAddress(NativeTestContract.contractAddress, currentNonce)
     val inputContractCodeHexString = s"0x${BytesUtils.toHexString(ContractInteropTestBase.nativeCallerContractCode)}"
@@ -844,6 +862,14 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       traceResult
     )
 
+    ///////////////////////////////////////////////////////
+    // Test 4: Native contract executes a staticcall on a native contract, passing more gas than its input gas.
+    // The transaction should fails with an OutOfGas exception.
+    ///////////////////////////////////////////////////////
+    intercept[OutOfGasException] {
+      transition(getMessage(NativeTestContract.contractAddress, data = inputRetrieveRequest),
+        gasLimit = NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE))
+    }
 
   }
 

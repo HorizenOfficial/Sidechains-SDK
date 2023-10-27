@@ -77,7 +77,7 @@ abstract class ContractInteropTestBase extends MessageProcessorFixture {
     Secp256k1.generateContractAddress(origin, nonce)
   }
 
-  protected def transition(msg: Message, blckContext: BlockContext = blockContext): Array[Byte] = {
+  protected def transition(msg: Message, blckContext: BlockContext = blockContext, gasLimit: BigInteger = gasLimit): Array[Byte] = {
     val transition = new StateTransition(stateView, processors, new GasPool(gasLimit), blckContext, msg)
     transition.execute(Invocation.fromMessage(msg, new GasPool(gasLimit)))
   }
