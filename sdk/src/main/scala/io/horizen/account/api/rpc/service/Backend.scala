@@ -6,14 +6,18 @@ import io.horizen.account.state.AccountStateView
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.FeeUtils.INITIAL_BASE_FEE
 import io.horizen.utils.BytesUtils
-import sparkz.util.ModifierId
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import java.math.BigInteger
 
-object Backend {
+object Backend extends SparkzLogging {
 //  private type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   private val MAX_GAS_PRICE = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
+  private val SUGGEST_TIP_TX_LIMIT = 3 //number of tx to consider per block for the tip estimation algorithm
+
+  private var tipCache : Option[TipCache] = Option.empty
+
 
   /**
    * Calculate suggested legacy gas price, i.e. including base fee.
@@ -29,8 +33,7 @@ object Backend {
 
   /**
    * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
-   * Replication of the original implementation in GETH w/o caching, see:
-   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L150
+   * Replication of the original implementation in GETH
    *
    * @see
    *   https://github.com/ethereum/go-ethereum/blob/v1.10.26/eth/gasprice/gasprice.go#L149
@@ -57,49 +60,100 @@ object Backend {
       maxPrice: BigInteger = MAX_GAS_PRICE,
       ignorePrice: BigInteger = BigInteger.TWO
   ): BigInteger = {
-    val blockHeight = history.getCurrentHeight
-    // limit the range of blocks by the number of available blocks and cap at 1024
-    val blocks: Integer = (blockCount * 2).min(blockHeight).min(1024)
+    var number = history.getCurrentHeight
+    val headHash = history.bestBlockId
+    val (lastHead : Option[ModifierId], lastPrice: BigInteger) = tipCache.fold(
+      (Option.empty[ModifierId], BigInteger.ZERO)
+    )(cache =>
+      (Some(cache.blockHash), cache.value)
+    )
 
-    // define limit for included gas prices each block
-    val limit = 3
-    val prices: Seq[BigInteger] = {
-      var collected = 0
-      var moreBlocksNeeded = false
-      // Return lowest tx gas prices of each requested block, sorted in ascending order.
-      // Queries up to 2*blockCount blocks, but stops in range > blockCount if enough samples were found.
-      (0 until blocks).withFilter(_ => !moreBlocksNeeded || collected < 2).map { i =>
-        val block = history
-          .blockIdByHeight(blockHeight - i)
-          .map(ModifierId(_))
-          .flatMap(history.getStorageBlockById)
-          .get
-        val blockPrices = getBlockPrices(block, ignorePrice, limit)
-        collected += blockPrices.length
-        if (i >= blockCount) moreBlocksNeeded = true
-        blockPrices
+    // If the latest gasprice is still valid, return it.
+    if (lastHead.isDefined && lastHead.get == headHash){
+      return lastPrice
+    }
+
+    var sent = 0
+    var exp = 0
+    var prices: Seq[Option[Seq[BigInteger]]] =  Seq() //in go-ethereum this is called result
+    var results: Seq[BigInteger] = Seq()
+    while (sent < blockCount && number > 0){
+      prices = prices :+ getBlockPrices(history, number, ignorePrice, SUGGEST_TIP_TX_LIMIT)
+      sent += 1
+      exp += 1
+      number -= 1
+    }
+    while (exp > 0){
+      val pricesOfABlock : Option[Seq[BigInteger]] = prices.head
+      prices = prices.drop(1)
+      if (pricesOfABlock.isEmpty) {
+        //if we are here we had some errors collecting the blocks
+        log.warn("Error retrieving blocks in history while suggesting tip cap, returning the cached one")
+        return lastPrice
       }
-    }.flatten
+      exp -= 1
+      var res : Seq[BigInteger] = pricesOfABlock.get
+      if (res.isEmpty) {
+        // Nothing returned. There are two special cases here:
+        // - The block is empty
+        // - All the transactions included are sent by the miner itself.
+        // In these cases, use the latest calculated price for sampling.
+        res = Seq(lastPrice)
+      }
 
-    prices
-      .sorted
-      .lift((prices.length - 1) * percentile / 100)
-      .getOrElse(BigInteger.ZERO)
-      .min(maxPrice)
+      // Besides, in order to collect enough data for sampling, if nothing
+      // meaningful returned, try to query more blocks. But the maximum
+      // is 2*checkBlocks.
+      if (res.length == 1 && results.length + 1 + exp < blockCount * 2 && number > 0) {
+        prices = prices :+ getBlockPrices(history, number, ignorePrice, SUGGEST_TIP_TX_LIMIT)
+        exp += 1
+        number -= 1
+      }
+      results = results ++ res
+    }
+
+    var resultPrice = lastPrice
+    if (!results.isEmpty) {
+      resultPrice =
+        results
+          .sorted
+          .lift((results.length - 1) * percentile / 100)
+          .getOrElse(lastPrice)
+          .min(maxPrice)
+    }
+
+    //cache the result for next calls
+    tipCache = Some(TipCache(headHash, resultPrice))
+    resultPrice
   }
 
   /**
-   * Calculates the lowest transaction gas price in a given block If the block is empty or all transactions are sent by
-   * the miner itself, empty sequence is returned. Replication of the original implementation in GETH, see:
-   * github.com/ethereum/go-ethereum/blob/master/eth/gasprice/gasprice.go#L258
+   * Calculates the lowest transaction gas price in a given block
+   * If the block is empty or all transactions are sent by the miner itself, empty sequence is returned.
+   * If we are unable to find the block, return an empty option.
+   * Replication of the original implementation in GETH, see:
+   * https://github.com/ethereum/go-ethereum/blob/v1.10.26/eth/gasprice/gasprice.go#L257
    */
-  private def getBlockPrices(block: AccountBlock, ignoreUnder: BigInteger, limit: Int): Seq[BigInteger] = {
-    block.transactions
+  private def getBlockPrices(history: AccountHistory,
+                             blockHeight: Int,
+                             ignoreUnder: BigInteger,
+                             limit: Int): Option[Seq[BigInteger]] = {
+
+    val blockId = history.blockIdByHeight(blockHeight)
+    if (blockId.isEmpty){
+      return Option.empty
+    }
+    val blockOpt = history.getStorageBlockById(ModifierId(blockId.get))
+    if (blockOpt.isEmpty){
+      return Option.empty
+    }
+    val block = blockOpt.get
+    Some(block.transactions
       .filter(tx => !(tx.getFrom.bytes() sameElements block.forgerPublicKey.bytes()))
       .map(tx => getEffectiveGasTip(tx.asInstanceOf[EthereumTransaction], block.header.baseFee))
       .filter(gasTip => ignoreUnder == null || gasTip.compareTo(ignoreUnder) >= 0)
       .sorted
-      .take(limit)
+      .take(limit))
   }
 
   def getRewardsForBlock(
@@ -144,3 +198,6 @@ object Backend {
     else tx.getMaxPriorityFeePerGas.min(tx.getMaxFeePerGas.subtract(baseFee))
   }
 }
+
+case class TipCache(blockHash: ModifierId,  value: BigInteger)
+
