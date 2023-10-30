@@ -352,4 +352,39 @@ class BackendTest
     assertEquals(DefaultGasPrice, tip)
   }
 
+  @Test
+  def suggestTipCapWithMaxPrice(): Unit = {
+    /* This tests that if the calculated gas price is greater than maxPrice, it is capped to maxPrice.
+     */
+
+    // This fixture would create a calculated gas price of 36 Gwei
+    var baseGasPrice = BigInteger.ZERO
+    Mockito.when(historyMock.getStorageBlockById(ArgumentMatchers.any[ModifierId]())).thenAnswer { _ =>
+      val blockMock = mock[AccountBlock]
+      Mockito.when(blockMock.forgerPublicKey).thenReturn(AddressProposition.ZERO)
+      Mockito.when(blockMock.header).thenReturn(headerMock)
+
+      val listOfTxs = (0 until 3).map(_ => {
+        baseGasPrice = baseGasPrice.add(BigInteger.ONE)
+        val gasPrice = baseGasPrice.multiply(BigInteger.valueOf(1000000000L))
+        createEIP1559Transaction(
+          value = BigInteger.ZERO,
+          gasFee = gasPrice,
+          priorityGasFee = gasPrice)
+      }
+      )
+
+      Mockito.when(blockMock.transactions).thenReturn(listOfTxs.asInstanceOf[Seq[SidechainTypes#SCAT]])
+      Some(blockMock)
+    }
+
+    Mockito.when(historyMock.getCurrentHeight).thenReturn(100)
+    Mockito.when(historyMock.bestBlockId).thenReturn(ModifierId("100"))
+
+    val MaxGasPrice = BigInteger.valueOf(1000000000L)
+    val tip = Backend.suggestTipCap(historyMock, maxPrice = MaxGasPrice)
+    assertEquals(MaxGasPrice, tip)
+  }
+
+
 }
