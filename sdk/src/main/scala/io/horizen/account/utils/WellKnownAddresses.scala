@@ -12,7 +12,4 @@ object WellKnownAddresses {
 
   // this is used for intercepting Forward Transfers from Mainchain to forger pool
   val FORGER_POOL_RECIPIENT_ADDRESS: Address = new Address("0x0000000000000000000033333333333333333333")
-  // TODO: this address should be checked in the eoa msg processor too, in case anyone wanted to send funds to theforger pool.
-  //       As an alternative one could check in the forging phase: if this address has balance then move it to the forger pool
-
 }

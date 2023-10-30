@@ -96,7 +96,6 @@ class AccountForgeMessageBuilder(
       blockSizeIn: Long
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
-
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
@@ -105,9 +104,15 @@ class AccountForgeMessageBuilder(
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
-      val optFtValue = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
-      if (optFtValue.isDefined)
-        cumBaseFee = cumBaseFee.add(optFtValue.get)
+      val mcForwardTransfersToForgerPoolAmount = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+      cumBaseFee = cumBaseFee.add(mcForwardTransfersToForgerPoolAmount)
+    }
+
+    if (stateView.getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS).signum() == 1) {
+      // add funds sent to forger pool smart contract address to the cumulative base-fee
+      val value = stateView.getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      stateView.subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, value)
+      cumBaseFee = cumBaseFee.add(value)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()

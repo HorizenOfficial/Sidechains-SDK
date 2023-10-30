@@ -8,7 +8,7 @@ import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumRecei
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils, WellKnownAddresses}
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
@@ -133,9 +133,8 @@ class AccountState(
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.addTopQualityCertificates(mcBlockRefData, mod.id)
-        val optFtValue = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
-        if (optFtValue.isDefined)
-          cumBaseFee = cumBaseFee.add(optFtValue.get)
+        val mcForwardTransfersToForgerPoolAmount = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        cumBaseFee = cumBaseFee.add(mcForwardTransfersToForgerPoolAmount)
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash

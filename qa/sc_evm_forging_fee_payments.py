@@ -2,7 +2,6 @@
 import json
 import logging
 import math
-from decimal import Decimal
 
 from eth_utils import add_0x_prefix
 
@@ -234,7 +233,6 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         logging.info("forger tips = {}".format(forger_tips))
         logging.info("---------------------------------------")
         logging.info("total fee   = {}".format(total_fee))
-
 
         average_fee = math.floor(pool_fee // len(sc_block_fee_info))
         forger_fees = {}

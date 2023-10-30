@@ -75,8 +75,8 @@ class StateDbAccountStateView(
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Option[BigInteger] = {
-    var mcForwardTransferAmount : Option[BigInteger] = None
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): BigInteger = {
+    var mcForwardTransfersToForgerPoolAmount : BigInteger = BigInteger.ZERO
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -128,27 +128,25 @@ class StateDbAccountStateView(
           if (recipientAddress.equals(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)) {
             // move funds to forger pool
             log.debug(s"adding FT amount = $value to forger pool")
-            mcForwardTransferAmount = Some(value)
-          } else if (isEoaAccount(recipientAddress)) {
+            mcForwardTransfersToForgerPoolAmount = mcForwardTransfersToForgerPoolAmount.add(value)
+          } else if (isEoaAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
             // stateDb will implicitly create account if not existing yet
             log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
             addBalance(recipientAddress, value)
-          } else if (isSmartContractAccount(recipientAddress)) {
+          } else if (isSmartContractAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
             log.debug(s"adding FT amount = $value to Smart Contract address=$recipientProposition")
-            // TODO check that in case of Native Smart Contract address, we can receive funds, otherwise burn them
-            /*
+            addBalance(recipientAddress, value)
+          } else {
             val burnAddress = Address.ZERO
             log.warn(
               s"ignored FT, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
             )
             addBalance(burnAddress, value)
-            */
-            addBalance(recipientAddress, value)
           }
           log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
-    mcForwardTransferAmount
+    mcForwardTransfersToForgerPoolAmount
   }
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
@@ -383,4 +381,15 @@ class StateDbAccountStateView(
 
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
     new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
+
+  /**
+   * Checks if the given address is not one of the well known addresses that cannot receive funds.
+   */
+  private def canReceiveFunds(address: Address): Boolean = {
+    !Seq(
+      WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+      WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
+      WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
+    ).contains(address)
+  }
 }

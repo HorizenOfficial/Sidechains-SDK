@@ -11,25 +11,26 @@ import io.horizen.account.state._
 import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
+import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils, WellKnownAddresses, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
-import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.horizen.state.BaseStateReader
-import io.horizen.transaction.TransactionSerializer
+import io.horizen.transaction.{MC2SCAggregatedTransaction, TransactionSerializer}
 import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, TimeToEpochUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
@@ -45,6 +46,7 @@ import java.time.Instant
 import java.util
 import java.util.Optional
 import scala.io.Source
+import scala.collection.JavaConverters._
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar
@@ -393,6 +395,51 @@ class AccountForgeMessageBuilderTest
       signatureOption
     )
     assertTrue("Could not forge block", block.isSuccess)
+  }
+
+  @Test
+  def calculateForgerPoolRewards(): Unit = {
+    val blockContext = new BlockContext(
+      Address.ZERO,
+      1000,
+      BigInteger.ZERO,
+      10000000000L,
+      11,
+      2,
+      3,
+      1,
+      MockedHistoryBlockHashProvider,
+      Hash.ZERO
+    )
+
+    val mcBlockRefData = mock[MainchainBlockReferenceData]
+    when(mcBlockRefData.topQualityCertificate).thenReturn(Option.empty)
+    val mC2SCAggregatedTransaction = mock[MC2SCAggregatedTransaction]
+    when(mcBlockRefData.sidechainRelatedAggregatedTransaction).thenReturn(Some(mC2SCAggregatedTransaction))
+    val proposition = new AddressProposition(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+    val forwardTransfer = getForwardTransfer(proposition, 1.toByteArray)
+    val ftAmount = ZenWeiConverter.convertZenniesToWei(forwardTransfer.getFtOutput.amount)
+    when(mC2SCAggregatedTransaction.mc2scTransactionsOutputs).thenAnswer(_ => List(forwardTransfer).asJava)
+
+    usingView { stateView =>
+      val forgerPoolAddress = WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
+      val addressValue = 11111L
+      stateView.addBalance(forgerPoolAddress, BigInteger.valueOf(addressValue))
+
+      val forger = new AccountForgeMessageBuilder(null, null, null, false)
+
+      val inputBlockSize = 100L
+      val (_, _, blockFeeInfo) = forger.computeBlockInfo(
+        stateView,
+        Seq.empty,
+        Seq(mcBlockRefData),
+        blockContext,
+        null,
+        inputBlockSize
+      )
+
+      assertEquals(ftAmount.add(BigInteger.valueOf(addressValue)), blockFeeInfo.baseFee)
+    }
   }
 
   private def setupMockMessageProcessor = {
