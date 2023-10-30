@@ -126,6 +126,10 @@ testScriptsEvm=(
     'sc_evm_seedernode.py'
     'sc_evm_consensus_parameters_fork.py'
     'sc_evm_active_slot_coefficient.py'
+    'mc_sc_evm_forging1_with_mc_block_delay.py'
+    'mc_sc_evm_forging3_with_mc_block_delay.py'
+    'mc_sc_evm_forging4_with_mc_block_delay.py'
+    'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
     'sc_evm_rpc_eth.py'
 );
 
@@ -410,6 +414,7 @@ function runTestScript
       updateFailList="$testName"
       updateFailureCount
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+      exit 1
     fi
 
     echo | tee /dev/fd/3

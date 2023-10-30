@@ -116,7 +116,7 @@ public class SimpleAppModule extends SidechainAppModule
 
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, maxHistoryRewritingLength));
@@ -140,10 +140,10 @@ public class SimpleAppModule extends SidechainAppModule
                 .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, 1));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("BackupStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(backupStore, maxHistoryRewritingLength));
