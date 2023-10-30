@@ -23,6 +23,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
 
 
   val origin: Address = randomAddress
+  val origin2: Address = randomAddress
   val defaultBlockContext =
     new BlockContext(Address.ZERO, 0, 0, DefaultGasFeeFork.blockGasLimit, 0, 33, 0, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {

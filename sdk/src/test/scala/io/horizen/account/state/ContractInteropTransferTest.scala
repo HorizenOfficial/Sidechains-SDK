@@ -84,5 +84,17 @@ class ContractInteropTransferTest extends ContractInteropTestBase {
     // the transferred amount reached the native contract
     assertEquals(transferValue, stateView.getBalance(NativeTestContract.contractAddress))
   }
+
+  @Test
+  def testTransferFromNativeToEoa(): Unit = {
+    // call the native contract with some value and make it forward the amount to the EOA
+    transition(getMessage(NativeTestContract.contractAddress, value = transferValue, data = origin2.toBytes))
+    // origin lost the transferred amount
+    assertEquals(initialBalance.subtract(transferValue), stateView.getBalance(origin))
+    // the native contract does not have any balance, everything should have been forwarded
+    assertEquals(BigInteger.ZERO, stateView.getBalance(NativeTestContract.contractAddress))
+    // the transferred amount reached the EVM contract
+    assertEquals(transferValue, stateView.getBalance(origin2))
+  }
 }
 
