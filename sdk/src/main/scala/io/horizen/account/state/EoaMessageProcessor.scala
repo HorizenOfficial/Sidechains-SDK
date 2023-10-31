@@ -14,10 +14,7 @@ object EoaMessageProcessor extends MessageProcessor with SparkzLogging {
   override def customTracing(): Boolean = false
 
   override def canProcess(invocation: Invocation, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
-    // Can process only EOA to EOA transfer, so when "callee" is an EOA account:
-    // There is no need to check "caller" account because it can't be a smart contract one,
-    // because there is no known private key to create a valid signature.
-    // Note: in case of smart contract declaration "callee" is None.
+    // Can process EOA to EOA and Native contract to EOA transfer
     invocation.callee.exists(view.isEoaAccount)
   }
 
