@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
-import com.google.common.primitives.Bytes
+import com.google.common.primitives.{Bytes, Ints}
+import io.horizen.account.abi.ABIEncodable
 import io.horizen.account.abi.ABIUtil.{getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.state.ContractInteropTestBase._
 import io.horizen.account.utils.BigIntegerUtil.toUint256Bytes
@@ -10,11 +11,14 @@ import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, fail}
 import org.junit.Test
 import org.scalatest.Assertions.intercept
+import org.web3j.abi.{TypeEncoder, datatypes}
+import org.web3j.abi.datatypes.generated.Uint256
+import org.web3j.abi.datatypes.{DynamicBytes, DynamicStruct, Type, Address => AbiAddress}
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 class ContractInteropCallTest extends ContractInteropTestBase {
   override val processorToTest: NativeSmartContractMsgProcessor = NativeTestContract
@@ -437,7 +441,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     traceResult = tracer.getResult.result
 
     var expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
-    val currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
+    var currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
 
     // The gasUsed is empty since the traceTxStart and txTxEnd are not called in this unit test
     // check tracer output
@@ -604,9 +608,139 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     // See https://eips.ethereum.org/EIPS/eip-150
     ///////////////////////////////////////////////////////
 
+    tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    blockContext.setTracer(tracer)
+
     transition(getMessage(nativeCallerAddress, data = retrieveInput),
       gasLimit = NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE))
+
+    traceResult = tracer.getResult.result
+
+    expectedTxResult += 1
+    currentCounterValue += 1
+    val inputGasHex =  "0x" + NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE).toString(16)
+    expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
+    currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
+
+    assertJsonEquals(
+      s"""{
+    "type": "CALL",
+    "from": "$origin",
+    "to": "$nativeCallerAddress",
+    "gas": "$inputGasHex",
+    "gasUsed": "",
+    "input": "0x${BytesUtils.toHexString(retrieveInput)}",
+    "value": "0x0",
+    "output": "$expectedTxOutputHex",
+    "calls": [{
+      "type": "STATICCALL",
+      "from": "$nativeCallerAddress",
+      "to": "${NativeTestContract.contractAddress}",
+      "gas": "0x5d77",
+      "gasUsed": "0x64",
+      "input": "0x$NATIVE_CONTRACT_RETRIEVE_ABI_ID",
+      "output": "$expectedTxOutputHex"
+    },
+    {
+        "type": "CALL",
+        "from": "$nativeCallerAddress",
+        "to": "${NativeTestContract.contractAddress}",
+        "value": "0x0",
+        "gas": "0x5a51",
+        "gasUsed": "0xc8",
+        "input": "0x$NATIVE_CONTRACT_INC_ABI_ID",
+        "output": "$currentCounterValueHex"
+          }]
+  }""",
+      traceResult
+    )
+
+
+    ///////////////////////////////////////////////////////
+    // Test 6: Same as test 5 above but adding an additional smart contract (SimpleProxy) call in the stack.
+    // See https://eips.ethereum.org/EIPS/eip-150
+    ///////////////////////////////////////////////////////
+
+    // Deploying SimpleProxy contract.
+    // Change the nonce because in this test the part managing the nonce is skipped and it is need for creating the
+    // deployed contract address.
+    stateView.increaseNonce(origin)
+    val nonce = stateView.getNonce(origin)
+    stateView.increaseNonce(origin)
+
+    transition(getMessage(null, data = ContractInteropTestBase.simpleProxyContractCode))
+
+    val simpleProxyAddress = Secp256k1.generateContractAddress(origin, nonce)
+    // Prepare the call
+    val invokeInput = CallSimpleContractCmdInput(nativeCallerAddress, BigInteger.ZERO, BytesUtils.toHexString(retrieveInput))
+    val input = Bytes.concat(BytesUtils.fromHexString(SIMPLE_PROXY_CALL_ABI_ID), invokeInput.encode())
+
+    tracer = new Tracer(new TraceOptions(false, false, false, false, "callTracer", null))
+    blockContext.setTracer(tracer)
+
+    transition(getMessage(simpleProxyAddress, data = input),
+      gasLimit = NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE))
+
+    traceResult = tracer.getResult.result
+
+    expectedTxResult += 1
+    currentCounterValue += 1
+    expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
+    currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
+    val listOfParams: java.util.List[Type[_]] = java.util.Arrays.asList(
+      new datatypes.DynamicBytes(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
+    )
+
+   val output = TypeEncoder.encode(new DynamicStruct(listOfParams))
+
+    assertJsonEquals(
+          s"""{
+    "type": "CALL",
+    "from": "$origin",
+    "to": "$simpleProxyAddress",
+    "gas": "$inputGasHex",
+    "gasUsed": "",
+    "input": "0x${BytesUtils.toHexString(input)}",
+    "value": "0x0",
+    "output": "0x$output",
+    "calls": [
+    {
+        "type": "CALL",
+        "from": "$simpleProxyAddress",
+        "to": "$nativeCallerAddress",
+        "value": "0x0",
+        "gas": "0x5b43",
+        "gasUsed": "0x794",
+        "input": "0x${BytesUtils.toHexString(retrieveInput)}",
+        "output": "$expectedTxOutputHex",
+        "calls": [
+        {
+          "type": "STATICCALL",
+          "from": "$nativeCallerAddress",
+          "to": "${NativeTestContract.contractAddress}",
+          "gas": "0x572c",
+          "gasUsed": "0x64",
+          "input": "0x$NATIVE_CONTRACT_RETRIEVE_ABI_ID",
+          "output": "$expectedTxOutputHex"
+        },
+        {
+            "type": "CALL",
+            "from": "$nativeCallerAddress",
+            "to": "${NativeTestContract.contractAddress}",
+            "value": "0x0",
+            "gas": "0x5407",
+            "gasUsed": "0xc8",
+            "input": "0x$NATIVE_CONTRACT_INC_ABI_ID",
+            "output": "$currentCounterValueHex"
+        }]
+    }]
+    }""",
+          traceResult
+        )
+
   }
+
+
 
 
   @Test
@@ -873,4 +1007,22 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
   }
 
+}
+
+case class CallSimpleContractCmdInput(
+                                       contractAddress: Address,
+                                       value: BigInteger,
+                                       dataStr: String) extends ABIEncodable[DynamicStruct] {
+
+
+  override def asABIType(): DynamicStruct = {
+
+    val dataBytes: Array[Byte] = org.web3j.utils.Numeric.hexStringToByteArray(dataStr)
+    val listOfParams: java.util.List[Type[_]] = java.util.Arrays.asList(
+      new AbiAddress(contractAddress.toString),
+      new Uint256(value),
+      new DynamicBytes(dataBytes)
+    )
+    new DynamicStruct(listOfParams)
+  }
 }

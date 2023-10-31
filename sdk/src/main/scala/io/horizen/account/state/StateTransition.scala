@@ -153,9 +153,12 @@ class StateTransition(
     // limit call depth to 1024
     if (depth > 1024) throw new ExecutionRevertedException("max call depth exceeded")
     // get caller gas pool, for the top-level call this is empty
-    // TODO: this will be wrong after a call to `executeDepth()` because it does not add a new invocation to the stack.
-    //  As gas can only decrease, using a gaspool "too high" up the stack will only ever have "too much" gas, i.e.
-    //  this will never throw a false out-of-gas error, but the gas limit might not be checked correctly.
+    // In case of callbacks from the EVM, this gas check could be wrong, because it is possible that the caller invocation
+    // wasn't added to the invocationStack. So, what will be found in invocationStack is a grand-parent invocation.
+    // As gas can only decrease, using a gaspool "too high" up the stack will only ever have "too much" gas, i.e.
+    // this will never throw a false out-of-gas error, but the gas limit might not be checked correctly.
+    // However, the EVM always makes sure that the gas passed to an inner call is less than the input gas, so it
+    // shouldn't be a problem (See https://eips.ethereum.org/EIPS/eip-150).
     val callerGas = invocationStack.headOption.map(_.gasPool)
     // allocate gas from caller to the nested invocation, this can throw if the caller does not have enough gas
     callerGas.foreach(_.subGas(invocation.gasPool.getGas))
