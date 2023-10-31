@@ -8,7 +8,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createRawEIP1559Transa
 from SidechainTestFramework.account.httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.account.httpCalls.transaction.signTransaction import signTransaction
 from SidechainTestFramework.account.utils import convertZenToWei
-from SidechainTestFramework.scutil import generate_next_block, generate_next_blocks
+from SidechainTestFramework.scutil import generate_next_block, generate_next_blocks, assert_equal
 from test_framework.util import (assert_true)
 
 """
@@ -54,7 +54,7 @@ class SCEvmGasPrice(AccountChainSetup):
         else:
             expected_price += minerFee
 
-        assert_true(int(sc_node.rpc_eth_gasPrice()['result'], 16) == expected_price)
+        assert_equal(expected_price, int(sc_node.rpc_eth_gasPrice()['result'], 16))
 
     def run_test(self):
         ft_amount_in_zen = Decimal('1000.0')
@@ -73,38 +73,39 @@ class SCEvmGasPrice(AccountChainSetup):
         transferred_amount_in_zen = Decimal('1.2')
 
         # Create some txs for gasPrice calculation later
-        for i in range(5):
-            raw_tx = createRawEIP1559Transaction(sc_node,
-                                                 fromAddress=evm_address_1,
-                                                 toAddress=evm_address_2,
-                                                 value=convertZenToWei(transferred_amount_in_zen),
-                                                 nonce=str(nonce_addr_1),
-                                                 maxPriorityFeePerGas=maxPriorityFeePerGas)
-            self.__do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
-            nonce_addr_1 += 1
+        for j in range(10):
+            for i in range(5):
+                raw_tx = createRawEIP1559Transaction(sc_node,
+                                                     fromAddress=evm_address_1,
+                                                     toAddress=evm_address_2,
+                                                     value=convertZenToWei(transferred_amount_in_zen),
+                                                     nonce=str(nonce_addr_1),
+                                                     maxPriorityFeePerGas=maxPriorityFeePerGas)
+                self.__do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
+                nonce_addr_1 += 1
+            generate_next_block(sc_node, "first node")
 
-        generate_next_block(sc_node, "first node")
         assert_true(len(sc_node.rpc_eth_getBlockByNumber('latest', False)['result']['transactions']) == 5)
 
-        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=10)
+        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=0)
 
-        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=15)
-
-        self.__do_check_gas_price(0, generate_blocks=20)
+        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=40)
 
         maxPriorityFeePerGas = 600000000000
-        for i in range(5):
-            raw_tx = createRawEIP1559Transaction(sc_node,
-                                                 fromAddress=evm_address_1,
-                                                 toAddress=evm_address_2,
-                                                 value=convertZenToWei(transferred_amount_in_zen),
-                                                 nonce=str(nonce_addr_1),
-                                                 maxFeePerGas=maxPriorityFeePerGas,
-                                                 maxPriorityFeePerGas=maxPriorityFeePerGas)
-            self.__do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
-            nonce_addr_1 += 1
+        for j in range(10):
+            for i in range(5):
+                raw_tx = createRawEIP1559Transaction(sc_node,
+                                                     fromAddress=evm_address_1,
+                                                     toAddress=evm_address_2,
+                                                     value=convertZenToWei(transferred_amount_in_zen),
+                                                     nonce=str(nonce_addr_1),
+                                                     maxFeePerGas=maxPriorityFeePerGas,
+                                                     maxPriorityFeePerGas=maxPriorityFeePerGas)
+                self.__do_send_raw_tx(raw_tx=raw_tx, evm_signer_address=evm_address_1)
+                nonce_addr_1 += 1
+                generate_next_block(sc_node, "first node")
 
-        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=1)
+        self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=0)
 
 
 if __name__ == "__main__":

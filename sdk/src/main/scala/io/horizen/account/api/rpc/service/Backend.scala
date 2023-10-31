@@ -16,7 +16,7 @@ object Backend extends SparkzLogging {
   private val MAX_GAS_PRICE = INITIAL_BASE_FEE.multiply(BigInteger.valueOf(500))
   private val SUGGEST_TIP_TX_LIMIT = 3 //number of tx to consider per block for the tip estimation algorithm
 
-  private var tipCache : Option[TipCache] = Option.empty
+  private[horizen] var tipCache : Option[TipCache] = Option.empty
 
 
   /**
