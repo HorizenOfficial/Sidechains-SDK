@@ -23,17 +23,18 @@ object Backend extends SparkzLogging {
    * Calculate suggested legacy gas price, i.e. including base fee.
    */
   def calculateGasPrice(history: AccountHistory, baseFee: BigInteger): BigInteger = {
-    suggestTipCap(history).add(baseFee).min(MAX_GAS_PRICE)
+    suggestTipCap(history).add(baseFee)
   }
 
   /**
    * Overload with default arguments.
    */
-  def suggestTipCap(history: AccountHistory): BigInteger = suggestTipCap(history, 20, 60, MAX_GAS_PRICE, BigInteger.TWO)
+  def suggestTipCap(history: AccountHistory): BigInteger = suggestTipCap(history, 20, 40, MAX_GAS_PRICE, BigInteger.TWO)
 
   /**
    * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
    * Replication of the original implementation in GETH
+   * NOTE: we use a different percentile than GETH (40 instead of 60) given low traffic conditions
    *
    * @see
    *   https://github.com/ethereum/go-ethereum/blob/v1.10.26/eth/gasprice/gasprice.go#L149
@@ -56,7 +57,7 @@ object Backend extends SparkzLogging {
   def suggestTipCap(
       history: AccountHistory,
       blockCount: Int = 20,
-      percentile: Int = 60,
+      percentile: Int = 40,
       maxPrice: BigInteger = MAX_GAS_PRICE,
       ignorePrice: BigInteger = BigInteger.TWO
   ): BigInteger = {

@@ -65,10 +65,10 @@ class BackendTest
 
     val tip = Backend.suggestTipCap(historyMock)
     /* In this case, 20 blocks will be used, with 3 txs each => total number of samples will be 60.
-    The samples have values starting from 1 Gwei up to 60 Gwei, the 60th percentile of 60 samples is 35 => expected
+    The samples have values starting from 1 Gwei up to 60 Gwei, the 40th percentile of 60 samples is 24 => expected
     value is 36 Gwei
      */
-    assertEquals(BigInteger.valueOf(36000000000L), tip)
+    assertEquals(BigInteger.valueOf(24000000000L), tip)
   }
 
   @Test
@@ -99,10 +99,10 @@ class BackendTest
 
     val tip = Backend.suggestTipCap(historyMock)
     /* In this case, 40 blocks will be used, with 1 txs each => total number of samples will be 40.
-     The samples have values starting from 1 Gwei up to 40 Gwei, the 60th percentile of 40 samples is 23 => expected
-     value is 24 Gwei
+     The samples have values starting from 1 Gwei up to 40 Gwei, the 40th percentile of 40 samples is 16 => expected
+     value is 16 Gwei
       */
-    assertEquals(BigInteger.valueOf(24000000000L), tip)
+    assertEquals(BigInteger.valueOf(16000000000L), tip)
   }
 
 
@@ -141,11 +141,11 @@ class BackendTest
 
     /* In this case, 32 blocks will be used. 1 block out of 5 has 3 txs, the other 4 are empty so they contribute with
       just 1 sample with value = lastPrice, that in this case is the default (0 Gwei) => total number of samples is
-      7 "full" blocks * 3 txs + 25 empty blocks * 1 sample = 46. The 60th percentile of 46 samples is 27. The samples
+      7 "full" blocks * 3 txs + 25 empty blocks * 1 sample = 46. The 40th percentile of 46 samples is 18. The samples
       from the full blocks have values from 1 Gwei to 21 Gwei while the 25 samples from empty blocks are all 0 Gwei. So
-      the first 25 samples are 0 Gwei then the other are from 1 Gwei to 21 Gwei. At the 27th position we have 3 Gwei.
+      the first 25 samples are 0 Gwei then the other are from 1 Gwei to 21 Gwei. At the 18th position we have 0 Gwei.
       */
-    assertEquals(BigInteger.valueOf(3000000000L), tip)
+    assertEquals(BigInteger.valueOf(0), tip)
 
   }
 

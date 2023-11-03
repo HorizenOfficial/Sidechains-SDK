@@ -49,8 +49,8 @@ class SCEvmGasPrice(AccountChainSetup):
             generate_next_blocks(sc_node, "first node", generate_blocks)
 
         expected_price = int(sc_node.rpc_eth_getBlockByNumber('latest', True)['result']['baseFeePerGas'], 16)
-        if (minerFee + expected_price) > maxPrice:
-            expected_price = maxPrice
+        if minerFee  > maxPrice:
+            expected_price += maxPrice
         else:
             expected_price += minerFee
 
