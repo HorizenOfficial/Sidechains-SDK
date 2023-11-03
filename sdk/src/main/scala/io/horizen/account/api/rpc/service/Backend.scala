@@ -23,13 +23,39 @@ object Backend extends SparkzLogging {
    * Calculate suggested legacy gas price, i.e. including base fee.
    */
   def calculateGasPrice(history: AccountHistory, baseFee: BigInteger): BigInteger = {
-    suggestTipCap(history).add(baseFee).min(MAX_GAS_PRICE)
+    System.out.println("gasPrice tarocca");
+    var currentH = history.getCurrentHeight
+    var line: String = "Percentile,";
+    for (a <- history.getCurrentHeight - 2000 to history.getCurrentHeight) {
+      line = line + a + ","
+    }
+    line = line + "\n"
+    //System.out.println(line)
+
+    //for( percentile <- 10 to 90 by 10) {
+      var percentile = 40
+      for (a <- history.getCurrentHeight - 4000 to history.getCurrentHeight) {
+        val bf = history.getBlockById(history.blockIdByHeight(a).get).get().header.baseFee
+        var r = suggestTipCap(history, a, percentile).add(bf)
+        if (r!= BigInteger.valueOf(20*10^9)){
+          System.out.println(a+","+r)
+        }
+      }
+
+
+    //}
+
+    suggestTipCap(history).add(baseFee)
+  }
+
+  def suggestTipCap(history: AccountHistory): BigInteger  = {
+    suggestTipCap(history,0,60)
   }
 
   /**
    * Overload with default arguments.
    */
-  def suggestTipCap(history: AccountHistory): BigInteger = suggestTipCap(history, 20, 60, MAX_GAS_PRICE, BigInteger.TWO)
+  def suggestTipCap(history: AccountHistory, height: Int, percentile: Int): BigInteger = suggestTipCap(history, 20, percentile, MAX_GAS_PRICE, BigInteger.TWO, height)
 
   /**
    * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
@@ -58,18 +84,24 @@ object Backend extends SparkzLogging {
       blockCount: Int = 20,
       percentile: Int = 60,
       maxPrice: BigInteger = MAX_GAS_PRICE,
-      ignorePrice: BigInteger = BigInteger.TWO
+      ignorePrice: BigInteger = BigInteger.TWO,
+      height: Int = 0
+
   ): BigInteger = {
-    var number = history.getCurrentHeight
-    val headHash = history.bestBlockId
+    var number = if (height == 0)  history.getCurrentHeight else height
+    val headHash = history.getBlockById(history.blockIdByHeight(number).get).get().id
     val (lastHead : Option[ModifierId], lastPrice: BigInteger) = tipCache.fold(
       (Option.empty[ModifierId], BigInteger.ZERO)
     )(cache =>
       (Some(cache.blockHash), cache.value)
     )
 
+    //System.out.println("Calculating for: "+number);
+    //System.out.println("Calculating for: "+headHash);
+
     // If the latest gasprice is still valid, return it.
     if (lastHead.isDefined && lastHead.get == headHash){
+      //System.out.println("  returning cached");
       return lastPrice
     }
 
@@ -113,7 +145,12 @@ object Backend extends SparkzLogging {
     }
 
     var resultPrice = lastPrice
+    //System.out.println("Results lenght: "+results.length);
     if (!results.isEmpty) {
+      var ss = "["
+      results
+        .sorted.foreach(i => ss = ss + i +", ")
+     // System.out.println(ss+"]");
       resultPrice =
         results
           .sorted
