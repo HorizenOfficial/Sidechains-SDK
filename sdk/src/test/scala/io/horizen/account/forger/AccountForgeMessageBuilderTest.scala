@@ -400,7 +400,7 @@ class AccountForgeMessageBuilderTest
     Mockito
       .when(
         mockMsgProcessor.canProcess(
-          ArgumentMatchers.any[Message],
+          ArgumentMatchers.any[Invocation],
           ArgumentMatchers.any[AccountStateView],
           ArgumentMatchers.any[Int]
         )
@@ -409,10 +409,9 @@ class AccountForgeMessageBuilderTest
     Mockito
       .when(
         mockMsgProcessor.process(
-          ArgumentMatchers.any[Message],
+          ArgumentMatchers.any[Invocation],
           ArgumentMatchers.any[BaseAccountStateView],
-          ArgumentMatchers.any[GasPool],
-          ArgumentMatchers.any[BlockContext]
+          ArgumentMatchers.any[ExecutionContext]
         )
       )
       .thenThrow(new RuntimeException("kaputt"))

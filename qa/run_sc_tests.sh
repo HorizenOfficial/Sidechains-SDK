@@ -89,6 +89,7 @@ testScriptsEvm=(
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_node_info.py'
     'sc_evm_orphan_txs.py'
+    'sc_evm_native_interop.py'
     'sc_evm_rpc_invalid_blocks.py'
     'sc_evm_rpc_invalid_txs.py'
     'sc_evm_rpc_net_methods.py'
@@ -123,6 +124,7 @@ testScriptsEvm=(
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
     'sc_evm_mc_addr_ownership_perf_test.py'
+    'sc_evm_proxy_nsc.py'
     'sc_evm_seedernode.py'
     'sc_evm_consensus_parameters_fork.py'
     'sc_evm_active_slot_coefficient.py'
@@ -131,6 +133,8 @@ testScriptsEvm=(
     'mc_sc_evm_forging4_with_mc_block_delay.py'
     'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
     'sc_evm_rpc_eth.py'
+    'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
+    'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
 );
 
 testScriptsUtxo=(

@@ -1,37 +1,34 @@
 package io.horizen.account.state
 
-import com.google.common.primitives.Bytes
 import io.horizen.SidechainTypes
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
-import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
-import java.util.Optional
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
 class StateDbAccountStateView(
     stateDb: StateDB,
-    messageProcessors: Seq[MessageProcessor]
+    messageProcessors: Seq[MessageProcessor],
+    var readOnly: Boolean = false
 ) extends BaseAccountStateView
       with AutoCloseable
       with SparkzLogging {
-
   lazy val withdrawalReqProvider: WithdrawalRequestProvider =
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider =
@@ -41,6 +38,10 @@ class StateDbAccountStateView(
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
   lazy val mcAddrOwnershipProvider: McAddrOwnershipsProvider =
     messageProcessors.find(_.isInstanceOf[McAddrOwnershipsProvider]).get.asInstanceOf[McAddrOwnershipsProvider]
+
+  lazy val listOfNativeSmartContractAddresses: Array[Address] = messageProcessors.collect {
+    case msgProcessor: NativeSmartContractMsgProcessor => msgProcessor.contractAddress
+  }.toArray
 
   override def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
     certificateKeysProvider.getKeyRotationProof(withdrawalEpoch, indexOfSigner, KeyRotationProofTypes(keyType), this)
@@ -94,22 +95,7 @@ class StateDbAccountStateView(
           )
 
           val cmdInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignerProposition, vrfPublicKey), ownerAddress)
-          val data = Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), cmdInput.encode())
-
-          val message = new Message(
-            ownerAddress,
-            Optional.of(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
-            BigInteger.ZERO, // gasPrice
-            BigInteger.ZERO, // gasFeeCap
-            BigInteger.ZERO, // gasTipCap
-            BigInteger.ZERO, // gasLimit
-            stakedAmount,
-            BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
-            data,
-            false
-          )
-
-          val returnData = forgerStakesProvider.addScCreationForgerStake(message, this)
+          val returnData = forgerStakesProvider.addScCreationForgerStake(this, ownerAddress, stakedAmount, cmdInput)
           log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(returnData)}")
 
         case ft: ForwardTransfer =>
@@ -168,7 +154,7 @@ class StateDbAccountStateView(
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
   def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext, msg).transition()
   }
 
   /**
@@ -246,11 +232,15 @@ class StateDbAccountStateView(
     !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Address, code: Array[Byte]): Unit =
+  override def addAccount(address: Address, code: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid account code change")
     stateDb.setCode(address, code)
+  }
 
-  override def increaseNonce(address: Address): Unit =
+  override def increaseNonce(address: Address): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid nonce change")
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
+  }
 
   @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Address, amount: BigInteger): Unit = {
@@ -259,6 +249,7 @@ class StateDbAccountStateView(
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
       case _ =>
+        if (readOnly) throw new WriteProtectionException("invalid balance change")
         stateDb.addBalance(address, amount)
     }
   }
@@ -271,6 +262,7 @@ class StateDbAccountStateView(
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
       case _ =>
+        if (readOnly) throw new WriteProtectionException("invalid balance change")
         // The check on the address balance to be sufficient to pay the amount at this point has already been
         // done by the state while validating the origin tx
         stateDb.subBalance(address, amount)
@@ -280,8 +272,10 @@ class StateDbAccountStateView(
   override def getAccountStorage(address: Address, key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, new Hash(key)).toBytes
 
-  override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit =
+  override def updateAccountStorage(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid write access to storage")
     stateDb.setStorage(address, new Hash(key), new Hash(value))
+  }
 
   final override def removeAccountStorage(address: Address, key: Array[Byte]): Unit =
     updateAccountStorage(address, key, Hash.ZERO.toBytes)
@@ -306,6 +300,7 @@ class StateDbAccountStateView(
   }
 
   final override def updateAccountStorageBytes(address: Address, key: Array[Byte], value: Array[Byte]): Unit = {
+    if (readOnly) throw new WriteProtectionException("invalid write access to storage")
     // get previous length of value stored, if any
     val oldLength = new BigInteger(1, getAccountStorage(address, key)).intValueExact()
     // values are split up into 32-bytes chunks:
@@ -369,5 +364,18 @@ class StateDbAccountStateView(
   def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
 
   override def getGasTrackedView(gas: GasPool): BaseAccountStateView =
-    new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, gas)
+    new StateDbAccountStateViewGasTracked(stateDb, messageProcessors, readOnly, gas)
+
+  /**
+   * Prevent write access to account storage, balance, nonce and code. While write protection is enabled invalid access
+   * will throw a WriteProtectionException.
+   */
+  def enableWriteProtection(): Unit = readOnly = true
+
+  /**
+   * Disable write protection.
+   */
+  def disableWriteProtection(): Unit = readOnly = false
+
+  override def getNativeSmartContractAddressList(): Array[Address] = listOfNativeSmartContractAddresses
 }

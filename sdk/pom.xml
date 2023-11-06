@@ -272,7 +272,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>libevm</artifactId>
-      <version>0.1.0</version>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>at.favre.lib</groupId>
@@ -402,6 +402,15 @@
       </testResource>
     </testResources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12.4</version>
+        <configuration>
+          <!-- increase stack size, mainly to support the required call depth for nested contract invocations -->
+          <argLine>-Xss16m</argLine>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
