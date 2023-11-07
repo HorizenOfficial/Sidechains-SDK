@@ -2,9 +2,10 @@
 1. libevm dependency updated to 1.0.0-SNAPSHOT.
 2. Added support for EVM and native smart contracts interoperability.
 3. Sparkz dependency updated to 2.2.0
+4. Improved storage versioning
 
 **0.8.1**
-1. Improved storage versioning
+1. Improved precision of eth_gasPrice RPC call
 
 **0.8.0**
 1. ZenDao native smart contracts
