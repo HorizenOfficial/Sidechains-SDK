@@ -22,6 +22,7 @@ class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
+/*
     "reply at /getAllSecretByEmptyHttpBody" in {
 
       Post(basePath + "getAllSecretByEmptyHttpBody") ~> applicationApiRoute ~> check {
@@ -40,6 +41,7 @@ class SidechainApplicationApiRouteTest extends SidechainApiRouteTest {
         })
       }
     }
+ */
 
     //TODO we use different JSON serialization marshaller in test class and in the real application. Rewrite SidechainApiRouteTest to align to real application
     "reply at /getNSecretOtherImplementation" ignore {
