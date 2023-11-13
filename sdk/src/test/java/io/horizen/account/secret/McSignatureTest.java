@@ -202,7 +202,9 @@ public class McSignatureTest {
         byte[] hashedMsg = getMcHashedMsg("0x00c8f107a09cd4f463afc2f1e6e5bf6022ad4600");
         System.out.println("hashed msg = " + BytesUtils.toHexString(hashedMsg));
 
-        // base64 encoded signature as it is returned by rpc cmd above
+        // base64 encoded signature as it is returned by rpc cmd above. Note that Base64 encoding requires 4 characters
+        // for every 3 bytes encoded, then the string's length is padded up to a multiple of 4.
+        // So, base64-encoding s signature, which is 65 bytes long, results in a base64-encoded string 88 characters long.
         String strMcSignature = "IOc348/la3bqCb31IQg0DEVOowg6f3cKll+SmZ6ip4KVR37qp0aG72iqZwdulDmj+1bid+IdIJJhoOm1kMqCX/s=";
 
         byte[] decodedMcSignature = Base64.decode(strMcSignature).get();

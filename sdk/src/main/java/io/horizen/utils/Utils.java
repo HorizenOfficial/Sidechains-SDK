@@ -50,6 +50,17 @@ public final class Utils
         }
     }
 
+    public static byte[] Ripemd160Hash(byte[] bytes) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("RIPEMD160");
+            digest.update(bytes, 0, bytes.length);
+            byte[] result = digest.digest();
+            return result;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);  // Cannot happen.
+        }
+    }
+
     public static byte[] doubleSHA256HashOfConcatenation(byte[] bytes1, byte[] bytes2) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
