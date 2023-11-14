@@ -489,6 +489,39 @@
           <autoReleaseAfterClose>true</autoReleaseAfterClose>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.9</version> <!-- Use the latest version available -->
+        <configuration>
+          <excludes>
+            <exclude>org/apache/logging/log4j/core/util/**</exclude>
+            <exclude>org/apache/logging/log4j/core/util/SystemClock.class</exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <destFile>../coverage-reports/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}-jacoco-report.exec</destFile>
+              <append>true</append>
+            </configuration>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <configuration>
+              <dataFile>../coverage-reports/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}-jacoco-report.exec</dataFile>
+              <outputDirectory>../coverage-reports/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}-jacoco-report</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <reporting>

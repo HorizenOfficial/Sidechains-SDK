@@ -34,6 +34,10 @@ for i in "$@"; do
       EVM_ONLY="true"
       shift
       ;;
+    -jacoco)
+      JACOCO="true"
+      shift
+      ;;
     -utxo_only)
       UTXO_ONLY="true"
       shift
@@ -263,6 +267,16 @@ if [ ! -z "$EXCLUDE" ]; then
       fi
     done
   done
+fi
+
+# add --jacoco flag to each test if jacoco flag set to true
+if [ ! -z "$JACOCO" ] && [ "${JACOCO}" = "true" ]; then
+  modifiedList=()
+  for testFile in "${testScripts[@]}"; do
+      modified_test="${testFile} --jacoco"
+      modifiedList+=("$modified_test")
+  done
+  testScripts=("${modifiedList[@]}")
 fi
 
 # split array into m parts and only run tests of part n where SPLIT=m:n
