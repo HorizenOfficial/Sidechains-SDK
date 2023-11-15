@@ -75,8 +75,7 @@ class StateDbAccountStateView(
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): BigInteger = {
-    var mcForwardTransfersToForgerPoolAmount : BigInteger = BigInteger.ZERO
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -125,11 +124,7 @@ class StateDbAccountStateView(
 
           val recipientAddress = recipientProposition.address()
 
-          if (recipientAddress.equals(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)) {
-            // move funds to forger pool
-            log.debug(s"adding FT amount = $value to forger pool")
-            mcForwardTransfersToForgerPoolAmount = mcForwardTransfersToForgerPoolAmount.add(value)
-          } else if (isEoaAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
+          if (isEoaAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
             // stateDb will implicitly create account if not existing yet
             log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
             addBalance(recipientAddress, value)
@@ -146,7 +141,6 @@ class StateDbAccountStateView(
           log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
-    mcForwardTransfersToForgerPoolAmount
   }
 
   def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
@@ -244,7 +238,6 @@ class StateDbAccountStateView(
 
     consensusDataReceipt
   }
-
 
   override def isEoaAccount(address: Address): Boolean = {
     stateDb.isEoaAccount(address)
@@ -389,7 +382,8 @@ class StateDbAccountStateView(
     !Seq(
       WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS,
       WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-      WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
+      WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS,
+      WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
     ).contains(address)
   }
 }

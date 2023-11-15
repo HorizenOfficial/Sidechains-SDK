@@ -1,5 +1,6 @@
 package io.horizen.examples;
 
+import io.horizen.account.fork.ForgerPoolRewardsFork;
 import io.horizen.fork.*;
 import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.fork.ZenDAOFork;
@@ -62,6 +63,10 @@ public class AppForkConfigurator extends ForkConfigurator {
                     new ActiveSlotCoefficientFork(
                             0.05
                     )
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(40, 40, 40),
+                    new ForgerPoolRewardsFork(true)
             )
         );
     }

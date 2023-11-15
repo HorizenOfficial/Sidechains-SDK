@@ -1,15 +1,15 @@
 package io.horizen.account.state
 
 import io.horizen.account.fixtures.EthereumTransactionFixture
-import io.horizen.account.fork.GasFeeFork
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
+import io.horizen.account.fork.{ForgerPoolRewardsFork, GasFeeFork}
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment}
-import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountPayment, WellKnownAddresses}
+import io.horizen.consensus.{ConsensusEpochNumber, ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.evm._
 import io.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture}
-import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.fork._
 import io.horizen.params.NetworkParams
 import io.horizen.utils
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
@@ -22,6 +22,7 @@ import sparkz.core.VersionTag
 import sparkz.core.utils.NetworkTimeProvider
 
 import java.math.BigInteger
+import java.util
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success}
 
@@ -38,6 +39,7 @@ class AccountStateTest
   var params: NetworkParams = mock[NetworkParams]
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
   var state: AccountState = _
+  val view: AccountStateView = mock[AccountStateView]
   private def addMockBalance(account: Address, value: BigInteger) = {
     val stateDB = new StateDB(stateDbStorage, new Hash(metadataStorage.getAccountStateRoot))
     stateDB.addBalance(account, value)
@@ -48,7 +50,15 @@ class AccountStateTest
 
   @Before
   def setUp(): Unit = {
-    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    val forkConfigurator = new SimpleForkConfigurator() {
+      override def getOptionalSidechainForks: util.List[utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = List(
+        new utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+          SidechainForkConsensusEpoch(35, 35, 35),
+          new ForgerPoolRewardsFork(true)
+        )
+      ).asJava
+    }
+    ForkManagerUtil.initializeForkManager(forkConfigurator, "regtest")
 
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
     val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
@@ -77,6 +87,7 @@ class AccountStateTest
 
     // Test 1: No block fee info record in the storage
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 1))
     var feePayments: Seq[AccountPayment] = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 0, feePayments.size)
 
@@ -86,6 +97,7 @@ class AccountStateTest
       AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(1000).publicImage())
 
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq(blockFeeInfo1))
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 1))
 
     feePayments = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 1, feePayments.size)
@@ -111,6 +123,7 @@ class AccountStateTest
     Mockito
       .when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3))
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 1))
 
     feePayments = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
@@ -136,6 +149,7 @@ class AccountStateTest
     Mockito
       .when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4))
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 1))
 
     feePayments = state.getFeePaymentsInfo(0)
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
@@ -157,6 +171,7 @@ class AccountStateTest
     Mockito
       .when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(bfi1, bfi2, bfi3, bfi4, bfi5))
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 1))
 
     totalFee = sumFeeInfos(bfi1, bfi2, bfi3, bfi4, bfi5)
 
@@ -165,6 +180,58 @@ class AccountStateTest
 
     forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
+  }
+
+  @Test
+  def feePaymentsWithMcRewardPool(): Unit = {
+    state = new AccountState(
+      params,
+      mock[NetworkTimeProvider],
+      MockedHistoryBlockHashProvider,
+      VersionTag @@ BytesUtils.toHexString(getVersion.data()),
+      metadataStorage,
+      stateDbStorage,
+      Seq()
+    ) {
+      override def getView: AccountStateView = view
+    }
+
+    val addr1 = getPrivateKeySecp256k1(1000).publicImage()
+    val addr2 = getPrivateKeySecp256k1(1001).publicImage()
+    val addr3 = getPrivateKeySecp256k1(1002).publicImage()
+    val blockFeeInfo1: AccountBlockFeeInfo =
+      AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), addr1)
+    val blockFeeInfo2: AccountBlockFeeInfo =
+      AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(51), addr2)
+    val blockFeeInfo3: AccountBlockFeeInfo =
+      AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(52), addr3)
+    val blockFeeInfo4: AccountBlockFeeInfo =
+      AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(53), addr3)
+    val forgerBlockCounters = Map(
+      addr1 -> 1L,
+      addr2 -> 1L,
+      addr3 -> 2L
+    )
+    val forgerRewardPoolFee = BigInteger.valueOf(1000)
+
+    Mockito.reset(metadataStorage)
+
+    val totalFee = sumFeeInfos(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4).add(forgerRewardPoolFee)
+
+    Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
+      .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4))
+    Mockito.when(metadataStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 36))
+    Mockito.when(view.getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)).thenReturn(forgerRewardPoolFee)
+    Mockito.when(view.getForgerBlockCounters).thenReturn(forgerBlockCounters)
+
+    val feePayments = state.getFeePaymentsInfo(0)
+    assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
+
+    val forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
+    assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
+    assertEquals(s"Fee value for forger1 is wrong", BigInteger.valueOf(250 + 100 + 50), feePayments(0).value)
+    assertEquals(s"Fee value for forger2 is wrong", BigInteger.valueOf(250 + 100 + 51), feePayments(1).value)
+    assertEquals(s"Fee value for forger3 is wrong", BigInteger.valueOf(250 + 100 + 52 + 250 + 100 + 53), feePayments(2).value)
   }
 
   @Test

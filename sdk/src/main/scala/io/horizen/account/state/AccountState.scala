@@ -12,7 +12,8 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, A
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.GasFeeFork
+import io.horizen.account.fork.{ForgerPoolRewardsFork, GasFeeFork}
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.params.NetworkParams
@@ -133,8 +134,7 @@ class AccountState(
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.addTopQualityCertificates(mcBlockRefData, mod.id)
-        val mcForwardTransfersToForgerPoolAmount = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
-        cumBaseFee = cumBaseFee.add(mcForwardTransfersToForgerPoolAmount)
+        stateView.applyMainchainBlockReferenceData(mcBlockRefData)
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
@@ -225,6 +225,11 @@ class AccountState(
 
       // update next base fee
       stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod, params))
+
+      // update block counters for forger pool fee distribution
+      if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+        stateView.updateForgerBlockCounter(mod.forgerPublicKey)
+      }
 
       stateView.commit(idToVersion(mod.id))
 
@@ -380,7 +385,35 @@ class AccountState(
 
   override def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
-    AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
+    val mcForgerPoolRewards = getMcForgerPoolRewards
+
+    AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq, mcForgerPoolRewards)
+  }
+
+  private def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
+    if (ForgerPoolRewardsFork.get(getConsensusEpochNumber.getOrElse(0)).active) {
+      val extraForgerReward = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      if (extraForgerReward.signum() == 1) {
+        using(getView) { view =>
+          val counters: Map[AddressProposition, Long] = view.getForgerBlockCounters
+          val perBlockFee_remainder = extraForgerReward.divideAndRemainder(BigInteger.valueOf(counters.values.sum))
+          val perBlockFee = perBlockFee_remainder(0)
+          var remainder = perBlockFee_remainder(1)
+          //sort and add remainder based by block count
+          val forgerPoolRewards = counters.toSeq.sortBy(_._2)
+            .map { address_blocks =>
+              val blocks = BigInteger.valueOf(address_blocks._2)
+              val usedRemainder = remainder.min(blocks)
+              val reward = perBlockFee.multiply(blocks).add(usedRemainder)
+              remainder = remainder.subtract(usedRemainder)
+              (address_blocks._1, reward)
+            }
+          view.subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, extraForgerReward)
+          view.resetForgerBlockCounters()
+          forgerPoolRewards.toMap
+        }
+      } else Map.empty
+    } else Map.empty
   }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo

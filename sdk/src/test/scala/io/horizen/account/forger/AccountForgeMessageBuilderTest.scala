@@ -397,51 +397,6 @@ class AccountForgeMessageBuilderTest
     assertTrue("Could not forge block", block.isSuccess)
   }
 
-  @Test
-  def calculateForgerPoolRewards(): Unit = {
-    val blockContext = new BlockContext(
-      Address.ZERO,
-      1000,
-      BigInteger.ZERO,
-      10000000000L,
-      11,
-      2,
-      3,
-      1,
-      MockedHistoryBlockHashProvider,
-      Hash.ZERO
-    )
-
-    val mcBlockRefData = mock[MainchainBlockReferenceData]
-    when(mcBlockRefData.topQualityCertificate).thenReturn(Option.empty)
-    val mC2SCAggregatedTransaction = mock[MC2SCAggregatedTransaction]
-    when(mcBlockRefData.sidechainRelatedAggregatedTransaction).thenReturn(Some(mC2SCAggregatedTransaction))
-    val proposition = new AddressProposition(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
-    val forwardTransfer = getForwardTransfer(proposition, 1.toByteArray)
-    val ftAmount = ZenWeiConverter.convertZenniesToWei(forwardTransfer.getFtOutput.amount)
-    when(mC2SCAggregatedTransaction.mc2scTransactionsOutputs).thenAnswer(_ => List(forwardTransfer).asJava)
-
-    usingView { stateView =>
-      val forgerPoolAddress = WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
-      val addressValue = 11111L
-      stateView.addBalance(forgerPoolAddress, BigInteger.valueOf(addressValue))
-
-      val forger = new AccountForgeMessageBuilder(null, null, null, false)
-
-      val inputBlockSize = 100L
-      val (_, _, blockFeeInfo) = forger.computeBlockInfo(
-        stateView,
-        Seq.empty,
-        Seq(mcBlockRefData),
-        blockContext,
-        null,
-        inputBlockSize
-      )
-
-      assertEquals(ftAmount.add(BigInteger.valueOf(addressValue)), blockFeeInfo.baseFee)
-    }
-  }
-
   private def setupMockMessageProcessor = {
     val mockMsgProcessor = mock[MessageProcessor]
     Mockito

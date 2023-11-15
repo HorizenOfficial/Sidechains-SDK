@@ -1,5 +1,6 @@
 package io.horizen.account.utils
 
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.evm.{StateDB, TrieHasher}
 
 import java.math.BigInteger
@@ -17,7 +18,7 @@ object AccountFeePaymentsUtils {
     }
   }
 
-  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountPayment] = {
+  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo], mcForgerPoolRewards: Map[AddressProposition, BigInteger] = Map.empty): Seq[AccountPayment] = {
     if (blockFeeInfoSeq.isEmpty)
       return Seq()
 
@@ -49,8 +50,10 @@ object AccountFeePaymentsUtils {
         val forgerTotalFee = allForgersRewards
           .filter(info => forgerKey.equals(info.address))
           .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
+        // add mcForgerPoolReward if exists
+        val mcForgerPoolReward = mcForgerPoolRewards.getOrElse(forgerKey, BigInteger.ZERO)
         // return the resulting entry
-        AccountPayment(forgerKey, forgerTotalFee)
+        AccountPayment(forgerKey, forgerTotalFee.add(mcForgerPoolReward))
       }
     }
   }

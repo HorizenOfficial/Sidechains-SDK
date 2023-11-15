@@ -104,15 +104,7 @@ class AccountForgeMessageBuilder(
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
-      val mcForwardTransfersToForgerPoolAmount = stateView.applyMainchainBlockReferenceData(mcBlockRefData)
-      cumBaseFee = cumBaseFee.add(mcForwardTransfersToForgerPoolAmount)
-    }
-
-    if (stateView.getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS).signum() == 1) {
-      // add funds sent to forger pool smart contract address to the cumulative base-fee
-      val value = stateView.getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
-      stateView.subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, value)
-      cumBaseFee = cumBaseFee.add(value)
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()

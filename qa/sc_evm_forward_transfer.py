@@ -13,7 +13,7 @@ from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import assert_equal, forward_transfer_to_sidechain, assert_true
 
 """
-Check that forward transfer to non-EOA account does not change balance.
+Check forward transfer to EOA account.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -25,9 +25,6 @@ Test:
     - Execute forward transfer to an EOA
     - Verify account balance
     - Verify forward transfer
-    - Deploy Smart Contract
-    - Execute forward transfer to the address of the smart contract
-    - Verify balance of the smart contract account has not changed
 """
 
 
@@ -73,48 +70,6 @@ class SCEvmForwardTransfer(AccountChainSetup):
         forward_transfer = sc_node.block_getForwardTransfers(request)['result']['forwardTransfers'][0]
         assert_equal(ft_amount_in_wei, int(forward_transfer['value']))
         assert_equal(format_eoa(self.evm_address), forward_transfer['to'])
-
-        # Deploy Smart Contract
-        smart_contract_type = 'StorageTestContract'
-        logging.info(f"Creating smart contract utilities for {smart_contract_type}")
-        smart_contract = SmartContract(smart_contract_type)
-        logging.info(smart_contract)
-        test_message = 'Initial message'
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
-                                                                fromAddress=self.evm_address,
-                                                                gasLimit=10000000,
-                                                                gasPrice=900000000)
-
-        logging.info("Mempool node before")
-        logging.info(allTransactions(sc_node))
-
-        generate_next_blocks(sc_node, "first node", 1)
-        logging.info("Mempool node after")
-        logging.info(allTransactions(sc_node))
-
-        # verify smart contract has a balance of zero
-        balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
-        logging.info(balance)
-        assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
-
-        # execute forward transfer to the smart contract account
-        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
-                                      self.nodes[0],
-                                      format_eoa(smart_contract_address),
-                                      self.ft_amount_in_zen,
-                                      self.mc_return_address)
-
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-
-        # verify that the smart contract account balance has not changed
-        balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
-        logging.info(balance)
-        assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
-
-        # verify that such amount has been burned, that means credited to 0xdead address
-        balance = sc_node.rpc_eth_getBalance(to_checksum_address(NULL_ADDRESS), "latest")
-        logging.info(balance)
-        assert_equal(hex(int(forward_transfer['value'])), balance["result"], "dead address has zero balance")
 
 
 if __name__ == "__main__":

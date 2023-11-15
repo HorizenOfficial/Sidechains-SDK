@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils._
@@ -93,4 +94,16 @@ class AccountStateView(
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+
+  def updateForgerBlockCounter(forgerPublicKey: AddressProposition): Unit = {
+    metadataStorageView.updateForgerBlockCounter(forgerPublicKey)
+  }
+
+  def getForgerBlockCounters: Map[AddressProposition, Long] = {
+    metadataStorageView.getForgerBlockCounters
+  }
+
+  def resetForgerBlockCounters(): Unit = {
+    metadataStorageView.resetForgerBlockCounters()
+  }
 }

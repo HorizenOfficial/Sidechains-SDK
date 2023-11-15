@@ -4,8 +4,8 @@ from eth_utils import to_checksum_address
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, deploy_smart_contract
-from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, convertZenToWei, \
-    NULL_ADDRESS, CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS
+from SidechainTestFramework.account.utils import convertZenToWei, \
+    NULL_ADDRESS, CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS, FORGER_POOL_RECIPIENT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_blocks
 from test_framework.util import (assert_equal, forward_transfer_to_sidechain)
 
@@ -55,7 +55,7 @@ class SCEvmFtToNativeContract(AccountChainSetup):
         self.sc_ac_setup(forwardTransfer=10)
 
         # TEST 1 - ft to native SC
-        self.check_ft_to_smart_contract(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)
+        self.check_ft_to_smart_contract(FORGER_POOL_RECIPIENT_ADDRESS)
 
         # TEST 2 - ft to deployed SC
         # Deploy Factory smart contract
