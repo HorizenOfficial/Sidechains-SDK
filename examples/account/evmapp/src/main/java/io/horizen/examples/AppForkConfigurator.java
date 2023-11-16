@@ -69,7 +69,6 @@ public class AppForkConfigurator extends ForkConfigurator {
                     // TODO the actual fork point needs to be decided
                     new SidechainForkConsensusEpoch(50, 50, 50),
                     new ContractInteroperabilityFork(true)
-                    )
             ),
             new Pair<>(
                     // TODO the actual fork point needs to be decided
