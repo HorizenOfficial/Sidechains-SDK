@@ -37,11 +37,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
   override val contractCode: Array[Byte] = CertificateKeyRotationContractCode
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(gas)
-    getFunctionSignature(msg.getData) match {
+  override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+    val gasView = view.getGasTrackedView(invocation.gasPool)
+    getFunctionSignature(invocation.input) match {
       case SubmitKeyRotationReqCmdSig =>
-        execSubmitKeyRotation(msg, gasView, blockContext.withdrawalEpochNumber)
+        execSubmitKeyRotation(invocation, gasView, context.blockContext.withdrawalEpochNumber)
 
       case functionSig =>
         throw new ExecutionRevertedException(s"Requested function does not exist. Function signature: $functionSig")
@@ -145,11 +145,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
       throw new ExecutionRevertedException(s"Key rotation proof - self signature is invalid: $index")
   }
 
-  private def execSubmitKeyRotation(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
+  private def execSubmitKeyRotation(invocation: Invocation, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
     //verify
-    checkMessageValidity(msg)
+    checkInvocationValidity(invocation)
 
-    val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+    val inputData = SubmitKeyRotationCmdInputDecoder.decode(getArgumentsFromData(invocation.input))
     val keyRotationProof = inputData.keyRotationProof
     val keyIndex = keyRotationProof.index
     val keyType = keyRotationProof.keyType
@@ -182,13 +182,11 @@ case class CertificateKeyRotationMsgProcessor(params: NetworkParams) extends Nat
     keyRotationProof.encode()
   }
 
-  private def checkMessageValidity(msg: Message): Unit = {
-    val msgValue = msg.getValue
-
-    if (msg.getData.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsLengthInBytes) {
-      throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
-    } else if (msgValue.signum() != 0) {
-      throw new ExecutionRevertedException(s"SubmitKeyRotation message value is non-zero: $msg")
+  private def checkInvocationValidity(invocation: Invocation): Unit = {
+    if (invocation.input.length != METHOD_ID_LENGTH + SubmitKeyRotationCmdInputDecoder.getABIDataParamsStaticLengthInBytes) {
+      throw new ExecutionRevertedException(s"Wrong invocation data field length: ${invocation.input.length}")
+    } else if (invocation.value.signum() != 0) {
+      throw new ExecutionRevertedException(s"Value is non-zero: $invocation")
     }
   }
 

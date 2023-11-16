@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import io.horizen.account.AccountFixture
 import io.horizen.account.storage.AccountStateMetadataStorageView
-import io.horizen.account.utils.ZenWeiConverter
+import io.horizen.account.utils.{WellKnownAddresses, ZenWeiConverter}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
@@ -103,4 +103,39 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
+
+  @Test
+  def testGetNativeSmartContractAddressList(): Unit = {
+    var messageProcessors = Seq.empty[MessageProcessor]
+    val metadataStorageView = mock[AccountStateMetadataStorageView]
+    val stateDb = mock[StateDB]
+    var stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+
+    assertTrue("List of addresses is not empty", stateView.getNativeSmartContractAddressList().isEmpty)
+
+    messageProcessors = Seq(mock[MessageProcessor])
+    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    assertTrue("List of addresses is not empty", stateView.getNativeSmartContractAddressList().isEmpty)
+
+    val mockNativeSmartContract = mock[NativeSmartContractMsgProcessor]
+    val mockAddress = new Address("0x0000000000000000000011234561111111111111")
+    Mockito.when(mockNativeSmartContract.contractAddress).thenReturn(mockAddress)
+    messageProcessors = Seq(mockNativeSmartContract, mock[MessageProcessor])
+    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    var listOfAddresses = stateView.getNativeSmartContractAddressList()
+    assertEquals("Wrong list of addresses size", 1, listOfAddresses.length)
+    assertEquals("Wrong address", mockAddress, listOfAddresses.head)
+
+    messageProcessors = Seq(EoaMessageProcessor, mockNativeSmartContract,
+      WithdrawalMsgProcessor, mock[MessageProcessor], new CertificateKeyRotationMsgProcessor(mockNetworkParams), mock[EvmMessageProcessor])
+    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    listOfAddresses = stateView.getNativeSmartContractAddressList()
+    assertEquals("Wrong list of addresses size", 3, listOfAddresses.length)
+    assertTrue("Missing mockNativeSmartContract address", listOfAddresses.contains(mockAddress))
+    assertTrue("Missing WithdrawalMsgProcessor address", listOfAddresses.contains(WithdrawalMsgProcessor.contractAddress))
+    assertTrue("Missing CertificateKeyRotationMsgProcessor address", listOfAddresses.contains(WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS))
+
+
+  }
+
 }

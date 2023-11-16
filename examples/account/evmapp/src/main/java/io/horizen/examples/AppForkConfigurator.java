@@ -1,6 +1,7 @@
 package io.horizen.examples;
 
 import io.horizen.account.fork.ForgerPoolRewardsFork;
+import io.horizen.account.fork.ContractInteroperabilityFork;
 import io.horizen.fork.*;
 import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.fork.ZenDAOFork;
@@ -65,7 +66,14 @@ public class AppForkConfigurator extends ForkConfigurator {
                     )
             ),
             new Pair<>(
-                    new SidechainForkConsensusEpoch(40, 40, 40),
+                    // TODO the actual fork point needs to be decided
+                    new SidechainForkConsensusEpoch(50, 50, 50),
+                    new ContractInteroperabilityFork(true)
+                    )
+            ),
+            new Pair<>(
+                    // TODO the actual fork point needs to be decided
+                    new SidechainForkConsensusEpoch(60, 60, 60),
                     new ForgerPoolRewardsFork(true)
             )
         );

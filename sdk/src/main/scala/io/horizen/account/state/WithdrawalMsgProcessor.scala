@@ -35,14 +35,14 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(gas)
-    getFunctionSignature(msg.getData) match {
+  override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+    val gasView = view.getGasTrackedView(invocation.gasPool)
+    getFunctionSignature(invocation.input) match {
       case GetListOfWithdrawalReqsCmdSig =>
-        execGetListOfWithdrawalReqRecords(msg, gasView)
+        execGetListOfWithdrawalReqRecords(invocation, gasView)
 
       case AddNewWithdrawalReqCmdSig =>
-        execAddWithdrawalRequest(msg, gasView, blockContext.withdrawalEpochNumber)
+        execAddWithdrawalRequest(invocation, gasView, context.blockContext.withdrawalEpochNumber)
 
       case functionSig =>
         throw new ExecutionRevertedException(s"Requested function does not exist. Function signature: $functionSig")
@@ -71,16 +71,16 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     listOfWithdrawalReqs
   }
 
-  protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    if (msg.getValue.signum() != 0) {
+  protected def execGetListOfWithdrawalReqRecords(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    if (msg.getData.length != METHOD_ID_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
-      throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
+    if (invocation.input.length != METHOD_ID_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsStaticLengthInBytes)
+      throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
 
     val inputParams : GetListOfWithdrawalRequestsCmdInput = Try {
-      GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+      GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(invocation.input))
     } match {
       case Success(decodedBytes) => decodedBytes
       case Failure(ex) =>
@@ -91,11 +91,11 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
   }
 
-  private[horizen] def checkWithdrawalRequestValidity(msg: Message): Unit = {
-    val withdrawalAmount = msg.getValue
+  private[horizen] def checkWithdrawalRequestValidity(invocation: Invocation): Unit = {
+    val withdrawalAmount = invocation.value
 
-    if (msg.getData.length != METHOD_ID_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
-      throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
+    if (invocation.input.length != METHOD_ID_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsStaticLengthInBytes) {
+      throw new ExecutionRevertedException(s"Wrong message data field length: ${invocation.input.length}")
     } else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
       throw new ExecutionRevertedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
     } else if (withdrawalAmount.compareTo(DustThresholdInWei) < 0) {
@@ -103,8 +103,8 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     }
   }
 
-  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
-    checkWithdrawalRequestValidity(msg)
+  protected def execAddWithdrawalRequest(invocation: Invocation, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
+    checkWithdrawalRequestValidity(invocation)
     val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
     if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
       throw new ExecutionRevertedException("Reached maximum number of Withdrawal Requests per epoch: request is invalid")
@@ -113,16 +113,16 @@ object WithdrawalMsgProcessor extends NativeSmartContractMsgProcessor with Withd
     val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
     setWithdrawalEpochCounter(view, currentEpochNum, nextNumOfWithdrawalReqs)
 
-    val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+    val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(invocation.input))
 
-    val withdrawalAmount = msg.getValue
+    val withdrawalAmount = invocation.value
     val request = WithdrawalRequest(inputParams.mcAddr, withdrawalAmount)
     val requestInBytes = request.bytes
     view.updateAccountStorageBytes(contractAddress, getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
 
-    view.subBalance(msg.getFrom, withdrawalAmount)
+    view.subBalance(invocation.caller, withdrawalAmount)
 
-    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
+    val withdrawalEvent = AddWithdrawalRequest(invocation.caller, request.proposition, withdrawalAmount, currentEpochNum)
     val evmLog = getEthereumConsensusDataLog(withdrawalEvent)
     view.addLog(evmLog)
 

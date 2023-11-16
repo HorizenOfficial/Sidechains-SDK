@@ -169,7 +169,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def getNodeView(): AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
 
-  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
+  override lazy val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage, stateMetadataStorage, secretStorage)
 
   override protected def applyLocallyGeneratedTransactions(newTxs: Iterable[SidechainTypes#SCAT]): Unit = {

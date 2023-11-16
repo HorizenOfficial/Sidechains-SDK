@@ -26,7 +26,6 @@ class AccountStateView(
     messageProcessors: Seq[MessageProcessor]
 ) extends StateDbAccountStateView(stateDb, messageProcessors)
       with StateView[SidechainTypes#SCAT]
-      with AutoCloseable
       with SparkzLogging {
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {

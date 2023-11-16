@@ -84,7 +84,7 @@ abstract class AbstractSidechainNodeViewHolder[
     } catch {
       case e: Exception =>
         // can happen during unit test with mocked objects
-        log.warn("Could not print debug info about storages: " + e.getMessage)
+        log.warn("Could not print debug info about storages: " + e.getMessage, e)
     }
   }
 

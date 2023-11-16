@@ -10,8 +10,12 @@ import java.math.BigInteger
  * @param gas
  *   GasPool instance to deduct gas from
  */
-class StateDbAccountStateViewGasTracked(stateDb: StateDB, messageProcessors: Seq[MessageProcessor], gas: GasPool)
-    extends StateDbAccountStateView(stateDb, messageProcessors) {
+class StateDbAccountStateViewGasTracked(
+    stateDb: StateDB,
+    messageProcessors: Seq[MessageProcessor],
+    readOnly: Boolean,
+    gas: GasPool
+) extends StateDbAccountStateView(stateDb, messageProcessors, readOnly) {
 
   /**
    * Consume gas for account access:

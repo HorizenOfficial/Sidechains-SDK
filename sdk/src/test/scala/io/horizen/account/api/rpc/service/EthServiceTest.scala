@@ -325,6 +325,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
 
   @Before
   def setUp(): Unit = {
+    Backend.tipCache  = Option.empty
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
     val genesisBlockId = bytesToId(
