@@ -15,7 +15,7 @@ import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccount
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{checkMcAddresses, checkMcRedeemScriptForMultisig, getMcSignature, getOwnershipId}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{checkMcAddresses, checkMcRedeemScriptForMultisig, getMcSignature, getOwnershipId, checkMultisigAddress}
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
@@ -36,7 +36,6 @@ import io.horizen.proof.{SchnorrSignatureSerializer, Signature25519}
 import io.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, SchnorrPropositionSerializer, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.BytesUtils
-import io.horizen.utils.Utils.Ripemd160Sha256Hash
 import org.web3j.crypto.Keys
 import sparkz.core.settings.RESTApiSettings
 
@@ -1126,13 +1125,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   def encodeAddNewOwnershipCmdRequest(ownershipInfo: TransactionCreateMultisigMcAddrOwnershipInfo): Array[Byte] = {
-    // this throws if any of sc and mc addresses is not valid
-    val pubKeyHash = checkMcAddresses(ownershipInfo.mcMultisigAddress, params)
 
+    // this throws if an invalid redeemScript structure is passed
     checkMcRedeemScriptForMultisig(ownershipInfo.redeemScript)
 
-    val computedHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(ownershipInfo.redeemScript))
-    require(pubKeyHash.sameElements(computedHash), "Wrong redeem script hash")
+    require(checkMultisigAddress(ownershipInfo.mcMultisigAddress, ownershipInfo.redeemScript, params), "Wrong redeem script hash")
 
     // this throws if the signatures are not correctly base64 encoded
     ownershipInfo.mcSignatures.foreach(getMcSignature)

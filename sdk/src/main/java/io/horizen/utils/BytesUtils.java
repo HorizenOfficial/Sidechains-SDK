@@ -196,6 +196,7 @@ public final class BytesUtils {
     }
 
     public static final int HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH = 33;
+    public static final int HORIZEN_UNCOMPRESSED_PUBLIC_KEY_LENGTH = 65;
     public static final int HORIZEN_ADDRESS_HASH_LENGTH = 20;
     public static final int HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH = 35;
     public static final int HORIZEN_MC_SIGNATURE_BASE_64_LENGTH = 88;
@@ -216,7 +217,7 @@ public final class BytesUtils {
     public static final byte OP_CHECKMULTISIG = (byte) 0xAE;
     public static final byte OP_1 = (byte) 0x51;
     public static final byte OP_16 = (byte) 0x60;
-    public static final byte OFFSET_FOR_OP_N = (byte) 0x50; // in MC it is computred as (OP_1 - -1) since 0x50 is a reserved OP
+    public static final byte OFFSET_FOR_OP_N = (byte) 0x50; // in MC it is computred as (OP_1 -1) since 0x50 is a reserved OP
 
     public static byte[] fromHorizenMcTransparentAddress(String address, NetworkParams params) {
         if(address.length() != HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)
@@ -224,7 +225,6 @@ public final class BytesUtils {
 
         byte[] addressBytesWithChecksum = Base58.decode(address).get();
         byte[] addressBytes = Arrays.copyOfRange(addressBytesWithChecksum, 0, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH);
-
 
         // Check version
         byte[] prefix = Arrays.copyOfRange(addressBytes, 0, HORIZEN_ADDRESS_PREFIX_LENGTH);
@@ -241,7 +241,7 @@ public final class BytesUtils {
                     "Incorrect Horizen address format,  pubKey or script TestNet prefix expected, got %s",
                     BytesUtils.toHexString(prefix)));
 
-        byte[] publicKeyHash = Arrays.copyOfRange(addressBytes, HORIZEN_ADDRESS_PREFIX_LENGTH, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH);
+        byte[] addressDataHash = Arrays.copyOfRange(addressBytes, HORIZEN_ADDRESS_PREFIX_LENGTH, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH);
 
         // Verify checksum
         byte[] checksum = Arrays.copyOfRange(addressBytesWithChecksum, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH, addressBytesWithChecksum.length);
@@ -249,7 +249,8 @@ public final class BytesUtils {
         if(!Arrays.equals(calculatedChecksum, checksum))
             throw new IllegalArgumentException("Broken Horizen public key address: checksum is wrong.");
 
-        return publicKeyHash;
+        // The returned data can be a pubKeyHash or a scriptHash, depending on the address type
+        return addressDataHash;
     }
 
     public static String toHorizenPublicKeyAddress(byte[] publicKeyHashBytes, NetworkParams params) {

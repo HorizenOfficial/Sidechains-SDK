@@ -2,6 +2,7 @@ package io.horizen.account.secret;
 
 import com.google.common.primitives.Bytes;
 import io.horizen.account.proposition.AddressProposition;
+import io.horizen.account.state.McAddrOwnershipMsgProcessor;
 import io.horizen.account.utils.Secp256k1;
 import io.horizen.params.RegTestParams;
 import io.horizen.utils.BytesUtils;
@@ -12,13 +13,17 @@ import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
 import sparkz.util.encode.Base58;
 import sparkz.util.encode.Base64;
+
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.security.SignatureException;
 import java.util.Arrays;
+
 import static io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray;
 import static io.horizen.account.utils.Secp256k1.*;
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;
@@ -328,5 +333,155 @@ public class McSignatureTest {
         String outPutString = new String(inputBytes, StandardCharsets.UTF_8);
 
         assertEquals(inputString, outPutString);
+    }
+
+    @Test
+    public void testCheckMultisigRedeemScriptWithCompressedPubKeys() {
+        String redeedmScriptBytes1 = ("532103974d0bd1c95c5bb754e4034185041985272dab6c4a014326487280035ede404f210391154f2d09d5a6435f640d2f71a4e2bb0e47df249ac4ef59b8282898b5c7233821034cbf76a316cd68ead959ff00c4b5570085c270606b8ff65e838b6c7fc8efd65053ae");
+        var res1 = McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScriptBytes1);
+        int thresholdSignVal1 = (int) res1._1;
+        Seq<byte[]> pk1 = res1._2;
+        assertEquals(3, thresholdSignVal1);
+        assertEquals(3, pk1.length());
+
+        scala.collection.Iterator iter1 = pk1.iterator();
+        while (iter1.hasNext()) {
+            byte[] k = (byte[]) iter1.next();
+            assertEquals(0x21, k.length);
+        }
+    }
+
+    @Test
+    public void testCheckMultisigRedeemScriptWithMixedFormatPubKeys() {
+        String redeedmScriptBytes = ("5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c53ae");
+        var res = McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScriptBytes);
+        int thresholdSignVal = (int)res._1;
+        Seq<byte[]> pk = res._2;
+        assertEquals(2, thresholdSignVal);
+        assertEquals(3, pk.length());
+
+        var ttt = JavaConverters.seqAsJavaListConverter(pk).asJava();
+
+        byte[] k1 = ttt.get(0);
+        byte[] k2 = ttt.get(1);
+        byte[] k3 = ttt.get(2);
+        assertEquals(0x41, k1.length);
+        assertEquals(0x21, k2.length);
+        assertEquals(0x21, k3.length);
+    }
+
+    @Test
+    public void testNegativeCheckMultisigRedeemScript() {
+        // extra bytes after the last pubkey
+        String redeedmScript = "5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0cffff53ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid length of redeemScript" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid threshold signature value (k > n)
+        redeedmScript = "5441049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0cffff53ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid value for threshold signature value" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid threshold signature value (zero)
+        redeedmScript = "5041049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c53ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid threshold signatures byte" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid threshold signature value (INVALID op_CODE)
+        redeedmScript = "0341049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c53ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid threshold signatures byte" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+        // invalid number of pub keys (bigger than expected)
+        redeedmScript = "5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c54ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            // the parsing is not consistent anymore, it might happen in different ways, here we read a bad size for the next not existing pub key
+            assertTrue(e.getMessage().contains("Invalid" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid  number of pub keys (smaller than expected)
+        redeedmScript = "5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae921023d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c52ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid length of redeemScript" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid lentgth of one of the pub keys (0x22 instead of 0x21 or 0x41
+        redeedmScript = "5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232102ebcf7cee690099a35c19b7bb49f8685bd77136647632cad9a173d5199ad38ae92202ff3d63b961ffea8dc7d5532282a9eb660ee11a9841d2a0425f09d82798e1ffba0c53ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid compressed/uncompressed pub key length" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        // invalid null script
+        redeedmScript = "5050ae";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Number of pub keys byte" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
     }
 }

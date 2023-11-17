@@ -4,11 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{
-  AddNewMultisigOwnershipCmd, AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd,
-  GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd,
-  ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, checkMcAddresses, checkMcRedeemScriptForMultisig,
-  ecParameters, getMcSignature, getOwnershipId}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewMultisigOwnershipCmd, AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, checkMcRedeemScriptForMultisig, checkMultisigAddress, ecParameters, getMcHashedMsg, getMcSignature, getOwnershipId, verifySignaturesWithThreshold}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -17,7 +13,7 @@ import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTR
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
-import io.horizen.utils.BytesUtils.{padWithZeroBytes, toHorizenPublicKeyAddress}
+import io.horizen.utils.BytesUtils.{OP_CHECKMULTISIG, padWithZeroBytes, toHorizenPublicKeyAddress}
 import io.horizen.utils.Utils.{Ripemd160Sha256Hash, doubleSHA256Hash}
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.asn1.x9.X9ECParameters
@@ -143,27 +139,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     view.removeAccountStorageBytes(contractAddress, ownershipId)
   }
 
-
-  def isValidOwnershipSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
-    // get a signature data obj for the verification
-    val v_barr = getUnsignedByteArray(mcSignature.getV)
-    val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
-    val s_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getS), SIGNATURE_RS_SIZE)
-
-    val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
-
-    // the sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
-    val hashedMsg = getMcHashedMsg(mcMultisigAddress + Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
-
-    // verify MC message signature
-    val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
-    val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
-    val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
-    val recCompressedPubKeyBytes = ecpointRec.getEncoded(true)
-
-    pubKey.sameElements(recCompressedPubKeyBytes)
-  }
-
   def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
@@ -184,22 +159,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     val computedTaddr = toHorizenPublicKeyAddress(mcPubkeyhash, networkParams)
 
     computedTaddr.equals(mcTransparentAddress)
-  }
-
-  // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
-  private def getMcHashedMsg(messageToSignString: String) = {
-    // this is the magic string prepended in zend to the message to be signed*/
-    val strMessageMagic = "Zcash Signed Message:\n"
-    // compute the message to be signed. Similarly to what MC does, we must prepend the size of the byte buffers
-    // we are using
-    val messageMagicBytes = strMessageMagic.getBytes(StandardCharsets.UTF_8)
-    val mmb2 = Bytes.concat(Array[Byte](messageMagicBytes.length.asInstanceOf[Byte]), messageMagicBytes)
-
-    // TODO: currently size < 256 which is ok for a sc address; make it generic with int_to_bytes
-    val messageToSignBytes = messageToSignString.getBytes(StandardCharsets.UTF_8)
-    val mts2 = Bytes.concat(Array[Byte](messageToSignBytes.length.asInstanceOf[Byte]), messageToSignBytes)
-    // hash the message as MC does (double sha256)
-    doubleSHA256Hash(Bytes.concat(mmb2, mts2))
   }
 
   def doAddNewOwnershipCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
@@ -282,8 +241,10 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
       throw new ExecutionRevertedException(errMsg)
     }
 
+    val senderScAddress = msg.getFrom
+
     // check that sender account exists
-    if (!view.accountExists(msg.getFrom) ) {
+    if (!view.accountExists(senderScAddress) ) {
       val errMsg = s"Sender account does not exist: msg = $msg"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
@@ -296,12 +257,23 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     val mcSignatures = cmdInput.mcSignatures
     val redeemScript = cmdInput.redeemScript
 
+    // get threshold signature value and all pub keys from redeemScript.
+    // If any semantic error is detected while parsing an exception is raised
+    var retValue : (Int, Seq[Array[Byte]]) = null
+    try {
+      retValue = checkMcRedeemScriptForMultisig(redeemScript)
+    } catch {
+      case e: IllegalArgumentException =>
+        val errMsg = s"Unexpected format of redeemScript: ${e.getMessage}"
+        log.warn(errMsg)
+        throw new ExecutionRevertedException(errMsg)
+    }
+    val thresholdSignatureValue = retValue._1
+    val pubKeys = retValue._2
+
     // check validity of the addr/redeemscript pair
-    // TODO wrap all in a single method and use it also in http api
-    val pubKeyHash = checkMcAddresses(mcMultisigAddress, networkParams)
-    val computedHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(redeemScript))
-    if(!pubKeyHash.sameElements(computedHash)) {
-      val errMsg = s"Could not verify redeemScript hash"
+    if(!checkMultisigAddress(mcMultisigAddress, redeemScript, networkParams)) {
+      val errMsg = s"Could not verify multisig address against redeemScript"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
     }
@@ -309,35 +281,11 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     // compute ownershipId
     val newOwnershipId = getOwnershipId(mcMultisigAddress)
 
-    // get the signatures
-    val mcSignSecp256k1Seq: Seq[SignatureSecp256k1] = mcSignatures.map( s => getMcSignature(s))
+    // get the signatures, it might trow upon errors
+    val signatures: Seq[SignatureSecp256k1] = mcSignatures.map( s => getMcSignature(s))
 
-    // get all pub keys from redeemScript
-    val (thresholdSignatureValue, pubKeys) = checkMcRedeemScriptForMultisig(redeemScript)
-
-    val senderScAddress = msg.getFrom
-    var score = 0
-    var verifiedPubKeyIndexes = Seq[Int]()
-    val pubKeyIndexPairs = pubKeys.zipWithIndex
-
-    mcSignSecp256k1Seq.foreach {
-      signature => {
-        breakable {
-          pubKeyIndexPairs.foreach {
-            pk_idx_pair => {
-              if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
-                !verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
-                isValidOwnershipSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, signature) // current pk is verified against current signature
-              ) {
-                score += 1
-                verifiedPubKeyIndexes = pk_idx_pair._2 +: verifiedPubKeyIndexes
-                break
-              }
-            }
-          }
-        }
-      }
-    }
+    // verify the minimum number of signatures required
+    val score = verifySignaturesWithThreshold(senderScAddress, mcMultisigAddress, pubKeys, signatures, thresholdSignatureValue)
     if (score < thresholdSignatureValue) {
       val errMsg = s"Invalid number of verified signatures: $score, need: $thresholdSignatureValue: invocation = $invocation"
       log.warn(errMsg)
@@ -659,48 +607,136 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     val redeemScriptLen = redeemScriptBytes.length
 
     // check we have a trailing OP_CHECKMULTISIG op code (0xAE) in the redeem script because we support only this type as of now
-    require(redeemScriptBytes(redeemScriptLen-1) == BytesUtils.OP_CHECKMULTISIG, "Tail of redeemScript should be OP_CHECKMULTSIG")
+    require(redeemScriptBytes(redeemScriptLen-1) == BytesUtils.OP_CHECKMULTISIG, s"Tail of redeemScript should be OP_CHECKMULTSIG (0x${OP_CHECKMULTISIG.formatted("%02X")})")
 
     // read the number of pubKeys
     val numOfPubKeyByte = redeemScriptBytes(redeemScriptLen-2)
-    // we can have from 1 to 16 elements
-    require((numOfPubKeyByte >= BytesUtils.OP_1) && (numOfPubKeyByte <= BytesUtils.OP_16), s"Number of pub keys $numOfPubKeyByte out of bounds")
+    // we can have from 1 to 16 elements, even if actually the limit on the script size in MC would only allow 15 elements (in case of compressed pub key format, otherwise even less)
+    require((numOfPubKeyByte >= BytesUtils.OP_1) && (numOfPubKeyByte <= BytesUtils.OP_16), s"Number of pub keys byte 0x${numOfPubKeyByte.formatted("%02X")} out of bounds")
     val numOfPubKeys : Int = numOfPubKeyByte - BytesUtils.OFFSET_FOR_OP_N
 
-    // total length is 3 op codes plus the list of pub key hash
-    require(redeemScriptLen == (numOfPubKeys*(BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH + 1)) + 3, "Invalid length of redeem Script")
-
     val thresholdSignatureValueByte = redeemScriptBytes(0)
-    require((thresholdSignatureValueByte >= BytesUtils.OP_1) && (thresholdSignatureValueByte <= BytesUtils.OP_16), s"Invalid threshold signatures byte $thresholdSignatureValueByte")
+    require((thresholdSignatureValueByte >= BytesUtils.OP_1) && (thresholdSignatureValueByte <= BytesUtils.OP_16), s"Invalid threshold signatures byte 0x${thresholdSignatureValueByte.formatted("%02X")}")
     val thresholdSignatureValue : Int = thresholdSignatureValueByte - BytesUtils.OFFSET_FOR_OP_N
 
     // consistency check
-    require(thresholdSignatureValue <= numOfPubKeys, s"Invalid range for threshold signature value: $thresholdSignatureValue")
+    require(thresholdSignatureValue <= numOfPubKeys, s"Invalid value for threshold signature value: $thresholdSignatureValue > $numOfPubKeys")
 
-    // get all pub keys TODO support also UNCOMPRESSED pub keys
-    val x = (0 until numOfPubKeys).map {
-      e => {
-        val pubKeyOffset = 1 + e*(BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH + 1) + 1
-        // check that the declared size of the pub key, which is prepended to the pub key itself, is the expected one
-        require(redeemScriptBytes(pubKeyOffset-1) == BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH, s"Invalid compressed pub key length ${redeemScriptBytes(pubKeyOffset-1)} red in redeemScript for pub key $e")
-        redeemScriptBytes.slice(pubKeyOffset, pubKeyOffset+BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH)
+    // get all pub keys, starting from the second byte of the script (the first is the threshold sig value)
+    var pos = 1
+    val pubKeys = (0 until numOfPubKeys).map {
+      n => {
+        // read size of next pub key and advance pos
+        val nextPubKeySize = redeemScriptBytes(pos)
+        pos += 1
+
+        // check that the declared size of the pub key is one in the expected pair
+        require(
+          nextPubKeySize == BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH ||
+          nextPubKeySize == BytesUtils.HORIZEN_UNCOMPRESSED_PUBLIC_KEY_LENGTH,
+          s"Invalid compressed/uncompressed pub key length $nextPubKeySize red in redeemScript for pub key $n")
+
+        // read the pub key and advance pos
+        val pubKey = redeemScriptBytes.slice(pos, pos+nextPubKeySize)
+        pos += nextPubKeySize
+
+        pubKey
       }
     }
-    (thresholdSignatureValue, x)
+
+    // total length should be the value of pos and the last 2 bytes (OP_N, OP_MULTISIG)
+    require(redeemScriptLen == (2 + pos), s"Invalid length of redeemScript: $redeemScriptLen")
+
+    (thresholdSignatureValue, pubKeys)
   }
 
 
-  def checkMcAddresses(mcTransparentAddress: String, params: NetworkParams): Array[Byte] = {
+  def checkMcAddresses(mcAddress: String, params: NetworkParams): Array[Byte] = {
 
-    // this throws if the address is not base 58 decoded
-    val decodedMcPubKeyHash: Array[Byte] = BytesUtils.fromHorizenMcTransparentAddress(mcTransparentAddress, params)
+    // this throws if the address is not base 58 decoded. The returned data can be a pubKeyHash or a scriptHash, depending
+    // on the address type
+    val decodedAddressDataHash: Array[Byte] = BytesUtils.fromHorizenMcTransparentAddress(mcAddress, params)
 
     // check decoded length
-    require(decodedMcPubKeyHash.length == BytesUtils.HORIZEN_ADDRESS_HASH_LENGTH,
-      s"MC address decoded ${BytesUtils.toHexString(decodedMcPubKeyHash)}, length should be ${BytesUtils.HORIZEN_ADDRESS_HASH_LENGTH}, found ${decodedMcPubKeyHash.length}")
+    require(decodedAddressDataHash.length == BytesUtils.HORIZEN_ADDRESS_HASH_LENGTH,
+      s"MC address decoded ${BytesUtils.toHexString(decodedAddressDataHash)}, length should be ${BytesUtils.HORIZEN_ADDRESS_HASH_LENGTH}, found ${decodedAddressDataHash.length}")
 
-    decodedMcPubKeyHash
+    decodedAddressDataHash
   }
 
+  def checkMultisigAddress(mcMultisigAddress: String, redeemScript: String, params: NetworkParams) : Boolean = {
+    val scriptHash = try {
+      checkMcAddresses(mcMultisigAddress, params)
+    } catch {
+      case e: Throwable =>
+        val msgStr = s"invalid mc address: ${e.getMessage}"
+        log.warn(msgStr)
+        NULL_HEX_STRING_32
+    }
+    val computedScriptHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(redeemScript))
+    scriptHash.sameElements(computedScriptHash)
+  }
+
+  def isValidOwnershipSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
+    // get a signature data obj for the verification
+    val v_barr = getUnsignedByteArray(mcSignature.getV)
+    val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
+    val s_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getS), SIGNATURE_RS_SIZE)
+
+    val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
+
+    // the sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
+    val hashedMsg = getMcHashedMsg(mcMultisigAddress + Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
+
+    // verify MC message signature
+    val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
+    val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
+    val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
+    val recCompressedPubKeyBytes = ecpointRec.getEncoded(true)
+
+    pubKey.sameElements(recCompressedPubKeyBytes)
+  }
+
+  def verifySignaturesWithThreshold(senderScAddress: Address, mcMultisigAddress: String, pubKeys: Seq[Array[Byte]], signatures: Seq[SignatureSecp256k1], thresholdSignatureValue: Int) : Int = {
+    var score = 0
+    var verifiedPubKeyIndexes = Seq[Int]()
+    val pubKeyIndexPairs = pubKeys.zipWithIndex
+
+    signatures.foreach {
+      signature => {
+        breakable {
+          pubKeyIndexPairs.foreach {
+            pk_idx_pair => {
+              if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
+                !verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
+                isValidOwnershipSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, signature) // current pk is verified against current signature
+              ) {
+                score += 1
+                verifiedPubKeyIndexes = pk_idx_pair._2 +: verifiedPubKeyIndexes
+                break
+              }
+            }
+          }
+        }
+      }
+    }
+    score
+  }
+
+  // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
+  def getMcHashedMsg(messageToSignString: String) = {
+    // this is the magic string prepended in zend to the message to be signed*/
+    val strMessageMagic = "Zcash Signed Message:\n"
+    // compute the message to be signed. Similarly to what MC does, we must prepend the size of the byte buffers
+    // we are using
+    val messageMagicBytes = strMessageMagic.getBytes(StandardCharsets.UTF_8)
+    val mmb2 = Bytes.concat(Array[Byte](messageMagicBytes.length.asInstanceOf[Byte]), messageMagicBytes)
+
+    // TODO: currently size < 256 which is ok for a sc address; make it generic with int_to_bytes
+    val messageToSignBytes = messageToSignString.getBytes(StandardCharsets.UTF_8)
+    val mts2 = Bytes.concat(Array[Byte](messageToSignBytes.length.asInstanceOf[Byte]), messageToSignBytes)
+    // hash the message as MC does (double sha256)
+    doubleSHA256Hash(Bytes.concat(mmb2, mts2))
+  }
 }
 
