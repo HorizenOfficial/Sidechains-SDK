@@ -82,7 +82,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
     val secret = allAccounts.find(
       a => (fromAddress.isEmpty ||
-        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address.toBytes) == fromAddress.get) &&
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address.toBytes).equalsIgnoreCase(fromAddress.get)) &&
         nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
           .compareTo(txValueInWei) >= 0
     )

@@ -11,7 +11,7 @@ from test_framework.util import check_json_precision, \
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
     sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO, set_sc_parallel_test, \
-    SNAPSHOT_VERSION_TAG
+    SNAPSHOT_VERSION_TAG, set_jacoco
 import os
 import tempfile
 import traceback
@@ -186,6 +186,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Stores parallel process integer assigned to current test")
         parser.add_option("--mcblockdelay", dest="mcblockdelay", type=int, default=0, action="store",
                           help="Stores mainchain block delay reference parameter")
+        parser.add_option("--jacoco", dest="jacoco", default=False, action="store_true",
+                          help="Stores jacoco flag assigned to current test")
 
         self.add_options(parser)
         self.sc_add_options(parser)
@@ -208,6 +210,8 @@ class SidechainTestFramework(BitcoinTestFramework):
             parallel_group = int(self.options.parallel)
             if parallel_group > 0:
                 self.set_parallel_test(parallel_group)
+
+            set_jacoco(self.options.jacoco)
 
             self.setup_chain()
 

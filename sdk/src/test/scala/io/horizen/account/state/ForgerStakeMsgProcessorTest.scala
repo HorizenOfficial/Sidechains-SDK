@@ -117,6 +117,9 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong MethodId for GetListOfForgersCmd", "f6ad3c23", ForgerStakeMsgProcessor.GetListOfForgersCmd)
     assertEquals("Wrong MethodId for AddNewStakeCmd", "5ca748ff", ForgerStakeMsgProcessor.AddNewStakeCmd)
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
+    //TODO OpenStakeForgerListCmd signature is wrong, it misses a closing parenthesis. Fixing it requires an hard fork so
+    // for the moment we stick with the wrong one.
+    assertEquals("Wrong MethodId for OpenStakeForgerListCmd", "b05bf06c", ForgerStakeMsgProcessor.OpenStakeForgerListCmd)
   }
 
   @Test
