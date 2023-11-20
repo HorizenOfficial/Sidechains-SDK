@@ -123,6 +123,7 @@ testScriptsEvm=(
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
+    'sc_evm_mc_addr_ownership_multisig.py'
     'sc_evm_mc_addr_ownership_perf_test.py'
     'sc_evm_proxy_nsc.py'
     'sc_evm_seedernode.py'
