@@ -125,7 +125,13 @@ abstract class AbstractHistoryStorage[
   }
 
   private def blockInfoOptionByIdFromStorage(blockId: ModifierId): Option[SidechainBlockInfo] = {
-    storage.get(blockInfoKey(blockId)).asScala.flatMap(baw => SidechainBlockInfoSerializer.parseBytesTry(baw.data).toOption)
+    val maybeBlockInfo = storage.get(blockInfoKey(blockId)).asScala.flatMap(baw => SidechainBlockInfoSerializer.parseBytesTry(baw.data).toOption)
+    if (params.resetModifiersStatus) {
+      // pork-around here to reset semantic validity of blockInfo from storage - it will allow to re-process forked chains after restart
+      maybeBlockInfo.map(_.copy(semanticValidity = ModifierSemanticValidity.Unknown))
+    } else {
+      maybeBlockInfo
+    }
   }
 
   private def blockInfoByIdFromStorage(blockId: ModifierId): SidechainBlockInfo = {

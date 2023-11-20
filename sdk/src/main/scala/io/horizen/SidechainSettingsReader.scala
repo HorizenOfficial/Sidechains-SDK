@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
-import net.ceedubs.ficus.readers.EnumerationReader._
+import net.ceedubs.ficus.readers.EnumerationReader._ //actually used
 import sparkz.core.settings.{SettingsReaders, SparkzSettings}
 
 import java.io.File
@@ -48,10 +48,11 @@ object SidechainSettingsReader
     val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
     val ethServiceSettings = config.as[EthServiceSettings]("sparkz.ethService")
     val apiRateLimiterSettings = config.as[ApiRateLimiterSettings]("sparkz.apiRateLimiter")
+    val historySettings = config.as[HistorySettings]("sparkz.history")
 
     SidechainSettings(sparkzSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
-      ethServiceSettings, accountMempoolSettings, apiRateLimiterSettings)
+      ethServiceSettings, accountMempoolSettings, apiRateLimiterSettings, historySettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {
