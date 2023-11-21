@@ -32,7 +32,7 @@ case class CertificateDataWithKeyRotation(override val referencedEpochNumber: In
   }
 
   override def toString: String = {
-    "CertificateDataWithoutKeyRotation(" +
+    "CertificateDataWithKeyRotation(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
       s"sidechainId = ${sidechainId.mkString("Array(", ", ", ")")}, " +
       s"withdrawalRequests = {${backwardTransfers.mkString(",")}}, " +

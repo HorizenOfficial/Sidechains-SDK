@@ -19,7 +19,7 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 
 WAIT_CONST = 1
 
-SNAPSHOT_VERSION_TAG = "0.8.1"
+SNAPSHOT_VERSION_TAG = "0.9.0"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -57,6 +57,9 @@ DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 
 # Parallel Testing
 parallel_test = 0
 
+# flag for jacoco code coverage analysis
+is_jacoco_included = False
+
 
 class TimeoutException(Exception):
     def __init__(self, operation):
@@ -74,6 +77,9 @@ def set_sc_parallel_test(n):
     global parallel_test
     parallel_test = n
 
+def set_jacoco(value):
+    global is_jacoco_included
+    is_jacoco_included = value
 
 def start_port_modifier():
     if parallel_test > 0:
@@ -691,7 +697,17 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
+
+    user_home = os.path.expanduser("~")
+    jacoco_agent_path = os.path.join(user_home, ".m2", "repository", "org", "jacoco", "org.jacoco.agent", "0.8.9",
+                                     "org.jacoco.agent-0.8.9-runtime.jar")
+    jacoco_cmd = f'-javaagent:{jacoco_agent_path}=destfile=../coverage-reports/sidechains-sdk-{SNAPSHOT_VERSION_TAG}/sidechains-sdk-{SNAPSHOT_VERSION_TAG}-jacoco-report.exec,append=true'
+
+    if is_jacoco_included:
+        bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + jacoco_cmd + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
+              + " " + mc_block_delay_ref
+    else:
+        bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
               + " " + mc_block_delay_ref
 
     if print_output_to_file:

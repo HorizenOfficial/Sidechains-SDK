@@ -157,17 +157,13 @@ class CertificateKeyRotationMsgProcessorTest
       }
     }
 
-    withGas {
-      certificateKeyRotationMsgProcessor.process(
-        getMessage(
-          to = contractAddress,
-          data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
-          nonce = randomNonce
-        ), view, _, blockContext
-      )
-    }
+    val msg = getMessage(
+      to = contractAddress,
+      data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
+      nonce = randomNonce
+    )
+    withGas(TestContext.process(certificateKeyRotationMsgProcessor, msg, view, blockContext, _))
   }
-
 
   private def processBadKeyRotationMessage(newKey: SchnorrSecret, keyRotationProof: KeyRotationProof, view: AccountStateView, epoch: Int = 0,
                                            spuriousBytes: Option[Array[Byte]], badBytes: Option[Array[Byte]], errMsg : String) = {
@@ -182,7 +178,6 @@ class CertificateKeyRotationMsgProcessorTest
     //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
     assertEquals("Wrong MethodId for SubmitKeyRotationReqCmdSig", "288d61cc", CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig)
   }
-
 
   @Test
   def testProcessShortOpCode(): Unit = {
@@ -237,7 +232,7 @@ class CertificateKeyRotationMsgProcessorTest
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
       // negative test: try using an input with a trailing byte
-      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong message data field length")
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong invocation data field length")
       // negative test: try using a message with right length but wrong bytes
       val badBytes1 = Some(BytesUtils.fromHexString(notDecodableData))
       processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes1, errMsg = "Could not decode")

@@ -23,4 +23,6 @@ trait BaseAccountStateView extends AccountStateReader {
   def addLog(log: EthereumConsensusDataLog): Unit
 
   def getGasTrackedView(gas: GasPool): BaseAccountStateView
+
+  def getNativeSmartContractAddressList(): Array[Address]
 }

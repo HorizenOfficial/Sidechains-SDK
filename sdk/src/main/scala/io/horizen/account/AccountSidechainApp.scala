@@ -4,8 +4,8 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen._
-import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.rpc.handler.RpcHandler
 import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
@@ -23,9 +23,9 @@ import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
 import io.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil}
+import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.evm.LevelDBDatabase
-import io.horizen.fork.{ConsensusParamsFork, ForkConfigurator}
+import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
@@ -33,7 +33,7 @@ import io.horizen.secret.SecretSerializer
 import io.horizen.storage._
 import io.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import io.horizen.transaction._
-import io.horizen.utils.{BytesUtils, Pair, TimeToEpochUtils}
+import io.horizen.utils.{BytesUtils, Pair}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
@@ -93,21 +93,21 @@ class AccountSidechainApp @Inject()
 
   // Init all storages
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, maxConsensusSlotsInEpoch * 2 + 1)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 5)),
     sidechainTransactionsCompanion,
     params)
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, maxConsensusSlotsInEpoch * 2 + 1)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, 5)),
     sidechainSecretsCompanion)
 
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore, maxConsensusSlotsInEpoch * 2 + 1)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore, params.maxHistoryRewritingLength * 2)))
 
   protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
 
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, maxConsensusSlotsInEpoch * 2 + 1)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, 5)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {

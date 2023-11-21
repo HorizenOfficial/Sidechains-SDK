@@ -1,3 +1,13 @@
+**0.9.0**
+1. libevm dependency updated to 1.0.0.
+2. Added support for EVM and native smart contracts interoperability.
+3. Sparkz dependency updated to 2.2.0.
+4. Improved storage versioning (fullsynch time reduced by 5x)
+5. Minor fixes:
+    * [eth RPC endpoint] debug_traceCall now returns a more accurate error response for reverted transactions 
+    * [eth RPC endpoint] debug_traceCall and debug_traceTransaction now return a correct value for the gasUsed field when topmost call is a call to a Solidity Smart Contract function.
+    * Certificates older than 4 epochs are now deleted from the storage only if more recent certificates appeared.
+
 **0.8.1**
 1. Improved precision of eth_gasPrice RPC call
 

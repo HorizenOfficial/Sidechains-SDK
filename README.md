@@ -35,7 +35,7 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 
 * Java 11 or newer
 * Scala 2.12.10+
-* Python 3
+* Python 3.10
 * Maven
 
 On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
@@ -48,7 +48,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.8.1.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.9.0.jar:./target/lib/* io.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
