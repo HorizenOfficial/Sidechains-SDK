@@ -1,21 +1,31 @@
 package io.horizen.account.state
 
 import io.horizen.account.AccountFixture
+import io.horizen.account.fixtures.ForgerAccountFixture.getPrivateKeySecp256k1
+import io.horizen.account.fork.ForgerPoolRewardsFork
 import io.horizen.account.storage.AccountStateMetadataStorageView
+import io.horizen.account.utils.WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
 import io.horizen.account.utils.{WellKnownAddresses, ZenWeiConverter}
+import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
 import io.horizen.utils.ByteArrayWrapper
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
 import io.horizen.evm.{Address, StateDB}
+import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
+import io.horizen.utils
 import org.junit.Assert._
 import org.junit._
-import org.mockito._
+import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
+
+import java.math.BigInteger
+import java.util
+import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
 class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProcessorFixture with StoreFixture
       with AccountFixture {
@@ -27,6 +37,15 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
   @Before
   def setUp(): Unit = {
+    val forkConfigurator = new SimpleForkConfigurator() {
+      override def getOptionalSidechainForks: util.List[utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = List(
+        new utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+          SidechainForkConsensusEpoch(35, 35, 35),
+          new ForgerPoolRewardsFork(true)
+        )
+      ).asJava
+    }
+    ForkManagerUtil.initializeForkManager(forkConfigurator, "regtest")
     val mockWithdrawalReqProvider = mock[WithdrawalRequestProvider]
     val messageProcessors = Seq[MessageProcessor]()
     val metadataStorageView = mock[AccountStateMetadataStorageView]
@@ -53,8 +72,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     val epochNum = 102
 
     // No withdrawal requests
-    Mockito
-      .when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
+    when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
       .thenReturn(Seq())
 
     var res = stateView.getWithdrawalRequests(epochNum)
@@ -67,8 +85,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {
       WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
     })
-    Mockito
-      .when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
+    when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
       .thenReturn(listOfWR)
 
     res = stateView.getWithdrawalRequests(epochNum)
@@ -119,7 +136,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     val mockNativeSmartContract = mock[NativeSmartContractMsgProcessor]
     val mockAddress = new Address("0x0000000000000000000011234561111111111111")
-    Mockito.when(mockNativeSmartContract.contractAddress).thenReturn(mockAddress)
+    when(mockNativeSmartContract.contractAddress).thenReturn(mockAddress)
     messageProcessors = Seq(mockNativeSmartContract, mock[MessageProcessor])
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
     var listOfAddresses = stateView.getNativeSmartContractAddressList()
@@ -135,6 +152,35 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
     assertTrue("Missing WithdrawalMsgProcessor address", listOfAddresses.contains(WithdrawalMsgProcessor.contractAddress))
     assertTrue("Missing CertificateKeyRotationMsgProcessor address", listOfAddresses.contains(WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS))
 
+
+  }
+
+  @Test
+  def testGetMcForgerPoolReward(): Unit = {
+    val messageProcessors = Seq.empty[MessageProcessor]
+    val metadataStorageView = mock[AccountStateMetadataStorageView]
+    val stateDb = mock[StateDB]
+    val stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    val addr1 = getPrivateKeySecp256k1(1000).publicImage()
+    val addr2 = getPrivateKeySecp256k1(1001).publicImage()
+    val addr3 = getPrivateKeySecp256k1(1002).publicImage()
+    val blockCounters = Map(
+      addr1 -> 2L,
+      addr2 -> 3L,
+      addr3 -> 5L,
+    )
+
+    when(stateDb.getBalance(FORGER_POOL_RECIPIENT_ADDRESS)).thenReturn(BigInteger.valueOf(1000L))
+    when(metadataStorageView.getForgerBlockCounters).thenAnswer(_ => blockCounters)
+    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0))
+    assertTrue(rewardsBeforeFork.isEmpty)
+
+    when(metadataStorageView.getConsensusEpochNumber).thenAnswer(_ => Some(36))
+    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36))
+    assertEquals(3, rewardsAfterFork.size)
+    assertEquals(BigInteger.valueOf(200L), rewardsAfterFork(addr1))
+    assertEquals(BigInteger.valueOf(300L), rewardsAfterFork(addr2))
+    assertEquals(BigInteger.valueOf(500L), rewardsAfterFork(addr3))
 
   }
 

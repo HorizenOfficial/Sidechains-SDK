@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
+import io.horizen.account.fork.ForgerPoolRewardsFork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
@@ -76,7 +77,7 @@ class StateDbAccountStateView(
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData, ftToSmartContractForkActive: Boolean = false): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -110,11 +111,11 @@ class StateDbAccountStateView(
 
           val recipientAddress = recipientProposition.address()
 
-          if (isEoaAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
+          if (isEoaAccount(recipientAddress) ) {
             // stateDb will implicitly create account if not existing yet
             log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
             addBalance(recipientAddress, value)
-          } else if (isSmartContractAccount(recipientAddress) && canReceiveFunds(recipientAddress)) {
+          } else if (ftToSmartContractForkActive && isSmartContractAccount(recipientAddress)) {
             log.debug(s"adding FT amount = $value to Smart Contract address=$recipientProposition")
             addBalance(recipientAddress, value)
           } else {
@@ -124,6 +125,7 @@ class StateDbAccountStateView(
             )
             addBalance(burnAddress, value)
           }
+
           log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
@@ -382,16 +384,4 @@ class StateDbAccountStateView(
   def disableWriteProtection(): Unit = readOnly = false
 
   override def getNativeSmartContractAddressList(): Array[Address] = listOfNativeSmartContractAddresses
-
-  /**
-   * Checks if the given address is not one of the well known addresses that cannot receive funds.
-   */
-  private def canReceiveFunds(address: Address): Boolean = {
-    !Seq(
-      WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-      WellKnownAddresses.WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-      WellKnownAddresses.CERTIFICATE_KEY_ROTATION_SMART_CONTRACT_ADDRESS,
-      WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS
-    ).contains(address)
-  }
 }

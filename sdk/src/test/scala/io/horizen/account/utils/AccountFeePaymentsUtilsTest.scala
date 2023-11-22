@@ -19,9 +19,11 @@ class AccountFeePaymentsUtilsTest
   val addr_a: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000aa")
   val addr_b: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000bb")
   val addr_c: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000cc")
+  val addr_d: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000dd")
   val forgerAddr_a = new AddressProposition(addr_a)
   val forgerAddr_b = new AddressProposition(addr_b)
   val forgerAddr_c = new AddressProposition(addr_c)
+  val forgerAddr_d = new AddressProposition(addr_d)
 
   @Test
   def testNullBlockFeeInfoSeq(): Unit = {
@@ -178,7 +180,9 @@ class AccountFeePaymentsUtilsTest
     val mcForgerPoolRewards = Map(
       forgerAddr_a -> BigInteger.valueOf(10),
       forgerAddr_b -> BigInteger.valueOf(10),
-      forgerAddr_c -> BigInteger.valueOf(10)
+      forgerAddr_c -> BigInteger.valueOf(10),
+      forgerAddr_d -> BigInteger.valueOf(10),
+
     )
 
 
@@ -188,12 +192,14 @@ class AccountFeePaymentsUtilsTest
     blockFeeInfoSeq = blockFeeInfoSeq :+ abfi_c2
 
     val accountPaymentsList = getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards)
-    assertEquals(accountPaymentsList.length, 3)
+    assertEquals(accountPaymentsList.length, 4)
 
     accountPaymentsList.foreach(
       payment => {
         if (payment.address.equals(forgerAddr_c))
           assertEquals(payment.value, BigInteger.valueOf(230))
+        else if (payment.address.equals(forgerAddr_d))
+          assertEquals(payment.value, BigInteger.valueOf(10))
         else
           assertEquals(payment.value, BigInteger.valueOf(120))
       }

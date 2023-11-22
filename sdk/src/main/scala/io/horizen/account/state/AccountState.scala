@@ -132,9 +132,10 @@ class AccountState(
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
+      val ftToSmartContractForkActive = ForgerPoolRewardsFork.get(consensusEpochNumber).active
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.addTopQualityCertificates(mcBlockRefData, mod.id)
-        stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        stateView.applyMainchainBlockReferenceData(mcBlockRefData, ftToSmartContractForkActive)
       }
 
       // get also list of receipts, useful for computing the receiptRoot hash
@@ -204,8 +205,11 @@ class AccountState(
       // Note: store also entries with zero values, which can arise in sc blocks without any tx
       stateView.updateFeePaymentInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
 
+      // update block counters for forger pool fee distribution
+      stateView.updateForgerBlockCounter(mod.forgerPublicKey, consensusEpochNumber)
+
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
-      evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
+      evalForgersReward(mod, modWithdrawalEpochInfo, consensusEpochNumber, stateView)
 
       // check logs bloom consistency with block header
       mod.verifyLogsBloomConsistency(receiptList)
@@ -226,11 +230,6 @@ class AccountState(
       // update next base fee
       stateView.updateNextBaseFee(FeeUtils.calculateNextBaseFee(mod, params))
 
-      // update block counters for forger pool fee distribution
-      if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
-        stateView.updateForgerBlockCounter(mod.forgerPublicKey)
-      }
-
       stateView.commit(idToVersion(mod.id))
 
       new AccountState(
@@ -246,13 +245,13 @@ class AccountState(
   }
 
 
-  private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, stateView: AccountStateView): Unit = {
+  private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, consensusEpochNumber: ConsensusEpochNumber, stateView: AccountStateView): Unit = {
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
     if (isWithdrawalEpochFinished) {
       // current block fee info is already in the view therefore we pass None as second param
-      val feePayments = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, None)
+      val feePayments = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, consensusEpochNumber, None)
 
       log.info(s"End of Withdrawal Epoch ${modWithdrawalEpochInfo.epoch} reached, added ${feePayments.length} rewards with block ${mod.header.id}")
 
@@ -264,6 +263,9 @@ class AccountState(
         log.error(errMsg)
         throw new IllegalArgumentException(errMsg)
       }
+
+      // reset forger pool balance and block counters
+      stateView.resetForgerPoolAndBlockCounters(consensusEpochNumber)
 
       // add rewards to forgers balance
       feePayments.foreach(
@@ -383,37 +385,11 @@ class AccountState(
 
   override def hasCeased: Boolean = stateMetadataStorage.hasCeased
 
-  override def getFeePaymentsInfo(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+  override def getFeePaymentsInfo(withdrawalEpoch: Int, consensusEpochNumber: ConsensusEpochNumber, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
-    val mcForgerPoolRewards = getMcForgerPoolRewards
+    val mcForgerPoolRewards = using(getView)(_.getMcForgerPoolRewards(consensusEpochNumber))
 
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq, mcForgerPoolRewards)
-  }
-
-  private def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
-    if (ForgerPoolRewardsFork.get(getConsensusEpochNumber.getOrElse(0)).active) {
-      val extraForgerReward = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
-      if (extraForgerReward.signum() == 1) {
-        using(getView) { view =>
-          val counters: Map[AddressProposition, Long] = view.getForgerBlockCounters
-          val perBlockFee_remainder = extraForgerReward.divideAndRemainder(BigInteger.valueOf(counters.values.sum))
-          val perBlockFee = perBlockFee_remainder(0)
-          var remainder = perBlockFee_remainder(1)
-          //sort and add remainder based by block count
-          val forgerPoolRewards = counters.toSeq.sortBy(_._2)
-            .map { address_blocks =>
-              val blocks = BigInteger.valueOf(address_blocks._2)
-              val usedRemainder = remainder.min(blocks)
-              val reward = perBlockFee.multiply(blocks).add(usedRemainder)
-              remainder = remainder.subtract(usedRemainder)
-              (address_blocks._1, reward)
-            }
-          view.subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, extraForgerReward)
-          view.resetForgerBlockCounters()
-          forgerPoolRewards.toMap
-        }
-      } else Map.empty
-    } else Map.empty
   }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo

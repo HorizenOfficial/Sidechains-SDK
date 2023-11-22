@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
+import io.horizen.account.fork.ForgerPoolRewardsFork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.storage.AccountStateMetadataStorageView
@@ -85,24 +86,56 @@ class AccountStateView(
 
   override def getFeePaymentsInfo(
       withdrawalEpoch: Int,
+      consensusEpochNumber: ConsensusEpochNumber,
       blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None
   ): Seq[AccountPayment] = {
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
-    AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
+    val mcForgerPoolRewards = getMcForgerPoolRewards(consensusEpochNumber)
+    AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards)
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
-  def updateForgerBlockCounter(forgerPublicKey: AddressProposition): Unit = {
-    metadataStorageView.updateForgerBlockCounter(forgerPublicKey)
+  def getMcForgerPoolRewards(consensusEpochNumber: ConsensusEpochNumber): Map[AddressProposition, BigInteger] = {
+    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+      val extraForgerReward = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      if (extraForgerReward.signum() == 1) {
+          val counters: Map[AddressProposition, Long] = getForgerBlockCounters
+          val perBlockFee_remainder = extraForgerReward.divideAndRemainder(BigInteger.valueOf(counters.values.sum))
+          val perBlockFee = perBlockFee_remainder(0)
+          var remainder = perBlockFee_remainder(1)
+          //sort and add remainder based by block count
+          val forgerPoolRewards = counters.toSeq.sortBy(_._2)
+            .map { address_blocks =>
+              val blocks = BigInteger.valueOf(address_blocks._2)
+              val usedRemainder = remainder.min(blocks)
+              val reward = perBlockFee.multiply(blocks).add(usedRemainder)
+              remainder = remainder.subtract(usedRemainder)
+              (address_blocks._1, reward)
+            }
+          forgerPoolRewards.toMap
+      } else Map.empty
+    } else Map.empty
+  }
+
+  def updateForgerBlockCounter(forgerPublicKey: AddressProposition, consensusEpochNumber: ConsensusEpochNumber): Unit = {
+    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+      metadataStorageView.updateForgerBlockCounter(forgerPublicKey)
+    }
   }
 
   def getForgerBlockCounters: Map[AddressProposition, Long] = {
     metadataStorageView.getForgerBlockCounters
   }
 
-  def resetForgerBlockCounters(): Unit = {
-    metadataStorageView.resetForgerBlockCounters()
+  def resetForgerPoolAndBlockCounters(consensusEpochNumber: ConsensusEpochNumber): Unit = {
+    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+      val forgerPoolBalance = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      if (forgerPoolBalance.signum() == 1) {
+        subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, forgerPoolBalance)
+        metadataStorageView.resetForgerBlockCounters()
+      }
+    }
   }
 }

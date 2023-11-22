@@ -434,13 +434,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   def resetForgerBlockCounters(): Unit = {
     forgerBlockCountersOpt = Some(Map.empty[AddressProposition, Long])
-    val removeList = new JArrayList[ByteArrayWrapper]()
-    removeList.add(getForgerBlockCountersKey)
-    storage.update(
-      UUID.randomUUID().toString.getBytes,
-      new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]](),
-      removeList
-    )
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
