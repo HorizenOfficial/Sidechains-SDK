@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import logging
 import pprint
 from decimal import Decimal
 
@@ -9,15 +8,13 @@ from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_to
     function_signature_to_4byte_selector, to_checksum_address
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import format_evm, estimate_gas, format_eoa
+from SidechainTestFramework.account.ac_utils import format_evm, estimate_gas
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendMultisigKeysOwnership import sendMultisigKeysOwnership
-from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
-    INTEROPERABILITY_FORK_EPOCH, ZENDAO_FORK_EPOCH
+    ZENDAO_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
@@ -29,27 +26,10 @@ Configuration:
     - 1 MC node
 
 Test:
-    Do some test for handling relations between owned SC/MC addresses via native smart contract call:
-    - Add ownership relation and check event
-    - Get the list of MC addresses associated to a SC address
-    - Remove an association and check event
-    - Interoperability test: same tests as before but using a proxy evm smart contract
-    Do some negative tests     
+    Do some test for handling relations between owned SC/MC addresses via native smart contract call,
+    with special reference to the multisig MC addresses:
+    Some negative tests is performed as well.  
 """
-
-
-def get_address_with_balance(input_list):
-    """
-    Assumes the list in input is obtained via the RPC cmd listaddressgroupings()
-    """
-    for group in input_list:
-        for record in group:
-            addr = record[0]
-            val = record[1]
-            if val > 0:
-                return addr, val
-    return None, 0
-
 
 def check_add_ownership_event(event, sc_addr, mc_addr, op="add"):
     if op == "add":
@@ -139,7 +119,7 @@ def extract_sc_associations_list(abi_return_value_bytes):
 
 class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
     def __init__(self):
-        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * ZENDAO_FORK_EPOCH,
                          number_of_sidechain_nodes=2)
 
     def run_test(self):
@@ -225,8 +205,7 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
         # containing this pub key format
         priv_key_unc = "cUHcJUdzjNceFfUhLQtrrbjPtHo5NBP9ZofNxdSFnQqXijao761c"
         addr_unc = "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G"
-        uncomp_pubkey = "049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d4023"
-
+        uncomp_pubkey = "042a5bb6de7d7d39455c2ddce7a6c6e9149e9633985e2d384af0c2900814d8d6a6945bc79b67aafa2ef611f8c16df2fd6a2581ade8d82b5c9b5dd31490d2536b6d"
         # import the key in wallet so that we can sign
         mc_node.importprivkey(priv_key_unc)
 
@@ -567,6 +546,34 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
 
         # check the tx adding an ownership is included in the block and the receipt is succesful
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=mc_multisig_address_1)
+
+        # use an uncompressed pub key for generating a trivial multisig address with just this pub key, this is for testing
+        # we are able to validate the signature agaist it
+        addresses = []
+        mc_signatures = []
+        rpc_array_param = []
+
+        addresses.append(addr_unc)
+        rpc_array_param.append(uncomp_pubkey)
+
+        # Create the multi-sig address as combination of the single addresses created above
+        m_sig_obj = mc_node.createmultisig(1, rpc_array_param)
+        mc_multisig_address_3 = m_sig_obj["address"]
+        redeemScript_3 = m_sig_obj["redeemScript"]
+
+        mc_signatures.append(mc_node.signmessage(addresses[0], mc_multisig_address_3 + sc_address_checksum_fmt))
+
+        ret = sendMultisigKeysOwnership(sc_node,
+                                        sc_address=sc_address,
+                                        mc_addr=mc_multisig_address_3,
+                                        mc_signatures=mc_signatures,
+                                        redeemScript=redeemScript_3)
+
+        tx_hash = ret['transactionId']
+        self.sc_sync_all()
+
+        # check the tx adding an ownership is included in the block and the receipt is successful
+        forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=mc_multisig_address_3)
 
 
 if __name__ == "__main__":

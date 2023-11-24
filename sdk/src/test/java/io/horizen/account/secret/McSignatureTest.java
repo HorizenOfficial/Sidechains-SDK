@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
+import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import sparkz.util.encode.Base58;
@@ -92,9 +93,40 @@ public class McSignatureTest {
         byte[] mcPrivKey = Arrays.copyOfRange(decodedGrossMcPrivKey, 1, 33);
 
         System.out.println(BytesUtils.toHexString(mcPrivKey));
-        /*
-        c811a42bbcf269cb551fa517d90431cffc16703184ab1adce14c7671efc61704
-         */
+        assertEquals(
+                BytesUtils.toHexString(mcPrivKey),
+                "c811a42bbcf269cb551fa517d90431cffc16703184ab1adce14c7671efc61704"
+        );
+
+    }
+
+    @Test
+    public void mcPrivKeyToMcTaddr() {
+        String mcPrivKeyDump = "cUHcJUdzjNceFfUhLQtrrbjPtHo5NBP9ZofNxdSFnQqXijao761c";
+        byte[] decodedGrossMcPrivKey = Base58.decode(mcPrivKeyDump).get();
+        byte[] mcPrivKey = Arrays.copyOfRange(decodedGrossMcPrivKey, 1, 33);
+        byte[] uncompPubKeyBytes = Secp256k1.getPublicKey(mcPrivKey);
+        var ecParameters = SECNamedCurves.getByName("secp256k1");
+
+        // get the point on the curve corresponding to the uncompressed (0x04 prepended) mc pub key
+        ECPoint ecpoint = ecParameters.getCurve().decodePoint(Bytes.concat(BytesUtils.fromHexString("04"), uncompPubKeyBytes));
+        byte[] compPubKeyBytes = ecpoint.getEncoded(true);
+
+        byte[] mcPubkeyhash = Ripemd160Sha256Hash(compPubKeyBytes);
+
+        String computedTaddr = toHorizenPublicKeyAddress(
+                mcPubkeyhash,
+                new RegTestParams(null, null, null,
+                        null, null, 0,
+                        0, 0, null, null, null,
+                        0, null, null,
+                        null, null, null,
+                        null, null, false, null,
+                        null, 0,false, false,
+                        false, 0));
+
+        System.out.println(computedTaddr);
+        assertEquals(computedTaddr, "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G");
     }
 
     @Test
@@ -344,9 +376,9 @@ public class McSignatureTest {
         assertEquals(3, thresholdSignVal1);
         assertEquals(3, pk1.length());
 
-        scala.collection.Iterator iter1 = pk1.iterator();
+        Iterator<byte[]> iter1 = pk1.iterator();
         while (iter1.hasNext()) {
-            byte[] k = (byte[]) iter1.next();
+            byte[] k = iter1.next();
             assertEquals(0x21, k.length);
         }
     }

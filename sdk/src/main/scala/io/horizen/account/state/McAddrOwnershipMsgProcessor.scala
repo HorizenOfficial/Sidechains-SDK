@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.fork.ZenDAOFork
 import io.horizen.account.proof.SignatureSecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewMultisigOwnershipCmd, AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, checkMcRedeemScriptForMultisig, checkMultisigAddress, ecParameters, getMcHashedMsg, getMcSignature, getOwnershipId, verifySignaturesWithThreshold}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewMultisigOwnershipCmd, AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, checkMcRedeemScriptForMultisig, checkMultisigAddress, getMcSignature, getOwnershipId, isValidOwnershipSignature, verifySignaturesWithThreshold}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
 import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
@@ -139,28 +139,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     view.removeAccountStorageBytes(contractAddress, ownershipId)
   }
 
-  def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1): Boolean = {
-    // get a signature data obj for the verification
-    val v_barr = getUnsignedByteArray(mcSignature.getV)
-    val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
-    val s_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getS), SIGNATURE_RS_SIZE)
-
-    val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
-
-    // the sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
-    val hashedMsg = getMcHashedMsg(Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
-
-    // verify MC message signature
-    val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
-    val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
-    val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
-    val recCompressedPubKeyBytes = ecpointRec.getEncoded(true)
-    val mcPubkeyhash = Ripemd160Sha256Hash(recCompressedPubKeyBytes)
-    val computedTaddr = toHorizenPublicKeyAddress(mcPubkeyhash, networkParams)
-
-    computedTaddr.equals(mcTransparentAddress)
-  }
-
   def doAddNewOwnershipCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
 
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
@@ -195,7 +173,7 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
 
     // verify the ownership validating the signature
     val mcSignSecp256k1: SignatureSecp256k1 = getMcSignature(mcSignature)
-    if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1)) {
+    if (!isValidOwnershipSignature(msg.getFrom, mcTransparentAddress, mcSignSecp256k1, networkParams)) {
       val errMsg = s"Invalid mc signature $mcSignature: invocation = $invocation"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
@@ -677,7 +655,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     scriptHash.sameElements(computedScriptHash)
   }
 
-  def isValidOwnershipSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
+  def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1, networkParams: NetworkParams): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
     val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
@@ -686,15 +664,46 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
 
     // the sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
-    val hashedMsg = getMcHashedMsg(mcMultisigAddress + Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
+    val hashedMsg = getMcHashedMsg(Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
 
     // verify MC message signature
     val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
     val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
     val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
     val recCompressedPubKeyBytes = ecpointRec.getEncoded(true)
+    val mcPubkeyhash = Ripemd160Sha256Hash(recCompressedPubKeyBytes)
+    val computedTaddr = toHorizenPublicKeyAddress(mcPubkeyhash, networkParams)
 
-    pubKey.sameElements(recCompressedPubKeyBytes)
+    computedTaddr.equals(mcTransparentAddress)
+  }
+
+  def isValidOwnershipMultisigSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
+    // get a signature data obj for the verification
+    val v_barr = getUnsignedByteArray(mcSignature.getV)
+    val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
+    val s_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getS), SIGNATURE_RS_SIZE)
+
+    val signatureData = new Sign.SignatureData(v_barr, r_barr, s_barr)
+
+    // The sc address hex string used in the message to sign must have a checksum format (EIP-55: Mixed-case checksum address encoding)
+    // For a multisig signature we also prepend the string of the mcMultisigAddress in order to prevent the re-utilization of this signature
+    // for adding a standard ownership link with the owner transparent address
+    val hashedMsg = getMcHashedMsg(mcMultisigAddress + Keys.toChecksumAddress(Numeric.toHexString(scAddress.toBytes)))
+
+    // verify MC message signature
+    val recPubKey = Sign.signedMessageHashToKey(hashedMsg, signatureData)
+    val recUncompressedPubKeyBytes = Bytes.concat(Array[Byte](0x04), Numeric.toBytesPadded(recPubKey, PUBLIC_KEY_SIZE))
+
+    val pubKeyBytes = if (pubKey.head == 0x04) {
+      // the format of the input pubKey is uncompressed, no need to get the compressed format
+      recUncompressedPubKeyBytes
+    } else {
+      // get the compressed format
+      val ecpointRec = ecParameters.getCurve.decodePoint(recUncompressedPubKeyBytes)
+      ecpointRec.getEncoded(true)
+    }
+
+    pubKey.sameElements(pubKeyBytes)
   }
 
   def verifySignaturesWithThreshold(senderScAddress: Address, mcMultisigAddress: String, pubKeys: Seq[Array[Byte]], signatures: Seq[SignatureSecp256k1], thresholdSignatureValue: Int) : Int = {
@@ -709,7 +718,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
             pk_idx_pair => {
               if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
                 !verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
-                isValidOwnershipSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, signature) // current pk is verified against current signature
+                isValidOwnershipMultisigSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, signature) // current pk is verified against current signature
               ) {
                 score += 1
                 verifiedPubKeyIndexes = pk_idx_pair._2 +: verifiedPubKeyIndexes
@@ -724,7 +733,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
   }
 
   // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
-  def getMcHashedMsg(messageToSignString: String) = {
+  def getMcHashedMsg(messageToSignString: String): Array[Byte] = {
     // this is the magic string prepended in zend to the message to be signed*/
     val strMessageMagic = "Zcash Signed Message:\n"
     // compute the message to be signed. Similarly to what MC does, we must prepend the size of the byte buffers
