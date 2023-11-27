@@ -30,4 +30,4 @@ qa/.metals/metals.log
 .scalafmt.conf
 
 # Jacoco reports
-coverage-reports/sidechains-sdk-0.8.0-SNAPSHOT/sidechains-sdk-0.8.0-SNAPSHOT-jacoco-report/
+coverage-reports/**
