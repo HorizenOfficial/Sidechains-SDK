@@ -72,7 +72,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
         self.advance_to_epoch(35)
-        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)] * 3
+        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)] * 35
 
         # Connect and sync SC nodes
         logging.info("Connecting sc nodes...")
