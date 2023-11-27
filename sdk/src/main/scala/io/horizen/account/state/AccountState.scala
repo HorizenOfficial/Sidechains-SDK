@@ -387,7 +387,7 @@ class AccountState(
 
   override def getFeePaymentsInfo(withdrawalEpoch: Int, consensusEpochNumber: ConsensusEpochNumber, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
-    val mcForgerPoolRewards = stateMetadataStorage.getView.getMcForgerPoolRewards
+    val mcForgerPoolRewards = stateMetadataStorage.getMcForgerPoolRewards
 
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq, mcForgerPoolRewards)
   }

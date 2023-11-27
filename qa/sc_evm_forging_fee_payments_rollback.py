@@ -155,7 +155,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # assert Forger Pool balance is updated
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(forger_pool_balance, ft_pool_amount_wei)
+        assert_equal(ft_pool_amount_wei, forger_pool_balance)
 
         # end of the withdrawal epoch
         mc_block_last_of_the_epoch_to_revert = mc_node.generate(1)[0]
@@ -172,7 +172,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # assert Forger Pool balance is distributed
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(forger_pool_balance, 0)
+        assert_equal(0, forger_pool_balance)
 
         # regular fee includes 60 blocks before reaching the fork
         pool_fee = forgersPoolFee
@@ -227,7 +227,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # assert Forger Pool balance is distributed
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(forger_pool_balance, 0)
+        assert_equal(0, forger_pool_balance)
 
         # recalculate fee with new block count and pool amount
         pool_fee = forgersPoolFee

@@ -328,7 +328,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // Update Forger Block Counters
     forgerBlockCountersOpt.foreach(forgerBlockCounters => {
-        updateList.add(new JPair(getForgerBlockCountersKey, new ByteArrayWrapper(ForgerBlockCountersSerializer.toBytes(forgerBlockCounters))))
+      updateList.add(new JPair(getForgerBlockCountersKey, new ByteArrayWrapper(ForgerBlockCountersSerializer.toBytes(forgerBlockCounters))))
     })
 
     // Update MC Forger Pool Rewards
@@ -377,11 +377,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
 
     receiptsOpt.foreach(receipts => {
-        for (r <- receipts) {
-          val key = getReceiptKey(r.transactionHash)
-          val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
-          updateList.add(new JPair(key, value))
-        }
+      for (r <- receipts) {
+        val key = getReceiptKey(r.transactionHash)
+        val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
+        updateList.add(new JPair(key, value))
+      }
     })
 
     nextBaseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
@@ -426,7 +426,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     mcForgerPoolRewardsOpt = Some(forgerPoolRewards)
   }
 
-  def getForgerBlockCounters: Map[AddressProposition, Long] = {
+  override def getForgerBlockCounters: Map[AddressProposition, Long] = {
     forgerBlockCountersOpt.getOrElse(getForgerBlockCountersFromStorage)
   }
 
@@ -443,7 +443,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
   }
 
-  def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
+  override def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
     mcForgerPoolRewardsOpt.getOrElse(getMcForgerPoolRewardsFromStorage)
   }
 

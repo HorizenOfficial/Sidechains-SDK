@@ -72,14 +72,12 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
         self.advance_to_epoch(35)
-        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)] * 34
+        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)] * 3
 
         # Connect and sync SC nodes
         logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
-        # Set the genesis SC block fee info
-        sc_block_fee_info.append(BlockFeeInfo(1, 0, 0))
 
         # Do FT of some Zen to SC Node 2
         evm_address_sc_node_2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
@@ -318,8 +316,8 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # trigger cert submission
         # Generate 2 SC blocks on SC node and start them automatic cert creation.
-        generate_next_block(sc_node_1, "second node")  # 1 MC block to reach the end of WE
-        generate_next_block(sc_node_1, "second node")  # 1 MC block to trigger Submitter logic
+        generate_next_block(sc_node_1, "first node")  # 1 MC block to reach the end of WE
+        generate_next_block(sc_node_1, "first node")  # 1 MC block to trigger Submitter logic
 
         # Wait for Certificates appearance
         time.sleep(10)
@@ -357,7 +355,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # assert forger pool balance is 0 now, as the fees are distributed
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(forger_pool_balance, 0)
+        assert_equal(0, forger_pool_balance)
 
         fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
         assert_equal(node_1_fees, fee_payments_api_response[0]['value'])

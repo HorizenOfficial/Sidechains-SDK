@@ -111,11 +111,11 @@ class StateDbAccountStateView(
 
           val recipientAddress = recipientProposition.address()
 
-          if (isEoaAccount(recipientAddress) ) {
+          if (isEoaAccount(recipientAddress)) {
             // stateDb will implicitly create account if not existing yet
             log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
             addBalance(recipientAddress, value)
-          } else if (ftToSmartContractForkActive && isSmartContractAccount(recipientAddress)) {
+          } else if (ftToSmartContractForkActive) {
             log.debug(s"adding FT amount = $value to Smart Contract address=$recipientProposition")
             addBalance(recipientAddress, value)
           } else {
