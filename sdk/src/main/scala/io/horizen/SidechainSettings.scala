@@ -150,6 +150,10 @@ case class ApiRateLimiterSettings(
     throttlingThresholdMs: Int = 2000,
 ) extends SensitiveStringer
 
+case class HistorySettings(
+    resetModifiersStatus: Boolean = false,
+)
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -165,6 +169,7 @@ case class SidechainSettings(
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
     apiRateLimiter: ApiRateLimiterSettings,
+    history: HistorySettings
 ){
   require(sparkzSettings.network.handlingTransactionsEnabled || !forger.automaticForging,
     s"Node that does not support transaction handling cannot be a forger node: " +

@@ -173,7 +173,8 @@ abstract class AbstractSidechainApp
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
-        mcBlockRefDelay = mcBlockReferenceDelay
+        mcBlockRefDelay = mcBlockReferenceDelay,
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
       )
 
 
@@ -210,7 +211,8 @@ abstract class AbstractSidechainApp
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
-        mcBlockRefDelay = mcBlockReferenceDelay
+        mcBlockRefDelay = mcBlockReferenceDelay,
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
       )
 
 
@@ -247,7 +249,8 @@ abstract class AbstractSidechainApp
         isCSWEnabled = isCSWEnabled,
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
-        mcBlockRefDelay = mcBlockReferenceDelay
+        mcBlockRefDelay = mcBlockReferenceDelay,
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
       )
 
 
