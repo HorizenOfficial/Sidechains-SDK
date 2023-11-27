@@ -1,3 +1,5 @@
+**0.10.0**
+
 **0.9.0**
 1. libevm dependency updated to 1.0.0.
 2. Added support for EVM and native smart contracts interoperability.
