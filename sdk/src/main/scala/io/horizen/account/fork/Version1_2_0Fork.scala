@@ -2,7 +2,7 @@ package io.horizen.account.fork
 
 import io.horizen.fork.{ForkManager, OptionalSidechainFork}
 
-case class ForgerPoolRewardsFork(active : Boolean = false) extends OptionalSidechainFork
+case class Version1_2_0Fork(active : Boolean = false) extends OptionalSidechainFork
 
 /**
  * <p>This fork introduces 2 major changes:</p>
@@ -12,10 +12,10 @@ case class ForgerPoolRewardsFork(active : Boolean = false) extends OptionalSidec
  *      at the end of withdrawal epoch.</li>
  * </ul>
  */
-object ForgerPoolRewardsFork {
-  def get(epochNumber: Int): ForgerPoolRewardsFork = {
-    ForkManager.getOptionalSidechainFork[ForgerPoolRewardsFork](epochNumber).getOrElse(DefaultForgerPoolRewardsFork)
+object Version1_2_0Fork {
+  def get(epochNumber: Int): Version1_2_0Fork = {
+    ForkManager.getOptionalSidechainFork[Version1_2_0Fork](epochNumber).getOrElse(DefaultVersion1_2_0Fork)
   }
 
-  val DefaultForgerPoolRewardsFork: ForgerPoolRewardsFork = ForgerPoolRewardsFork()
+  val DefaultVersion1_2_0Fork: Version1_2_0Fork = Version1_2_0Fork()
 }

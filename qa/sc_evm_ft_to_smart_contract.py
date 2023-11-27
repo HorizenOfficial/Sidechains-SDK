@@ -16,10 +16,15 @@ Configuration:
     - 1 MC node
 
 Tests:
-    - Test 1 - FT to a native Smart Contract address
-    - Test 2 - FT to a deployed Smart Contract address
-    - Test 3 - negative - FT to a native Smart Contract address that cannot receive funds,
-               check that the burn address is updated
+    
+    - TEST 1 - before the fork
+        - 1.1 - ft to native SC - burned
+        - 1.2 - ft to deployed SC - burned
+        - 1.3 - FT to a random address - success
+    - TEST 2 - after the fork
+        - 2.1 - ft to native SC - success
+        - 2.2 - ft to deployed SC - success
+        - 2.3 - FT to a random address - success
 """
 
 
@@ -106,7 +111,7 @@ class SCEvmFtToNativeContract(AccountChainSetup):
         # TEST 2.2 - ft to deployed SC - success
         self.check_ft_to_smart_contract(smart_contract_address, True)
 
-        # TEST 1.3 - FT to a random address - success
+        # TEST 2.3 - FT to a random address - success
         self.check_ft_to_smart_contract("0000000000000000000012341234123412341234", True)
 
 

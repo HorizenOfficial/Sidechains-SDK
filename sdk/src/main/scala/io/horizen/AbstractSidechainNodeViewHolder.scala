@@ -481,7 +481,7 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
-  def getFeePaymentsInfo(state: MS, epochNumber: Int, consensusEpochNumber: ConsensusEpochNumber) : FPI
+  def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int, consensusEpochNumber: ConsensusEpochNumber) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
 
   override def postStop(): Unit = {

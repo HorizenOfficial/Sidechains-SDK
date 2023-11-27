@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
-import io.horizen.account.fork.ForgerPoolRewardsFork
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus

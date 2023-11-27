@@ -206,7 +206,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         # let assume a portion of the MC coinbase is sent to the SC as a contribution to the forger pool
         # this funds should not be distributed until fork happens at epoch 60
         ft_pool_amount = 0.5
-        ft_pool_amount_wei = convertZenToWei(0.5)
+        ft_pool_amount_wei = convertZenToWei(ft_pool_amount)
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
                                       format_eoa(FORGER_POOL_RECIPIENT_ADDRESS),
@@ -340,7 +340,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         mc_node.generate(self.withdrawalEpochLength)
         self.sc_sync_all()
-        generate_next_block(sc_node_2, "second node")
+        last_block_id = generate_next_block(sc_node_2, "second node")
         self.sc_sync_all()
         per_block_fee = convertZenToWei(ft_pool_amount) // 8
         node_1_fees = per_block_fee * 5
@@ -358,6 +358,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         # assert forger pool balance is 0 now, as the fees are distributed
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
         assert_equal(forger_pool_balance, 0)
+
+        fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
+        assert_equal(node_1_fees, fee_payments_api_response[0]['value'])
+        assert_equal(node_2_fees, fee_payments_api_response[1]['value'])
 
 
 if __name__ == "__main__":

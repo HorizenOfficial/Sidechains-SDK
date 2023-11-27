@@ -12,7 +12,7 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, A
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.{ForgerPoolRewardsFork, GasFeeFork}
+import io.horizen.account.fork.{Version1_2_0Fork, GasFeeFork}
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
@@ -132,7 +132,7 @@ class AccountState(
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
       var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
-      val ftToSmartContractForkActive = ForgerPoolRewardsFork.get(consensusEpochNumber).active
+      val ftToSmartContractForkActive = Version1_2_0Fork.get(consensusEpochNumber).active
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.addTopQualityCertificates(mcBlockRefData, mod.id)
         stateView.applyMainchainBlockReferenceData(mcBlockRefData, ftToSmartContractForkActive)
@@ -250,7 +250,7 @@ class AccountState(
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
     if (isWithdrawalEpochFinished) {
-      // current block fee info is already in the view therefore we pass None as second param
+      // current block fee info is already in the view therefore we pass None as third param
       val feePayments = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, consensusEpochNumber, None)
 
       log.info(s"End of Withdrawal Epoch ${modWithdrawalEpochInfo.epoch} reached, added ${feePayments.length} rewards with block ${mod.header.id}")
@@ -387,7 +387,7 @@ class AccountState(
 
   override def getFeePaymentsInfo(withdrawalEpoch: Int, consensusEpochNumber: ConsensusEpochNumber, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
-    val mcForgerPoolRewards = using(getView)(_.getMcForgerPoolRewards(consensusEpochNumber))
+    val mcForgerPoolRewards = stateMetadataStorage.getView.getMcForgerPoolRewards
 
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq, mcForgerPoolRewards)
   }

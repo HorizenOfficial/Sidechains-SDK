@@ -6,7 +6,7 @@ import io.horizen.account.block.AccountBlock.calculateReceiptRoot
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
-import io.horizen.account.fork.{ForgerPoolRewardsFork, GasFeeFork}
+import io.horizen.account.fork.{Version1_2_0Fork, GasFeeFork}
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proposition.AddressProposition
@@ -93,7 +93,7 @@ class AccountForgeMessageBuilder(
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData, ForgerPoolRewardsFork.get(blockContext.consensusEpochNumber).active)
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData, Version1_2_0Fork.get(blockContext.consensusEpochNumber).active)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()

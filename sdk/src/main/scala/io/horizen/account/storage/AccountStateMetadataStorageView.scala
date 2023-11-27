@@ -2,7 +2,7 @@ package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.ForgerBlockCountersSerializer
+import io.horizen.account.state.{ForgerBlockCountersSerializer, McForgerPoolRewardsSerializer}
 import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
@@ -45,6 +45,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var blockFeeInfoOpt: Option[AccountBlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var forgerBlockCountersOpt: Option[Map[AddressProposition, Long]] = None
+  private[horizen] var mcForgerPoolRewardsOpt: Option[Map[AddressProposition, BigInteger]] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
   //Contains the base fee to be used when forging the next block
@@ -272,6 +273,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     blockFeeInfoOpt = None
     consensusEpochOpt = None
     forgerBlockCountersOpt = None
+    mcForgerPoolRewardsOpt = None
     accountStateRootOpt = None
     receiptsOpt = None
     nextBaseFeeOpt = None
@@ -327,6 +329,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // Update Forger Block Counters
     forgerBlockCountersOpt.foreach(forgerBlockCounters => {
         updateList.add(new JPair(getForgerBlockCountersKey, new ByteArrayWrapper(ForgerBlockCountersSerializer.toBytes(forgerBlockCounters))))
+    })
+
+    // Update MC Forger Pool Rewards
+    mcForgerPoolRewardsOpt.foreach(forgerPoolRewards => {
+      updateList.add(new JPair(getMcForgerPoolRewardsKey, new ByteArrayWrapper(McForgerPoolRewardsSerializer.toBytes(forgerPoolRewards))))
     })
 
     updateList.add(new JPair(accountStateRootKey, new ByteArrayWrapper(accountStateRootOpt.get)))
@@ -415,6 +422,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     forgerBlockCountersOpt = Some(counters.updated(forgerPublicKey, existingCount + 1))
   }
 
+  def updateMcForgerPoolRewards(forgerPoolRewards: Map[AddressProposition, BigInteger]): Unit = {
+    mcForgerPoolRewardsOpt = Some(forgerPoolRewards)
+  }
+
   def getForgerBlockCounters: Map[AddressProposition, Long] = {
     forgerBlockCountersOpt.getOrElse(getForgerBlockCountersFromStorage)
   }
@@ -431,6 +442,24 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case _ => Map.empty[AddressProposition, Long]
     }
   }
+
+  def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
+    mcForgerPoolRewardsOpt.getOrElse(getMcForgerPoolRewardsFromStorage)
+  }
+
+  private[horizen] def getMcForgerPoolRewardsFromStorage: Map[AddressProposition, BigInteger] = {
+    storage.get(getMcForgerPoolRewardsKey).asScala match {
+      case Some(baw) =>
+        McForgerPoolRewardsSerializer.parseBytesTry(baw.data) match {
+          case Success(rewards) => rewards
+          case Failure(exception) =>
+            log.error("Error while mc forger pool rewards parsing.", exception)
+            Map.empty[AddressProposition, BigInteger]
+        }
+      case _ => Map.empty[AddressProposition, BigInteger]
+    }
+  }
+
 
   def resetForgerBlockCounters(): Unit = {
     forgerBlockCountersOpt = Some(Map.empty[AddressProposition, Long])
@@ -453,6 +482,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] val getForgerBlockCountersKey: ByteArrayWrapper = calculateKey("forgerBlockCounters".getBytes(StandardCharsets.UTF_8))
+
+  private[horizen] val getMcForgerPoolRewardsKey: ByteArrayWrapper = calculateKey("mcForgerPoolRewards".getBytes(StandardCharsets.UTF_8))
 
   private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 

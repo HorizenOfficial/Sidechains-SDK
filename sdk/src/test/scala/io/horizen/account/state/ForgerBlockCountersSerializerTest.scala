@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.account.fixtures.ForgerAccountFixture.getPrivateKeySecp256k1
+import io.horizen.account.proposition.AddressProposition
 import org.junit.Assert.{assertEquals, fail}
 import org.junit.Test
 
@@ -26,4 +27,17 @@ class ForgerBlockCountersSerializerTest {
       case Success(value) => assertEquals("Parsed value different from serialized value", value, forgerBlockCounters)
     }
   }
+
+  @Test
+  def serializationRoundTripTest_Empty(): Unit = {
+    val forgerBlockCounters = Map.empty[AddressProposition, Long]
+
+    val bytes = ForgerBlockCountersSerializer.toBytes(forgerBlockCounters)
+
+    ForgerBlockCountersSerializer.parseBytesTry(bytes) match {
+      case Failure(_) => fail("Parsing failed in ForgerBlockCountersSerializer")
+      case Success(value) => assertEquals("Parsed value different from serialized value", value, forgerBlockCounters)
+    }
+  }
+
 }

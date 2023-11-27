@@ -1,7 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
-import io.horizen.account.fork.ForgerPoolRewardsFork
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.storage.AccountStateMetadataStorageView
@@ -84,6 +84,7 @@ class AccountStateView(
   // useful in bootstrapping tool
   def getConsensusEpochNumberAsInt: Int = getConsensusEpochNumber.getOrElse(0)
 
+  // after this we always reset the counters
   override def getFeePaymentsInfo(
       withdrawalEpoch: Int,
       consensusEpochNumber: ConsensusEpochNumber,
@@ -92,13 +93,14 @@ class AccountStateView(
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
     val mcForgerPoolRewards = getMcForgerPoolRewards(consensusEpochNumber)
+    metadataStorageView.updateMcForgerPoolRewards(mcForgerPoolRewards)
     AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards)
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
   def getMcForgerPoolRewards(consensusEpochNumber: ConsensusEpochNumber): Map[AddressProposition, BigInteger] = {
-    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+    if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       val extraForgerReward = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
       if (extraForgerReward.signum() == 1) {
           val counters: Map[AddressProposition, Long] = getForgerBlockCounters
@@ -120,7 +122,7 @@ class AccountStateView(
   }
 
   def updateForgerBlockCounter(forgerPublicKey: AddressProposition, consensusEpochNumber: ConsensusEpochNumber): Unit = {
-    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+    if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       metadataStorageView.updateForgerBlockCounter(forgerPublicKey)
     }
   }
@@ -130,7 +132,7 @@ class AccountStateView(
   }
 
   def resetForgerPoolAndBlockCounters(consensusEpochNumber: ConsensusEpochNumber): Unit = {
-    if (ForgerPoolRewardsFork.get(consensusEpochNumber).active) {
+    if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       val forgerPoolBalance = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
       if (forgerPoolBalance.signum() == 1) {
         subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, forgerPoolBalance)

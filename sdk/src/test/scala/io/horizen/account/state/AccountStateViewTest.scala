@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import io.horizen.account.AccountFixture
 import io.horizen.account.fixtures.ForgerAccountFixture.getPrivateKeySecp256k1
-import io.horizen.account.fork.ForgerPoolRewardsFork
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils.WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
 import io.horizen.account.utils.{WellKnownAddresses, ZenWeiConverter}
@@ -41,7 +41,7 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
       override def getOptionalSidechainForks: util.List[utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = List(
         new utils.Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
           SidechainForkConsensusEpoch(35, 35, 35),
-          new ForgerPoolRewardsFork(true)
+          new Version1_2_0Fork(true)
         )
       ).asJava
     }

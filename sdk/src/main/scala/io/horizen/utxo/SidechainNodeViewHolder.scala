@@ -216,8 +216,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def getNodeView(): SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
 
-  override def getFeePaymentsInfo(state: MS, epochNumber: Int, consensusEpochNumber: ConsensusEpochNumber) : FPI = {
-    val feePayments = state.getFeePayments(epochNumber)
+  override def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int, consensusEpochNumber: ConsensusEpochNumber) : FPI = {
+    val feePayments = state.getFeePayments(withdrawalEpochNumber)
     SidechainFeePaymentsInfo(feePayments)
   }
 

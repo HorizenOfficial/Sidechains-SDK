@@ -197,11 +197,11 @@ class AccountFeePaymentsUtilsTest
     accountPaymentsList.foreach(
       payment => {
         if (payment.address.equals(forgerAddr_c))
-          assertEquals(payment.value, BigInteger.valueOf(230))
+          assertEquals(BigInteger.valueOf(230), payment.value)
         else if (payment.address.equals(forgerAddr_d))
-          assertEquals(payment.value, BigInteger.valueOf(10))
+          assertEquals(BigInteger.valueOf(10), payment.value)
         else
-          assertEquals(payment.value, BigInteger.valueOf(120))
+          assertEquals(BigInteger.valueOf(120), payment.value)
       }
     )
   }

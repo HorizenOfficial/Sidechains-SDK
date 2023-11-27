@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.horizen.account.block.AccountBlock;
 import io.horizen.account.block.AccountBlockHeader;
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion;
-import io.horizen.account.fork.ForgerPoolRewardsFork;
+import io.horizen.account.fork.Version1_2_0Fork;
 import io.horizen.account.fork.GasFeeFork;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.AccountStateView;
@@ -148,7 +148,7 @@ abstract public class AbstractAccountModel implements SidechainModel<AccountBloc
 
             // apply sc creation output, this will call forger stake msg processor
             for (MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-                view.applyMainchainBlockReferenceData(mcBlockRefData, ForgerPoolRewardsFork.get(0).active());
+                view.applyMainchainBlockReferenceData(mcBlockRefData, Version1_2_0Fork.get(0).active());
             }
 
             // get the state root after all state-changing operations
