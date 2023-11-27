@@ -76,9 +76,7 @@ class AccountStateTest
 
   @Test
   def feePayments(): Unit = {
-    val accountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
 
     // Test 1: No block fee info record in the storage
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
@@ -88,8 +86,7 @@ class AccountStateTest
 
     // Test 2: with single block fee info record in the storage
     Mockito.reset(metadataStorage)
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
     val blockFeeInfo1: AccountBlockFeeInfo =
       AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(1000).publicImage())
 
@@ -106,8 +103,7 @@ class AccountStateTest
 
     // Test 3: with multiple block fee info records for different forger keys in the storage
     Mockito.reset(metadataStorage)
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
     val blockFeeInfo2: AccountBlockFeeInfo =
       AccountBlockFeeInfo(BigInteger.valueOf(101), BigInteger.valueOf(51), getPrivateKeySecp256k1(1001).publicImage())
 
@@ -139,8 +135,7 @@ class AccountStateTest
 
     // Test 4: with multiple block fee info records for non-unique forger keys in the storage
     Mockito.reset(metadataStorage)
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
     // Block was created with the forger3 (second time in the epoch)
     val blockFeeInfo4: AccountBlockFeeInfo =
       AccountBlockFeeInfo(BigInteger.valueOf(50), BigInteger.valueOf(51), blockFeeInfo3.forgerAddress)
@@ -169,8 +164,7 @@ class AccountStateTest
     val bfi5 = AccountBlockFeeInfo(BigInteger.valueOf(200), BigInteger.valueOf(0), f2Addr)
 
     Mockito.reset(metadataStorage)
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map.empty)
     Mockito
       .when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(bfi1, bfi2, bfi3, bfi4, bfi5))
@@ -208,9 +202,7 @@ class AccountStateTest
 
     Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
       .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4))
-    val accountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-    Mockito.when(metadataStorage.getView).thenReturn(accountStateMetadataStorageView)
-    Mockito.when(accountStateMetadataStorageView.getMcForgerPoolRewards).thenAnswer(_ => Map(addr1 -> perBlockFee, addr2 -> perBlockFee, addr3 -> perBlockFee.add(perBlockFee)))
+    Mockito.when(metadataStorage.getMcForgerPoolRewards).thenAnswer(_ => Map(addr1 -> perBlockFee, addr2 -> perBlockFee, addr3 -> perBlockFee.add(perBlockFee)))
 
     val feePayments = state.getFeePaymentsInfo(0, intToConsensusEpochNumber(0))
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
