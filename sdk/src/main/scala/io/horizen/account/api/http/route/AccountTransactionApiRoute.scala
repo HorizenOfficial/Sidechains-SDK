@@ -71,7 +71,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
-      invokeProxyCall ~ invokeProxyStaticCall  ~ sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~ getKeysOwnerScAddresses ~ sendMultisigKeysOwnership
+      invokeProxyCall ~ invokeProxyStaticCall  ~ sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~
+      getKeysOwnerScAddresses ~ sendMultisigKeysOwnership
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -1200,6 +1201,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         (transactionPathPrefix, "createSmartContract", error),
         (transactionPathPrefix, "openForgerList", error),
         (transactionPathPrefix, "createKeyRotationTransaction", error),
+        (transactionPathPrefix, "sendKeysOwnership", error),
+        (transactionPathPrefix, "removeKeysOwnership", error),
+        (transactionPathPrefix, "sendMultisigKeysOwnership", error),
       ) ++ proxyRoutes
     } else
       proxyRoutes

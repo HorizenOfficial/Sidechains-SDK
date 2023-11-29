@@ -217,7 +217,7 @@ public final class BytesUtils {
     public static final byte OP_CHECKMULTISIG = (byte) 0xAE;
     public static final byte OP_1 = (byte) 0x51;
     public static final byte OP_16 = (byte) 0x60;
-    public static final byte OFFSET_FOR_OP_N = (byte) 0x50; // in MC it is computred as (OP_1 -1) since 0x50 is a reserved OP
+    public static final byte OFFSET_FOR_OP_N = (byte) 0x50; // in MC it is computed as (OP_1 -1) since 0x50 is a reserved OP
 
     public static byte[] fromHorizenMcTransparentAddress(String address, NetworkParams params) {
         if(address.length() != HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)

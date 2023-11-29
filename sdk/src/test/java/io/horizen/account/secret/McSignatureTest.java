@@ -126,7 +126,7 @@ public class McSignatureTest {
                         false, 0));
 
         System.out.println(computedTaddr);
-        assertEquals(computedTaddr, "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G");
+        assertEquals("ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G", computedTaddr);
     }
 
     @Test
@@ -515,5 +515,24 @@ public class McSignatureTest {
             System.out.println(t);
             fail("IllegalArgumentException expected");
         }
+
+        // invalid empty script
+        redeedmScript = "";
+        try {
+            McAddrOwnershipMsgProcessor.checkMcRedeemScriptForMultisig(redeedmScript);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e){
+            //  expected
+            System.out.println(e);
+            assertTrue(e.getMessage().contains("Invalid number of bytes" ));
+        } catch (Throwable t) {
+            System.out.println(t);
+            fail("IllegalArgumentException expected");
+        }
+
+        var qqq = McAddrOwnershipMsgProcessor.cachedMagicBytes();
+        var www = McAddrOwnershipMsgProcessor.cachedMagicBytes();
+        assertArrayEquals(qqq, www);
+
     }
 }

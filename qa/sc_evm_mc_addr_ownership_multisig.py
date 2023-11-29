@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import pprint
 from decimal import Decimal
 
@@ -8,13 +9,15 @@ from eth_utils import add_0x_prefix, remove_0x_prefix, event_signature_to_log_to
     function_signature_to_4byte_selector, to_checksum_address
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import format_evm, estimate_gas
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import format_evm, estimate_gas, format_eoa
 from SidechainTestFramework.account.httpCalls.transaction.getKeysOwnership import getKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.removeKeysOwnership import removeKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership import sendKeysOwnership
 from SidechainTestFramework.account.httpCalls.transaction.sendMultisigKeysOwnership import sendMultisigKeysOwnership
+from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
-    ZENDAO_FORK_EPOCH
+    ZENDAO_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
@@ -119,7 +122,7 @@ def extract_sc_associations_list(abi_return_value_bytes):
 
 class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
     def __init__(self):
-        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * ZENDAO_FORK_EPOCH,
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
                          number_of_sidechain_nodes=2)
 
     def run_test(self):
@@ -574,6 +577,135 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
 
         # check the tx adding an ownership is included in the block and the receipt is successful
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=mc_multisig_address_3)
+
+
+        #######################################################################################################
+        # Interoperability test with an EVM smart contract calling MC address ownership native contract
+        #######################################################################################################
+        # reach the Interoperability fork
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        # Create and deploy evm proxy contract
+        # Create a new sc address to be used for the interoperability tests
+        evm_address_interop = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+
+        new_ft_amount_in_zen = Decimal('50.0')
+
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      evm_address_interop,
+                                      new_ft_amount_in_zen,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=True)
+
+        generate_next_block(sc_node, "first node")
+
+        # Deploy proxy contract
+        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop)
+        # Create native contract interface, useful encoding/decoding params. Note this doesn't deploy a contract.
+        native_contract = SmartContract("McAddrOwnership")
+
+        # Test 'sendMultisigKeysOwnership(string,string,string[])'
+        # For this function I need a signature. Because I don't have a way to create it in this test, I'll create a
+        # non-executable transaction using the HTTP API and steal its data.
+        # TODO as soon as the code is merged from dev, test also the new fork before calling teh multisig func
+
+        addresses = []
+        addr_objects = []
+        mc_signatures_interop = []
+        rpc_array_param = []
+        NUM_OF_ADDR_IN_MULTISIG = 3
+        THRESHOLD_SIGNATURE_VALUE = 2
+        for i in range(NUM_OF_ADDR_IN_MULTISIG):
+            addresses.append(mc_node.getnewaddress())
+            addr_objects.append(mc_node.validateaddress(addresses[i]))
+            rpc_array_param.append(addr_objects[i]['pubkey'])
+        m_sig_obj = mc_node.createmultisig(THRESHOLD_SIGNATURE_VALUE, rpc_array_param)
+        mc_multisig_address_interop = m_sig_obj["address"]
+        redeemScript_interop = m_sig_obj["redeemScript"]
+        sc_address_checksum_fmt = to_checksum_address(evm_address_interop)
+        for i in range(NUM_OF_ADDR_IN_MULTISIG):
+            if i <= THRESHOLD_SIGNATURE_VALUE:
+                mc_signatures_interop.append(mc_node.signmessage(addresses[i], mc_multisig_address_interop + sc_address_checksum_fmt))
+
+        sendMultisigKeysOwnership(sc_node, nonce=10,
+                                sc_address=evm_address_interop,
+                                mc_addr=mc_multisig_address_interop,
+                                mc_signatures=mc_signatures_interop,
+                                redeemScript=redeemScript_interop)
+
+        # Get the transaction from the mempool
+        response = allTransactions(sc_node, True)
+        logging.info("response {}".format(response))
+        native_input = response['transactions'][0]['data']
+
+        # Estimate gas. The result will be compared with the actual used gas
+        exp_gas = proxy_contract.estimate_gas(evm_address_interop, nonce=None, target_addr=native_contract_address,
+                                              value=0, data=native_input)
+        assert_true("result" in exp_gas)
+
+        # Check callTrace
+        trace_response = proxy_contract.do_call_trace(evm_address_interop, nonce=None, target_addr=native_contract_address,
+                                              value=0, data=native_input)
+
+        logging.info("trace_result: {}".format(trace_response))
+        assert_false("error" in trace_response)
+        assert_true("result" in trace_response)
+        trace_result = trace_response["result"]
+
+        assert_equal(proxy_contract.contract_address.lower(), trace_result["to"].lower())
+        assert_equal(1, len(trace_result["calls"]))
+        native_call = trace_result["calls"][0]
+        assert_equal("CALL", native_call["type"])
+        assert_equal(proxy_contract.contract_address.lower(), native_call["from"].lower())
+        assert_equal("0x" + native_contract_address, native_call["to"])
+        assert_true(int(native_call["gas"], 16) > 0)
+        assert_true(int(native_call["gasUsed"], 16) > 0)
+        assert_equal("0x" + native_input, native_call["input"])
+        assert_false("calls" in native_call)
+
+        tx_hash = proxy_contract.call_transaction(evm_address_interop, nonce=None, target_addr=native_contract_address,
+                                              value=0, data=native_input)
+        forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=evm_address_interop, mc_addr=mc_multisig_address_interop)
+
+        # Compare estimated gas with actual used gas. They are not equal because, during the tx execution, more gas than
+        # actually needed is removed from the gas pool and then refunded. This causes the gas estimation algorithm to
+        # overestimate the gas.
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+
+        gas_used = int(receipt['result']['gasUsed'], 16)
+        estimated_gas = int(exp_gas['result'], 16)
+        assert_true(estimated_gas >= gas_used, "Wrong estimated gas")
+
+        gas_used_tracer = int(trace_result['gasUsed'], 16)
+        assert_equal(gas_used, gas_used_tracer, "Wrong gas")
+
+        # Check traceTransaction
+        trace_response = sc_node.rpc_debug_traceTransaction(tx_hash, {"tracer": "callTracer"})
+        logging.info("rpc_debug_traceTransaction {}".format(trace_response))
+
+        assert_false("error" in trace_response)
+        assert_true("result" in trace_response)
+        trace_result = trace_response["result"]
+
+        assert_equal(proxy_contract.contract_address.lower(), trace_result["to"].lower())
+        assert_equal(1, len(trace_result["calls"]))
+        native_call = trace_result["calls"][0]
+        assert_equal("CALL", native_call["type"])
+        assert_equal(proxy_contract.contract_address.lower(), native_call["from"].lower())
+        assert_equal("0x" + native_contract_address, native_call["to"])
+        assert_true(int(native_call["gas"], 16) > 0)
+        assert_true(int(native_call["gasUsed"], 16) > 0)
+        assert_equal("0x" + native_input, native_call["input"])
+        assert_false("calls" in native_call)
+
+        gas_used_tracer = int(trace_result['gasUsed'], 16)
+        assert_equal(gas_used, gas_used_tracer, "Wrong gas")
+
 
 
 if __name__ == "__main__":

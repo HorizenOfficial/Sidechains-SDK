@@ -541,7 +541,43 @@ class McAddrOwnershipMsgProcessorMultisigTest
       ex = intercept[ExecutionRevertedException] {
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
-      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 1"))
+      assertTrue(ex.getMessage.contains("Signatures are not enough. Input has 1, needs at least 2"))
+
+
+      // Use a list of signatures which does not contain the expected minimum value of valid ones
+      val seqTest2 = listOfMcMultisigAddrSign_1.take(1) ++ listOfMcMultisigAddrSign_2
+      cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1, seqTest2)
+      data = cmdInput.encode()
+      msgBad = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewMultisigOwnershipCmd) ++ data,
+        randomNonce,
+        scAddressObj1
+      )
+      ex = intercept[ExecutionRevertedException] {
+        withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
+      }
+      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 1, need: 2"))
+
+
+      // Use a list of signatures which does not contain the expected minimum value of valid ones
+      val seqTest3 = listOfMcMultisigAddrSign_2.take(1) ++ listOfMcMultisigAddrSign_1.take(1)
+      cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1, seqTest3)
+      data = cmdInput.encode()
+      msgBad = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewMultisigOwnershipCmd) ++ data,
+        randomNonce,
+        scAddressObj1
+      )
+      ex = intercept[ExecutionRevertedException] {
+        withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
+      }
+      // in this case we are giving up checking signatures because after the first fails we can not
+      // reach the threshold with the second one even if it is valid
+      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 0, need: 2"))
 
       // Use an illegal redeemScript
       cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1.replace("ae", "dd"), listOfMcMultisigAddrSign_1)
@@ -1097,5 +1133,6 @@ class McAddrOwnershipMsgProcessorMultisigTest
 
     computedTaddr.equals(mcTransparentAddress)
   }
+
 
 }

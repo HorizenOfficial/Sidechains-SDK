@@ -616,6 +616,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             print("Expected exception thrown: {}".format(err))
             # error is raised from API since the address has no balance
             assert_true("reverted" in str(err))
+            # this is the ascii hex for the error message "should work"
+            assert_true("73686f756c6420776f726b" in str(err))
+
 
 
         # reach the Interoperability fork

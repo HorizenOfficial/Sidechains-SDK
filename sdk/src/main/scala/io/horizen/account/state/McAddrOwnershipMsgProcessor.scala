@@ -140,14 +140,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
   }
 
   def doAddNewOwnershipCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
-
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-    if (msg.getNonce == null) {
-      val errMsg = s"Call must include a nonce: msg = $msg"
-      log.warn(errMsg)
-      throw new ExecutionRevertedException(errMsg)
-    }
-
     // check that invocation.value is zero
     if (invocation.value.signum() != 0) {
       val errMsg = s"Value must be zero: invocation = $invocation"
@@ -204,14 +196,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
 
 
   def doAddNewMultisigOwnershipCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
-
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-    if (msg.getNonce == null) {
-      val errMsg = s"Call must include a nonce: msg = $msg"
-      log.warn(errMsg)
-      throw new ExecutionRevertedException(errMsg)
-    }
-
     // check that invocation.value is zero
     if (invocation.value.signum() != 0) {
       val errMsg = s"Value must be zero: invocation = $invocation"
@@ -232,8 +216,8 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
 
     val cmdInput = AddNewMultisigOwnershipCmdInputDecoder.decode(inputParams)
     val mcMultisigAddress = cmdInput.mcTransparentAddress
-    val mcSignatures = cmdInput.mcSignatures
     val redeemScript = cmdInput.redeemScript
+    val mcSignatures = cmdInput.mcSignatures
 
     // get threshold signature value and all pub keys from redeemScript.
     // If any semantic error is detected while parsing an exception is raised
@@ -249,6 +233,13 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     val thresholdSignatureValue = retValue._1
     val pubKeys = retValue._2
 
+    // check we have enough signatures for attempting the validation
+    if(mcSignatures.size < thresholdSignatureValue) {
+      val errMsg = s"Signatures are not enough. Input has ${mcSignatures.size}, needs at least $thresholdSignatureValue"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
+    }
+
     // check validity of the addr/redeemscript pair
     if(!checkMultisigAddress(mcMultisigAddress, redeemScript, networkParams)) {
       val errMsg = s"Could not verify multisig address against redeemScript"
@@ -259,7 +250,7 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     // compute ownershipId
     val newOwnershipId = getOwnershipId(mcMultisigAddress)
 
-    // get the signatures, it might trow upon errors
+    // get the signatures, it might throw upon errors
     val signatures: Seq[SignatureSecp256k1] = mcSignatures.map( s => getMcSignature(s))
 
     // verify the minimum number of signatures required
@@ -500,7 +491,13 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
       throw new ExecutionRevertedException(s"No data in invocation = $invocation")
 
     getFunctionSignature(invocation.input) match {
-      case AddNewMultisigOwnershipCmd => doAddNewMultisigOwnershipCmd(invocation, gasView, context.msg)
+      case AddNewMultisigOwnershipCmd =>
+        if (isMultisigForkActive(context.blockContext.consensusEpochNumber)) {
+          doAddNewMultisigOwnershipCmd(invocation, gasView, context.msg)
+        } else {
+          log.warn("fork not active, can not handle multisig ownership cmd yet")
+          throw new ExecutionRevertedException(s"op code not supported: $AddNewMultisigOwnershipCmd")
+        }
       case AddNewOwnershipCmd => doAddNewOwnershipCmd(invocation, gasView, context.msg)
       case RemoveOwnershipCmd => doRemoveOwnershipCmd(invocation, gasView, context.msg)
       case GetListOfAllOwnershipsCmd => doGetListOfAllOwnershipsCmd(invocation, gasView)
@@ -510,6 +507,21 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
+
+  def isMultisigForkActive(consensusEpochNumber: Int): Boolean = {
+    true
+    /** TODO uncomment once dev is merged
+    val forkIsActive = Version1_2_0Fork.get(consensusEpochNumber).active
+    val strVal = if (forkIsActive) {
+      "YES"
+    } else {
+      "NO"
+    }
+    log.trace(s"Epoch $consensusEpochNumber: Version1_2_0Fork fork active=$strVal")
+    forkIsActive
+    */
+  }
+
 
   override def initDone(view: BaseAccountStateView): Boolean = {
     // depending on whether this is a warm or a cold access, this read op costs WarmStorageReadCostEIP2929 or ColdSloadCostEIP2929
@@ -584,6 +596,9 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     val redeemScriptBytes = BytesUtils.fromHexString(redeemScript)
     val redeemScriptLen = redeemScriptBytes.length
 
+    // check we have the minimum number of bytes for parsing
+    require(redeemScriptLen > 2, s"Invalid number of bytes $redeemScriptLen in redeemScript")
+
     // check we have a trailing OP_CHECKMULTISIG op code (0xAE) in the redeem script because we support only this type as of now
     require(redeemScriptBytes(redeemScriptLen-1) == BytesUtils.OP_CHECKMULTISIG, s"Tail of redeemScript should be OP_CHECKMULTSIG (0x${OP_CHECKMULTISIG.formatted("%02X")})")
 
@@ -612,7 +627,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
         require(
           nextPubKeySize == BytesUtils.HORIZEN_COMPRESSED_PUBLIC_KEY_LENGTH ||
           nextPubKeySize == BytesUtils.HORIZEN_UNCOMPRESSED_PUBLIC_KEY_LENGTH,
-          s"Invalid compressed/uncompressed pub key length $nextPubKeySize red in redeemScript for pub key $n")
+          s"Invalid compressed/uncompressed pub key length $nextPubKeySize read in redeemScript for pub key $n")
 
         // read the pub key and advance pos
         val pubKey = redeemScriptBytes.slice(pos, pos+nextPubKeySize)
@@ -643,16 +658,16 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
   }
 
   def checkMultisigAddress(mcMultisigAddress: String, redeemScript: String, params: NetworkParams) : Boolean = {
-    val scriptHash = try {
-      checkMcAddresses(mcMultisigAddress, params)
+    try {
+      val scriptHash = checkMcAddresses(mcMultisigAddress, params)
+      val computedScriptHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(redeemScript))
+      scriptHash.sameElements(computedScriptHash)
     } catch {
       case e: Throwable =>
         val msgStr = s"invalid mc address: ${e.getMessage}"
         log.warn(msgStr)
-        NULL_HEX_STRING_32
+        false
     }
-    val computedScriptHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(redeemScript))
-    scriptHash.sameElements(computedScriptHash)
   }
 
   def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1, networkParams: NetworkParams): Boolean = {
@@ -708,12 +723,18 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
 
   def verifySignaturesWithThreshold(senderScAddress: Address, mcMultisigAddress: String, pubKeys: Seq[Array[Byte]], signatures: Seq[SignatureSecp256k1], thresholdSignatureValue: Int) : Int = {
     var score = 0
+    var remainingSignatures = signatures.size
     var verifiedPubKeyIndexes = Seq[Int]()
     val pubKeyIndexPairs = pubKeys.zipWithIndex
 
     signatures.foreach {
       signature => {
         breakable {
+          if (remainingSignatures + score < thresholdSignatureValue)
+          {
+            log.warn(s"Can not reach the minimum number of valid signatures. Number of signatures: ${signatures.size}, score: $score, remaining: $remainingSignatures, thresholdValue: $thresholdSignatureValue")
+            break
+          }
           pubKeyIndexPairs.foreach {
             pk_idx_pair => {
               if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
@@ -722,30 +743,36 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
               ) {
                 score += 1
                 verifiedPubKeyIndexes = pk_idx_pair._2 +: verifiedPubKeyIndexes
+                log.debug(s"Signature ${signatures.size - remainingSignatures} verified for pubkey ${BytesUtils.toHexString(pk_idx_pair._1)}")
                 break
               }
             }
           }
         }
       }
+      remainingSignatures -= 1
     }
     score
   }
 
   // this reproduces the MC way of getting a message for signing it via rpc signmessage cmd
   def getMcHashedMsg(messageToSignString: String): Array[Byte] = {
-    // this is the magic string prepended in zend to the message to be signed*/
-    val strMessageMagic = "Zcash Signed Message:\n"
-    // compute the message to be signed. Similarly to what MC does, we must prepend the size of the byte buffers
-    // we are using
-    val messageMagicBytes = strMessageMagic.getBytes(StandardCharsets.UTF_8)
-    val mmb2 = Bytes.concat(Array[Byte](messageMagicBytes.length.asInstanceOf[Byte]), messageMagicBytes)
-
-    // TODO: currently size < 256 which is ok for a sc address; make it generic with int_to_bytes
     val messageToSignBytes = messageToSignString.getBytes(StandardCharsets.UTF_8)
-    val mts2 = Bytes.concat(Array[Byte](messageToSignBytes.length.asInstanceOf[Byte]), messageToSignBytes)
+    // TODO: currently the size of the message must fit in a byte, that means < 256, which is ok for
+    //  both a sc_addr and mc_addr + sc_addr; make it generic with int_to_bytes
+    require(messageToSignBytes.length <= 256, s"Too long a message to sign: ${messageToSignBytes.length} > 256")
+    val mts = Bytes.concat(Array[Byte](messageToSignBytes.length.asInstanceOf[Byte]), messageToSignBytes)
     // hash the message as MC does (double sha256)
-    doubleSHA256Hash(Bytes.concat(mmb2, mts2))
+    doubleSHA256Hash(Bytes.concat(cachedMagicBytes, mts))
   }
+
+  private def getMagicBytes: Array[Byte] = {
+      // this is the magic string prepended in zend to the message to be signed
+      val strMessageMagic = "Zcash Signed Message:\n"
+      // similarly to what MC does, we must prepend the size of the byte buffers we are using
+      val messageMagicBytes = strMessageMagic.getBytes(StandardCharsets.UTF_8)
+      Bytes.concat(Array[Byte](messageMagicBytes.length.asInstanceOf[Byte]), messageMagicBytes)
+  }
+  lazy val cachedMagicBytes: Array[Byte] = getMagicBytes
 }
 

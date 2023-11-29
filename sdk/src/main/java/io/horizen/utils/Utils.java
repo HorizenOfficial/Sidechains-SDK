@@ -1,5 +1,6 @@
 package io.horizen.utils;
 
+import org.apache.logging.log4j.LogManager;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import sparkz.crypto.hash.Blake2b256;
 import java.math.BigInteger;
@@ -7,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.util.Random;
+import java.util.logging.Logger;
 
 public final class Utils
 {
@@ -30,6 +32,7 @@ public final class Utils
             byte[] first = digest.digest();
             return digest.digest(first);
         } catch (NoSuchAlgorithmException e) {
+            LogManager.getLogger().error("Unexpected exception: ", e);
             throw new RuntimeException(e);  // Cannot happen.
         }
     }
@@ -43,9 +46,9 @@ public final class Utils
             byte[] first = digest1.digest();
 
             digest2.update(first, 0, first.length);
-            byte[] second = digest2.digest();
-            return second;
+            return digest2.digest();
         } catch (NoSuchAlgorithmException e) {
+            LogManager.getLogger().error("Unexpected exception: ", e);
             throw new RuntimeException(e);  // Cannot happen.
         }
     }
@@ -54,9 +57,9 @@ public final class Utils
         try {
             MessageDigest digest = MessageDigest.getInstance("RIPEMD160");
             digest.update(bytes, 0, bytes.length);
-            byte[] result = digest.digest();
-            return result;
+            return digest.digest();
         } catch (NoSuchAlgorithmException e) {
+            LogManager.getLogger().error("Unexpected exception: ", e);
             throw new RuntimeException(e);  // Cannot happen.
         }
     }
@@ -69,6 +72,7 @@ public final class Utils
             byte[] first = digest.digest();
             return digest.digest(first);
         } catch (NoSuchAlgorithmException e) {
+            LogManager.getLogger().error("Unexpected exception: ", e);
             throw new RuntimeException(e);  // Cannot happen.
         }
     }
