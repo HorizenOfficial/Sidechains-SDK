@@ -266,7 +266,7 @@ class SCEvmDebugMethods(AccountChainSetup):
 
         assert_true("calls" not in trace_result)
         assert_equal("CREATE", trace_result["type"])
-        assert_equal(0, int(trace_result["gas"], 16))  # it is the input gas without the intrinsic gas
+        assert_equal("0x15864", trace_result["gas"], )  # it is the input gas without the intrinsic gas
         assert_equal("0x15864", trace_result["gasUsed"])
         assert_equal(trace_call_args['input'], trace_result["input"])
         assert_true("output" not in trace_result)

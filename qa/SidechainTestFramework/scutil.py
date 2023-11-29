@@ -189,9 +189,9 @@ def launch_bootstrap_tool(command_name, json_parameters, model):
     try:
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
-    except ValueError:
-        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
-                     .format(command_name, json_param, sc_bootstrap_output.decode()))
+    except ValueError as e:
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\nException: {}\n"
+                     .format(command_name, json_param, sc_bootstrap_output.decode(), str(e)))
         raise Exception("Bootstrap tool error occurred")
 
 

@@ -1,6 +1,6 @@
 package io.horizen.account.state
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIEncodable
 import io.horizen.account.abi.ABIUtil.{getArgumentsFromData, getFunctionSignature}
 import io.horizen.account.state.ContractInteropTestBase._
@@ -11,14 +11,14 @@ import io.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, fail}
 import org.junit.Test
 import org.scalatest.Assertions.intercept
-import org.web3j.abi.{TypeEncoder, datatypes}
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.abi.datatypes.{DynamicBytes, DynamicStruct, Type, Address => AbiAddress}
+import org.web3j.abi.{TypeEncoder, datatypes}
 import sparkz.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
 class ContractInteropCallTest extends ContractInteropTestBase {
   override val processorToTest: NativeSmartContractMsgProcessor = NativeTestContract
@@ -186,36 +186,34 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     var traceResult = tracer.getResult.result
 
-    // The gasUsed is empty since the traceTxStart and txTxEnd are not called in this unit test
+    // The gas and gasUsed fields are empty since the traceTxStart and txTxEnd are not called in this unit test
     // check tracer output
-    val initialGasHexString = gasLimitHexString
     assertJsonEquals(
       s"""{
         "type": "CALL",
         "from": "$origin",
         "to": "${NativeTestContract.contractAddress}",
-        "gas": "$initialGasHexString",
-        "gasUsed": "",
+        "gas": "0x0",
+        "gasUsed": "0x0",
         "input": "0x${BytesUtils.toHexString(inputRetrieveRequest)}",
         "value": "0x0",
         "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}",
         "calls": [{
-          "type": "STATICCALL",
           "from": "${NativeTestContract.contractAddress}",
-          "to": "$storageContractAddress",
           "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
           "gasUsed": "0xf6",
+          "to": "$storageContractAddress",
           "input": "0x$STORAGE_RETRIEVE_ABI_ID",
-          "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}"
-        }, {
-          "type" : "CALL",
+          "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}",
+          "type": "STATICCALL"
+       }, {
+          "gas" : "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
+          "gasUsed" : "0x1a4",
           "from" : "${NativeTestContract.contractAddress}",
           "to" : "$storageContractAddress",
           "value" : "0x0",
-          "gas" : "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
-          "gasUsed" : "0x1a4",
           "input" : "0x$STORAGE_INC_ABI_ID",
-          "output" : "0x"
+          "type" : "CALL"
         } ]
       }""",
       traceResult
@@ -262,8 +260,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
         "type": "CALL",
         "from": "$origin",
         "to": "${NativeTestContract.contractAddress}",
-        "gas": "$initialGasHexString",
-        "gasUsed": "",
+        "gas": "0x0",
+        "gasUsed": "0x0",
         "input": "0x${BytesUtils.toHexString(inputIncRequest)}",
         "error": "$expectedErrorMsg",
         "value": "0x0",
@@ -313,38 +311,37 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     "type": "CALL",
     "from": "$origin",
     "to": "${NativeTestContract.contractAddress}",
-    "gas": "$initialGasHexString",
-    "gasUsed": "",
+    "gas": "0x0",
+    "gasUsed": "0x0",
     "input": "0x${BytesUtils.toHexString(inputIncWithTryRequest)}",
     "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}",
     "value": "0x0",
     "calls": [{
-      "type": "STATICCALL",
       "from": "${NativeTestContract.contractAddress}",
-      "to": "$storageContractAddress",
       "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
       "gasUsed": "$failedSubCallGasHexString",
+      "to": "$storageContractAddress",
       "input": "0x$STORAGE_INC_ABI_ID",
-      "error": "$expectedErrorMsg"
+      "error": "$expectedErrorMsg",
+      "type": "STATICCALL"
     },
     {
-      "type" : "CALL",
       "from": "${NativeTestContract.contractAddress}",
-      "to": "$storageContractAddress",
-      "value" : "0x0",
       "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
       "gasUsed" : "0x1a4",
+      "to": "$storageContractAddress",
+      "value" : "0x0",
       "input" : "0x$STORAGE_INC_ABI_ID",
-      "output" : "0x"
+      "type" : "CALL"
     },
     {
-      "type" : "STATICCALL",
       "from": "${NativeTestContract.contractAddress}",
-      "to": "$storageContractAddress",
       "gas": "${NativeTestContract.SUB_CALLS_GAS_HEX_STRING}",
       "gasUsed" : "0xf6",
+      "to": "$storageContractAddress",
       "input" : "0x$STORAGE_RETRIEVE_ABI_ID",
-      "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}"
+      "output": "0x${BytesUtils.toHexString(currentExpectedValueBytes)}",
+      "type" : "STATICCALL"
     } ]
   }""",
       traceResult
@@ -394,8 +391,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
                     "type": "CALL",
                     "from": "$origin",
                     "to": "$nativeCallerAddress",
-                    "gas": "$gasLimitHexString",
-                    "gasUsed": "",
+                    "gas": "0x0",
+                    "gasUsed": "0x0",
                     "input": "0x${BytesUtils.toHexString(retrieveInput)}",
                     "value": "0x0",
                     "error": "execution reverted",
@@ -450,8 +447,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     "type": "CALL",
     "from": "$origin",
     "to": "$nativeCallerAddress",
-    "gas": "$gasLimitHexString",
-    "gasUsed": "",
+    "gas": "0x0",
+    "gasUsed": "0x0",
     "input": "0x${BytesUtils.toHexString(retrieveInput)}",
     "value": "0x0",
     "output": "$expectedTxOutputHex",
@@ -522,8 +519,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
           "type": "CALL",
           "from": "$origin",
           "to": "$nativeCallerAddress",
-          "gas": "$gasLimitHexString",
-          "gasUsed": "",
+          "gas": "0x0",
+          "gasUsed": "0x0",
           "input": "0x${BytesUtils.toHexString(readwriteInput)}",
           "value": "0x0",
           "output": "$expectedTxOutputHex",
@@ -583,8 +580,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
                 "type": "CALL",
                 "from": "$origin",
                 "to": "$nativeCallerAddress",
-                "gas": "$gasLimitHexString",
-                "gasUsed": "",
+                "gas": "0x0",
+                "gasUsed": "0x0",
                 "input": "0x${BytesUtils.toHexString(readwriteContractCallInput)}",
                 "value": "0x0",
                 "error" : "execution reverted",
@@ -618,7 +615,6 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     expectedTxResult += 1
     currentCounterValue += 1
-    val inputGasHex =  "0x" + NativeTestContract.SUB_CALLS_GAS.subtract(BigInteger.ONE).toString(16)
     expectedTxOutputHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(expectedTxResult), 32))
     currentCounterValueHex = "0x" + BytesUtils.toHexString(org.web3j.utils.Numeric.toBytesPadded(BigInteger.valueOf(currentCounterValue), 32))
 
@@ -627,8 +623,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     "type": "CALL",
     "from": "$origin",
     "to": "$nativeCallerAddress",
-    "gas": "$inputGasHex",
-    "gasUsed": "",
+    "gas": "0x0",
+    "gasUsed": "0x0",
     "input": "0x${BytesUtils.toHexString(retrieveInput)}",
     "value": "0x0",
     "output": "$expectedTxOutputHex",
@@ -698,8 +694,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     "type": "CALL",
     "from": "$origin",
     "to": "$simpleProxyAddress",
-    "gas": "$inputGasHex",
-    "gasUsed": "",
+    "gas": "0x0",
+    "gasUsed": "0x0",
     "input": "0x${BytesUtils.toHexString(input)}",
     "value": "0x0",
     "output": "0x$output",
@@ -781,8 +777,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
       "type": "CALL",
       "from": "$origin",
       "to": "${NativeTestContract.contractAddress}",
-      "gas": "$gasLimitHexString",
-      "gasUsed": "",
+      "gas": "0x0",
+      "gasUsed": "0x0",
       "input": "0x${BytesUtils.toHexString(input)}",
       "error": "execution reverted with return data \\"0x\\"",
       "value": "0x0",
@@ -844,16 +840,15 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     var traceResult = tracer.getResult.result
 
-    // The gasUsed is empty since the traceTxStart and txTxEnd are not called in this unit test
+    // The gas and gasUsed field are empty since the traceTxStart and txTxEnd are not called in this unit test
     // check tracer output
-    val initialGasHexString = gasLimitHexString
     assertJsonEquals(
       s"""{
         "type": "CALL",
         "from": "$origin",
         "to": "${NativeTestContract.contractAddress}",
-        "gas": "$initialGasHexString",
-        "gasUsed": "",
+        "gas": "0x0",
+        "gasUsed": "0x0",
         "input": "0x${BytesUtils.toHexString(inputRetrieveRequest)}",
         "value": "0x0",
         "output": "$expectedTxOutputHex",
@@ -921,8 +916,8 @@ class ContractInteropCallTest extends ContractInteropTestBase {
         "type": "CALL",
         "from": "$origin",
         "to": "${NativeTestContract.contractAddress}",
-        "gas": "$initialGasHexString",
-        "gasUsed": "",
+        "gas": "0x0",
+        "gasUsed": "0x0",
         "input": "0x${BytesUtils.toHexString(inputIncRequest)}",
         "error": "$expectedErrorMsg",
         "value": "0x0",
@@ -954,7 +949,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
 
     transition(getMessage(contractAddress, data = retrieveInput))
 
-    //Check that the nonce of he native smart contract was incremented
+    //Check that the nonce of the native smart contract was incremented
     val currentNonce = stateView.getNonce(NativeTestContract.contractAddress)
     assertEquals("Wrong nonce after deploying a contract", initialNonce.add(1), currentNonce)
 
@@ -970,6 +965,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
     val inputContractCodeHexString = s"0x${BytesUtils.toHexString(ContractInteropTestBase.nativeCallerContractCode)}"
     val outputContractCodeHexString = s"0x${BytesUtils.toHexString(stateView.getCode(deployedContractAddress))}"
 
+
     // The gasUsed is empty since the traceTxStart and txTxEnd are not called in this unit test
     // check tracer output
     assertJsonEquals(
@@ -977,11 +973,10 @@ class ContractInteropCallTest extends ContractInteropTestBase {
         "type": "CALL",
         "from": "$origin",
         "to": "${NativeTestContract.contractAddress}",
-        "gas": "$initialGasHexString",
-        "gasUsed": "",
+        "gas": "0x0",
+        "gasUsed": "0x0",
         "input": "0x${BytesUtils.toHexString(inputCreateRequest)}",
         "value": "0x0",
-        "output": "0x",
         "calls": [{
           "type" : "CREATE",
           "from" : "${NativeTestContract.contractAddress}",
