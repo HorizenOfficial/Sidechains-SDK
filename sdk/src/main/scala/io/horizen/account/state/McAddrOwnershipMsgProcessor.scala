@@ -221,7 +221,7 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
 
     // as a preliminary check, ensure we are below the limit on the max number of signatures
     if (mcSignatures.size > MAX_NUM_OF_PUBKEYS_IN_MULTISIG) {
-      val errMsg = s"Too many signatures ${mcSignatures.size}, can not me more that max num of pubkeys in a redeem script $MAX_NUM_OF_PUBKEYS_IN_MULTISIG"
+      val errMsg = s"Too many signatures ${mcSignatures.size}, can not be more that max num of pubkeys in a redeem script $MAX_NUM_OF_PUBKEYS_IN_MULTISIG"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
     }
