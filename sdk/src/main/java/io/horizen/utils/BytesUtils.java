@@ -214,6 +214,7 @@ public final class BytesUtils {
     private static final byte[] SCRIPT_TESTNET_PREFIX = BytesUtils.fromHexString("2092"); // "zr"
     private static final byte[] SCRIPT_TESTNET_PREFIX_OLD = BytesUtils.fromHexString("1CBA"); // "t2"
 
+    public static final int MAX_NUM_OF_PUBKEYS_IN_MULTISIG = 16;
     public static final byte OP_CHECKMULTISIG = (byte) 0xAE;
     public static final byte OP_1 = (byte) 0x51;
     public static final byte OP_16 = (byte) 0x60;

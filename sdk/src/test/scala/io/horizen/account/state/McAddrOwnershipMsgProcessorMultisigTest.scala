@@ -100,20 +100,20 @@ class McAddrOwnershipMsgProcessorMultisigTest
 
   var listOfMcMultisigAddrSign_1: Seq[String] = Seq[String](mcSignatureStr_11, mcSignatureStr_12, mcSignatureStr_13)
   //-------------------------------------------------------------------------------------------------------------------------------
-  val mcMultiSigAddr2: String = "zrDVBZrgyp7r4ripx7gAaf9AoFVZ8dktgSX"
-  val redeemScript2: String = "5241049bff9c9b5d0976aed138669e050b6b202aba89d16b5d3dfe4952a87d1888418fcae1a517d1dca6c61a7326dcb2f76bd5ff713b2c30f11a68a818bb074a2d40232103b881310ef3be9b8f42ad1705180d8eeed727fe47673a5119b6b1fe37309be9512102828b14acc47d4b7ba3f721b5eede0b85e4849cadb4bc59fc9aaaba75f579daea53ae"
-
+  // a multisig address with one uncompressed pub key in first position in the redeemScrtpt
+  val mcMultiSigAddr2: String = "zrLzHQBnfrfQoJoMTzFd6prXaJFpTVFwJSS"
+  val redeemScript2: String = "5241042a5bb6de7d7d39455c2ddce7a6c6e9149e9633985e2d384af0c2900814d8d6a6945bc79b67aafa2ef611f8c16df2fd6a2581ade8d82b5c9b5dd31490d2536b6d2102d5b2315fbe98fd90f0ad1bae2915e3ffa24cc4ab7b05867974cd8dc5b8d6830c2102d0206b465fff84569d2e414b34755ea4d1b381ad463bd70b5665a69c1dbf7e9453ae"
   val mcAddrStr_21: String = "ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G"
-  val mcAddrStr_22: String = "zthyXpQ2LMYrHLxwVC1R3yfpR6epqNrRDMz"
-  val mcAddrStr_23: String = "ztp4GJMoLSQhuunZPC7x67wZW1YeKkWqb6Q"
+  val mcAddrStr_22: String = "ztbhfK99731g8L9AXnU1uYZmzvNUyCvjW8C"
+  val mcAddrStr_23: String = "ztfnzHecyHayfikSSKEwyHCAiRznyJRa5dg"
 
-  val mcSignatureStr_21: String = "H2ay43UtkU6vC+fA9mH41Y3aFnTaIeYYe/2jXycV5AkXeNTMOgs9PZtyAAP+1k7ln5v2PthgOzSV15P85WZVhlA="
-  val mcSignatureStr_22: String = "IAsfMcq4+8nCxGxYUVXCiMBEMxWhAGPR7+4e/zwKnanxF++H0OlbF/LxUH+NWKVdtP0z3OquOK4UEtCmN5cfV8k="
-  val mcSignatureStr_23: String = "H+Fn/va1Ct/BcyjokrrcSfzsvnk/19KKwNbWKrKWUPhvaGDy+uBsGPuQF39wIrds2mt9O62ZbOhh/T3jCSrd0a4="
+  val mcSignatureStr_21: String = "H2EUmbRwGe/krFJD251wrnwD7v3mSREdcIECkJEHDu3SYdN+NGj2k3Yi3XpU6u1gmHkHOaYssJSHt+ABQGOC27k="
+  val mcSignatureStr_22: String = "HwQuxveM5zR565ZZaXQzg/riSNin47YB78BZMBHfXv9OZOOZpk6f0VBPh+7WBt8kf20FrLaMx6KimSrzw54Cayk="
+  val mcSignatureStr_23: String = "H+XG3GGL+7G7TtJnIKGcaz2cYiLmhtdGZ6DReSLmeGUqNtnlVRea202op46G+5trr2iEtEj5Q6WJtFuzMwwFQ3A="
 
   var listOfMcMultisigAddrSign_2: Seq[String] = Seq[String](mcSignatureStr_21, mcSignatureStr_22, mcSignatureStr_23)
   //-------------------------------------------------------------------------------------------------------------------------------
-  // A multisig address made of 3 identical pub keys.
+  // A multisig address made of 3 identical pub keys, that should be valid.
   val mcMultiSigAddrRep: String = "zr5Z3wKHPabDbr8vVXzW1JXdmZ55WRTcEN8"
   val redeemScriptRep: String = "522103dc080dc6ddc4dfeed866cf09e2d883babc6cc32ff6796f6ceed9d5f714a9cf452103dc080dc6ddc4dfeed866cf09e2d883babc6cc32ff6796f6ceed9d5f714a9cf452103dc080dc6ddc4dfeed866cf09e2d883babc6cc32ff6796f6ceed9d5f714a9cf4553ae"
   val mcSignatureStrRep: String = "Hw1T7OCaewGVgqjq+4FX+QczfYSwQJWzmb6D91qfnpmBGjO+WuuxYzcycspRaMChUzDJVEE7yLbd1SxeBxFP5Lk="
@@ -360,11 +360,11 @@ class McAddrOwnershipMsgProcessorMultisigTest
   }
 
   @Test
-  def testAddMultisigOwnershipLongShuffledSignatureList(): Unit = {
+  def testAddMultisigOwnershipShuffledSignatureList(): Unit = {
 
-    // provide a large sequence of signatures, some of them are not verifying and the coorrect ones are shuffled so that the order of verification
+    // provide a shuffled sequence of valid signatures so that the order of verification
     // is not the same of the public keys represented on the redeem script
-    val shuffledSignatures = scala.util.Random.shuffle(listOfMcMultisigAddrSign_1++listOfMcMultisigAddrSign_2)
+    val shuffledSignatures = scala.util.Random.shuffle(listOfMcMultisigAddrSign_1)
 
     usingView(messageProcessor) { view =>
 
@@ -409,6 +409,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
   @Test
   def testAddMultisigOwnershipMaxNumOfPubKeys(): Unit = {
 
+    // verify the case with the max number of pubkeys (15) in a redeemscript and as many signatures
     usingView(messageProcessor) { view =>
 
       messageProcessor.init(view, view.getConsensusEpochNumberAsInt)
@@ -593,6 +594,27 @@ class McAddrOwnershipMsgProcessorMultisigTest
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
       assertTrue(ex.getMessage.contains("Unexpected format of redeemScript"))
+
+      // Use a list of signatures which contains the expected minimum value of valid ones but has also an invalid signature
+      // in the middle of the sequence: we should fail anyway
+      val seqTest4 = Seq[String](
+        listOfMcMultisigAddrSign_1(1),
+        listOfMcMultisigAddrSign_2(1), // this is not valid
+        listOfMcMultisigAddrSign_1(2))
+      cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1, seqTest4)
+      data = cmdInput.encode()
+      msgBad = getMessage(
+        contractAddress,
+        BigInteger.ZERO,
+        BytesUtils.fromHexString(AddNewMultisigOwnershipCmd) ++ data,
+        randomNonce,
+        scAddressObj1
+      )
+      ex = intercept[ExecutionRevertedException] {
+        withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
+      }
+      // in this case we are giving up checking signatures after we have an invalid one
+      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 1, need: 2"))
     }
   }
 

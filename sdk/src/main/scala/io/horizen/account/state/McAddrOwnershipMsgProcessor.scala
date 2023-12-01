@@ -13,7 +13,7 @@ import io.horizen.account.utils.WellKnownAddresses.MC_ADDR_OWNERSHIP_SMART_CONTR
 import io.horizen.params.NetworkParams
 import io.horizen.utils.BytesUtils
 import io.horizen.evm.Address
-import io.horizen.utils.BytesUtils.{OP_CHECKMULTISIG, padWithZeroBytes, toHorizenPublicKeyAddress}
+import io.horizen.utils.BytesUtils.{MAX_NUM_OF_PUBKEYS_IN_MULTISIG, OP_CHECKMULTISIG, padWithZeroBytes, toHorizenPublicKeyAddress}
 import io.horizen.utils.Utils.{Ripemd160Sha256Hash, doubleSHA256Hash}
 import org.bouncycastle.asn1.sec.SECNamedCurves
 import org.bouncycastle.asn1.x9.X9ECParameters
@@ -218,6 +218,13 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     val mcMultisigAddress = cmdInput.mcTransparentAddress
     val redeemScript = cmdInput.redeemScript
     val mcSignatures = cmdInput.mcSignatures
+
+    // as a preliminary check, ensure we are below the limit on the max number of signatures
+    if (mcSignatures.size > MAX_NUM_OF_PUBKEYS_IN_MULTISIG) {
+      val errMsg = s"Too many signatures ${mcSignatures.size}, can not me more that max num of pubkeys in a redeem script $MAX_NUM_OF_PUBKEYS_IN_MULTISIG"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
+    }
 
     // get threshold signature value and all pub keys from redeemScript.
     // If any semantic error is detected while parsing an exception is raised
@@ -723,34 +730,35 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
 
   def verifySignaturesWithThreshold(senderScAddress: Address, mcMultisigAddress: String, pubKeys: Seq[Array[Byte]], signatures: Seq[SignatureSecp256k1], thresholdSignatureValue: Int) : Int = {
     var score = 0
-    var remainingSignatures = signatures.size
     var verifiedPubKeyIndexes = Seq[Int]()
     val pubKeyIndexPairs = pubKeys.zipWithIndex
+    val signaturesIndexPairs = signatures.zipWithIndex
 
-    signatures.foreach {
-      signature => {
+    signaturesIndexPairs.foreach {
+      sign_idx_pair => {
+        var currentSignatureVerified = false
         breakable {
-          if (remainingSignatures + score < thresholdSignatureValue)
-          {
-            log.warn(s"Can not reach the minimum number of valid signatures. Number of signatures: ${signatures.size}, score: $score, remaining: $remainingSignatures, thresholdValue: $thresholdSignatureValue")
-            break
-          }
           pubKeyIndexPairs.foreach {
             pk_idx_pair => {
               if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
                 !verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
-                isValidOwnershipMultisigSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, signature) // current pk is verified against current signature
+                isValidOwnershipMultisigSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, sign_idx_pair._1) // current pk is verified against current signature
               ) {
+                currentSignatureVerified = true
                 score += 1
                 verifiedPubKeyIndexes = pk_idx_pair._2 +: verifiedPubKeyIndexes
-                log.debug(s"Signature ${signatures.size - remainingSignatures} verified for pubkey ${BytesUtils.toHexString(pk_idx_pair._1)}")
+                log.debug(s"Signature ${sign_idx_pair._2} verified for pubkey ${BytesUtils.toHexString(pk_idx_pair._1)}")
                 break
               }
             }
           }
+          if (!currentSignatureVerified)
+          {
+            log.warn(s"Signature ${sign_idx_pair._2} not valid")
+            return score
+          }
         }
       }
-      remainingSignatures -= 1
     }
     score
   }
