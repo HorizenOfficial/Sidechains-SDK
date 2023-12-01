@@ -226,6 +226,13 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
       throw new ExecutionRevertedException(errMsg)
     }
 
+    // check validity of the addr/redeemscript pair
+    if(!checkMultisigAddress(mcMultisigAddress, redeemScript, networkParams)) {
+      val errMsg = s"Could not verify multisig address against redeemScript"
+      log.warn(errMsg)
+      throw new ExecutionRevertedException(errMsg)
+    }
+
     // get threshold signature value and all pub keys from redeemScript.
     // If any semantic error is detected while parsing an exception is raised
     var retValue : (Int, Seq[Array[Byte]]) = null
@@ -243,13 +250,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     // check we have enough signatures for attempting the validation
     if(mcSignatures.size < thresholdSignatureValue) {
       val errMsg = s"Signatures are not enough. Input has ${mcSignatures.size}, needs at least $thresholdSignatureValue"
-      log.warn(errMsg)
-      throw new ExecutionRevertedException(errMsg)
-    }
-
-    // check validity of the addr/redeemscript pair
-    if(!checkMultisigAddress(mcMultisigAddress, redeemScript, networkParams)) {
-      val errMsg = s"Could not verify multisig address against redeemScript"
       log.warn(errMsg)
       throw new ExecutionRevertedException(errMsg)
     }

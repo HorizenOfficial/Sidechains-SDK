@@ -14,8 +14,8 @@ import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
-import io.horizen.params.NetworkParams
-import io.horizen.utils.BytesUtils.{padWithZeroBytes, toHorizenPublicKeyAddress}
+import io.horizen.params.{NetworkParams, RegTestParams}
+import io.horizen.utils.BytesUtils.{padWithZeroBytes, toHorizenPublicKeyAddress, toHorizenScriptAddress}
 import io.horizen.utils.Utils.Ripemd160Sha256Hash
 import io.horizen.utils.{BytesUtils, Pair}
 import org.junit.Assert._
@@ -511,7 +511,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
       ex = intercept[ExecutionRevertedException] {
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
-      assertTrue(ex.getMessage.contains("Unexpected format of redeemScript"))
+      assertTrue(ex.getMessage.contains("Could not verify multisig address against redeemScript"))
 
       // Use a wrong list of signatures address
       cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1, listOfMcMultisigAddrSign_2)
@@ -580,8 +580,15 @@ class McAddrOwnershipMsgProcessorMultisigTest
       // reach the threshold with the second one even if it is valid
       assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 0, need: 2"))
 
-      // Use an illegal redeemScript
-      cmdInput = AddNewMultisigOwnershipCmdInput(mcMultiSigAddr1, redeemScript1.replace("ae", "dd"), listOfMcMultisigAddrSign_1)
+      // Use an illegal redeemScript whit a valid address
+      val badRedeemScript = redeemScript1.replace("ae", "dd")
+      val computedScriptHash = Ripemd160Sha256Hash(BytesUtils.fromHexString(badRedeemScript))
+      val computedTaddr = toHorizenScriptAddress(
+        computedScriptHash,
+        RegTestParams(null, null, null, null, null, 0, 0, 0, null, null, null, 0, null, null, null, null, null, null, null, false, null, null, 0, false, false, false)
+      )
+
+      cmdInput = AddNewMultisigOwnershipCmdInput(computedTaddr, badRedeemScript, listOfMcMultisigAddrSign_1)
       data = cmdInput.encode()
       msgBad = getMessage(
         contractAddress,

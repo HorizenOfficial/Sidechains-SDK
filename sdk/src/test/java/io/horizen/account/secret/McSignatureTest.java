@@ -94,8 +94,8 @@ public class McSignatureTest {
 
         System.out.println(BytesUtils.toHexString(mcPrivKey));
         assertEquals(
-                BytesUtils.toHexString(mcPrivKey),
-                "c811a42bbcf269cb551fa517d90431cffc16703184ab1adce14c7671efc61704"
+                "c811a42bbcf269cb551fa517d90431cffc16703184ab1adce14c7671efc61704",
+                BytesUtils.toHexString(mcPrivKey)
         );
 
     }
