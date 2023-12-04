@@ -1,5 +1,6 @@
 package io.horizen.examples;
 
+import io.horizen.account.fork.Version1_2_0Fork;
 import io.horizen.account.fork.ContractInteroperabilityFork;
 import io.horizen.fork.*;
 import io.horizen.account.fork.GasFeeFork;
@@ -65,10 +66,13 @@ public class AppForkConfigurator extends ForkConfigurator {
                     )
             ),
             new Pair<>(
-                    // TODO the actual fork point needs to be decided
                     new SidechainForkConsensusEpoch(50, 50, 50),
                     new ContractInteroperabilityFork(true)
-                    )
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(60, 60, 60),
+                    new Version1_2_0Fork(true)
+            )
         );
     }
 }

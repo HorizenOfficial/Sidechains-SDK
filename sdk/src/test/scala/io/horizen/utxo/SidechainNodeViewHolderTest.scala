@@ -167,9 +167,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
-    Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
-      fail("Consensus epoch data should not being requested from the State.")
-      null
+    Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
+      (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 
 
@@ -362,6 +362,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state to reach the last withdrawal epoch index
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(withdrawalEpochInfo)
     Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(true)
+    Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes(StandardCharsets.UTF_8)))
+      (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
+    })
 
     // Mock state fee payments with checks
     val expectedFeePayments: Seq[ZenBox] = Seq(getZenBox, getZenBox)

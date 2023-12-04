@@ -1,5 +1,6 @@
 package io.horizen.account.storage
 
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.utils.AccountBlockFeeInfo
 import io.horizen.block.WithdrawalEpochCertificate
@@ -8,6 +9,7 @@ import io.horizen.storage.{SidechainStorageInfo, Storage}
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.Try
@@ -54,4 +56,7 @@ class AccountStateMetadataStorage(storage: Storage)
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
 
+  override def getForgerBlockCounters: Map[AddressProposition, Long] = getView.getForgerBlockCounters
+
+  override def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = getView.getMcForgerPoolRewards
 }
