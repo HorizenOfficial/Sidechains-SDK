@@ -316,8 +316,8 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # trigger cert submission
         # Generate 2 SC blocks on SC node and start them automatic cert creation.
-        generate_next_block(sc_node_1, "first node")  # 1 MC block to reach the end of WE
-        generate_next_block(sc_node_1, "first node")  # 1 MC block to trigger Submitter logic
+        generate_next_block(sc_node_1, "first node")  # 1 SC block to reach the end of WE
+        generate_next_block(sc_node_1, "first node")  # 1 SC block to trigger Submitter logic
 
         # Wait for Certificates appearance
         time.sleep(10)

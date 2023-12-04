@@ -442,8 +442,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
               val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
               val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
-                val consensusEpochNumber: ConsensusEpochNumber = stateAfterApply.getCurrentConsensusEpochInfo._2.epoch
-                val feePayments : FPI = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber, consensusEpochNumber)
+                val feePayments : FPI = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
                 var historyAfterUpdateFee = newHistory
                 if (!feePayments.isEmpty) {
                   historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, feePayments)
@@ -481,7 +480,7 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
-  def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int, consensusEpochNumber: ConsensusEpochNumber) : FPI
+  def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
 
   override def postStop(): Unit = {
