@@ -1,4 +1,5 @@
 **0.10.0**
+1. Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
 
 **0.9.0**
 1. libevm dependency updated to 1.0.0.
