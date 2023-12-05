@@ -1,11 +1,14 @@
 package io.horizen.account.storage
 
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.EthereumReceipt
 import io.horizen.account.utils.AccountBlockFeeInfo
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.consensus.ConsensusEpochNumber
 import io.horizen.utils.WithdrawalEpochInfo
 import sparkz.util.ModifierId
+
+import java.math.BigInteger
 
 // expect this storage to be passed by the app during SidechainApp initialization
 trait AccountStateMetadataStorageReader {
@@ -22,7 +25,7 @@ trait AccountStateMetadataStorageReader {
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
-  def getTransactionReceipt(txHash: Array[Byte]) : Option[EthereumReceipt]
+  def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt]
 
   def hasCeased: Boolean
 
@@ -31,4 +34,8 @@ trait AccountStateMetadataStorageReader {
 
   // zero bytes when storage is empty
   def getAccountStateRoot: Array[Byte] // 32 bytes, kessack hash
+
+  def getForgerBlockCounters: Map[AddressProposition, Long]
+
+  def getMcForgerPoolRewards: Map[AddressProposition, BigInteger]
 }

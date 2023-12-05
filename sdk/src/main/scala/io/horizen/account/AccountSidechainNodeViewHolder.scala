@@ -158,8 +158,9 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   private def blockHashProvider(height: Int): Option[String] = history.blockIdByHeight(height)
 
-  override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
-    val feePayments = state.getFeePaymentsInfo(epochNumber)
+  override def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int) : FPI = {
+    val consensusEpochNumber: ConsensusEpochNumber = state.getCurrentConsensusEpochInfo._2.epoch
+    val feePayments = state.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber)
     AccountFeePaymentsInfo(feePayments)
   }
 

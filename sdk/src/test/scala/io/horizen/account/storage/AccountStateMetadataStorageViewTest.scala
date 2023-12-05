@@ -2,6 +2,7 @@ package io.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import io.horizen.SidechainTypes
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
 import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import io.horizen.account.utils.AccountBlockFeeInfo
@@ -60,6 +61,7 @@ class AccountStateMetadataStorageViewTest
 
     assertTrue("Last certificate referenced epoch number should be empty in view", storageView.lastCertificateReferencedEpoch.isEmpty)
     assertTrue("Last certificate referenced epoch number should be empty in storage", stateMetadataStorage.lastCertificateReferencedEpoch.isEmpty)
+    assertTrue("Forger block counters should be empty in view", storageView.forgerBlockCountersOpt.isEmpty)
 
     //Starting modification of the view and checking that view and storage are no more aligned
 
@@ -109,6 +111,11 @@ class AccountStateMetadataStorageViewTest
     storageView.updateTransactionReceipts(receipts)
     assertTrue("receipts should be defined in view", storageView.getTransactionReceipt(receipt1.transactionHash).isDefined)
     assertTrue("receipts should not be in storage", stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).isEmpty)
+
+    val addressProposition = new AddressProposition(BytesUtils.fromHexString("00000000000000000000000000000000000000aa"))
+    storageView.updateForgerBlockCounter(addressProposition)
+    assertTrue("Counter for forger does not exists",storageView.getForgerBlockCounters.contains(addressProposition))
+    assertTrue("Counter for forger is incorrect",storageView.getForgerBlockCounters(addressProposition) == 1)
 
     storageView.commit(bytesToVersion(getVersion.data()))
 

@@ -167,7 +167,7 @@ abstract class AbstractHistory[
     if(newChainSuffix.isEmpty && currentChainSuffix.isEmpty)
       throw new IllegalArgumentException("Cannot retrieve fork changes. Fork length is more than params.maxHistoryRewritingLength")
 
-    val newChainSuffixValidity: Boolean = !newChainSuffix.tail.map(isSemanticallyValid)
+    val newChainSuffixValidity: Boolean = params.resetModifiersStatus || !newChainSuffix.tail.map(isSemanticallyValid)
       .contains(ModifierSemanticValidity.Invalid)
 
     if(newChainSuffixValidity) {

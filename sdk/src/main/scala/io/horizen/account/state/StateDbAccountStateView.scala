@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
@@ -76,7 +77,7 @@ class StateDbAccountStateView(
   override def ownershipDataExist(ownershipId: Array[Byte]): Boolean =
     mcAddrOwnershipProvider.ownershipDataExist(this, ownershipId)
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Unit = {
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData, ftToSmartContractForkActive: Boolean = false): Unit = {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -108,18 +109,24 @@ class StateDbAccountStateView(
             MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes)
           )
 
-          if (isEoaAccount(recipientProposition.address())) {
+          val recipientAddress = recipientProposition.address()
+
+          if (isEoaAccount(recipientAddress)) {
             // stateDb will implicitly create account if not existing yet
-            addBalance(recipientProposition.address(), value)
-            log.debug(s"added FT amount = $value to address=$recipientProposition")
+            log.debug(s"adding FT amount = $value to EOA address=$recipientProposition")
+            addBalance(recipientAddress, value)
+          } else if (ftToSmartContractForkActive) {
+            log.debug(s"adding FT amount = $value to Smart Contract address=$recipientProposition")
+            addBalance(recipientAddress, value)
           } else {
             val burnAddress = Address.ZERO
             log.warn(
-              s"ignored FT to non-EOA account, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
+              s"ignored FT, amount=$value to address=$recipientProposition (the amount was burned by sending balance to $burnAddress address)"
             )
             addBalance(burnAddress, value)
-            // TODO: we should return the amount back to mcReturnAddress instead of just burning it
           }
+
+          log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
   }
@@ -219,7 +226,6 @@ class StateDbAccountStateView(
 
     consensusDataReceipt
   }
-
 
   override def isEoaAccount(address: Address): Boolean = {
     stateDb.isEoaAccount(address)

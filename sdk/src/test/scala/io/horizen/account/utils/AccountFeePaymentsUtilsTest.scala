@@ -19,9 +19,11 @@ class AccountFeePaymentsUtilsTest
   val addr_a: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000aa")
   val addr_b: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000bb")
   val addr_c: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000cc")
+  val addr_d: Array[Byte] = BytesUtils.fromHexString("00000000000000000000000000000000000000dd")
   val forgerAddr_a = new AddressProposition(addr_a)
   val forgerAddr_b = new AddressProposition(addr_b)
   val forgerAddr_c = new AddressProposition(addr_c)
+  val forgerAddr_d = new AddressProposition(addr_d)
 
   @Test
   def testNullBlockFeeInfoSeq(): Unit = {
@@ -150,6 +152,56 @@ class AccountFeePaymentsUtilsTest
           //   forgerTip (10) + poolFee quota (3) + remainder quota (1)
           assertEquals(payment.value, BigInteger.valueOf(10 + 3 + 1))
         }
+      }
+    )
+  }
+
+  @Test
+  def testWithMcForgerPoolRewards(): Unit = {
+    var blockFeeInfoSeq : Seq[AccountBlockFeeInfo] = Seq()
+
+    val abfi_a = AccountBlockFeeInfo(
+      baseFee = BigInteger.valueOf(100),
+      forgerTips = BigInteger.valueOf(10),
+      forgerAddr_a)
+    val abfi_b = AccountBlockFeeInfo(
+      baseFee = BigInteger.valueOf(100),
+      forgerTips = BigInteger.valueOf(10),
+      forgerAddr_b)
+    val abfi_c1 = AccountBlockFeeInfo(
+      baseFee = BigInteger.valueOf(100),
+      forgerTips = BigInteger.valueOf(10),
+      forgerAddr_c)
+    val abfi_c2 = AccountBlockFeeInfo(
+      baseFee = BigInteger.valueOf(100),
+      forgerTips = BigInteger.valueOf(10),
+      forgerAddr_c)
+
+    val mcForgerPoolRewards = Map(
+      forgerAddr_a -> BigInteger.valueOf(10),
+      forgerAddr_b -> BigInteger.valueOf(10),
+      forgerAddr_c -> BigInteger.valueOf(10),
+      forgerAddr_d -> BigInteger.valueOf(10),
+
+    )
+
+
+    blockFeeInfoSeq = blockFeeInfoSeq :+ abfi_a
+    blockFeeInfoSeq = blockFeeInfoSeq :+ abfi_b
+    blockFeeInfoSeq = blockFeeInfoSeq :+ abfi_c1
+    blockFeeInfoSeq = blockFeeInfoSeq :+ abfi_c2
+
+    val accountPaymentsList = getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards)
+    assertEquals(accountPaymentsList.length, 4)
+
+    accountPaymentsList.foreach(
+      payment => {
+        if (payment.address.equals(forgerAddr_c))
+          assertEquals(BigInteger.valueOf(230), payment.value)
+        else if (payment.address.equals(forgerAddr_d))
+          assertEquals(BigInteger.valueOf(10), payment.value)
+        else
+          assertEquals(BigInteger.valueOf(120), payment.value)
       }
     )
   }
