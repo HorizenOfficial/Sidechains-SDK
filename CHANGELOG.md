@@ -1,4 +1,5 @@
 **0.10.0**
+1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
 
 **0.9.0**
 1. libevm dependency updated to 1.0.0.

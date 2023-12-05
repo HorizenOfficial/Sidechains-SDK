@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.fork.ZenDAOFork
+import io.horizen.account.fork.{Version1_2_0Fork, ZenDAOFork}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipMsgProcessor.{AddNewMultisigOwnershipCmd, AddNewOwnershipCmd, GetListOfAllOwnershipsCmd, GetListOfOwnerScAddressesCmd, GetListOfOwnershipsCmd, OwnershipLinkedListNullValue, OwnershipsLinkedListTipKey, RemoveOwnershipCmd, ScAddressRefsLinkedListNullValue, ScAddressRefsLinkedListTipKey, checkMcRedeemScriptForMultisig, checkMultisigAddress, getMcSignature, getOwnershipId, isValidOwnershipSignature, verifySignaturesWithThreshold}
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
@@ -516,8 +516,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
   }
 
   def isMultisigForkActive(consensusEpochNumber: Int): Boolean = {
-    true
-    /** TODO uncomment once dev is merged
     val forkIsActive = Version1_2_0Fork.get(consensusEpochNumber).active
     val strVal = if (forkIsActive) {
       "YES"
@@ -526,7 +524,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
     }
     log.trace(s"Epoch $consensusEpochNumber: Version1_2_0Fork fork active=$strVal")
     forkIsActive
-    */
   }
 
 
@@ -677,7 +674,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     }
   }
 
-  def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1, networkParams: NetworkParams): Boolean = {
+  private def isValidOwnershipSignature(scAddress: Address, mcTransparentAddress: String, mcSignature: SignatureSecp256k1, networkParams: NetworkParams): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
     val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
@@ -740,8 +737,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
         breakable {
           pubKeyIndexPairs.foreach {
             pk_idx_pair => {
-              if (score < thresholdSignatureValue && // we are still below the threshold of needed verified signatures
-                !verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
+              if (!verifiedPubKeyIndexes.contains(pk_idx_pair._2) && // current pk has not yet been verified
                 isValidOwnershipMultisigSignature(senderScAddress, mcMultisigAddress, pk_idx_pair._1, sign_idx_pair._1) // current pk is verified against current signature
               ) {
                 currentSignatureVerified = true
@@ -752,11 +748,14 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
               }
             }
           }
-          if (!currentSignatureVerified)
-          {
-            log.warn(s"Signature ${sign_idx_pair._2} not valid")
-            return score
-          }
+        }
+        if (!currentSignatureVerified) {
+          val errMsg = s"Signature ${sign_idx_pair._2} not valid"
+          log.warn(errMsg)
+          throw new ExecutionRevertedException(errMsg)
+        } else if (score >= thresholdSignatureValue) {
+          // exit with success
+          return score
         }
       }
     }

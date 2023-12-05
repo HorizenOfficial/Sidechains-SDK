@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
-import io.horizen.account.fork.ZenDAOFork
+import io.horizen.account.fork.{Version1_2_0Fork, ZenDAOFork}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnership}
@@ -43,6 +43,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
     with StoreFixture {
 
   val ZENDAO_MOCK_FORK_POINT: Int = 100
+  val VER_1_2_MOCK_FORK_POINT: Int = 110
 
   class TestOptionalForkConfigurator extends ForkConfigurator {
     override val fork1activation: SidechainForkConsensusEpoch = SidechainForkConsensusEpoch(0, 0, 0)
@@ -50,6 +51,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
     override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
       Seq[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]](
         new Pair(SidechainForkConsensusEpoch(ZENDAO_MOCK_FORK_POINT, ZENDAO_MOCK_FORK_POINT, ZENDAO_MOCK_FORK_POINT), ZenDAOFork(true)),
+        new Pair(SidechainForkConsensusEpoch(VER_1_2_MOCK_FORK_POINT, VER_1_2_MOCK_FORK_POINT, VER_1_2_MOCK_FORK_POINT), Version1_2_0Fork(true)),
       ).asJava
   }
 
@@ -59,7 +61,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
     0,
     DefaultGasFeeFork.blockGasLimit,
     0,
-    /*consensusEpochNumber*/ ZENDAO_MOCK_FORK_POINT,
+    /*consensusEpochNumber*/ VER_1_2_MOCK_FORK_POINT,
     0,
     1,
     MockedHistoryBlockHashProvider,
@@ -70,7 +72,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
   def init(): Unit = {
     ForkManagerUtil.initializeForkManager(new TestOptionalForkConfigurator, "regtest")
     // by default start with fork active
-    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(ZENDAO_MOCK_FORK_POINT)))
+    Mockito.when(metadataStorageView.getConsensusEpochNumber).thenReturn(Option(intToConsensusEpochNumber(VER_1_2_MOCK_FORK_POINT)))
   }
 
   val dummyBigInteger: BigInteger = BigInteger.ONE
@@ -526,7 +528,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
       ex = intercept[ExecutionRevertedException] {
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
-      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 0"))
+      assertTrue(ex.getMessage.contains("Signature 0 not valid"))
 
       // Use too short a list of signatures address
       val seqTest = listOfMcMultisigAddrSign_1.take(1)
@@ -559,7 +561,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
       ex = intercept[ExecutionRevertedException] {
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
-      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 1, need: 2"))
+      assertTrue(ex.getMessage.contains("Signature 1 not valid"))
 
 
       // Use a list of signatures which does not contain the expected minimum value of valid ones
@@ -578,7 +580,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
       }
       // in this case we are giving up checking signatures because after the first fails we can not
       // reach the threshold with the second one even if it is valid
-      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 0, need: 2"))
+      assertTrue(ex.getMessage.contains("Signature 0 not valid"))
 
       // Use an illegal redeemScript whit a valid address
       val badRedeemScript = redeemScript1.replace("ae", "dd")
@@ -621,7 +623,7 @@ class McAddrOwnershipMsgProcessorMultisigTest
         withGas(TestContext.process(messageProcessor, msgBad, view, defaultBlockContext, _))
       }
       // in this case we are giving up checking signatures after we have an invalid one
-      assertTrue(ex.getMessage.contains("Invalid number of verified signatures: 1, need: 2"))
+      assertTrue(ex.getMessage.contains("Signature 1 not valid"))
     }
   }
 

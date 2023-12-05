@@ -17,7 +17,7 @@ from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership impo
 from SidechainTestFramework.account.httpCalls.transaction.sendMultisigKeysOwnership import sendMultisigKeysOwnership
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
-    ZENDAO_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH
+    ZENDAO_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH, VER_1_2_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
@@ -186,12 +186,41 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
                 print("  val mcAddrStr: String = \"{}\"".format(addresses[i]))
                 print("  val mcSignatureStr: String = \"{}\"".format(mc_signatures[i]))
 
+        # try to link a multisig adddress to a sc address before the VER_1_2 fork activation, this should fail because
+        # multisig support is not active yet
         ret = sendMultisigKeysOwnership(sc_node,
                                         sc_address=sc_address,
                                         mc_addr=mc_multisig_address_1,
                                         mc_signatures=mc_signatures,
                                         redeemScript=redeemScript_1)
 
+        tx_hash = ret['transactionId']
+        self.sc_sync_all()
+
+        generate_next_block(sc_node, "first node")
+        self.sc_sync_all()
+
+        # get mempool contents and check tx has been forged but the receipt is failed, since it has been processed by the correct message
+        # processor (ZenDao fork is active) but the tx is reverted because the multisig support is not yet enabled.
+        response = allTransactions(sc_node, False)
+        assert_true(tx_hash not in response['transactionIds'])
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+        status = int(receipt['result']['status'], 16)
+        assert_true(status == 0)
+
+        # reach the VER_1_2 fork, which enables multisig support
+        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, VER_1_2_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        # retry the linking, from now on it should work
+        ret = sendMultisigKeysOwnership(sc_node,
+                                        sc_address=sc_address,
+                                        mc_addr=mc_multisig_address_1,
+                                        mc_signatures=mc_signatures,
+                                        redeemScript=redeemScript_1)
 
         tx_hash = ret['transactionId']
         self.sc_sync_all()
@@ -612,7 +641,6 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
         # Test 'sendMultisigKeysOwnership(string,string,string[])'
         # For this function I need a signature. Because I don't have a way to create it in this test, I'll create a
         # non-executable transaction using the HTTP API and steal its data.
-        # TODO as soon as the code is merged from dev, test also the new fork before calling teh multisig func
 
         addresses = []
         addr_objects = []

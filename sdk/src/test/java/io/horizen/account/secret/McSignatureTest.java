@@ -122,8 +122,8 @@ public class McSignatureTest {
                         0, null, null,
                         null, null, null,
                         null, null, false, null,
-                        null, 0,false, false,
-                        false, 0));
+                        null, 0, false, false,
+                        false, 0, false));
 
         System.out.println(computedTaddr);
         assertEquals("ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G", computedTaddr);

@@ -141,7 +141,7 @@ testScriptsEvm=(
     'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
     'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
     'sc_evm_ft_to_smart_contract.py'
-    'sc_evm_forging_fee_payments_rollback.py
+    'sc_evm_forging_fee_payments_rollback.py'
 );
 
 testScriptsUtxo=(
