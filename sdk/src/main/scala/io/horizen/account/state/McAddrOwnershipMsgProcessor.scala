@@ -696,7 +696,7 @@ object McAddrOwnershipMsgProcessor extends SparkzLogging {
     computedTaddr.equals(mcTransparentAddress)
   }
 
-  def isValidOwnershipMultisigSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
+  private def isValidOwnershipMultisigSignature(scAddress: Address, mcMultisigAddress: String, pubKey: Array[Byte], mcSignature: SignatureSecp256k1): Boolean = {
     // get a signature data obj for the verification
     val v_barr = getUnsignedByteArray(mcSignature.getV)
     val r_barr = padWithZeroBytes(getUnsignedByteArray(mcSignature.getR), SIGNATURE_RS_SIZE)
