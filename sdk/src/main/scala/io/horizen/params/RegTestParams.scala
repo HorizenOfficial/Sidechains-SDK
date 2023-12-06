@@ -40,7 +40,8 @@ case class RegTestParams(
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
                           override val isHandlingTransactionsEnabled: Boolean = true,
-                          override val mcBlockRefDelay: Int = 0
+                          override val mcBlockRefDelay: Int = 0,
+                          override val resetModifiersStatus: Boolean = false,
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

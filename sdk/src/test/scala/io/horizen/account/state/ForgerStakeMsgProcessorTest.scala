@@ -1,18 +1,21 @@
 package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
-import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
+import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, OpenStakeForgerListCmdCorrect, RemoveStakeCmd}
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.StoreFixture
+import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
-import io.horizen.utils.{BytesUtils, Ed25519}
+import io.horizen.utils.{BytesUtils, Ed25519, Pair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -59,9 +62,20 @@ class ForgerStakeMsgProcessorTest
   val OpenForgerStakeListEventSig: Array[Byte] = getEventSignature("OpenForgerList(uint32,address,bytes32)")
   val NumOfIndexedOpenForgerStakeListEvtParams = 1
 
+  val V1_2_MOCK_FORK_POINT: Int = 100
+
 
   @Before
   def setUp(): Unit = {
+    val forkConfigurator = new SimpleForkConfigurator() {
+      override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = List(
+        new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+          SidechainForkConsensusEpoch(35, 35, 35),
+          new Version1_2_0Fork(true)
+        )
+      ).asJava
+    }
+    ForkManagerUtil.initializeForkManager(forkConfigurator, "regtest")
   }
 
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount): Message = {
@@ -305,7 +319,7 @@ class ForgerStakeMsgProcessorTest
       returnData = assertGas(6237, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertArrayEquals(Array[Byte](1, 1, 0), returnData)
 
-      // assert we have open the forger list
+      // assert we have opened the forger list
       isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
       assertTrue(isOpen)
 
@@ -328,11 +342,126 @@ class ForgerStakeMsgProcessorTest
         assertGas(4300, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
-      // assert we have open the forger list
+      // assert we have opened the forger list
       isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
       assertTrue(isOpen)
     }
   }
+
+
+  @Test
+  def testOpenStakeForgerListCorrectSignature(): Unit = {
+
+    val randomGenerator = new Random(1L)
+    val byteSeed = new Array[Byte](32)
+    randomGenerator.nextBytes(byteSeed)
+    val keyPair1 = Ed25519.createKeyPair(byteSeed)
+    val blockSignSecret1: PrivateKey25519 = new PrivateKey25519(keyPair1.getKey, keyPair1.getValue)
+
+    randomGenerator.nextBytes(byteSeed)
+    val keyPair2 = Ed25519.createKeyPair(byteSeed)
+    val blockSignSecret2: PrivateKey25519 = new PrivateKey25519(keyPair2.getKey, keyPair2.getValue)
+
+    randomGenerator.nextBytes(byteSeed)
+    val keyPair3 = Ed25519.createKeyPair(byteSeed)
+
+    val blockSignerProposition1 = new PublicKey25519Proposition(keyPair1.getValue) // 32 bytes
+    val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
+
+    val blockSignerProposition2 = new PublicKey25519Proposition(keyPair2.getValue) // 32 bytes
+    val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
+
+    val blockSignerProposition3 = new PublicKey25519Proposition(keyPair3.getValue) // 32 bytes
+    val vrfPublicKey3 = new VrfPublicKey(BytesUtils.fromHexString("330000000000000000000000000000000000000000000000000000000000000033")) // 33 bytes
+
+    usingView(forgerStakeMessageProcessor) { view =>
+
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+
+      // create sender account with some fund in it
+      val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
+      createSenderAccount(view, initialAmount)
+
+      Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
+      Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
+        (blockSignerProposition1, vrfPublicKey1),
+        (blockSignerProposition2, vrfPublicKey2),
+        (blockSignerProposition3, vrfPublicKey3)
+      ))
+
+      //Setting the context
+      val txHash1 = Keccak256.hash("first tx")
+      view.setupTxContext(txHash1, 10)
+
+      var forgerIndex = 0
+      var nonce = 0
+      var msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+
+      var signature = blockSignSecret1.sign(msgToSign)
+      var cmdInput = OpenStakeForgerListCmdInput(
+        forgerIndex, signature
+      )
+
+      // Test with the correct signature before fork. It should fail.
+      var msg = getMessage(
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmdCorrect) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
+
+      // should fail because before fork OpenStakeForgerListCmdCorrect is not a valid function signature
+      val exc = intercept[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      }
+      assertEquals(s"op code not supported: $OpenStakeForgerListCmdCorrect", exc.getMessage)
+
+      // Test after fork. It should work.
+      val blockContext = new BlockContext(
+        Address.ZERO,
+        0,
+        0,
+        DefaultGasFeeFork.blockGasLimit,
+        0,
+        V1_2_MOCK_FORK_POINT,
+        0,
+        1,
+        MockedHistoryBlockHashProvider,
+        Hash.ZERO
+      )
+
+
+      var returnData = assertGas(45937, msg, view, forgerStakeMessageProcessor, blockContext)
+      assertArrayEquals(Array[Byte](1, 0, 0), returnData)
+
+      // Checking log
+      val listOfLogs = view.getLogs(txHash1.asInstanceOf[Array[Byte]])
+      assertEquals("Wrong number of logs", 1, listOfLogs.length)
+      val expectedAddStakeEvt = OpenForgerList(forgerIndex, msg.getFrom, blockSignerProposition1)
+      checkOpenForgerStakeListEvent(expectedAddStakeEvt, listOfLogs(0))
+
+      val isOpen = forgerStakeMessageProcessor.isForgerListOpen(view)
+      assertFalse(isOpen)
+
+      nonce = 1
+      forgerIndex = 1
+      msgToSign = ForgerStakeMsgProcessor.getOpenStakeForgerListCmdMessageToSign(
+        forgerIndex, ownerAddressProposition.address(), nonce.toByteArray)
+
+      signature = blockSignSecret2.sign(msgToSign)
+      cmdInput = OpenStakeForgerListCmdInput(
+        forgerIndex, signature
+      )
+
+      // Test the old signature after fork. It should still work.
+
+      msg = getMessage(
+        contractAddress, 0, BytesUtils.fromHexString(OpenStakeForgerListCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
+
+      returnData = assertGas(6237, msg, view, forgerStakeMessageProcessor, blockContext)
+      assertArrayEquals(Array[Byte](1, 1, 0), returnData)
+
+
+    }
+  }
+
 
   @Test
   def testOpenStakeForgerListWithListNotRestricted(): Unit = {

@@ -11,4 +11,6 @@ object WellKnownAddresses {
   val MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS: Address = new Address("0x0000000000000000000088888888888888888888")
   val PROXY_SMART_CONTRACT_ADDRESS: Address = new Address("0x00000000000000000000AAAAAAAAAAAAAAAAAAAA")
 
+  // this is used for intercepting Forward Transfers from Mainchain to forger pool
+  val FORGER_POOL_RECIPIENT_ADDRESS: Address = new Address("0x0000000000000000000033333333333333333333")
 }

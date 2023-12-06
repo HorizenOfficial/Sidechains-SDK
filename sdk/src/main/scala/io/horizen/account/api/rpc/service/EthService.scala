@@ -12,6 +12,7 @@ import io.horizen.account.api.rpc.utils._
 import io.horizen.account.block.AccountBlock
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.forger.AccountForgeMessageBuilder
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.AccountMemoryPool
 import io.horizen.account.proof.SignatureSecp256k1
@@ -706,8 +707,10 @@ class EthService(
     val pendingStateView = nodeView.state.getView
 
     // apply mainchain references
+    val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, block.timestamp)
+    val ftToSmartContractForkActive = Version1_2_0Fork.get(epochNumber).active
     for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-      pendingStateView.applyMainchainBlockReferenceData(mcBlockRefData)
+      pendingStateView.applyMainchainBlockReferenceData(mcBlockRefData, ftToSmartContractForkActive)
     }
 
     val gasPool = new GasPool(block.header.gasLimit)
@@ -873,8 +876,10 @@ class EthService(
     // get state at previous block
     getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
       // apply mainchain references
+      val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, block.timestamp)
+      val ftToSmartContractForkActive = Version1_2_0Fork.get(epochNumber).active
       for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-        tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
+        tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, ftToSmartContractForkActive)
       }
 
       val gasPool = new GasPool(block.header.gasLimit)
@@ -932,8 +937,10 @@ class EthService(
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, (blockNumber - 1).toString) { (tagStateView, blockContext) =>
         // apply mainchain references
+        val epochNumber = TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, block.timestamp)
+        val ftToSmartContractForkActive = Version1_2_0Fork.get(epochNumber).active
         for (mcBlockRefData <- block.mainchainBlockReferencesData) {
-          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
+          tagStateView.applyMainchainBlockReferenceData(mcBlockRefData, ftToSmartContractForkActive)
         }
 
         val gasPool = new GasPool(block.header.gasLimit)

@@ -2,6 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
+import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList._
@@ -364,6 +365,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg)
       case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+      case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
+                                            => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
@@ -405,13 +408,15 @@ object ForgerStakeMsgProcessor {
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
   val OpenStakeForgerListCmd: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32")
+  val OpenStakeForgerListCmdCorrect: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32)")
 
   // ensure we have strings consistent with size of opcode
   require(
     GetListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
       AddNewStakeCmd.length == 2 * METHOD_ID_LENGTH &&
       RemoveStakeCmd.length == 2 * METHOD_ID_LENGTH &&
-      OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH
+      OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH &&
+      OpenStakeForgerListCmdCorrect.length == 2 * METHOD_ID_LENGTH
   )
 
   def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Address, nonce: Array[Byte]): Array[Byte] = {

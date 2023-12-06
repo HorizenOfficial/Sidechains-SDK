@@ -1,5 +1,6 @@
 package io.horizen.account.utils
 
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.evm.{StateDB, TrieHasher}
 
 import java.math.BigInteger
@@ -17,9 +18,9 @@ object AccountFeePaymentsUtils {
     }
   }
 
-  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountPayment] = {
+  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo], mcForgerPoolRewards: Map[AddressProposition, BigInteger] = Map.empty): Seq[AccountPayment] = {
     if (blockFeeInfoSeq.isEmpty)
-      return Seq()
+      return mcForgerPoolRewards.map(reward => AccountPayment(reward._1, reward._2)).toSeq
 
     var poolFee: BigInteger = BigInteger.ZERO
     val forgersBlockRewards: Seq[AccountPayment] = blockFeeInfoSeq.map(feeInfo => {
@@ -40,8 +41,8 @@ object AccountFeePaymentsUtils {
         AccountPayment(forgerBlockReward.address, finalForgerFee)
     }
 
-    // Aggregate together payments for the same forger
-    val forgerKeys = allForgersRewards.map(_.address).distinct
+    // Get all unique forger addresses
+    val forgerKeys = (allForgersRewards.map(_.address) ++ mcForgerPoolRewards.keys).distinct
 
     // sum all rewards for per forger address
     forgerKeys.map {
@@ -49,8 +50,10 @@ object AccountFeePaymentsUtils {
         val forgerTotalFee = allForgersRewards
           .filter(info => forgerKey.equals(info.address))
           .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
+        // add mcForgerPoolReward if exists
+        val mcForgerPoolReward = mcForgerPoolRewards.getOrElse(forgerKey, BigInteger.ZERO)
         // return the resulting entry
-        AccountPayment(forgerKey, forgerTotalFee)
+        AccountPayment(forgerKey, forgerTotalFee.add(mcForgerPoolReward))
       }
     }
   }
