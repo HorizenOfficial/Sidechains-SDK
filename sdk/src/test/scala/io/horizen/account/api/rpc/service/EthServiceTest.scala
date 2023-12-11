@@ -1465,5 +1465,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
     }
   }
 
-
+  @Test
+  def eth_getLogs(): Unit = {
+    assertThrows[RpcException] {
+      rpc("eth_getLogs", Map("fromBlock" -> "1", "toBlock" -> "10002"))
+    }
+  }
 }
