@@ -1114,8 +1114,9 @@ class EthService(
           } else {
             val start = parseBlockTag(nodeView, query.fromBlock)
             val end = parseBlockTag(nodeView, query.toBlock)
-            if (start > end) {
-              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid block range"))
+            if (start > end || end - start > settings.getLogsBlockLimit) {
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "invalid block range. fromBlock should be before toBlock and range should be less than " + settings.getLogsBlockLimit))
             }
 
             var resultCount = 0
