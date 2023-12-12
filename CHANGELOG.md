@@ -1,8 +1,13 @@
 **0.10.0**
 1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
-2. Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
-3. Added limit for number of blocks to inspect for eth_getLogs
-4. Fixed json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
+2. Added support for ZenIP 42203/42206: 
+    *  it is now possible to move founds with a forward transfer directly to a smart contract address in the EON sidechain
+    *  it is now possible to increment the EON forgers reward pool with a forward transfer to a specific address
+5. Minor fixes:
+    * Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
+    * [eth RPC endpoint] Added upper limit (10000) for number of blocks to inspect when calling eth_getLogs
+    * [eth RPC endpoint] Fixed json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
+    * New optional flag history.resetModifiersStatus available in the configuration file, to allow old nodes updated 'lately' to new versions (after hardforks activation) to rejoin the leading chain without performing a fullsynch
 
 **0.9.0**
 1. libevm dependency updated to 1.0.0.
