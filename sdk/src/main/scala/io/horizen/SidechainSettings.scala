@@ -109,6 +109,11 @@ case class EthServiceSettings(
     getLogsSizeLimit: Int = 10000,
 
     /**
+     * Size limit of the number of blocks traversed by the RPC call eth_getLogs
+     */
+    getLogsBlockLimit: Int = 10000,
+
+    /**
      * Timeout limit for the RPC call eth_getLogs
      */
     getLogsQueryTimeout: FiniteDuration = 10.seconds
