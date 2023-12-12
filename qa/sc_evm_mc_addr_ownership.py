@@ -240,7 +240,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
-        # add the same sc/mc ownership , as abovesending a transaction with data invoking native smart contract
+        # add the same sc/mc ownership , as above sending a transaction with data invoking native smart contract
         ret = sendKeysOwnership(sc_node, nonce=1,
                                 sc_address=sc_address,
                                 mc_addr=taddr1,
@@ -616,6 +616,9 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             print("Expected exception thrown: {}".format(err))
             # error is raised from API since the address has no balance
             assert_true("reverted" in str(err))
+            # this is the ascii hex for the error message "should work"
+            assert_true("73686f756c6420776f726b" in str(err))
+
 
 
         # reach the Interoperability fork

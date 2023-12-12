@@ -3,8 +3,9 @@ import json
 import time
 from decimal import Decimal
 
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import format_evm
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo
@@ -407,6 +408,71 @@ class SCEvmSeederNode(AccountChainSetup):
 
         try:
             sc_node_seeder.transaction_createKeyRotationTransaction(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
+
+        # Check sendKeysOwnership
+        mc_addr = mc_node.getnewaddress()
+        sc_address_checksum_fmt = to_checksum_address(evm_address_sc1)
+        mc_signature = mc_node.signmessage(mc_addr, sc_address_checksum_fmt)
+        request = {
+            "ownershipInfo": {
+                "scAddress": evm_address_sc1,
+                "mcTransparentAddress": mc_addr,
+                "mcSignature": mc_signature
+            }
+        }
+        try:
+            sc_node_seeder.transaction_sendKeysOwnership(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
+
+        # Check sendMultisigKeysOwnership
+        addresses = []
+        addr_objects = []
+        mc_signatures = []
+        rpc_array_param = []
+        NUM_OF_ADDR_IN_MULTISIG = 3
+        THRESHOLD_SIGNATURE_VALUE = 2
+        for i in range(NUM_OF_ADDR_IN_MULTISIG):
+            addresses.append(mc_node.getnewaddress())
+            addr_objects.append(mc_node.validateaddress(addresses[i]))
+            rpc_array_param.append(addr_objects[i]['pubkey'])
+        m_sig_obj = mc_node.createmultisig(THRESHOLD_SIGNATURE_VALUE, rpc_array_param)
+        mc_multisig_address = m_sig_obj["address"]
+        redeemScript = m_sig_obj["redeemScript"]
+        for i in range(NUM_OF_ADDR_IN_MULTISIG):
+            if i <= THRESHOLD_SIGNATURE_VALUE:
+                mc_signatures.append(mc_node.signmessage(addresses[i], mc_multisig_address + sc_address_checksum_fmt))
+
+        request = {
+            "ownershipInfo": {
+                "scAddress": evm_address_sc1,
+                "mcMultisigAddress": mc_multisig_address,
+                "mcSignatures": mc_signatures,
+                "redeemScript": redeemScript
+            }
+        }
+        try:
+            sc_node_seeder.transaction_sendMultisigKeysOwnership(json.dumps(request))
+        except SCAPIException as e:
+            check_error_not_enabled_on_seeder_node(e)
+        else:
+            fail("expected exception when calling method")
+
+        # Check removeKeysOwnership
+        request = {
+            "ownershipInfo": {
+                "scAddress": evm_address_sc1,
+                "mcTransparentAddress": mc_addr
+            }
+        }
+        try:
+            sc_node_seeder.transaction_removeKeysOwnership(json.dumps(request))
         except SCAPIException as e:
             check_error_not_enabled_on_seeder_node(e)
         else:

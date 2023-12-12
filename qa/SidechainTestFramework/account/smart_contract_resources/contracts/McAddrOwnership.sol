@@ -19,5 +19,7 @@ interface McAddrOwnership {
 
     function sendKeysOwnership(bytes3 mcAddrBytes1, bytes32 mcAddrBytes2, bytes24 signature1, bytes32 signature2, bytes32 signature3) external returns (bytes32);
 
+    function sendMultisigKeysOwnership(string memory mcMultisigAddress, string memory redeemScript, string[] memory mcSignatures) external returns (bytes32);
+
     function removeKeysOwnership(bytes3 mcAddrBytes1, bytes32 mcAddrBytes2) external returns (bytes32);
 }
