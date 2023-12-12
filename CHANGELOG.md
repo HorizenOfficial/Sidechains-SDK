@@ -2,6 +2,7 @@
 1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
 2. Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
 3. Added limit for number of blocks to inspect for eth_getLogs
+4. Fixed json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
 
 **0.9.0**
 1. libevm dependency updated to 1.0.0.
