@@ -124,7 +124,7 @@ class ScBtLimitTest(SidechainTestFramework):
 
         # Verify we didn't reach the SC fork1 that includes BT limit
         consensusEpochData = http_block_forging_info(sc_node)
-        assert_equal(consensusEpochData["bestEpochNumber"], 1)
+        assert_equal(consensusEpochData["bestBlockEpochNumber"], 1)
 
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
@@ -197,7 +197,7 @@ class ScBtLimitTest(SidechainTestFramework):
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         consensusEpochData = http_block_forging_info(sc_node)
         print(consensusEpochData)
-        assert_equal(consensusEpochData["bestEpochNumber"], 3)
+        assert_equal(consensusEpochData["bestBlockEpochNumber"], 3)
 
         # Based on withdrawalEpochLength = 11, maxBTsAllowedPerCertificate = 3999, we open 399 slots for WithdrawalBoxes for each MC block reference
         # 2 MC block mined = 399 * 2 = 798 WthdrawalBoxes allowed

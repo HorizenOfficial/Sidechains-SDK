@@ -146,7 +146,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
         ByteArrayWrapper version = new ByteArrayWrapper(BytesUtils.fromHexString(versionToRollback));
 
         // storage extends autocloseable
-        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json), 1441)){
 
             String storageVersionPre  = BytesUtils.toHexString(storage.lastVersionID().get().data());
             storage.rollback(version);
@@ -182,7 +182,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
         int numOfVersions = json.get("numberOfVersionToRetrieve").asInt();
 
         // storage extends autocloseable
-        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json), 1441)){
 
             List<ByteArrayWrapper> bawList = storage.rollbackVersions();
             log.info(bawList);
@@ -220,7 +220,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
     private void processLastVersionID(JsonNode json) {
 
         // storage extends autocloseable
-        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json), 1441)){
             var optLastVer = storage.lastVersionID();
             if (optLastVer.isEmpty())
                 throw new IllegalArgumentException("Selected DB is not versioned: " + getStorageFile(json));

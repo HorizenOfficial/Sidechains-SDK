@@ -10,7 +10,8 @@ from test_framework.util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO, set_sc_parallel_test
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO, set_sc_parallel_test, \
+    SNAPSHOT_VERSION_TAG, set_jacoco
 import os
 import tempfile
 import traceback
@@ -158,7 +159,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
-        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-"+SNAPSHOT_VERSION_TAG+".jar;{examples_dir}/simpleapp/target/lib/* io.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
@@ -183,6 +184,10 @@ class SidechainTestFramework(BitcoinTestFramework):
                                "/NaiveThresholdSignatureCircuitWithKeyRotation")
         parser.add_option("--parallel", dest="parallel", type=int, default=0, action="store",
                           help="Stores parallel process integer assigned to current test")
+        parser.add_option("--mcblockdelay", dest="mcblockdelay", type=int, default=0, action="store",
+                          help="Stores mainchain block delay reference parameter")
+        parser.add_option("--jacoco", dest="jacoco", default=False, action="store_true",
+                          help="Stores jacoco flag assigned to current test")
 
         self.add_options(parser)
         self.sc_add_options(parser)
@@ -205,6 +210,8 @@ class SidechainTestFramework(BitcoinTestFramework):
             parallel_group = int(self.options.parallel)
             if parallel_group > 0:
                 self.set_parallel_test(parallel_group)
+
+            set_jacoco(self.options.jacoco)
 
             self.setup_chain()
 

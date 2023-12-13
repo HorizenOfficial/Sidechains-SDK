@@ -156,7 +156,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
               body.withdrawalRequests.foreach(element =>
                 outputs.add(new WithdrawalRequestBoxData(
-                  MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
+                  MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(element.mainchainAddress, params)),
                   element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
               )
 
@@ -621,7 +621,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       outputs.add(new WithdrawalRequestBoxData(
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
-        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(element.mainchainAddress, params)),
       element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
     })
 

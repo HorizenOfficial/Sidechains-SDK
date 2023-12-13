@@ -21,6 +21,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.transaction.mainchain.ForwardTransfer
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.NetworkTimeProvider
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.ExecutionContext
@@ -32,7 +33,8 @@ case class AccountBlockApiRoute(
     sidechainBlockActorRef: ActorRef,
     companion: SparkzSerializer[SidechainTypes#SCAT],
     forgerRef: ActorRef,
-    params: NetworkParams
+    params: NetworkParams,
+    timeProvider: NetworkTimeProvider
 )(implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
     extends BlockBaseApiRoute[
       SidechainTypes#SCAT,
@@ -44,7 +46,7 @@ case class AccountBlockApiRoute(
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView
-    ](settings, sidechainBlockActorRef, companion, forgerRef, params) {
+    ](settings, sidechainBlockActorRef, companion, forgerRef, params, timeProvider) {
 
   override val route: Route = pathPrefix(blockPathPrefix) {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~

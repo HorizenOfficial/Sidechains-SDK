@@ -28,7 +28,7 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.evm.results.ProofAccountResult
-import io.horizen.evm.{Address, Hash, TraceOptions}
+import io.horizen.evm.{Address, Hash, TraceOptions, Tracer}
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.network.SyncStatus
 import io.horizen.network.SyncStatusActor.ReceivableMessages.GetSyncStatus
@@ -51,11 +51,11 @@ import java.nio.charset.StandardCharsets
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EthService(
@@ -373,7 +373,11 @@ class EthService(
       val (success, reverted) = check(highBound)
       if (!success) {
         val error = reverted
-          .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData)))
+          .map(err => {
+              log.debug(s"Execution has been reverted: ${err.getMessage}", err)
+              RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.returnData))
+            }
+          )
           .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
         throw new RpcException(error)
       }
@@ -498,7 +502,7 @@ class EthService(
     new BlockContext(
       block.header,
       blockInfo.height,
-      TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
+      TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, blockInfo.timestamp),
       blockInfo.withdrawalEpochInfo.epoch,
       networkParams.chainId,
       blockHashProvider
@@ -617,10 +621,36 @@ class EthService(
     }
   }
 
+  // This method looks for the transaction first in the history and then, if not found, in the memory pool.
+  private def getTransaction(transactionHash: Hash)
+  : Option[(Option[AccountBlock], EthereumTransaction, EthereumReceipt)] = {
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        stateView
+          .getTransactionReceipt(transactionHash.toBytes)
+          .flatMap(receipt => {
+            nodeView.history
+              .blockIdByHeight(receipt.blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(block => {
+                val tx = block.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction]
+                (Some(block), tx, receipt)
+              })
+          }).orElse (
+            nodeView.pool.getTransactionById(transactionHash.toStringNoPrefix).asScala.map(tx =>
+              (None, tx.asInstanceOf[EthereumTransaction], null))
+          )
+      }
+    }
+  }
+
+
   @RpcMethod("eth_getTransactionByHash")
   def getTransactionByHash(transactionHash: Hash): EthereumTransactionView = {
-    getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
-      new EthereumTransactionView(tx, receipt, block.header.baseFee)
+    getTransaction(transactionHash).map { case (blockOpt, tx, receipt) =>
+      val baseFee = blockOpt.map(_.header.baseFee).orNull
+      new EthereumTransactionView(tx, receipt, baseFee)
     }.orNull
   }
 
@@ -830,9 +860,6 @@ class EthService(
 
     // get state at previous block
     getStateViewAtTag(nodeView, (blockInfo.height - 1).toString) { (tagStateView, blockContext) =>
-      // enable tracing
-      blockContext.enableTracer(config)
-
       // apply mainchain references
       for (mcBlockRefData <- block.mainchainBlockReferencesData) {
         tagStateView.applyMainchainBlockReferenceData(mcBlockRefData)
@@ -841,18 +868,16 @@ class EthService(
       val gasPool = new GasPool(block.header.gasLimit)
 
       // apply all transaction, collecting traces on the way
-      val evmResults = block.transactions.zipWithIndex.map({ case (tx, i) =>
-        tagStateView.applyTransaction(tx, i, gasPool, blockContext)
-        blockContext.getEvmResult
+      val traces = block.transactions.zipWithIndex.map({ case (tx, i) =>
+        using(new Tracer(config)) { tracer =>
+          blockContext.setTracer(tracer)
+          tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+          tracer.getResult.result
+        }
       })
 
       // return the list of tracer results from the evm
-      val tracerResultList = new ListBuffer[JsonNode]
-      for (evmResult <- evmResults) {
-        if (evmResult != null && evmResult.tracerResult != null)
-          tracerResultList += evmResult.tracerResult
-      }
-      tracerResultList.toList
+      traces.toList
     }
   }
 
@@ -910,18 +935,13 @@ class EthService(
           tagStateView.applyTransaction(tx, i, gasPool, blockContext)
         }
 
-        // enable tracing
-        blockContext.enableTracer(config)
-
-        // apply requested transaction with tracing enabled
-        tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
-
-        // return the tracer result from the evm
-        if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
-          blockContext.getEvmResult.tracerResult
-        else {
-          logger.warn("Unable to get tracer result from EVM")
-          JsonNodeFactory.instance.objectNode()
+        using(new Tracer(config)) { tracer =>
+          // enable tracing
+          blockContext.setTracer(tracer)
+          // apply requested transaction with tracing enabled
+          tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
+          // return the tracer result
+          tracer.getResult.result
         }
       }
     }
@@ -930,7 +950,6 @@ class EthService(
   @RpcMethod("debug_traceCall")
   @RpcOptionalParameters(1)
   def traceCall(params: TransactionArgs, tag: String, config: TraceOptions): JsonNode = {
-
     applyOnAccountView { nodeView =>
       // get block info
       val blockInfo = getBlockInfoById(nodeView, getBlockIdByHashOrTag(nodeView, tag))
@@ -938,19 +957,15 @@ class EthService(
       // get state at selected block
       getStateViewAtTag(nodeView, if (tag == "pending") "pending" else blockInfo.height.toString) {
         (tagStateView, blockContext) =>
-          // enable tracing
-          blockContext.enableTracer(config)
-
-          // apply requested message with tracing enabled
-          val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
-          tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)
-
-          // return the tracer result from the evm
-          if (blockContext.getEvmResult != null && blockContext.getEvmResult.tracerResult != null)
-            blockContext.getEvmResult.tracerResult
-          else {
-            logger.warn("Unable to get tracer result from EVM")
-            JsonNodeFactory.instance.objectNode()
+          using(new Tracer(config)) { tracer =>
+            // enable tracing
+            blockContext.setTracer(tracer)
+            // apply requested message with tracing enabled
+            val msg = params.toMessage(blockContext.baseFee, settings.globalRpcGasCap)
+            Try(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext)) match {
+              case Failure(ex) if !ex.isInstanceOf[ExecutionFailedException] => throw ex
+              case _ => tracer.getResult.result // return the tracer result
+             }
           }
       }
     }

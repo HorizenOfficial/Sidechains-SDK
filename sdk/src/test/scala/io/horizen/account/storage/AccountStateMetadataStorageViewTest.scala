@@ -8,14 +8,18 @@ import io.horizen.account.utils.AccountBlockFeeInfo
 import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import io.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import io.horizen.storage.Storage
+import io.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
+import org.mockito.Mockito.when
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core._
 
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
+import java.util.Optional
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source
 import scala.util.Random
@@ -163,6 +167,37 @@ class AccountStateMetadataStorageViewTest
     )
   }
 
+  @Test
+  def doNotRemoveOldCertificateIfAreStillNeededAsPreviousCertificate(): Unit = {
+    // Arrange
+    val storageMock = mock[Storage]
+    val metadataStorageView = new AccountStateMetadataStorageView(storageMock)
+    val storageCertKey = new ByteArrayWrapper(BytesUtils.fromHexString("fecbe6fcc71e68d667c602c6112bec5e365c77f0fcb829d2502afb4e0608eaba"))
+
+    when(storageMock.get(storageCertKey)).thenAnswer(_ => Optional.empty())
+
+    // Act
+    val oldCertToBeRemoved = metadataStorageView.getOldTopCertificatesToBeRemoved(WithdrawalEpochInfo(5, 5))
+
+    // Assert
+    assertTrue(oldCertToBeRemoved.isEmpty)
+  }
+
+  @Test
+  def removeOldCertificateIfCertificateWasAlreadyUsedAsPreviousCertificate(): Unit = {
+    // Arrange
+    val storageMock = mock[Storage]
+    val metadataStorageView = new AccountStateMetadataStorageView(storageMock)
+    val storageCertKey = new ByteArrayWrapper(BytesUtils.fromHexString("fecbe6fcc71e68d667c602c6112bec5e365c77f0fcb829d2502afb4e0608eaba"))
+
+    when(storageMock.get(storageCertKey)).thenAnswer(_ => Optional.of(Some(2)))
+
+    // Act
+    val oldCertToBeRemoved = metadataStorageView.getOldTopCertificatesToBeRemoved(WithdrawalEpochInfo(5, 5))
+
+    // Assert
+    assertTrue(oldCertToBeRemoved.nonEmpty)
+  }
 
   def generateCertificateWithEpochNumber(epochNum: Int): WithdrawalEpochCertificate = {
     val sourceCertHex: String = Source.fromResource("cert_no_bts").getLines().next()

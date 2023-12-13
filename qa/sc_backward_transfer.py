@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-import json
-import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
+from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_equal, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, generate_next_block
-from SidechainTestFramework.sc_forging_util import *
+from test_framework.util import assert_false, start_nodes, \
+    websocket_port_by_mc_node_index
 
 """
 Check Certificate automatic creation and submission to MC:

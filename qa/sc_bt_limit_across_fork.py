@@ -87,7 +87,7 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
 
         # Verify we didn't reach the SC fork1 that includes BT limit
         consensusEpochData = http_block_forging_info(sc_node)
-        assert_equal(consensusEpochData["bestEpochNumber"], 1)
+        assert_equal(consensusEpochData["bestBlockEpochNumber"], 1)
 
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
@@ -112,12 +112,12 @@ class ScBtLimitAcrossForkTest(SidechainTestFramework):
         amounts = [54 for i in range(999)]
         withdrawMultiCoins(sc_node, bt_addresses, amounts)
         consensusEpochData = http_block_forging_info(sc_node)
-        assert_equal(consensusEpochData["bestEpochNumber"], 2)
+        assert_equal(consensusEpochData["bestBlockEpochNumber"], 2)
 
         # Reach the SC fork 1
         sc_block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         consensusEpochData = http_block_forging_info(sc_node)
-        assert_equal(consensusEpochData["bestEpochNumber"], 3)
+        assert_equal(consensusEpochData["bestBlockEpochNumber"], 3)
         block_json = http_block_findById(sc_node, sc_block_id)
 
         # Verify that we didn't include the transaction since we still don't have enough open WB slots (2 MC block 799 slots)

@@ -249,6 +249,31 @@ class SCEvmDebugMethods(AccountChainSetup):
         res = sc_node.rpc_debug_traceCall(trace_call_args, "pending", {"tracer": "theBestTracer"})
         assert_true(res['error'] is not None, "invalid tracer should fail")
 
+        # traceCall with an invalid transaction should return an error
+        trace_call_args['gas'] = "0x15863"  # just below intrinsic gas, the tx is invalid
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "latest", {"tracer": "callTracer"})
+
+        assert_true(res['error'] is not None, "invalid transaction should fail")
+        assert_true('intrinsic gas too low' in res['error']['message'], "wrong message")
+
+        # traceCall with a failed transaction should return the stack trace
+        trace_call_args['gas'] = "0x15864"  # just enough gas to cover for intrinsic gas, tx is valid but fails for OoG
+        res = sc_node.rpc_debug_traceCall(trace_call_args, "latest", {"tracer": "callTracer"})
+
+        logging.info(res)
+        assert_true("error" not in res, "failed transaction should not fail")
+        trace_result = res["result"]
+
+        assert_true("calls" not in trace_result)
+        assert_equal("CREATE", trace_result["type"])
+        assert_equal(0, int(trace_result["gas"], 16))  # it is the input gas without the intrinsic gas
+        assert_equal("0x15864", trace_result["gasUsed"])
+        assert_equal(trace_call_args['input'], trace_result["input"])
+        assert_true("output" not in trace_result)
+        assert_equal("out of gas", trace_result["error"])
+
+
+
 
 if __name__ == "__main__":
     SCEvmDebugMethods().main()

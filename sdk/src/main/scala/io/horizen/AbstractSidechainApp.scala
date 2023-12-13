@@ -10,11 +10,12 @@ import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
 import io.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import io.horizen.companion._
+import io.horizen.consensus.{ConsensusParamsUtil, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation}
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ForkConfigurator, ForkManager}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
@@ -22,7 +23,7 @@ import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
 import io.horizen.transaction._
 import io.horizen.transaction.mainchain.SidechainCreation
-import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair}
+import io.horizen.utils.{BlockUtils, BytesUtils, DynamicTypedSerializer, Pair, TimeToEpochUtils, WithdrawalEpochUtils}
 import io.horizen.websocket.client._
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.impl.Log4jContextFactory
@@ -54,7 +55,7 @@ abstract class AbstractSidechainApp
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
    val chainInfo : ChainInfo,
-   val consensusSecondsInSlot: Int
+   val mcBlockReferenceDelay : Int
   )
   extends Application with SparkzLogging
 {
@@ -67,6 +68,7 @@ abstract class AbstractSidechainApp
   private val closableResourceList = mutable.ListBuffer[AutoCloseable]()
   protected val sidechainTransactionsCompanion: DynamicTypedSerializer[TX, TransactionSerializer[TX]]
   protected val terminationTimeout: FiniteDuration = Duration(30, TimeUnit.SECONDS)
+  protected val maxMcBlockRefDelay = 10
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
@@ -128,99 +130,127 @@ abstract class AbstractSidechainApp
   lazy val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
 
-  if (consensusSecondsInSlot < consensus.minSecondsInSlot || consensusSecondsInSlot > consensus.maxSecondsInSlot) {
-    throw new IllegalArgumentException(s"Consensus seconds in slot is out of range. It should be no less than ${consensus.minSecondsInSlot} and be less or equal to ${consensus.maxSecondsInSlot}. " +
-      s"Current value: $consensusSecondsInSlot")
-  }
+
+  // Init ForkManager
+  // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
+
+  val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
+  val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
 
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
-    case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
-      sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
-      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
-      genesisPoWData = genesisPowData,
-      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = consensusSecondsInSlot,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      signersPublicKeys = signersPublicKeys,
-      mastersPublicKeys = mastersPublicKeys,
-      circuitType = circuitType,
-      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
-      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
-      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
-      restrictForgers = sidechainSettings.forger.restrictForgers,
-      allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      chainId = chainInfo.regtestId,
-      isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
-    )
+    case "regtest" =>
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.regtest, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
+        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.regtest), intToConsensusSlotNumber(1))
+      }))
+      RegTestParams(
+        sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+        sidechainGenesisBlockId = genesisBlock.id,
+        genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+        parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+        genesisPoWData = genesisPowData,
+        mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+        sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+        withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+        signersPublicKeys = signersPublicKeys,
+        mastersPublicKeys = mastersPublicKeys,
+        circuitType = circuitType,
+        signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+        certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
+        certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
+        calculatedSysDataConstant = calculatedSysDataConstant,
+        initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+        cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+        cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+        restrictForgers = sidechainSettings.forger.restrictForgers,
+        allowedForgersList = forgerList,
+        sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+        chainId = chainInfo.regtestId,
+        isCSWEnabled = isCSWEnabled,
+        isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
+      )
 
-    case "testnet" => TestNetParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
-      sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
-      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
-      genesisPoWData = genesisPowData,
-      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = consensusSecondsInSlot,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      signersPublicKeys = signersPublicKeys,
-      mastersPublicKeys = mastersPublicKeys,
-      circuitType = circuitType,
-      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
-      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
-      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
-      restrictForgers = sidechainSettings.forger.restrictForgers,
-      allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      chainId = chainInfo.testnetId,
-      isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
-    )
 
-    case "mainnet" => MainNetParams(
-      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
-      sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
-      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
-      genesisPoWData = genesisPowData,
-      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = consensusSecondsInSlot,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      signersPublicKeys = signersPublicKeys,
-      mastersPublicKeys = mastersPublicKeys,
-      circuitType = circuitType,
-      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
-      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
-      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
-      restrictForgers = sidechainSettings.forger.restrictForgers,
-      allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      chainId = chainInfo.mainnetId,
-      isCSWEnabled = isCSWEnabled,
-      isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
-      isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled
-    )
+    case "testnet" =>
+      ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
+        ConsensusParamsForkInfo(fork.getKey.testnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+      }))
+      ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
+        TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.testnet), intToConsensusSlotNumber(1))
+      }))
+      TestNetParams(
+        sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+        sidechainGenesisBlockId = genesisBlock.id,
+        genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+        parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+        genesisPoWData = genesisPowData,
+        mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+        sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+        withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+        signersPublicKeys = signersPublicKeys,
+        mastersPublicKeys = mastersPublicKeys,
+        circuitType = circuitType,
+        signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+        certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
+        certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
+        calculatedSysDataConstant = calculatedSysDataConstant,
+        initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+        cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+        cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+        restrictForgers = sidechainSettings.forger.restrictForgers,
+        allowedForgersList = forgerList,
+        sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+        chainId = chainInfo.testnetId,
+        isCSWEnabled = isCSWEnabled,
+        isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
+      )
+
+
+     case "mainnet" =>
+       ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(ConsensusParamsForkInfo(0, defaultConsensusForks)) ++ consensusParamsForkList.map(fork => {
+         ConsensusParamsForkInfo(fork.getKey.mainnet, fork.getValue.asInstanceOf[ConsensusParamsFork])
+       }))
+       ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq( TimeToEpochUtils.virtualGenesisBlockTimeStamp(genesisBlock.timestamp)) ++ consensusParamsForkList.map(fork => {
+         TimeToEpochUtils.getTimeStampForEpochAndSlot(genesisBlock.timestamp, intToConsensusEpochNumber(fork.getKey.mainnet), intToConsensusSlotNumber(1))
+       }))
+      MainNetParams(
+        sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
+        sidechainGenesisBlockId = genesisBlock.id,
+        genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+        parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+        genesisPoWData = genesisPowData,
+        mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+        sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+        withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+        signersPublicKeys = signersPublicKeys,
+        mastersPublicKeys = mastersPublicKeys,
+        circuitType = circuitType,
+        signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+        certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certProvingKeyFilePath,
+        certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.certVerificationKeyFilePath,
+        calculatedSysDataConstant = calculatedSysDataConstant,
+        initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+        cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+        cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+        restrictForgers = sidechainSettings.forger.restrictForgers,
+        allowedForgersList = forgerList,
+        sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+        chainId = chainInfo.mainnetId,
+        isCSWEnabled = isCSWEnabled,
+        isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
+        isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
+        mcBlockRefDelay = mcBlockReferenceDelay
+      )
+
+
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
@@ -230,6 +260,12 @@ abstract class AbstractSidechainApp
 
     log.info(s"Sidechain is non ceasing, virtual withdrawal epoch length is ${params.withdrawalEpochLength}.")
   } else {
+    if (params.mcBlockRefDelay >= WithdrawalEpochUtils.certificateSubmissionWindowLength(params) - 1)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than submission window length")
+
+    if (params.mcBlockRefDelay > maxMcBlockRefDelay)
+      throw new IllegalArgumentException(s"Incorrect mainchain block reference delay. Delay must be less than %d".format(maxMcBlockRefDelay))
+
     log.info(s"Sidechain is ceasing, withdrawal epoch length is ${params.withdrawalEpochLength}.")
   }
 
@@ -265,9 +301,6 @@ abstract class AbstractSidechainApp
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
   }
 
-  // Init ForkManager
-  // We need to have it initializes before the creation of the SidechainState
-  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
   // Retrieve information for using a web socket connector
   lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

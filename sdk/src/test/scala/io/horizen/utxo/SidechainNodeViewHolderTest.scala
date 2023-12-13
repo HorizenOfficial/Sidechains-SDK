@@ -32,6 +32,7 @@ import sparkz.core.{VersionTag, idToVersion}
 import sparkz.util.{ModifierId, SparkzEncoding}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
@@ -427,6 +428,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
 
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
+
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
 
@@ -484,6 +490,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -544,6 +555,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
@@ -612,6 +625,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
        Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
     })
 
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli)
+
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
 
@@ -635,6 +653,54 @@ class SidechainNodeViewHolderTest extends JUnitSuite
             assertEquals("Different number of cleared blocks from cached", (blocksNumber - blockToApply - maxModifiersCacheSize), cleared.length)
             true
           }
+          case _ => false
+        }
+    }
+  }
+
+  /*
+* This test check that the sequence of applied modifiers gets flushed every 100 modifiers to avoid memory leaks.
+*/
+  @Test
+  def flushAppliedModifiers(): Unit = {
+    val twoHundredBlocks = generateSidechainBlockSeq(200, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.openSurfaceIds()).thenReturn(Seq())
+    val blockMock = Mockito.mock(classOf[SidechainBlock])
+    Mockito.when(history.bestBlock).thenReturn(blockMock)
+    Mockito.when(blockMock.timestamp).thenReturn(Instant.now().toEpochMilli / 1000)
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      Success(Unit)
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(twoHundredBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
+            true
+          case _ => false
+        }
+    }
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) =>
+            assertEquals("Different number of applied blocks", 100, applied.length)
+            assertEquals("Different number of cleared blocks from cached", 0, cleared.length)
+            true
           case _ => false
         }
     }

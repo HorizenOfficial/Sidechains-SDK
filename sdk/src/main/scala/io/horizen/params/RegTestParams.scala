@@ -22,8 +22,6 @@ case class RegTestParams(
                           override val mainchainCreationBlockHeight: Int = 1,
                           override val withdrawalEpochLength: Int = 100,
                           override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
-                          override val consensusSecondsInSlot: Int = 120,
-                          override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val mastersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val circuitType: CircuitTypes = CircuitTypes.NaiveThresholdSignatureCircuit,
@@ -41,7 +39,8 @@ case class RegTestParams(
                           override val chainId: Long = 1111111,
                           override val isCSWEnabled: Boolean = true,
                           override val isNonCeasing: Boolean = false,
-                          override val isHandlingTransactionsEnabled: Boolean = true
+                          override val isHandlingTransactionsEnabled: Boolean = true,
+                          override val mcBlockRefDelay: Int = 0
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
