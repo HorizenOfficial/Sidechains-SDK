@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import logging
-import sys
 from decimal import Decimal
 
 from eth_utils import remove_0x_prefix
