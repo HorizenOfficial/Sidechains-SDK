@@ -47,6 +47,8 @@ Test:
     - Forge SC block by the second SC node for the next consensus epoch (Second node ForgingStake must become active).
     - Generate MC and SC blocks to reach the end of the withdrawal epoch. 
     - Check forger payments for the SC nodes.
+    
+    This test doesn't support --allforks.
 """
 
 
@@ -68,6 +70,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
             current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]

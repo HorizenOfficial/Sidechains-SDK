@@ -36,7 +36,9 @@ Test:
     - Get the list of MC addresses associated to a SC address
     - Remove an association and check event
     - Interoperability test: same tests as before but using a proxy evm smart contract
-    Do some negative tests     
+    Do some negative tests   
+    
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 """
 
 
@@ -180,76 +182,78 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             sc_node.rpc_eth_getBalance(format_evm(native_contract_address), 'latest')['result'], 16)
         assert_equal(nsc_bal, 0)
 
-        # send funds to native smart contract before the zendao fork is reached
-        eoa_nsc_amount = 123456
-        tx_hash_eoa = createLegacyEIP155Transaction(sc_node2,
-                                                    fromAddress=sc_address2,
-                                                    toAddress=native_contract_address,
-                                                    value=eoa_nsc_amount
-                                                    )
-        self.sc_sync_all()
-
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
-
-        # get mempool contents and check tx has been forged even if the fork is not active yet. Check the receipt
-        response = allTransactions(sc_node, False)
-        assert_true(tx_hash_eoa not in response['transactionIds'])
-        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
-        status = int(receipt['result']['status'], 16)
-        assert_equal(1, status)
-        gas_used = int(receipt['result']['gasUsed'], 16)
-        assert_equal(gas_used, 21000)
-
-        # check the address has the expected balance
-        nsc_bal = int(
-            sc_node.rpc_eth_getBalance(format_evm(native_contract_address), 'latest')['result'], 16)
-        assert_equal(nsc_bal, eoa_nsc_amount)
-
         mc_signature1 = mc_node.signmessage(taddr1, sc_address_checksum_fmt)
-        print("scAddr: " + sc_address_checksum_fmt)
-        print("mcAddr: " + taddr1)
-        print("mcSignature: " + mc_signature1)
-
-        # try adding sc/mc ownership sending a transaction with data invoking native smart contract before fork point
-        ret = sendKeysOwnership(sc_node, nonce=0,
-                                sc_address=sc_address,
-                                mc_addr=taddr1,
-                                mc_signature=mc_signature1)
-
-        tx_hash = ret['transactionId']
-        self.sc_sync_all()
-
-        generate_next_block(sc_node, "first node")
-        self.sc_sync_all()
-
-        # get mempool contents and check tx has been forged even if the fork is not active yet since it is processed
-        # by the eoa msg processor. Check also the receipt and gas used greater than an eoa (due to contract code)
-        response = allTransactions(sc_node, False)
-        assert_true(tx_hash not in response['transactionIds'])
-        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
-        status = int(receipt['result']['status'], 16)
-        assert_true(status == 1)
-        gas_used = int(receipt['result']['gasUsed'], 16)
-        assert_true(gas_used > 21000)
-
-        # reach the ZenDao fork
-        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
-
-        for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
-            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        nonce = 0
+        if self.options.all_forks is False:
+            # send funds to native smart contract before the zendao fork is reached
+            eoa_nsc_amount = 123456
+            tx_hash_eoa = createLegacyEIP155Transaction(sc_node2,
+                                                        fromAddress=sc_address2,
+                                                        toAddress=native_contract_address,
+                                                        value=eoa_nsc_amount
+                                                        )
             self.sc_sync_all()
 
-        # add the same sc/mc ownership , as abovesending a transaction with data invoking native smart contract
-        ret = sendKeysOwnership(sc_node, nonce=1,
+            generate_next_block(sc_node, "first node")
+            self.sc_sync_all()
+
+            # get mempool contents and check tx has been forged even if the fork is not active yet. Check the receipt
+            response = allTransactions(sc_node, False)
+            assert_true(tx_hash_eoa not in response['transactionIds'])
+            receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash_eoa))
+            status = int(receipt['result']['status'], 16)
+            assert_equal(1, status)
+            gas_used = int(receipt['result']['gasUsed'], 16)
+            assert_equal(gas_used, 21000)
+
+            # check the address has the expected balance
+            nsc_bal = int(
+                sc_node.rpc_eth_getBalance(format_evm(native_contract_address), 'latest')['result'], 16)
+            assert_equal(nsc_bal, eoa_nsc_amount)
+
+            print("scAddr: " + sc_address_checksum_fmt)
+            print("mcAddr: " + taddr1)
+            print("mcSignature: " + mc_signature1)
+
+            # try adding sc/mc ownership sending a transaction with data invoking native smart contract before fork point
+            ret = sendKeysOwnership(sc_node, nonce=nonce,
+                                    sc_address=sc_address,
+                                    mc_addr=taddr1,
+                                    mc_signature=mc_signature1)
+            nonce += 1
+            tx_hash = ret['transactionId']
+            self.sc_sync_all()
+
+            generate_next_block(sc_node, "first node")
+            self.sc_sync_all()
+
+            # get mempool contents and check tx has been forged even if the fork is not active yet since it is processed
+            # by the eoa msg processor. Check also the receipt and gas used greater than an eoa (due to contract code)
+            response = allTransactions(sc_node, False)
+            assert_true(tx_hash not in response['transactionIds'])
+            receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
+            status = int(receipt['result']['status'], 16)
+            assert_true(status == 1)
+            gas_used = int(receipt['result']['gasUsed'], 16)
+            assert_true(gas_used > 21000)
+
+            # reach the ZenDao fork
+            current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+            for i in range(0, ZENDAO_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
+
+        # add the same sc/mc ownership, as above sending a transaction with data invoking native smart contract
+        ret = sendKeysOwnership(sc_node, nonce=nonce,
                                 sc_address=sc_address,
                                 mc_addr=taddr1,
                                 mc_signature=mc_signature1)
-
+        nonce += 1
         tx_hash = ret['transactionId']
         self.sc_sync_all()
 
-        # check the tx adding an ownership is included in the block and the receipt is succesful after fork activation
+        # check the tx adding an ownership is included in the block and the receipt is successful after fork activation
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr1)
 
         # get another address (note that mc recycles addresses)
@@ -265,11 +269,11 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
 
         # add a second owned mc address linked to the same sc address, and use a different sc address format, we should
         # support that
-        ret = sendKeysOwnership(sc_node, nonce=2,
+        ret = sendKeysOwnership(sc_node, nonce=nonce,
                                 sc_address=to_checksum_address(sc_address),
                                 mc_addr=taddr2,
                                 mc_signature=mc_signature2)
-
+        nonce += 1
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2)
 
@@ -290,6 +294,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
                                   sc_address=sc_address,
                                   mc_addr=taddr2)
         pprint.pprint(ret)
+        nonce += 1
 
         tx_hash = ret['transactionId']
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2, evt_op="remove")
@@ -325,11 +330,12 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         # 2. try to add a not owned ownership. The tx is executed but the receipt has a failed status
         taddr3 = mc_node.getnewaddress()
 
-        ret = sendKeysOwnership(sc_node, nonce=4,
+        ret = sendKeysOwnership(sc_node, nonce=nonce,
                                 sc_address=sc_address,
                                 mc_addr=taddr3,
                                 mc_signature=mc_signature1)
         tx_hash = ret['transactionId']
+        nonce += 1
 
         forge_and_check_receipt(self, sc_node, tx_hash, expected_receipt_status=0)
 
@@ -394,12 +400,14 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             fail("duplicate association should not work")
 
         # re-add the mc address we removed
-        ret = sendKeysOwnership(sc_node, nonce=5,
+        ret = sendKeysOwnership(sc_node, nonce=nonce,
                                 sc_address=sc_address,
                                 mc_addr=taddr2,
                                 mc_signature=mc_signature2)
 
         tx_hash = ret['transactionId']
+        nonce += 1
+
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=sc_address, mc_addr=taddr2)
 
         # try adding 10 mc addresses and forge a block after that
@@ -413,11 +421,13 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
             print("mcAddr: " + taddr)
             print("mcSignature: " + mc_signature)
 
-            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=6 + i,
+            tx_hash_list.append(sendKeysOwnership(sc_node, nonce=nonce + i,
                                                   sc_address=sc_address,
                                                   mc_addr=taddr,
                                                   mc_signature=mc_signature)['transactionId'])
             self.sc_sync_all()
+
+        nonce += 10
 
         generate_next_block(sc_node, "first node")
         self.sc_sync_all()
@@ -443,7 +453,7 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         assert_true(len(taddr_list) == 9)
 
         # use a different sc address format, we should support that
-        removeKeysOwnership(sc_node, nonce=16,
+        removeKeysOwnership(sc_node, nonce=nonce,
                             sc_address=to_checksum_address(sc_address),
                             mc_addr=taddr_rem)
 
@@ -602,28 +612,29 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
         generate_next_block(sc_node, "first node")
 
         # Deploy proxy contract
-        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop)
+        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop, self.options.all_forks)
         # Create native contract interface, useful encoding/decoding params. Note this doesn't deploy a contract.
         native_contract = SmartContract("McAddrOwnership")
 
-        # Test before interoperability fork
         method = 'getAllKeyOwnerships()'
         native_input = format_eoa(native_contract.raw_encode_call(method))
-        try:
-            proxy_contract.do_static_call(evm_address_interop, 1, native_contract_address, native_input)
-            fail("Interoperability call should fail before fork point")
-        except RuntimeError as err:
-            print("Expected exception thrown: {}".format(err))
-            # error is raised from API since the address has no balance
-            assert_true("reverted" in str(err))
+        if self.options.all_forks is False:
+            # Test before interoperability fork
+            try:
+                proxy_contract.do_static_call(evm_address_interop, 1, native_contract_address, native_input)
+                fail("Interoperability call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("reverted" in str(err))
 
 
-        # reach the Interoperability fork
-        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+            # reach the Interoperability fork
+            current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
-            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-            self.sc_sync_all()
+            for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
 
         # Test getAllKeyOwnerships()
 

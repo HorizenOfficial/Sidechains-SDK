@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import sys
 from decimal import Decimal
 
 from eth_utils import remove_0x_prefix
@@ -7,12 +8,13 @@ from eth_utils import remove_0x_prefix
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.utils import convertZenToWei
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition, \
-    AccountModel
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, generate_account_proposition
 from test_framework.util import assert_equal
 
 """
 Check the EVM SC block header values gasUsed and baseFee.
+
+This test doesn't support --allforks.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -33,6 +35,10 @@ class SCEvmBaseFee(AccountChainSetup):
         super().__init__(withdrawalEpochLength=10)
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         self.sc_ac_setup()
 
         sc_node = self.sc_nodes[0]

@@ -11,6 +11,7 @@ from test_framework.util import assert_equal, assert_true
 
 """
 Check debug methods.
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork

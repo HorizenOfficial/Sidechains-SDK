@@ -8,6 +8,7 @@ from SidechainTestFramework.scutil import EVM_APP_SLOT_TIME, SLOTS_IN_EPOCH, gen
 from test_framework.util import assert_equal, assert_false, fail
 
 
+# This test doesn't support --allforks.
 class SCEVMGasFeeFork(AccountChainSetup):
 
     def __init__(self):
@@ -45,6 +46,10 @@ class SCEVMGasFeeFork(AccountChainSetup):
                 fail("TX should be invalid")
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         self.sc_ac_setup()
 
         sc_node = self.sc_nodes[0]

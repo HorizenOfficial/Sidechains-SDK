@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 
 from eth_utils import to_checksum_address
 
@@ -8,9 +9,11 @@ from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, depl
 from SidechainTestFramework.account.utils import convertZenToWei, \
     NULL_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, EVM_APP_SLOT_TIME, SLOTS_IN_EPOCH
-from test_framework.util import (assert_equal, forward_transfer_to_sidechain, assert_false)
+from test_framework.util import (assert_equal, forward_transfer_to_sidechain, assert_false, fail)
 
 """
+This test doesn't support --allforks.
+
 Configuration: 
     - 1 SC node
     - 1 MC node
@@ -82,6 +85,10 @@ class SCEvmFtToNativeContract(AccountChainSetup):
             assert_equal(updated_burn_bal, start_burn_balance + ft_amount_wei)
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         sc_node = self.sc_nodes[0]
         self.sc_ac_setup(forwardTransfer=10)
 

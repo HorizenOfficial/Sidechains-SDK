@@ -13,6 +13,8 @@ from test_framework.util import assert_equal, assert_true, websocket_port_by_mc_
 import pprint
 
 """
+This test doesn't support --allforks.
+
 Configuration:
     Start 1 MC node and 2 SC node.
     SC node 1 connected to the MC node 1.
@@ -67,6 +69,10 @@ class SCConsensusParamsForkTest(AccountChainSetup):
 
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         time.sleep(0.1)
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a

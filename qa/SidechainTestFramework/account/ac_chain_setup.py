@@ -176,10 +176,20 @@ class AccountChainSetup(SidechainTestFramework):
                                                                  model=AccountModel)
 
     def sc_setup_nodes(self):
+        additional_params = []
+        if self.debug_extra_args is not None:
+            additional_params = self.debug_extra_args
+        for index in range(self.number_of_sidechain_nodes):
+            if self.debug_extra_args is None:
+                additional_params.append([])
+            additional_params[index].append('-mc_block_delay_ref')
+            additional_params[index].append(str(self.options.mcblockdelay))
+            additional_params[index].append('-all_forks')
+            additional_params[index].append(str(self.options.all_forks))
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes,
-                              extra_args=self.debug_extra_args)
+                              extra_args=additional_params)
 
     def sc_ac_setup(self, wallet=True, forwardTransfer=True, ft_amount_in_zen=Decimal("33.22")):
         sc_node = self.sc_nodes[0]
@@ -222,3 +232,4 @@ class AccountChainSetup(SidechainTestFramework):
 
             sc_best_block = sc_node.block_best()["result"]
             logging.info(sc_best_block)
+

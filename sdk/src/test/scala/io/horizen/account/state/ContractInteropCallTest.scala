@@ -28,7 +28,7 @@ class ContractInteropCallTest extends ContractInteropTestBase {
   val INVALID_OP_CODE__ERR_MSG_FROM_EVM = "invalid opcode"
   val WRITE_PROTECTION_ERR_MSG_FROM_NATIVE_CONTRACT = "invalid write access to storage"
 
-  private object NativeTestContract extends NativeSmartContractMsgProcessor {
+  protected object NativeTestContract extends NativeSmartContractMsgProcessor {
     override val contractAddress: Address = new Address("0x00000000000000000000000000000000deadbeef")
     override val contractCode: Array[Byte] = Keccak256.hash("NativeTestContract")
 

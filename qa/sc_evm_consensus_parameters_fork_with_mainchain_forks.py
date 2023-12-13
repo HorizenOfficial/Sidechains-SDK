@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -9,10 +10,12 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_next_block, AccountModel, \
     try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
 from test_framework.util import initialize_chain_clean, websocket_port_by_mc_node_index, \
-    connect_nodes_bi, disconnect_nodes_bi, forward_transfer_to_sidechain, assert_equal, assert_true
+    connect_nodes_bi, disconnect_nodes_bi, forward_transfer_to_sidechain, assert_equal, assert_true, fail
 
 """
 Check the correct behavior of the consensus parameter fork activation with a mainchain fork
+
+This test doesn't support --allforks.
 
 Configuration:
     Start 2 MC node and 2 SC node.
@@ -63,6 +66,8 @@ class SCConsensusParamsForkWithMainchainForksTest(AccountChainSetup):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
+
+
         mc_node = self.nodes[0]
         sc_node_configuration = [
             SCNodeConfiguration(
@@ -88,6 +93,10 @@ class SCConsensusParamsForkWithMainchainForksTest(AccountChainSetup):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node1 = self.nodes[0]
         mc_node2 = self.nodes[1]
         sc_node1 = self.sc_nodes[0]
