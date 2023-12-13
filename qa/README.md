@@ -7,7 +7,7 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 
 **Requirements**
 
-- Install Python 3.5 or newer
+- Install Python 3.10 or newer
 ```
 sudo apt install python
 sudo apt-get -y install python3-pip

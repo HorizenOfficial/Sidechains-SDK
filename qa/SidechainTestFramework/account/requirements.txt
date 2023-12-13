@@ -4,3 +4,4 @@ rlp
 eth_utils
 eth_bloom
 base58
+requests

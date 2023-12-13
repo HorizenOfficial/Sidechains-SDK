@@ -6,7 +6,7 @@ package io.horizen.account.state;
 // by a specific instance of MessageProcessor.
 // The specific instance of MessageProcessor is selected by looping on a list (initialized
 // at genesis state creation) and executing the method 'canProcess'.
-// Currently there are 3 main MessageProcessor types:
+// Currently, there are 3 main MessageProcessor types:
 //  - Eoa2Eoa: handling regular coin transfers between EOA accounts
 //  - Evm: handling transactions requiring EVM invocations (such as smart contract deployment/invocation/...)
 //  - NativeSmartContract: Handling SC custom logic not requiring EVM invocations (Forger Stake handling, Withdrawal request ...)
@@ -16,27 +16,28 @@ public interface MessageProcessor {
     // Common pattern: declare a new native smart contract account in the View
     void init(BaseAccountStateView view, int consensusEpochNumber) throws MessageProcessorInitializationException;
 
-    // Checks if the processor is applicable to the Message. Some message processor can support messages when reaching
+    boolean customTracing();
+
+    // Checks if the processor is applicable to the invocation. Some message processor can support messages when reaching
     // a fork point, therefore we pass along the consensus epoch number, which is not stored in stateDb
-    boolean canProcess(Message msg, BaseAccountStateView view, int consensusEpochNumber);
+    boolean canProcess(Invocation invocation, BaseAccountStateView view, int consensusEpochNumber);
 
     /**
-     * Apply message to the given view. Possible results:
+     * Apply invocation to the given view. Possible results:
      * <ul>
      *     <li>applied as expected: return byte[]</li>
-     *     <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
-     *     <li>message invalid and must not exist in a block: throw any other Exception</li>
+     *     <li>invocation valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
+     *     <li>invocation invalid and must not exist in a block: throw any other Exception</li>
      * </ul>
      *
-     * @param msg message to apply to the state
-     * @param view state view
-     * @param gas available gas for the execution
-     * @param blockContext contextual information accessible during execution. It contains also the consensus epoch number
+     * @param invocation invocation to execute
+     * @param view       state view
+     * @param context    contextual information accessible during execution. It contains also the consensus epoch number
      * @return return data on successful execution
      * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
-     * @throws ExecutionFailedException revert-and-consume-all-gas, also mark the message as "failed"
-     * @throws RuntimeException any other exceptions are consideres as "invalid message"
+     * @throws ExecutionFailedException   revert-and-consume-all-gas, also mark the message as "failed"
+     * @throws RuntimeException           any other exceptions are considered as "invalid message"
      */
-    byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
-            throws ExecutionFailedException;
+    byte[] process(Invocation invocation, BaseAccountStateView view, ExecutionContext context)
+        throws ExecutionFailedException;
 }

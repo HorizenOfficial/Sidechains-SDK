@@ -28,3 +28,6 @@ qa/.metals/metals.lock.db
 qa/.metals/metals.mv.db
 qa/.metals/metals.log
 .scalafmt.conf
+
+# Jacoco reports
+coverage-reports/**

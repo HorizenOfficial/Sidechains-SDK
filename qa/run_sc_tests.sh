@@ -34,6 +34,10 @@ for i in "$@"; do
       EVM_ONLY="true"
       shift
       ;;
+    -jacoco)
+      JACOCO="true"
+      shift
+      ;;
     -utxo_only)
       UTXO_ONLY="true"
       shift
@@ -89,6 +93,7 @@ testScriptsEvm=(
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_node_info.py'
     'sc_evm_orphan_txs.py'
+    'sc_evm_native_interop.py'
     'sc_evm_rpc_invalid_blocks.py'
     'sc_evm_rpc_invalid_txs.py'
     'sc_evm_rpc_net_methods.py'
@@ -123,10 +128,17 @@ testScriptsEvm=(
     'account_websocket_server_rpc.py'
     'sc_evm_mc_addr_ownership.py'
     'sc_evm_mc_addr_ownership_perf_test.py'
+    'sc_evm_proxy_nsc.py'
     'sc_evm_seedernode.py'
     'sc_evm_consensus_parameters_fork.py'
     'sc_evm_active_slot_coefficient.py'
+    'mc_sc_evm_forging1_with_mc_block_delay.py'
+    'mc_sc_evm_forging3_with_mc_block_delay.py'
+    'mc_sc_evm_forging4_with_mc_block_delay.py'
+    'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
     'sc_evm_rpc_eth.py'
+    'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
+    'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
 );
 
 testScriptsUtxo=(
@@ -255,6 +267,16 @@ if [ ! -z "$EXCLUDE" ]; then
       fi
     done
   done
+fi
+
+# add --jacoco flag to each test if jacoco flag set to true
+if [ ! -z "$JACOCO" ] && [ "${JACOCO}" = "true" ]; then
+  modifiedList=()
+  for testFile in "${testScripts[@]}"; do
+      modified_test="${testFile} --jacoco"
+      modifiedList+=("$modified_test")
+  done
+  testScripts=("${modifiedList[@]}")
 fi
 
 # split array into m parts and only run tests of part n where SPLIT=m:n
@@ -410,6 +432,7 @@ function runTestScript
       updateFailList="$testName"
       updateFailureCount
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+      exit 1
     fi
 
     echo | tee /dev/fd/3

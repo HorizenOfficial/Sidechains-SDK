@@ -179,11 +179,15 @@ class ConsensusValidator[
 
   //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
   private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean, activeSlotCoefficient: Double): Unit = {
-    log.debug(s"Verify Forging stake info against root hash: ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
+    log.whenDebugEnabled {
+      s"Verify Forging stake info against root hash: ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}"
+    }
 
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
     if (!forgingStakeIsCorrect) {
-      log.debug(s"Actual stakeInfo: rootHash: ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
+      log.whenDebugEnabled {
+        s"Actual stakeInfo: rootHash: ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)}, totalStake: ${stakeConsensusEpochInfo.totalStake}"
+      }
       throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)}")
     }
 

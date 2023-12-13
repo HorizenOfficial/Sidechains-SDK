@@ -120,6 +120,12 @@ class SCEvmEOA2EOA(AccountChainSetup):
                                        transferred_amount_in_zen)
         assert_true(ret, msg)
 
+        logging.info("Repeat similar transaction with different case in sender address...")
+        transferred_amount_in_zen = Decimal('11')
+        ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1.upper(), evm_address_sc2,
+                                       transferred_amount_in_zen)
+        assert_true(ret, msg)
+
         logging.info("Create an EOA to EOA transaction moving some fund from SC1 address to a SC1 different address.")
         evm_address_sc1_b = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         transferred_amount_in_zen = Decimal('22')
@@ -162,6 +168,13 @@ class SCEvmEOA2EOA(AccountChainSetup):
         # moreover, check we have the chainId in tx json, as per EIP155
         txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(add_0x_prefix(txHash))['result']
         assert_true("chainId" in txJsonResult)
+
+        logging.info("Repeat similar transaction with different case in sender address...")
+        transferred_amount_in_zen = Decimal('15')
+        ret, msg, txHash = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1.upper(), evm_address_sc2,
+                                            transferred_amount_in_zen,
+                                            isEIP155=True, print_json_results=False)
+        assert_true(ret, msg)
 
         # negative cases
 

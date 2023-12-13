@@ -23,6 +23,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
 
 
   val origin: Address = randomAddress
+  val origin2: Address = randomAddress
   val defaultBlockContext =
     new BlockContext(Address.ZERO, 0, 0, DefaultGasFeeFork.blockGasLimit, 0, 33, 0, 1, MockedHistoryBlockHashProvider, Hash.ZERO)
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
@@ -84,7 +85,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
   ): Array[Byte] = {
     view.setupAccessList(msg)
     val gas = new GasPool(1000000)
-    val result = Try.apply(processor.process(msg, view, gas, ctx))
+    val result = Try.apply(TestContext.process(processor, msg, view, ctx, gas))
     assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
     // return result or rethrow any exception
     result.get

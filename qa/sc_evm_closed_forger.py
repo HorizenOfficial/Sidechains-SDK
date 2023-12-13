@@ -30,7 +30,7 @@ Configuration:
 
 Test:
     - Try to stake money with invalid forger info and verify that we are not allowed to stake
-    - Try the same with forger info pubkeys contained in the closed list, should be succesful
+    - Try the same with forger info pubkeys contained in the closed list, should be successful
     - Open the stake to the world using the openStakeTransaction and verify that a generic proposition (not included in the forger list) 
       is allowed to forge. Some negative test is also done.
 
