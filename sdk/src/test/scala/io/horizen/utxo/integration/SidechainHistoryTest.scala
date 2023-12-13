@@ -2,9 +2,9 @@ package io.horizen.utxo.integration
 
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.utxo.companion.SidechainTransactionsCompanion
-import io.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
+import io.horizen.consensus.{ConsensusDataStorage, ConsensusParamsUtil, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import io.horizen.fixtures._
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
 import io.horizen.params.{MainNetParams, NetworkParams}
@@ -58,6 +58,10 @@ class SidechainHistoryTest extends JUnitSuite
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork)
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
 
     genesisBlockInfo = AbstractHistory.calculateGenesisBlockInfo(genesisBlock, params).copy(semanticValidity = ModifierSemanticValidity.Valid)
     Mockito.when(sidechainSettings.sparkzSettings)
@@ -709,8 +713,11 @@ class SidechainHistoryTest extends JUnitSuite
     val testParams = MainNetParams(new Array[Byte](32),
       genesisBlock.id,
       sidechainGenesisBlockTimestamp = 100000,
-      consensusSecondsInSlot = 10,
-      consensusSlotsInEpoch = 2)
+      )
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(2, 10))
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(testParams.sidechainGenesisBlockTimestamp)))
 
     val sidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), sidechainTransactionsCompanion, params)
     // Create first history object
@@ -719,7 +726,7 @@ class SidechainHistoryTest extends JUnitSuite
     Mockito.doAnswer(_ => firstBlockVrfOutputOpt).when(history).getVrfOutput(ArgumentMatchers.any[SidechainBlockHeader], ArgumentMatchers.any[NonceConsensusEpochInfo])
 
     val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, testParams)
-    assertEquals(2, TimeToEpochUtils.timeStampToEpochNumber(testParams, block1.timestamp))
+    assertEquals(2, TimeToEpochUtils.timeStampToEpochNumber(testParams.sidechainGenesisBlockTimestamp, block1.timestamp))
 
     history = history.append(block1).get._1
     history = history.reportModifierIsValid(block1).get
@@ -736,7 +743,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals(genesisBlock.id, block2Info.lastBlockInPreviousConsensusEpoch)
 
     val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, testParams)
-    assertEquals(3, TimeToEpochUtils.timeStampToEpochNumber(testParams, block3.timestamp))
+    assertEquals(3, TimeToEpochUtils.timeStampToEpochNumber(testParams.sidechainGenesisBlockTimestamp, block3.timestamp))
     history = history.append(block3).get._1
     history = history.reportModifierIsValid(block3).get
     val block3Info = history.bestBlockInfo

@@ -4,8 +4,8 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import io.horizen._
-import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.http.route.{AccountApplicationApiRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import io.horizen.account.api.http.{AccountApplicationApiGroup, route}
 import io.horizen.account.api.rpc.handler.RpcHandler
 import io.horizen.account.api.rpc.service.{EthService, RpcProcessor, RpcUtils}
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
@@ -38,6 +38,7 @@ import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -55,8 +56,8 @@ class AccountSidechainApp @Inject()
    @Named("ApplicationStopper") applicationStopper: SidechainAppStopper,
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
-   @Named("ConsensusSecondsInSlot") secondsInSlot: Int,
-   @Named("AppVersion") appVersion: String
+   @Named("AppVersion") appVersion: String,
+   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -65,7 +66,7 @@ class AccountSidechainApp @Inject()
     applicationStopper,
     forkConfigurator,
     chainInfo,
-    secondsInSlot
+    mcBlockReferenceDelay
   )
 {
 
@@ -91,22 +92,22 @@ class AccountSidechainApp @Inject()
   val consensusStore = new File(dataDirAbsolutePath + "/consensusData")
 
   // Init all storages
-  protected val sidechainSecretStorage = new SidechainSecretStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore)),
-    sidechainSecretsCompanion)
-
-  protected val stateMetadataStorage = new AccountStateMetadataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore)))
-
-  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
-
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore)),
+    registerClosableResource(new VersionedLevelDbStorageAdapter(historyStore, 5)),
     sidechainTransactionsCompanion,
     params)
 
+  protected val sidechainSecretStorage = new SidechainSecretStorage(
+    registerClosableResource(new VersionedLevelDbStorageAdapter(secretStore, 5)),
+    sidechainSecretsCompanion)
+
+  protected val stateMetadataStorage = new AccountStateMetadataStorage(
+    registerClosableResource(new VersionedLevelDbStorageAdapter(metaStateStore, params.maxHistoryRewritingLength * 2)))
+
+  protected val stateDbStorage: LevelDBDatabase = registerClosableResource(new LevelDBDatabase(dataDirAbsolutePath + "/evm-state"))
+
   protected val consensusDataStorage = new ConsensusDataStorage(
-    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore)))
+    registerClosableResource(new VersionedLevelDbStorageAdapter(consensusStore, 5)))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -156,7 +157,7 @@ class AccountSidechainApp @Inject()
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init Sync Status actor
-  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, params, timeProvider)
+  val syncStatusActorRef: ActorRef = SyncStatusActorRef("SyncStatus", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef, params, timeProvider)
 
   //rpcHandler
   val rpcHandler = new RpcHandler(
@@ -184,7 +185,7 @@ class AccountSidechainApp @Inject()
 
   override lazy val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState, NodeWalletBase, NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef, params, timeProvider),
     SidechainNodeApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params, appVersion),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),

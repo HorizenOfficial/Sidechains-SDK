@@ -34,6 +34,10 @@ for i in "$@"; do
       EVM_ONLY="true"
       shift
       ;;
+    -jacoco)
+      JACOCO="true"
+      shift
+      ;;
     -utxo_only)
       UTXO_ONLY="true"
       shift
@@ -89,6 +93,7 @@ testScriptsEvm=(
     'sc_evm_mempool_invalid_txs.py'
     'sc_evm_node_info.py'
     'sc_evm_orphan_txs.py'
+    'sc_evm_native_interop.py'
     'sc_evm_rpc_invalid_blocks.py'
     'sc_evm_rpc_invalid_txs.py'
     'sc_evm_rpc_net_methods.py'
@@ -115,27 +120,46 @@ testScriptsEvm=(
     'sc_evm_multiple_cert_submitters.py'
     'sc_evm_sync_status.py'
     'sc_evm_sync_status_forger_nodes.py'
+    'sc_evm_sync_status_after_consensus_fork.py'
     'sc_evm_txpool.py'
     'sc_evm_eip_1898.py'
     'account_websocket_server.py'
     'account_websocket_server_sync.py'
     'account_websocket_server_rpc.py'
+    'sc_evm_mc_addr_ownership.py'
+    'sc_evm_mc_addr_ownership_perf_test.py'
+    'sc_evm_proxy_nsc.py'
     'sc_evm_seedernode.py'
+    'sc_evm_consensus_parameters_fork.py'
+    'sc_evm_active_slot_coefficient.py'
+    'mc_sc_evm_forging1_with_mc_block_delay.py'
+    'mc_sc_evm_forging3_with_mc_block_delay.py'
+    'mc_sc_evm_forging4_with_mc_block_delay.py'
+    'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
+    'sc_evm_rpc_eth.py'
+    'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
+    'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
 );
 
 testScriptsUtxo=(
     'mc_sc_connected_nodes.py'
     'mc_sc_forging1.py'
+    'mc_sc_forging1_with_mc_block_delay.py'
     'mc_sc_forging2.py'
     'mc_sc_forging3.py'
+    'mc_sc_forging3_with_mc_block_delay.py'
     'mc_sc_forging4.py'
+    'mc_sc_forging4_with_mc_block_delay.py'
     'mc_sc_forging5.py'
+    'mc_sc_forging_different_delay.py --mcblockdelay 2'
+    'mc_sc_forging_different_delay.py --mcblockdelay 8'
     'mc_sc_forging_delegation.py'
     'mc_sc_forging_fee_payments.py'
     'mc_sc_nodes_alive.py'
     'sc_backward_transfer.py'
     'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
     'sc_backward_transfer.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation --nonceasing'
+    'sc_backward_transfer_with_mc_block_delay.py'
     'sc_blockid_for_backup.py'
     'sc_bootstrap.py'
     'sc_bt_limit.py'
@@ -184,6 +208,7 @@ testScriptsUtxo=(
     'sc_multiple_certs.py --certcircuittype=NaiveThresholdSignatureCircuitWithKeyRotation'
     'sc_multiple_cert_submitters.py'
     'sc_multiple_pending_certs_non_ceasing.py'
+    'sc_multiple_pending_certs_non_ceasing_with_delay.py'
     'sc_node_api_test.py'
     'sc_node_response_along_sync.py'
     'sc_node_termination_during_sync.py'
@@ -242,6 +267,16 @@ if [ ! -z "$EXCLUDE" ]; then
       fi
     done
   done
+fi
+
+# add --jacoco flag to each test if jacoco flag set to true
+if [ ! -z "$JACOCO" ] && [ "${JACOCO}" = "true" ]; then
+  modifiedList=()
+  for testFile in "${testScripts[@]}"; do
+      modified_test="${testFile} --jacoco"
+      modifiedList+=("$modified_test")
+  done
+  testScripts=("${modifiedList[@]}")
 fi
 
 # split array into m parts and only run tests of part n where SPLIT=m:n
@@ -397,6 +432,7 @@ function runTestScript
       updateFailList="$testName"
       updateFailureCount
       echo "!!! FAIL: ${testName} !!! ### Run Time: $testRuntime(s) ###" | tee /dev/fd/3
+      exit 1
     fi
 
     echo | tee /dev/fd/3

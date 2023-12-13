@@ -110,17 +110,6 @@ class CertificateKeyRotationMsgProcessorTest
 
   def randomNonce: BigInteger = randomU256
 
-
-  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
-    if (!view.accountExists(origin)) {
-      view.addAccount(origin, randomHash)
-
-      if (amount.signum() == 1) {
-        view.addBalance(origin, amount)
-      }
-    }
-  }
-
   private def buildKeyRotationProof(keyType: KeyRotationProofType, index: Int, epoch: Int, newKey: SchnorrSecret, oldSigningKey: SchnorrSecret, oldMasterKey: SchnorrSecret) = {
     val messageToSign = keyType match {
       case SigningKeyRotationProofType => CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
@@ -168,17 +157,13 @@ class CertificateKeyRotationMsgProcessorTest
       }
     }
 
-    withGas {
-      certificateKeyRotationMsgProcessor.process(
-        getMessage(
-          to = contractAddress,
-          data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
-          nonce = randomNonce
-        ), view, _, blockContext
-      )
-    }
+    val msg = getMessage(
+      to = contractAddress,
+      data = BytesUtils.fromHexString(SubmitKeyRotationReqCmdSig) ++ encodedInput,
+      nonce = randomNonce
+    )
+    withGas(TestContext.process(certificateKeyRotationMsgProcessor, msg, view, blockContext, _))
   }
-
 
   private def processBadKeyRotationMessage(newKey: SchnorrSecret, keyRotationProof: KeyRotationProof, view: AccountStateView, epoch: Int = 0,
                                            spuriousBytes: Option[Array[Byte]], badBytes: Option[Array[Byte]], errMsg : String) = {
@@ -194,11 +179,10 @@ class CertificateKeyRotationMsgProcessorTest
     assertEquals("Wrong MethodId for SubmitKeyRotationReqCmdSig", "288d61cc", CertificateKeyRotationMsgProcessor.SubmitKeyRotationReqCmdSig)
   }
 
-
   @Test
   def testProcessShortOpCode(): Unit = {
     usingView(certificateKeyRotationMsgProcessor) { view =>
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = new Array[Byte](0)
       val opCode = BytesUtils.fromHexString("ac")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -216,7 +200,7 @@ class CertificateKeyRotationMsgProcessorTest
   @Test
   def testProcessInvalidOpCode(): Unit = {
     usingView(certificateKeyRotationMsgProcessor) { view =>
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val opCode = BytesUtils.fromHexString("abadc0de")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -243,12 +227,12 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
       // negative test: try using an input with a trailing byte
-      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong message data field length")
+      processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = Some(new Array[Byte](1)), badBytes = None, errMsg = "Wrong invocation data field length")
       // negative test: try using a message with right length but wrong bytes
       val badBytes1 = Some(BytesUtils.fromHexString(notDecodableData))
       processBadKeyRotationMessage(newMasterKey, keyRotationProof, view, spuriousBytes = None, badBytes = badBytes1, errMsg = "Could not decode")
@@ -295,7 +279,7 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey.publicImage()))
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey.publicImage()))
 
@@ -358,7 +342,7 @@ class CertificateKeyRotationMsgProcessorTest
 
     usingView(certificateKeyRotationMsgProcessor) { view =>
 
-      certificateKeyRotationMsgProcessor.init(view)
+      certificateKeyRotationMsgProcessor.init(view, view.getConsensusEpochNumberAsInt)
       when(mockNetworkParams.mastersPublicKeys).thenReturn(Seq(oldMasterKey0, oldMasterKey1).map(_.publicImage()))
       when(mockNetworkParams.signersPublicKeys).thenReturn(Seq(oldSigningKey0, oldSigningKey1).map(_.publicImage()))
       //epoch 0

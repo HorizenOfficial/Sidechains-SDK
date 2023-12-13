@@ -36,7 +36,7 @@ class MCPublicKeyHashPropositionJsonTest
     val pubKey: String = node.path("mainchainAddress").asText()
     var parsedPubKeyHashBytes: Array[Byte] = null
     try {
-      parsedPubKeyHashBytes = BytesUtils.fromHorizenPublicKeyAddress(pubKey, params)
+      parsedPubKeyHashBytes = BytesUtils.fromHorizenMcTransparentAddress(pubKey, params)
     } catch {
       case e: Exception => Assert.fail("PublicKey json value must be a Horizen address. Instead: error" + e.getMessage)
     }
@@ -45,7 +45,7 @@ class MCPublicKeyHashPropositionJsonTest
 
     var exceptionOccurred = false
     try {
-      BytesUtils.fromHorizenPublicKeyAddress(pubKey, RegTestParams())
+      BytesUtils.fromHorizenMcTransparentAddress(pubKey, RegTestParams())
     } catch {
       case _: Exception => exceptionOccurred = true // expected
     }

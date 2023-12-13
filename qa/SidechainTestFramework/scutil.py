@@ -7,10 +7,9 @@ import time
 import socket
 from contextlib import closing
 from decimal import Decimal
-from eth_utils import add_0x_prefix
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     AccountKey, VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
-    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCCreationInfo, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, KEY_ROTATION_CIRCUIT, \
     NO_KEY_ROTATION_CIRCUIT
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
@@ -19,6 +18,8 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
     assert_false, get_field_element_with_padding
 
 WAIT_CONST = 1
+
+SNAPSHOT_VERSION_TAG = "0.9.0"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -56,6 +57,9 @@ DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 
 # Parallel Testing
 parallel_test = 0
 
+# flag for jacoco code coverage analysis
+is_jacoco_included = False
+
 
 class TimeoutException(Exception):
     def __init__(self, operation):
@@ -73,6 +77,9 @@ def set_sc_parallel_test(n):
     global parallel_test
     parallel_test = n
 
+def set_jacoco(value):
+    global is_jacoco_included
+    is_jacoco_included = value
 
 def start_port_modifier():
     if parallel_test > 0:
@@ -198,7 +205,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.7.1.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-"+SNAPSHOT_VERSION_TAG+".jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -488,7 +495,7 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': api_key_hash,
+        'API_KEY_HASH': f'apiKeyHash = "{api_key_hash}"' if (api_key_hash != "") else '\r',
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_INCOMING_CONNECTIONS': sc_node_config.max_incoming_connections,
@@ -655,10 +662,11 @@ def get_lib_separator():
 def get_examples_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = get_examples_dir() + "/utxo/simpleapp/target/sidechains-sdk-simpleapp-0.7.1.jar" + get_lib_separator() + get_examples_dir() + "/utxo/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
-EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evmapp-0.7.1.jar" + get_lib_separator() + get_examples_dir() + "/account/evmapp/target/lib/* io.horizen.examples.EvmApp"
-UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/sidechains-sdk-utxoapp_sctool-0.7.1.jar"
-EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/sidechains-sdk-evmapp_sctool-0.7.1.jar"
+SIMPLE_APP_BINARY = get_examples_dir() + "/utxo/simpleapp/target/sidechains-sdk-simpleapp-"+SNAPSHOT_VERSION_TAG+".jar" + get_lib_separator() + get_examples_dir() + "/utxo/simpleapp/target/lib/* io.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/account/evmapp/target/sidechains-sdk-evmapp-"+SNAPSHOT_VERSION_TAG+".jar" + get_lib_separator() + get_examples_dir() + "/account/evmapp/target/lib/* io.horizen.examples.EvmApp"
+UTXO_BOOTSTRAPPING_TOOL = get_examples_dir() + "/utxo/utxoapp_sctool/target/sidechains-sdk-utxoapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
+EVM_BOOTSTRAPPING_TOOL = get_examples_dir() + "/account/evmapp_sctool/target/sidechains-sdk-evmapp_sctool-"+SNAPSHOT_VERSION_TAG+".jar"
+
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None):
@@ -678,6 +686,10 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if (extra_args is not None) and ("-agentlib" in extra_args):
         dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
 
+    mc_block_delay_ref = ''
+    if (extra_args is not None) and ("-mc_block_delay_ref" in extra_args):
+        mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
     Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
@@ -685,7 +697,18 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
+
+    user_home = os.path.expanduser("~")
+    jacoco_agent_path = os.path.join(user_home, ".m2", "repository", "org", "jacoco", "org.jacoco.agent", "0.8.9",
+                                     "org.jacoco.agent-0.8.9-runtime.jar")
+    jacoco_cmd = f'-javaagent:{jacoco_agent_path}=destfile=../coverage-reports/sidechains-sdk-{SNAPSHOT_VERSION_TAG}/sidechains-sdk-{SNAPSHOT_VERSION_TAG}-jacoco-report.exec,append=true'
+
+    if is_jacoco_included:
+        bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + jacoco_cmd + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
+              + " " + mc_block_delay_ref
+    else:
+        bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
+              + " " + mc_block_delay_ref
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
@@ -1176,16 +1199,17 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
 def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
-    best_slot = forging_info["bestSlotNumber"]
-    best_epoch = forging_info["bestEpochNumber"]
+    best_slot = forging_info["bestBlockSlotNumber"]
+    best_epoch = forging_info["bestBlockEpochNumber"]
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
-    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
+    forging_request = generate_forging_request(next_epoch, next_slot, forced_tx)
+    forge_result = node.block_generate(forging_request)
 
     # "while" will break if whole epoch no generated block, due changed error code
     # ErrorBlockNotCreated = 0105
-    count_slot = 720
+    count_slot = slots_in_epoch
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
@@ -1224,6 +1248,33 @@ def generate_next_blocks(node, node_name, blocks_count, verbose=True):
         blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
 
+
+def try_to_generate_block_in_slot(node, next_epoch, next_slot):
+
+    forging_request = generate_forging_request(next_epoch, next_slot, None)
+    forge_result = node.block_generate(forging_request)
+    return forge_result
+
+def try_to_generate_block_in_slots(node, slot_count, add_empty_slots=False):
+    block_ids = []
+
+    # Get starting slot
+    forging_info = node.block_forgingInfo()["result"]
+    slots_in_epoch = forging_info["consensusSlotsInEpoch"]
+    best_slot = forging_info["bestBlockSlotNumber"]
+    best_epoch = forging_info["bestBlockEpochNumber"]
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+
+    for _ in range(slot_count):
+        res = try_to_generate_block_in_slot(node, next_epoch, next_slot)
+        if "result" in res and "blockId" in res["result"]:
+            block_ids.append(res["result"]["blockId"])
+        else:
+            if (add_empty_slots):
+                block_ids.append("")
+        next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
+     
+    return block_ids
 
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):

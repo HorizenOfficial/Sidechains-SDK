@@ -50,8 +50,9 @@ class AccountState(
   // Used once on genesis AccountState creation
   private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
     using(getView) { view =>
+      val consensusEpochNumber = view.getConsensusEpochNumberAsInt
       for (processor <- messageProcessors) {
-        processor.init(view)
+        processor.init(view, consensusEpochNumber)
       }
 
       try {
@@ -123,7 +124,7 @@ class AccountState(
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
@@ -313,9 +314,8 @@ class AccountState(
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
   override def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimeStamp)
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, blockTimeStamp)
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
-
     blockConsensusEpoch != currentConsensusEpoch
   }
 
@@ -425,6 +425,12 @@ class AccountState(
 
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
+  override def getListOfMcAddrOwnerships(scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships(scAddressOpt))
+
+  override def getListOfOwnerScAddresses(): Seq[OwnerScAddress] = using(getView)(_.getListOfOwnerScAddresses())
+
+  override def ownershipDataExist(ownershipId: Array[Byte]): Boolean = using(getView)(_.ownershipDataExist(ownershipId))
+
   override def getLogs(txHash: Array[Byte]): Array[EthereumConsensusDataLog] = using(getView)(_.getLogs(txHash))
 
   override def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
@@ -514,6 +520,7 @@ class AccountState(
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
 }
 
 object AccountState extends SparkzLogging {

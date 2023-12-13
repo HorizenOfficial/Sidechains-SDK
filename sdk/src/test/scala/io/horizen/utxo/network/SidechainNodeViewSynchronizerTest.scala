@@ -17,8 +17,8 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
-import sparkz.core.network.ModifiersStatus.Requested
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import sparkz.core.network.ModifiersStatus.{Held, Requested}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
 import sparkz.core.network.{ConnectedPeer, ConnectionId, DeliveryTracker, Incoming}
@@ -159,11 +159,11 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       Requested
     })
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transactionBytes))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(ModifierId @@ originalTransaction.id -> transactionBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
     networkControllerProbe.expectNoMessage()
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transferData))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(ModifierId @@ originalTransaction.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
@@ -175,8 +175,8 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     val file = new FileReader(classLoader.getResource("sidechainblock_hex").getFile)
     val blockBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
 
-    val additianalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
-    val transferData = blockBytes ++ additianalBytes
+    val additionalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
+    val transferData = blockBytes ++ additionalBytes
 
     val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
     val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
@@ -187,16 +187,33 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
 
     Mockito.reset(deliveryTracker)
     Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
+      // First status() is checked on block itself, then it is checked on parent block
       val receivedId: ModifierId = answer.getArgument(0)
       assertEquals("Different block id expected.", deserializedBlock.id, receivedId)
       Requested
-    })
+    }).thenAnswer(answer => {
+      val receivedId: ModifierId = answer.getArgument(0)
+      assertEquals("Expected parent block id.", deserializedBlock.parentId, receivedId)
+      Held}
+    )
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> blockBytes))), Some(peer)))
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Seq(deserializedBlock.id -> blockBytes))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     networkControllerProbe.expectNoMessage()
 
-    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Map(deserializedBlock.id -> transferData))), Some(peer)))
+    Mockito.reset(deliveryTracker)
+    Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
+      // First status() is checked on block itself, then it is checked on parent block
+      val receivedId: ModifierId = answer.getArgument(0)
+      assertEquals("Different block id expected.", deserializedBlock.id, receivedId)
+      Requested
+    }).thenAnswer(answer => {
+      val receivedId: ModifierId = answer.getArgument(0)
+      assertEquals("Expected parent block id.", deserializedBlock.parentId, receivedId)
+      Held
+    }
+    )
+    nodeViewSynchronizerRef ! roundTrip(Message(modifiersSpec, Right(ModifiersData(SidechainBlockBase.ModifierTypeId, Seq(deserializedBlock.id -> transferData))), Some(peer)))
     viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
@@ -232,6 +249,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       }))
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
+    networkControllerProbe.expectMsgType[StartConnectingPeers.type]
     viewHolderProbe.expectMsgType[GetNodeViewChanges]
 
     val modifierId: ModifierId = getRandomModifier()

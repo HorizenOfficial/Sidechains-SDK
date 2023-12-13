@@ -16,14 +16,14 @@ class SCEVMGasFeeFork(AccountChainSetup):
 
     def advance_to_epoch(self, sc_node, epoch_number):
         forging_info = sc_node.block_forgingInfo()
-        current_epoch = forging_info["result"]["bestEpochNumber"]
+        current_epoch = forging_info["result"]["bestBlockEpochNumber"]
         # make sure we are not already passed the desired epoch
         assert_false(current_epoch > epoch_number, "unexpected epoch number")
         while current_epoch < epoch_number:
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             forging_info = sc_node.block_forgingInfo()
-            current_epoch = forging_info["result"]["bestEpochNumber"]
+            current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
     def assert_block_gas_limit(self, sc_node, expected_gas_limit):
         block = sc_node.rpc_eth_getBlockByNumber("latest", False)["result"]

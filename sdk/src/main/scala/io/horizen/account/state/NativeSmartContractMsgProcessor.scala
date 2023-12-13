@@ -6,8 +6,6 @@ import io.horizen.evm.Address
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
-
 abstract class NativeSmartContractMsgProcessor extends MessageProcessor with SparkzLogging {
 
   val contractAddress: Address
@@ -15,7 +13,7 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
   lazy val contractCodeHash: Array[Byte] = Keccak256.hash(contractCode)
 
   @throws[MessageProcessorInitializationException]
-  override def init(view: BaseAccountStateView): Unit = {
+  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
     if (!view.accountExists(contractAddress)) {
       view.addAccount(contractAddress, contractCode)
       log.debug(s"created Message Processor account $contractAddress")
@@ -26,9 +24,11 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     }
   }
 
-  override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
+  override def customTracing(): Boolean = false
+
+  override def canProcess(invocation: Invocation, view: BaseAccountStateView, consensusEpochNumber: Int): Boolean = {
     // we rely on the condition that init() has already been called at this point
-    msg.getTo.asScala.exists(contractAddress.equals(_))
+    invocation.callee.exists(contractAddress.equals(_))
   }
 
   def getEthereumConsensusDataLog(event: Any): EthereumConsensusDataLog = {

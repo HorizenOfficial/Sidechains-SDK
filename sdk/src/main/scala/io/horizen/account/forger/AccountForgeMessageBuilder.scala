@@ -152,7 +152,7 @@ class AccountForgeMessageBuilder(
             priceAndNonceIter.next()
 
           case Failure(err) =>
-            log.trace(s"Could not apply tx, reason: ${err.getMessage}")
+            log.debug(s"Could not apply tx ${tx.id}, reason: ${err.getMessage}")
             err match {
               case _: GasLimitReached =>
                 // block gas limit reached
@@ -210,7 +210,7 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 3. Set gasLimit
-    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+    val feeFork = GasFeeFork.get(TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp))
     val gasLimit: BigInteger = feeFork.blockGasLimit
 
     // 4. create a context for the new block
@@ -222,7 +222,7 @@ class AccountForgeMessageBuilder(
       baseFee,
       gasLimit,
       parentInfo.height + 1,
-      TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
+      TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp),
       WithdrawalEpochUtils
         .getWithdrawalEpochInfo(mainchainBlockReferencesData.size, parentInfo.withdrawalEpochInfo, params)
         .epoch,
@@ -264,7 +264,7 @@ class AccountForgeMessageBuilder(
               )
               require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
-              val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
+              val withdrawalEpochNumber: Int = WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferencesData.size, dummyView.getWithdrawalEpochInfo, params).epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))

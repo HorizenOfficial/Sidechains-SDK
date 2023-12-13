@@ -32,8 +32,10 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.bytesToId
 import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.ModifierId
 
 import java.lang.{Byte => JByte}
@@ -203,9 +205,17 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   Mockito.when(params.chainId).thenReturn(1997L)
   Mockito.when(params.isHandlingTransactionsEnabled).thenReturn(true)
 
+  // time provider mock, return a mocked timestamp in millisecond
+  // 1677850291000 --> March 3, 2023 1:31:31 PM
+  val mockedTimeProvider = mock[NetworkTimeProvider]
+  Mockito.when(mockedTimeProvider.time()).thenReturn(1677850291000L)
+
+  // 1676035728 --> February 10, 2023 1:28:48 PM
+  val genesisBlockTimestamp: Long = 1676035728L
+
   val sidechainTransactionApiRoute: Route = AccountTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,sidechainTransactionsCompanion, params, CircuitTypes.NaiveThresholdSignatureCircuit).route
   val sidechainWalletApiRoute: Route = AccountWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
-  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params).route
+  val sidechainBlockApiRoute: Route = AccountBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef, params, mockedTimeProvider).route
 
   val basePath: String
 

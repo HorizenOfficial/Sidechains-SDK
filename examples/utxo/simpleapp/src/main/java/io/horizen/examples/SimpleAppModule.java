@@ -30,14 +30,21 @@ public class SimpleAppModule extends SidechainAppModule
 {
     private final SettingsReader settingsReader;
 
-    public SimpleAppModule(String userSettingsFileName) {
+    // It's integer parameter that defines Mainchain Block Reference delay.
+    // 1 or 2 should be enough to avoid SC block reverting in the most cases.
+    // WARNING. It must be constant and should not be changed inside Sidechain network
+    private final int mcBlockRefDelay;
+
+    public SimpleAppModule(String userSettingsFileName, int mcBlockDelayReference) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.mcBlockRefDelay = mcBlockDelayReference;
     }
 
     @Override
     public void configureApp() {
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
+        int maxHistoryRewritingLength = 200;
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
@@ -45,15 +52,18 @@ public class SimpleAppModule extends SidechainAppModule
 
         String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
+        //Initialize the App Fork Configurator
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+
         // two distinct storages are used in application state and wallet in order to test a version
         // misalignment during startup and the recover logic
         File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
         File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
-        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
+        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2, maxHistoryRewritingLength);
 
         File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
         File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
-        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
+        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2, maxHistoryRewritingLength);
 
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
@@ -67,10 +77,6 @@ public class SimpleAppModule extends SidechainAppModule
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
         File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
 
-        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
-
-        // It's integer parameter that defines slot duration. The minimum valid value is 10, the maximum is 300.
-        int consensusSecondsInSlot = 120;
         String appVersion = "";
 
         // Here I can add my custom rest api and/or override existing one
@@ -110,37 +116,37 @@ public class SimpleAppModule extends SidechainAppModule
 
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(secretStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletCswDataStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateForgerBoxStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateUtxoMerkleTreeStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore, maxHistoryRewritingLength));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(historyStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, 5));
         bind(Storage.class)
                 .annotatedWith(Names.named("BackupStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(backupStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(backupStore, maxHistoryRewritingLength));
 
         bind(new TypeLiteral<List<SidechainApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
@@ -157,12 +163,12 @@ public class SimpleAppModule extends SidechainAppModule
         bind(ForkConfigurator.class)
                 .annotatedWith(Names.named("ForkConfiguration"))
                 .toInstance(forkConfigurator);
-        bind(Integer.class)
-                .annotatedWith(Names.named("ConsensusSecondsInSlot"))
-                .toInstance(consensusSecondsInSlot);
 
         bind(String.class)
                 .annotatedWith(Names.named("AppVersion"))
                 .toInstance(appVersion);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
+                .toInstance(mcBlockRefDelay);
     }
 }

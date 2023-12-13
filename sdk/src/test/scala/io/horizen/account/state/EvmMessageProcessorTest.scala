@@ -5,8 +5,8 @@ import org.junit.Assert.{assertFalse, assertNotNull, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import java.nio.charset.StandardCharsets
 
+import java.nio.charset.StandardCharsets
 
 class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSugar {
   @Test
@@ -14,7 +14,7 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
     val mockStateView = MockitoSugar.mock[AccountStateView]
     val processor = new EvmMessageProcessor()
     // just make sure this does not throw
-    processor.init(mockStateView)
+    processor.init(mockStateView, 0)
   }
 
   @Test
@@ -30,18 +30,30 @@ class EvmMessageProcessorTest extends EvmMessageProcessorTestBase with MockitoSu
         contractAddress.equals(address)
       })
 
-    assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), mockStateView))
+    assertTrue(
+      "should process smart contract deployment",
+      TestContext.canProcess(processor, getMessage(null), mockStateView, 0)
+    )
     assertTrue(
       "should process calls to existing smart contracts",
-      processor.canProcess(getMessage(contractAddress), mockStateView))
+      TestContext.canProcess(processor, getMessage(contractAddress), mockStateView, 0)
+    )
     assertFalse(
       "should not process EOA to EOA transfer (empty account)",
-      processor.canProcess(getMessage(emptyAddress), mockStateView))
+      TestContext.canProcess(processor, getMessage(emptyAddress), mockStateView, 0)
+    )
     assertFalse(
       "should not process EOA to EOA transfer (non-empty account)",
-      processor.canProcess(getMessage(eoaAddress), mockStateView))
+      TestContext.canProcess(processor, getMessage(eoaAddress), mockStateView, 0)
+    )
     assertFalse(
       "should ignore data on EOA to EOA transfer",
-      processor.canProcess(getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes(StandardCharsets.UTF_8)), mockStateView))
+      TestContext.canProcess(
+        processor,
+        getMessage(eoaAddress, data = "the same thing we do every night, pinky".getBytes(StandardCharsets.UTF_8)),
+        mockStateView,
+        0
+      )
+    )
   }
 }

@@ -25,7 +25,6 @@ class AccountStateView(
     messageProcessors: Seq[MessageProcessor]
 ) extends StateDbAccountStateView(stateDb, messageProcessors)
       with StateView[SidechainTypes#SCAT]
-      with AutoCloseable
       with SparkzLogging {
 
   def addTopQualityCertificates(refData: MainchainBlockReferenceData, blockId: ModifierId): Unit = {
@@ -79,6 +78,9 @@ class AccountStateView(
   override def hasCeased: Boolean = metadataStorageView.hasCeased
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
+
+  // useful in bootstrapping tool
+  def getConsensusEpochNumberAsInt: Int = getConsensusEpochNumber.getOrElse(0)
 
   override def getFeePaymentsInfo(
       withdrawalEpoch: Int,

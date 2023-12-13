@@ -12,6 +12,7 @@ examples/utxo/simpleapp/dependency-reduced-pom.xml
 .settings/
 .vscode/
 qa/tmp
+qa/node_modules
 hs_err*
 log
 *.bkp*
@@ -27,3 +28,6 @@ qa/.metals/metals.lock.db
 qa/.metals/metals.mv.db
 qa/.metals/metals.log
 .scalafmt.conf
+
+# Jacoco reports
+coverage-reports/**

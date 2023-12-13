@@ -120,6 +120,10 @@ abstract class AbstractHistoryStorage[
     activeChain.blockInfoById(blockId).orElse(blockInfoOptionByIdFromStorage(blockId))
   }
 
+  def contains(blockId: ModifierId): Boolean = {
+    isInActiveChain(blockId) || blockInfoOptionByIdFromStorage(blockId).nonEmpty
+  }
+
   private def blockInfoOptionByIdFromStorage(blockId: ModifierId): Option[SidechainBlockInfo] = {
     storage.get(blockInfoKey(blockId)).asScala.flatMap(baw => SidechainBlockInfoSerializer.parseBytesTry(baw.data).toOption)
   }

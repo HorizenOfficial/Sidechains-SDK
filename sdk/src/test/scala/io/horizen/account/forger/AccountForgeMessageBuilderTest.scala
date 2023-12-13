@@ -14,17 +14,17 @@ import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionTyp
 import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
-import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.horizen.state.BaseStateReader
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, WithdrawalEpochInfo}
+import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, TimeToEpochUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
@@ -56,9 +56,10 @@ class AccountForgeMessageBuilderTest
       with SecretFixture
       with SidechainRelatedMainchainOutputFixture {
 
+
   @Before
   def init(): Unit = {
-    ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
   }
 
   @Test
@@ -271,10 +272,12 @@ class AccountForgeMessageBuilderTest
     val totalBlockCount = epochSizeInSlots * 4
     val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
     val params = TestNetParams(
-      consensusSlotsInEpoch = epochSizeInSlots,
-      consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp
     )
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, new ConsensusParamsFork(epochSizeInSlots, slotLengthInSeconds)),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
     Mockito.when(nodeView.history.params).thenReturn(params)
     Mockito.when(nodeView.history.modifierById(any())).thenReturn(None)
 
@@ -397,18 +400,18 @@ class AccountForgeMessageBuilderTest
     Mockito
       .when(
         mockMsgProcessor.canProcess(
-          ArgumentMatchers.any[Message],
-          ArgumentMatchers.any[BaseAccountStateView]
+          ArgumentMatchers.any[Invocation],
+          ArgumentMatchers.any[AccountStateView],
+          ArgumentMatchers.any[Int]
         )
       )
       .thenReturn(true)
     Mockito
       .when(
         mockMsgProcessor.process(
-          ArgumentMatchers.any[Message],
+          ArgumentMatchers.any[Invocation],
           ArgumentMatchers.any[BaseAccountStateView],
-          ArgumentMatchers.any[GasPool],
-          ArgumentMatchers.any[BlockContext]
+          ArgumentMatchers.any[ExecutionContext]
         )
       )
       .thenThrow(new RuntimeException("kaputt"))

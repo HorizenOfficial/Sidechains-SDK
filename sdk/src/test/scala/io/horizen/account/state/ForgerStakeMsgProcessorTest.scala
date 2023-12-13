@@ -6,14 +6,13 @@ import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creato
 import io.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, OpenStakeForgerListCmd, RemoveStakeCmd}
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
-import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
+import io.horizen.evm.Address
 import io.horizen.fixtures.StoreFixture
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -23,7 +22,7 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
-import sparkz.util.serialization.{Reader, VLQByteBufferReader}
+import sparkz.util.serialization.VLQByteBufferReader
 
 import java.math.BigInteger
 import java.nio.ByteBuffer
@@ -94,7 +93,7 @@ class ForgerStakeMsgProcessorTest
     val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
 
     // try processing the removal of stake, should succeed
-    val returnData = withGas(forgerStakeMessageProcessor.process(msg, stateView, _, defaultBlockContext))
+    val returnData = withGas(TestContext.process(forgerStakeMessageProcessor, msg, stateView, defaultBlockContext, _))
     assertNotNull(returnData)
     assertArrayEquals(stakeId, returnData)
   }
@@ -102,7 +101,7 @@ class ForgerStakeMsgProcessorTest
   def getForgerStakeList(stateView: AccountStateView): Array[Byte] = {
     val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
     val (returnData, usedGas) = withGas { gas =>
-      val result = forgerStakeMessageProcessor.process(msg, stateView, gas, defaultBlockContext)
+      val result = TestContext.process(forgerStakeMessageProcessor, msg, stateView, defaultBlockContext, gas)
       (result, gas.getUsedGas)
     }
     // gas consumption depends on the number of items in the list
@@ -112,22 +111,15 @@ class ForgerStakeMsgProcessorTest
     returnData
   }
 
-  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
-    if (!view.accountExists(origin)) {
-      view.addAccount(origin, randomHash)
-
-      if (amount.signum() == 1) {
-        view.addBalance(origin, amount)
-      }
-    }
-  }
-
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calculated using this site: https://emn178.github.io/online-tools/keccak_256.html
     assertEquals("Wrong MethodId for GetListOfForgersCmd", "f6ad3c23", ForgerStakeMsgProcessor.GetListOfForgersCmd)
     assertEquals("Wrong MethodId for AddNewStakeCmd", "5ca748ff", ForgerStakeMsgProcessor.AddNewStakeCmd)
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
+    //TODO OpenStakeForgerListCmd signature is wrong, it misses a closing parenthesis. Fixing it requires an hard fork so
+    // for the moment we stick with the wrong one.
+    assertEquals("Wrong MethodId for OpenStakeForgerListCmd", "b05bf06c", ForgerStakeMsgProcessor.OpenStakeForgerListCmd)
   }
 
   @Test
@@ -135,7 +127,7 @@ class ForgerStakeMsgProcessorTest
     usingView(forgerStakeMessageProcessor) { view =>
       // we have to call init beforehand
       assertFalse(view.accountExists(contractAddress))
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
       assertTrue(view.accountExists(contractAddress))
       assertTrue(view.isSmartContractAccount(contractAddress))
       view.commit(bytesToVersion(getVersion.data()))
@@ -146,14 +138,14 @@ class ForgerStakeMsgProcessorTest
   def testCanProcess(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // correct contract address
-      assertTrue(forgerStakeMessageProcessor.canProcess(getMessage(forgerStakeMessageProcessor.contractAddress), view))
+      assertTrue(TestContext.canProcess(forgerStakeMessageProcessor, getMessage(forgerStakeMessageProcessor.contractAddress), view, view.getConsensusEpochNumberAsInt))
       // wrong address
-      assertFalse(forgerStakeMessageProcessor.canProcess(getMessage(randomAddress), view))
+      assertFalse(TestContext.canProcess(forgerStakeMessageProcessor, getMessage(randomAddress), view, view.getConsensusEpochNumberAsInt))
       // contact deployment: to == null
-      assertFalse(forgerStakeMessageProcessor.canProcess(getMessage(null), view))
+      assertFalse(TestContext.canProcess(forgerStakeMessageProcessor, getMessage(null), view, view.getConsensusEpochNumberAsInt))
 
       view.commit(bytesToVersion(getVersion.data()))
     }
@@ -188,7 +180,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -354,7 +346,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -398,7 +390,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(100).multiply(validWeiAmount)
@@ -441,7 +433,9 @@ class ForgerStakeMsgProcessorTest
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
       // try processing a msg with the same stake (same msg), should fail
-      assertThrows[ExecutionRevertedException](withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)))
+      assertThrows[ExecutionRevertedException](
+        withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
+      )
 
       // Checking that log doesn't change
       listOfLogs = view.getLogs(txHash2)
@@ -453,7 +447,7 @@ class ForgerStakeMsgProcessorTest
 
       // should fail because input has a trailing byte
       val ex = intercept[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msgBad, view, _, defaultBlockContext))
+        withGas(TestContext.process(forgerStakeMessageProcessor, msgBad, view, defaultBlockContext, _))
       }
       assertTrue(ex.getMessage.contains("Wrong message data field length"))
 
@@ -534,7 +528,7 @@ class ForgerStakeMsgProcessorTest
       val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
       val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
       createSenderAccount(view)
 
       Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
@@ -569,7 +563,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testProcessShortOpCode(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = new Array[Byte](0)
       val opCode = BytesUtils.fromHexString("ac")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -587,7 +581,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testProcessInvalidOpCode(): Unit = {
     usingView(forgerStakeMessageProcessor) { view =>
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
       val args: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val opCode = BytesUtils.fromHexString("abadc0de")
       val msg = getDefaultMessage(opCode, args, randomNonce)
@@ -616,7 +610,7 @@ class ForgerStakeMsgProcessorTest
 
       val ownerAddress = key.publicImage().address()
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
       Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
@@ -654,7 +648,7 @@ class ForgerStakeMsgProcessorTest
       val blockSignerProposition2 = new PublicKey25519Proposition(BytesUtils.fromHexString("2200000000000000000000000000000000000000000000000000000000000022")) // 32 bytes
       val vrfPublicKey2 = new VrfPublicKey(BytesUtils.fromHexString("220000000000000000000000000000000000000000000000000000000000000022")) // 33 bytes
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
       Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
@@ -697,7 +691,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -733,7 +727,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -757,7 +751,7 @@ class ForgerStakeMsgProcessorTest
           ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
             ownerAddressProposition, stakeAmount)))
 
-        val returnData = withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        val returnData = withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
         assertNotNull(returnData)
       }
 
@@ -785,7 +779,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       // val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -809,7 +803,7 @@ class ForgerStakeMsgProcessorTest
         listOfExpectedForgerStakes.add(AccountForgingStakeInfo(expStakeId,
           ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
             ownerAddressProposition, stakeAmount)))
-        val returnData = withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        val returnData = withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
         assertNotNull(returnData)
       }
 
@@ -849,7 +843,7 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       // create sender account with some fund in it
       // val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
@@ -866,7 +860,9 @@ class ForgerStakeMsgProcessorTest
       val addNewStakeMsg = getMessage(contractAddress, stakeAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ addNewStakeData, randomNonce)
       val expStakeId = forgerStakeMessageProcessor.getStakeId(addNewStakeMsg)
       val forgingStakeInfo = AccountForgingStakeInfo(expStakeId, ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey), ownerAddressProposition, stakeAmount))
-      val addNewStakeReturnData = withGas(forgerStakeMessageProcessor.process(addNewStakeMsg, view, _, defaultBlockContext))
+      val addNewStakeReturnData = withGas(
+        TestContext.process(forgerStakeMessageProcessor, addNewStakeMsg, view, defaultBlockContext, _)
+      )
       assertNotNull(addNewStakeReturnData)
 
       val nonce = randomNonce
@@ -881,20 +877,20 @@ class ForgerStakeMsgProcessorTest
       // should fail because value in msg should be 0 (value=1)
       var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
       assertThrows[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
       }
 
       // should fail because value in msg should be 0 (value=-1)
       msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
       assertThrows[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
       }
 
       // should fail because input data has a trailing byte
       val badData = Bytes.concat(data, new Array[Byte](1))
       msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData, nonce)
       val ex = intercept[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
       }
       assertTrue(ex.getMessage.contains("Wrong message data field length"))
 
@@ -920,7 +916,7 @@ class ForgerStakeMsgProcessorTest
 
       msg = getMessage(contractAddress, BigInteger.ZERO, BytesUtils.fromHexString(RemoveStakeCmd) ++ badData2, nonce)
       val ex2 = intercept[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+        withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, _))
       }
       assertTrue(ex2.getMessage.contains("ill-formed signature"))
 
@@ -954,19 +950,19 @@ class ForgerStakeMsgProcessorTest
 
     usingView(forgerStakeMessageProcessor) { view =>
 
-      forgerStakeMessageProcessor.init(view)
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
 
       withGas { gas =>
         var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
 
         assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
+          TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, gas)
         }
 
         msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
 
         assertThrows[ExecutionRevertedException] {
-          forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
+          TestContext.process(forgerStakeMessageProcessor, msg, view, defaultBlockContext, gas)
         }
       }
     }

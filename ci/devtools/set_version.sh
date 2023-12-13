@@ -7,10 +7,10 @@ set -Eeo pipefail
 current_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 base_dir="$( dirname "${current_dir%/*}" )"
 
-DOCKER_ORG="${DOCKER_ORG:-zencash}"
-IMAGE_NAME="${IMAGE_NAME:-sc-ci-base}"
-IMAGE_TAG="${IMAGE_TAG:-bionic_jdk-11_latest}"
-image="${DOCKER_ORG}/${IMAGE_NAME}:${IMAGE_TAG}"
+TESTS_DOCKER_ORG="${TESTS_DOCKER_ORG:-zencash}"
+TESTS_IMAGE_NAME="${TESTS_IMAGE_NAME:-sc-ci-base}"
+TESTS_IMAGE_TAG="${TESTS_IMAGE_TAG:-focal_jdk-11_latest}"
+image="${TESTS_DOCKER_ORG}/${TESTS_IMAGE_NAME}:${TESTS_IMAGE_TAG}"
 
 have_docker="false"
 command -v docker &> /dev/null && have_docker="true"
