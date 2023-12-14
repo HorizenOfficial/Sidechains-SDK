@@ -83,7 +83,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
       processor: MessageProcessor,
       ctx: BlockContext,
   ): Array[Byte] = {
-    view.setupAccessList(msg, new ForkRules(true))
+    view.setupAccessList(msg, ctx.forgerAddress, new ForkRules(true))
     val gas = new GasPool(1000000)
     val result = Try.apply(TestContext.process(processor, msg, view, ctx, gas))
     assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)

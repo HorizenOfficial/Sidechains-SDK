@@ -360,7 +360,8 @@ class StateDbAccountStateView(
   def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(new Hash(txHash), idx)
 
   // reset and prepare account access list
-  def setupAccessList(msg: Message, rules: ForkRules): Unit = stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO), rules)
+  def setupAccessList(msg: Message, forgerAddress: Address, rules: ForkRules): Unit =
+    stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO), forgerAddress, rules)
 
   def getRefund: BigInteger = stateDb.getRefund
 
