@@ -4,3 +4,22 @@
 with CLI arguments: examples/utxo/simpleapp/src/main/resources/sc_settings.conf
 3. Open http://127.0.0.1:9085/swagger in browser
 4. Find needed API in the list of APIs and validate it.
+
+**How to run dependency check**
+1. Add next part to the pom.xml file:
+```
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <version>9.0.4</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+```
+2. Run `mvn clean verify`
+3. Open `target/dependency-check-report.html` in browser
