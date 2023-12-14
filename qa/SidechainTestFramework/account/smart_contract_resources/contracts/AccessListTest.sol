@@ -3,8 +3,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 /**
- * @title Storage
- * @dev Store & retrieve value in a variable
+ * @title AccessListTest
+ * @dev Used to test the change in gas used when accessing the state of an address in access list.
  */
 contract AccessListTest {
 
