@@ -7,6 +7,7 @@
     * Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
     * [eth RPC endpoint] Added upper limit (10000) for number of blocks to inspect when calling eth_getLogs
     * [eth RPC endpoint] Fixed json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
+    * [eth RPC endpoint] eth_gasPrice - algorithm to suggest gas price will take now 20th percentile instead of 40th
     * New optional flag history.resetModifiersStatus available in the configuration file, to allow old nodes updated 'lately' to new versions (after hardforks activation) to rejoin the leading chain without performing a fullsynch
 
 **0.9.0**
