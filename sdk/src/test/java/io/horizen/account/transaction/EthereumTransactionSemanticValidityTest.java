@@ -1,21 +1,50 @@
 package io.horizen.account.transaction;
 
 import io.horizen.account.fixtures.EthereumTransactionFixture;
+import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.state.GasUtil;
+import io.horizen.fork.ForkManagerUtil;
+import io.horizen.fork.OptionalSidechainFork;
+import io.horizen.fork.SidechainForkConsensusEpoch;
+import io.horizen.fork.SimpleForkConfigurator;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Pair;
+import org.junit.Before;
 import org.junit.Test;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class EthereumTransactionSemanticValidityTest implements EthereumTransactionFixture {
 
-    private void assertNotValid(EthereumTransaction tx) {
+
+    final static int VERSION_1_3_FORK_EPOCH = 35;
+    @Before
+    public void setUp() {
+        SimpleForkConfigurator forkConfigurator = new SimpleForkConfigurator() {
+            public List<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>> getOptionalSidechainForks() {
+                var listOfForks = new ArrayList<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>>();
+                listOfForks.add(
+                        new Pair<>(
+                                new SidechainForkConsensusEpoch(VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH),
+                                new Version1_3_0Fork(true)
+                        )
+                );
+                return listOfForks;
+            }
+        };
+
+        ForkManagerUtil.initializeForkManager(forkConfigurator,"regtest");
+    }
+
+    private void assertNotValid(EthereumTransaction tx, int consensusEpochNumber) {
         try {
-            tx.semanticValidity();
+            tx.semanticValidity(consensusEpochNumber);
             fail("Failure expected" );
         } catch (TransactionSemanticValidityException e) {
             // mostly expected
@@ -26,7 +55,11 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         }
     }
 
-    @Test
+    private void assertNotValid(EthereumTransaction tx) {
+        assertNotValid(tx, 0);
+    }
+
+        @Test
     public void testUnsignedEip155TxValidity() {
         var transaction = getUnsignedEip155LegacyTransaction();
         assertNotValid(transaction);
@@ -456,17 +489,27 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
 
         // 2. gasLimit below intrinsic gas, computed without
+        BigInteger intrinsicGasInParis = GasUtil.intrinsicGas(goodTx.getData(), true, false);
+        assertNotValid(
+                copyEip1599EthereumTransaction(goodTx,
+                        null, null, null,
+                        intrinsicGasInParis.subtract(BigInteger.ONE), null, null, null,
+                        null, null)
+        );
+
+        // 3.Verify that, after Shanghai activation, the intrinsic gas is increased
         assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
                         null,null, null,
-                        GasUtil.TxGasContractCreation().subtract(BigInteger.ONE), null, null, null,
-                        null,null)
+                        intrinsicGasInParis, null, null, null,
+                        null,null), VERSION_1_3_FORK_EPOCH
         );
+
     }
 
     @Test
     public void testBigTxValidity() throws TransactionSemanticValidityException {
-        // data are charged with gas therefore we must set a gasLimt large enough.
+        // data are charged with gas therefore we must set a gasLimit large enough.
         // As of now check on block max gas limit is not made in tx.semanticValidity (it is made in state.validate(tx))
         var goodTx = getBigDataTransaction(5000000, BigInteger.valueOf(100000000));
         goodTx.semanticValidity();

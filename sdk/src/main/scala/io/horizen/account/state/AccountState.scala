@@ -12,7 +12,7 @@ import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, A
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.{Version1_2_0Fork, GasFeeFork}
+import io.horizen.account.fork.{GasFeeFork, Version1_2_0Fork, Version1_3_0Fork}
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
@@ -82,9 +82,11 @@ class AccountState(
         throw new IllegalStateException(errMsg)
       }
 
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
+
       // Check Txs semantic validity first
       for (tx <- mod.sidechainTransactions)
-        tx.semanticValidity()
+        tx.semanticValidity(consensusEpochNumber)
 
       // TODO: keep McBlockRef validation in a view style, so in the applyMainchainBlockReferenceData method
       // Validate top quality certificate in the end of the submission window:
@@ -125,7 +127,6 @@ class AccountState(
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       var cumGasUsed: BigInteger = BigInteger.ZERO
@@ -480,10 +481,11 @@ class AccountState(
       }
     }
 
-    ethTx.semanticValidity()
+    val consensusEpochNumber = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
+    ethTx.semanticValidity(consensusEpochNumber)
     val sender = ethTx.getFrom.address()
 
-    val feeFork = GasFeeFork.get(stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
+    val feeFork = GasFeeFork.get(consensusEpochNumber)
     if (feeFork.blockGasLimit.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${feeFork.blockGasLimit}")
 

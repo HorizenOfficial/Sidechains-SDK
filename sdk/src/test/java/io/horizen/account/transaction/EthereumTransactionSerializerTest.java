@@ -4,8 +4,11 @@ import io.horizen.account.fixtures.EthereumTransactionFixture;
 import io.horizen.account.secret.PrivateKeySecp256k1;
 import io.horizen.account.secret.PrivateKeySecp256k1Serializer;
 import io.horizen.account.state.GasUtil;
+import io.horizen.fork.ForkManagerUtil;
+import io.horizen.fork.SimpleForkConfigurator;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import scala.Option;
@@ -19,6 +22,12 @@ import java.math.BigInteger;
 import static org.junit.Assert.*;
 
 public class EthereumTransactionSerializerTest implements EthereumTransactionFixture {
+
+
+    @Before
+    public void setUp() {
+        ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(),"regtest");
+    }
 
     // Check that using the same key pair for signing two transactions give the same from address
     @Test
