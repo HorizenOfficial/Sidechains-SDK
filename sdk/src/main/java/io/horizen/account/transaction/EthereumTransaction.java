@@ -6,6 +6,7 @@ import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.GasUtil;
 import io.horizen.account.state.Message;
+import io.horizen.account.state.ProtocolParams;
 import io.horizen.account.utils.BigIntegerUtil;
 import io.horizen.account.utils.EthereumTransactionEncoder;
 import io.horizen.account.utils.Secp256k1;
@@ -289,6 +290,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                             "gas limit %s is below intrinsic gas %s",
                     id(), getGasLimit(), intrinsicGas));
+        }
+        if (isShanghaiActive && getTo().isEmpty() && getData().length > ProtocolParams.MaxInitCodeSize()){
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "max initcode size %s exceeded limit %s",
+                    id(), getData().length, ProtocolParams.MaxInitCodeSize()));
         }
 
         if (getFrom() == null) {

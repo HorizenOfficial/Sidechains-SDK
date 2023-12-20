@@ -4,6 +4,7 @@ import io.horizen.account.fixtures.EthereumTransactionFixture;
 import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.state.GasUtil;
+import io.horizen.account.state.ProtocolParams;
 import io.horizen.fork.ForkManagerUtil;
 import io.horizen.fork.OptionalSidechainFork;
 import io.horizen.fork.SidechainForkConsensusEpoch;
@@ -13,10 +14,12 @@ import io.horizen.utils.BytesUtils;
 import io.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -504,6 +507,38 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         intrinsicGasInParis, null, null, null,
                         null,null), VERSION_1_3_FORK_EPOCH
         );
+
+        // 4. Verify that, after Shanghai activation, the init code size should be below limit.
+        // First check that in Paris it is valid
+        byte[] data = new byte[ProtocolParams.MaxInitCodeSize() + 1];
+        EthereumTransaction txWithBigContractCodeSize = copyEip1599EthereumTransaction(goodTx,
+                null, null, null,
+                BigInteger.valueOf(30000000), null, null, null,
+                BytesUtils.toHexString(data), null);
+        try {
+            txWithBigContractCodeSize.semanticValidity(VERSION_1_3_FORK_EPOCH - 1);
+        } catch (Throwable e) {
+            fail("Test4: Successful EthereumTransaction creation expected." + e);
+        }
+
+        // Check that in Shanghai it is not valid anymore
+        assertNotValid(
+                txWithBigContractCodeSize, VERSION_1_3_FORK_EPOCH
+        );
+
+        // Check that this limit only applies to contract creation
+
+        EthereumTransaction txWithBigCDataSize = copyEip1599EthereumTransaction(goodTx,
+                null, Optional.of("0x11223344556677889900112233445566778899da"), null,
+                BigInteger.valueOf(30000000), null, null, null,
+                BytesUtils.toHexString(data), null);
+        try {
+            txWithBigCDataSize.semanticValidity(VERSION_1_3_FORK_EPOCH);
+        } catch (Throwable e) {
+            fail("Test4: Successful EthereumTransaction with function execution expected." + e);
+        }
+
+
 
     }
 

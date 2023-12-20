@@ -20,6 +20,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.evm._
+import io.horizen.transaction.exception.TransactionSemanticValidityException
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
@@ -483,6 +484,7 @@ class AccountState(
 
     val consensusEpochNumber = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
     ethTx.semanticValidity(consensusEpochNumber)
+
     val sender = ethTx.getFrom.address()
 
     val feeFork = GasFeeFork.get(consensusEpochNumber)
