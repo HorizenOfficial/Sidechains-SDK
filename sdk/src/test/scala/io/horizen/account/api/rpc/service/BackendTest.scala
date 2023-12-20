@@ -65,10 +65,10 @@ class BackendTest
 
     val tip = Backend.suggestTipCap(historyMock)
     /* In this case, 20 blocks will be used, with 3 txs each => total number of samples will be 60.
-    The samples have values starting from 1 Gwei up to 60 Gwei, the 40th percentile of 60 samples is 24 => expected
-    value is 36 Gwei
+    The samples have values starting from 1 Gwei up to 60 Gwei, the 20th percentile of 60 samples is 12 => expected
+    value is 12 Gwei
      */
-    assertEquals(BigInteger.valueOf(24000000000L), tip)
+    assertEquals(BigInteger.valueOf(12000000000L), tip)
   }
 
   @Test
@@ -99,10 +99,10 @@ class BackendTest
 
     val tip = Backend.suggestTipCap(historyMock)
     /* In this case, 40 blocks will be used, with 1 txs each => total number of samples will be 40.
-     The samples have values starting from 1 Gwei up to 40 Gwei, the 40th percentile of 40 samples is 16 => expected
-     value is 16 Gwei
+     The samples have values starting from 1 Gwei up to 40 Gwei, the 20th percentile of 40 samples is 8 => expected
+     value is 8 Gwei
       */
-    assertEquals(BigInteger.valueOf(16000000000L), tip)
+    assertEquals(BigInteger.valueOf(8000000000L), tip)
   }
 
 
