@@ -2,7 +2,7 @@ package io.horizen
 
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.consensus.{ConsensusEpochNumber, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation._
 import io.horizen.params.NetworkParams
@@ -480,7 +480,7 @@ abstract class AbstractSidechainNodeViewHolder[
     }
   }
 
-  def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
+  def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
 
   override def postStop(): Unit = {

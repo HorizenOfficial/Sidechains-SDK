@@ -79,4 +79,6 @@ trait NetworkParams {
   //Max Withdrawal Boxes per certificate
   final val maxWBsAllowed: Int = 3999
 
+  // Reset modifiers status to Unknown for all modifiers in the storage
+  val resetModifiersStatus: Boolean = false
 }

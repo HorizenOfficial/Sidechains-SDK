@@ -1,6 +1,8 @@
 package io.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
+import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.{ForgerBlockCountersSerializer, McForgerPoolRewardsSerializer}
 import io.horizen.account.state.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import io.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer, FeeUtils}
@@ -9,12 +11,13 @@ import io.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateS
 import io.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import io.horizen.storage.Storage
 import io.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import sparkz.core.{VersionTag, bytesToVersion, versionToBytes}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
-import sparkz.core.{VersionTag, versionToBytes}
+
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.util.{ArrayList => JArrayList}
+import java.util.{UUID, ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
@@ -41,6 +44,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var lastCertificateSidechainBlockIdOpt: Option[ModifierId] = None
   private[horizen] var blockFeeInfoOpt: Option[AccountBlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
+  private[horizen] var forgerBlockCountersOpt: Option[Map[AddressProposition, Long]] = None
+  private[horizen] var mcForgerPoolRewardsOpt: Option[Map[AddressProposition, BigInteger]] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
   //Contains the base fee to be used when forging the next block
@@ -267,6 +272,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     lastCertificateSidechainBlockIdOpt = None
     blockFeeInfoOpt = None
     consensusEpochOpt = None
+    forgerBlockCountersOpt = None
+    mcForgerPoolRewardsOpt = None
     accountStateRootOpt = None
     receiptsOpt = None
     nextBaseFeeOpt = None
@@ -319,6 +326,16 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(currConsensusEpoch))))
     })
 
+    // Update Forger Block Counters
+    forgerBlockCountersOpt.foreach(forgerBlockCounters => {
+      updateList.add(new JPair(getForgerBlockCountersKey, new ByteArrayWrapper(ForgerBlockCountersSerializer.toBytes(forgerBlockCounters))))
+    })
+
+    // Update MC Forger Pool Rewards
+    mcForgerPoolRewardsOpt.foreach(forgerPoolRewards => {
+      updateList.add(new JPair(getMcForgerPoolRewardsKey, new ByteArrayWrapper(McForgerPoolRewardsSerializer.toBytes(forgerPoolRewards))))
+    })
+
     updateList.add(new JPair(accountStateRootKey, new ByteArrayWrapper(accountStateRootOpt.get)))
 
     // If sidechain has ceased set the flag
@@ -360,11 +377,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
 
     receiptsOpt.foreach(receipts => {
-        for (r <- receipts) {
-          val key = getReceiptKey(r.transactionHash)
-          val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
-          updateList.add(new JPair(key, value))
-        }
+      for (r <- receipts) {
+        val key = getReceiptKey(r.transactionHash)
+        val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
+        updateList.add(new JPair(key, value))
+      }
     })
 
     nextBaseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
@@ -399,6 +416,55 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     new ByteArrayWrapper(Blake2b256.hash(key))
   }
 
+  def updateForgerBlockCounter(forgerPublicKey: AddressProposition): Unit = {
+    val counters: Map[AddressProposition, Long] = getForgerBlockCounters
+    val existingCount: Long = counters.getOrElse(forgerPublicKey, 0)
+    forgerBlockCountersOpt = Some(counters.updated(forgerPublicKey, existingCount + 1))
+  }
+
+  def updateMcForgerPoolRewards(forgerPoolRewards: Map[AddressProposition, BigInteger]): Unit = {
+    mcForgerPoolRewardsOpt = Some(forgerPoolRewards)
+  }
+
+  override def getForgerBlockCounters: Map[AddressProposition, Long] = {
+    forgerBlockCountersOpt.getOrElse(getForgerBlockCountersFromStorage)
+  }
+
+  private[horizen] def getForgerBlockCountersFromStorage: Map[AddressProposition, Long] = {
+    storage.get(getForgerBlockCountersKey).asScala match {
+      case Some(baw) =>
+        ForgerBlockCountersSerializer.parseBytesTry(baw.data) match {
+          case Success(counters) => counters
+          case Failure(e) =>
+            log.error("Failed to parse forger block counters from storage", e)
+            Map.empty[AddressProposition, Long]
+        }
+      case _ => Map.empty[AddressProposition, Long]
+    }
+  }
+
+  override def getMcForgerPoolRewards: Map[AddressProposition, BigInteger] = {
+    mcForgerPoolRewardsOpt.getOrElse(getMcForgerPoolRewardsFromStorage)
+  }
+
+  private[horizen] def getMcForgerPoolRewardsFromStorage: Map[AddressProposition, BigInteger] = {
+    storage.get(getMcForgerPoolRewardsKey).asScala match {
+      case Some(baw) =>
+        McForgerPoolRewardsSerializer.parseBytesTry(baw.data) match {
+          case Success(rewards) => rewards
+          case Failure(exception) =>
+            log.error("Error while mc forger pool rewards parsing.", exception)
+            Map.empty[AddressProposition, BigInteger]
+        }
+      case _ => Map.empty[AddressProposition, BigInteger]
+    }
+  }
+
+
+  def resetForgerBlockCounters(): Unit = {
+    forgerBlockCountersOpt = Some(Map.empty[AddressProposition, Long])
+  }
+
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("topQualityCertificate".getBytes(StandardCharsets.UTF_8), Ints.toByteArray(referencedWithdrawalEpoch)))
   }
@@ -414,6 +480,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
     calculateKey(Bytes.concat("receipt".getBytes(StandardCharsets.UTF_8), txHash))
   }
+
+  private[horizen] val getForgerBlockCountersKey: ByteArrayWrapper = calculateKey("forgerBlockCounters".getBytes(StandardCharsets.UTF_8))
+
+  private[horizen] val getMcForgerPoolRewardsKey: ByteArrayWrapper = calculateKey("mcForgerPoolRewards".getBytes(StandardCharsets.UTF_8))
 
   private[horizen] val getLastCertificateEpochNumberKey: ByteArrayWrapper = calculateKey("lastCertificateEpochNumber".getBytes(StandardCharsets.UTF_8))
 
