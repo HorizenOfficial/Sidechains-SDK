@@ -109,6 +109,11 @@ case class EthServiceSettings(
     getLogsSizeLimit: Int = 10000,
 
     /**
+     * Size limit of the number of blocks traversed by the RPC call eth_getLogs
+     */
+    getLogsBlockLimit: Int = 10000,
+
+    /**
      * Timeout limit for the RPC call eth_getLogs
      */
     getLogsQueryTimeout: FiniteDuration = 10.seconds
@@ -150,6 +155,10 @@ case class ApiRateLimiterSettings(
     throttlingThresholdMs: Int = 2000,
 ) extends SensitiveStringer
 
+case class HistorySettings(
+    resetModifiersStatus: Boolean = false,
+)
+
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
@@ -165,6 +174,7 @@ case class SidechainSettings(
     ethService: EthServiceSettings,
     accountMempool: AccountMempoolSettings,
     apiRateLimiter: ApiRateLimiterSettings,
+    history: HistorySettings
 ){
   require(sparkzSettings.network.handlingTransactionsEnabled || !forger.automaticForging,
     s"Node that does not support transaction handling cannot be a forger node: " +

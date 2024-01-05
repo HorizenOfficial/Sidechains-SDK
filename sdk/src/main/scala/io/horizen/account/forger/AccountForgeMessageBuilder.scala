@@ -6,7 +6,7 @@ import io.horizen.account.block.AccountBlock.calculateReceiptRoot
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
-import io.horizen.account.fork.GasFeeFork
+import io.horizen.account.fork.{Version1_2_0Fork, GasFeeFork}
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proposition.AddressProposition
@@ -27,18 +27,7 @@ import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.secret.{PrivateKey25519, Secret}
 import io.horizen.transaction.TransactionSerializer
-import io.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import io.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.vrf.VrfOutput
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block.{BlockId, Timestamp}
@@ -96,19 +85,19 @@ class AccountForgeMessageBuilder(
       blockSizeIn: Long
   ): Try[(Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], BigInteger, BigInteger)] = Try {
 
+    var cumGasUsed: BigInteger = BigInteger.ZERO
+    var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
+    var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
+
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       // Since forger still doesn't know the candidate block id we may pass random one.
       val dummyBlockId: ModifierId = bytesToId(new Array[Byte](32))
       stateView.addTopQualityCertificates(mcBlockRefData, dummyBlockId)
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData)
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData, Version1_2_0Fork.get(blockContext.consensusEpochNumber).active)
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val listOfTxsInBlock = new ListBuffer[SidechainTypes#SCAT]()
-
-    var cumGasUsed: BigInteger = BigInteger.ZERO
-    var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
-    var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
     val blockGasPool = new GasPool(blockContext.blockGasLimit)
     var blockSize = blockSizeIn
@@ -256,6 +245,9 @@ class AccountForgeMessageBuilder(
             val appliedTxList = resultTuple._2
             val currentBlockPayments = resultTuple._3
 
+            val consensusEpochNumber: ConsensusEpochNumber = intToConsensusEpochNumber(blockContext.consensusEpochNumber)
+            dummyView.updateForgerBlockCounter(forgerAddress, consensusEpochNumber)
+
             val feePayments = if (isWithdrawalEpochLastBlock) {
               // Current block is expected to be the continuation of the current tip, so there are no ommers.
               require(
@@ -267,10 +259,12 @@ class AccountForgeMessageBuilder(
               val withdrawalEpochNumber: Int = WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferencesData.size, dummyView.getWithdrawalEpochInfo, params).epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
-              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, Some(currentBlockPayments))
+              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
               feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))
+
+              dummyView.resetForgerPoolAndBlockCounters(consensusEpochNumber)
 
               feePayments
             } else {

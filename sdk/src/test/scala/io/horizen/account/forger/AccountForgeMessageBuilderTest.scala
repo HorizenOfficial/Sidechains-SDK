@@ -11,25 +11,26 @@ import io.horizen.account.state._
 import io.horizen.account.state.receipt.{EthereumReceipt, ReceiptFixture}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.transaction.EthereumTransaction.EthereumTransactionType
-import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils}
+import io.horizen.account.utils.{AccountMockDataHelper, EthereumTransactionEncoder, FeeUtils, WellKnownAddresses, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, Ommer}
 import io.horizen.chain.SidechainBlockInfo
 import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
-import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
 import io.horizen.params.TestNetParams
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.horizen.state.BaseStateReader
-import io.horizen.transaction.TransactionSerializer
+import io.horizen.transaction.{MC2SCAggregatedTransaction, TransactionSerializer}
 import io.horizen.utils.{BytesUtils, DynamicTypedSerializer, MerklePath, Pair, TestSidechainsVersionsManager, TimeToEpochUtils, WithdrawalEpochInfo}
 import io.horizen.vrf.VrfOutput
 import io.horizen.{AccountMempoolSettings, SidechainTypes}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
@@ -45,6 +46,7 @@ import java.time.Instant
 import java.util
 import java.util.Optional
 import scala.io.Source
+import scala.collection.JavaConverters._
 
 class AccountForgeMessageBuilderTest
     extends MockitoSugar

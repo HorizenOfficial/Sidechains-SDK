@@ -6,7 +6,7 @@
 # this script should be run in the root of coverage-reports folder
 
 # Specify snapshot version
-SNAPSHOT_VERSION_TAG="0.8.0-SNAPSHOT"
+SNAPSHOT_VERSION_TAG="0.9.0"
 
 # Check if SIDECHAIN_SDK is set and not empty
 if [ -z "$SIDECHAIN_SDK" ]; then

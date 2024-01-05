@@ -2,22 +2,24 @@
 import json
 import logging
 import math
+import time
 
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa, format_evm
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VER_1_2_FORK_EPOCH
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
-    connect_sc_nodes, generate_account_proposition, generate_next_block, )
+    connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
+    generate_next_blocks, )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, )
+    assert_equal, fail, forward_transfer_to_sidechain, assert_false, )
 
 """
 Info about forger account block fee payments
@@ -50,19 +52,32 @@ Test:
 
 class ScEvmForgingFeePayments(AccountChainSetup):
     def __init__(self):
-        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=20, forward_amount=1)
+        super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=20, forward_amount=3,
+                         block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 100)
+
+    def advance_to_epoch(self, epoch_number: int):
+        sc_node = self.sc_nodes[0]
+        forging_info = sc_node.block_forgingInfo()
+        current_epoch = forging_info["result"]["bestBlockEpochNumber"]
+        # make sure we are not already passed the desired epoch
+        assert_false(current_epoch > epoch_number, "unexpected epoch number")
+        while current_epoch < epoch_number:
+            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+            forging_info = sc_node.block_forgingInfo()
+            current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
     def run_test(self):
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
+        self.advance_to_epoch(35)
+        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)] * 35
 
         # Connect and sync SC nodes
         logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
-        # Set the genesis SC block fee info
-        sc_block_fee_info = [BlockFeeInfo(1, 0, 0)]
 
         # Do FT of some Zen to SC Node 2
         evm_address_sc_node_2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
@@ -78,7 +93,6 @@ class ScEvmForgingFeePayments(AccountChainSetup):
                                       mc_return_address=mc_node.getnewaddress(),
                                       generate_block=False)
         self.sync_all()
-
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block
@@ -100,7 +114,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
-        forger_stake_amount = 0.015  # Zen
+        forger_stake_amount = 1  # Zen
         forger_stake_amount_in_wei = convertZenToWei(forger_stake_amount)
 
         makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_2, evm_address_sc_node_2, sc2_blockSignPubKey,
@@ -187,6 +201,17 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         self.sc_sync_all()
 
+        # let assume a portion of the MC coinbase is sent to the SC as a contribution to the forger pool
+        # this funds should not be distributed until fork happens at epoch 60
+        ft_pool_amount = 0.5
+        ft_pool_amount_wei = convertZenToWei(ft_pool_amount)
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      mc_node,
+                                      format_eoa(FORGER_POOL_RECIPIENT_ADDRESS),
+                                      ft_pool_amount,
+                                      mc_return_address=mc_node.getnewaddress(),
+                                      generate_block=False)
+
         # Generate some MC block to reach the end of the withdrawal epoch
         mc_node.generate(self.withdrawalEpochLength - 2)
 
@@ -208,6 +233,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         sc_block_fee_info.append(BlockFeeInfo(2, 0, 0))
 
         self.sc_sync_all()
+
+        # assert Forger Pool balance is updated, but not distributed
+        forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
+        assert_equal(forger_pool_balance, ft_pool_amount_wei)
 
         # Collect fee values
         total_fee = 0
@@ -284,6 +313,53 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         for i in range(1, len(forger_fees) + 1):
             assert_equal(forger_fees[i], api_fee_payments_node1[i - 1]['value'],
                          "Different fee value found for payment " + str(i))
+
+        # trigger cert submission
+        # Generate 2 SC blocks on SC node and start them automatic cert creation.
+        generate_next_block(sc_node_1, "first node")  # 1 SC block to reach the end of WE
+        generate_next_block(sc_node_1, "first node")  # 1 SC block to trigger Submitter logic
+
+        # Wait for Certificates appearance
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] < 1 and sc_node_1.submitter_isCertGenerationActive()["result"][
+            "state"]:
+            logging.info("Wait for certificates in the MC mempool...")
+            if sc_node_1.submitter_isCertGenerationActive()["result"]["state"]:
+                logging.info("sc_node generating certificate now.")
+            time.sleep(2)
+
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
+
+        # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
+        # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
+        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
+        generate_next_blocks(sc_node_1, "first node", 4)
+        generate_next_blocks(sc_node_2, "second node", 2)
+
+        mc_node.generate(self.withdrawalEpochLength)
+        self.sc_sync_all()
+        last_block_id = generate_next_block(sc_node_2, "second node")
+        self.sc_sync_all()
+        per_block_fee = convertZenToWei(ft_pool_amount) // 8
+        node_1_fees = per_block_fee * 5
+        node_2_fees = per_block_fee * 3
+
+        sc_node_1_balance_before_payments = sc_node_1_balance_after_payments
+        sc_node_2_balance_before_payments = sc_node_2_balance_after_payments
+        sc_node_1_balance_after_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
+        sc_node_2_balance_after_payments = sc_node_2.wallet_getTotalBalance()['result']['balance']
+        assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
+                     "Wrong fee payment amount for SC node 1")
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
+                     "Wrong fee payment amount for SC node 2")
+
+        # assert forger pool balance is 0 now, as the fees are distributed
+        forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
+        assert_equal(0, forger_pool_balance)
+
+        fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
+        assert_equal(node_1_fees, fee_payments_api_response[0]['value'])
+        assert_equal(node_2_fees, fee_payments_api_response[1]['value'])
 
 
 if __name__ == "__main__":

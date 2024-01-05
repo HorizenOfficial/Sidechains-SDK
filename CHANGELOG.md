@@ -1,8 +1,23 @@
+**0.10.0**
+1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
+2. Added support for ZenIP 42203/42206: 
+    *  it is now possible to move founds with a forward transfer directly to a smart contract address in the EON sidechain
+    *  it is now possible to increment the EON forgers reward pool with a forward transfer to a specific address
+5. Minor fixes:
+    * Forger Stake native smart contract: OpenStakeForgerList function can be invoked using the ABI-compliant signature. The old signature is still valid for backward compatibility.
+    * [eth RPC endpoint] Added upper limit (10000) for number of blocks to inspect when calling eth_getLogs
+    * [eth RPC endpoint] Fixed json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
+    * [eth RPC endpoint] eth_gasPrice - algorithm to suggest gas price will take now 20th percentile instead of 40th
+
 **0.9.0**
-1. libevm dependency updated to 1.0.0-SNAPSHOT.
+1. libevm dependency updated to 1.0.0.
 2. Added support for EVM and native smart contracts interoperability.
-3. Sparkz dependency updated to 2.2.0
-4. Improved storage versioning
+3. Sparkz dependency updated to 2.2.0.
+4. Improved storage versioning (fullsynch time reduced by 5x)
+5. Minor fixes:
+    * [eth RPC endpoint] debug_traceCall now returns a more accurate error response for reverted transactions 
+    * [eth RPC endpoint] debug_traceCall and debug_traceTransaction now return a correct value for the gasUsed field when topmost call is a call to a Solidity Smart Contract function.
+    * Certificates older than 4 epochs are now deleted from the storage only if more recent certificates appeared.
 
 **0.8.1**
 1. Improved precision of eth_gasPrice RPC call
