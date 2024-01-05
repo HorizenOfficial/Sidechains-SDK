@@ -268,7 +268,7 @@ class StateTransition(
         }
         if (depth == 0) {
           // trace end of top-level call frame
-          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, System.nanoTime() - startTime, error)
+          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, error)
         } else {
           // trace end of nested call frame
           tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)

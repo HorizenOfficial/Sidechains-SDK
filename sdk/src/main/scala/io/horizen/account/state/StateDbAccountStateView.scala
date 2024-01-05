@@ -330,8 +330,9 @@ class StateDbAccountStateView(
   final override def removeAccountStorageBytes(address: Address, key: Array[Byte]): Unit =
     updateAccountStorageBytes(address, key, Array.empty)
 
-  def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult =
-    stateDb.getProof(address, keys.map(new Hash(_)))
+  def getProof(address: Address, keys: Array[Array[Byte]], stateRoot: Hash): ProofAccountResult = {
+    stateDb.getProof(address, stateRoot, keys.map(new Hash(_)))
+  }
 
   // account specific getters
   override def getNonce(address: Address): BigInteger = stateDb.getNonce(address)
