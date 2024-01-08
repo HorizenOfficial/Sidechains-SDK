@@ -1,10 +1,7 @@
 package io.horizen.examples;
 
-import io.horizen.account.fork.Version1_2_0Fork;
-import io.horizen.account.fork.ContractInteroperabilityFork;
+import io.horizen.account.fork.*;
 import io.horizen.fork.*;
-import io.horizen.account.fork.GasFeeFork;
-import io.horizen.account.fork.ZenDAOFork;
 import io.horizen.fork.ForkConfigurator;
 import io.horizen.fork.OptionalSidechainFork;
 import io.horizen.fork.SidechainForkConsensusEpoch;
@@ -72,6 +69,10 @@ public class AppForkConfigurator extends ForkConfigurator {
             new Pair<>(
                     new SidechainForkConsensusEpoch(60, 60, 60),
                     new Version1_2_0Fork(true)
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(70, 70, 70),
+                    new Version1_3_0Fork(true)
             )
         );
     }

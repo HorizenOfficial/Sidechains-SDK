@@ -4,7 +4,7 @@ import io.horizen.account.AccountFixture
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.consensus.{ConsensusEpochInfo, intToConsensusEpochNumber}
-import io.horizen.evm.{Address, Hash, MemoryDatabase, StateDB}
+import io.horizen.evm.{Address, ForkRules, Hash, MemoryDatabase, StateDB}
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.mockito.Mockito
@@ -83,7 +83,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
       processor: MessageProcessor,
       ctx: BlockContext,
   ): Array[Byte] = {
-    view.setupAccessList(msg)
+    view.setupAccessList(msg, new ForkRules(true))
     val gas = new GasPool(1000000)
     val result = Try.apply(TestContext.process(processor, msg, view, ctx, gas))
     assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)

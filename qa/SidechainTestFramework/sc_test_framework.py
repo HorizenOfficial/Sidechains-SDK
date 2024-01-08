@@ -188,6 +188,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Stores mainchain block delay reference parameter")
         parser.add_option("--jacoco", dest="jacoco", default=False, action="store_true",
                           help="Stores jacoco flag assigned to current test")
+        parser.add_option("--allforks", dest="all_forks", default=False, action="store_true",
+                          help="Enables all existing fork points at the first epoch")
 
         self.add_options(parser)
         self.sc_add_options(parser)

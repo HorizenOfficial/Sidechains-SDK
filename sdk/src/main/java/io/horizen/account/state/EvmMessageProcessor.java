@@ -1,6 +1,7 @@
 package io.horizen.account.state;
 
 import io.horizen.account.fork.ContractInteroperabilityFork;
+import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.evm.*;
 import io.horizen.evm.results.InvocationResult;
 import io.horizen.utils.BytesUtils;
@@ -52,6 +53,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         throws ExecutionFailedException {
         // prepare context
         var block = context.blockContext();
+
         var evmContext = new EvmContext(
                 BigInteger.valueOf(block.chainID),
                 block.forgerAddress,
@@ -60,7 +62,8 @@ public class EvmMessageProcessor implements MessageProcessor {
                 BigInteger.valueOf(block.blockNumber),
                 BigInteger.valueOf(block.timestamp),
                 block.baseFee,
-                block.random);
+                block.random,
+                new ForkRules(Version1_3_0Fork.get(block.consensusEpochNumber).active()));
 
         // setup callback for the evm to access the block hash provider
         try (

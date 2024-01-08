@@ -1,7 +1,8 @@
 package io.horizen.account.state
 
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.utils.BigIntegerUtil
-import io.horizen.evm.EvmContext
+import io.horizen.evm.{EvmContext, ForkRules}
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
@@ -56,7 +57,7 @@ class StateTransition(
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
       // reset and prepare account access list
-      view.setupAccessList(msg)
+      view.setupAccessList(msg, new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
       // execute top-level call frame
@@ -188,11 +189,11 @@ class StateTransition(
   }
 
   private def invoke(processor: MessageProcessor, invocation: Invocation): Array[Byte] = {
-    val startTime = System.nanoTime()
     if (!processor.customTracing()) {
       tracer.foreach(tracer => {
         if (depth == 0) {
           // trace start of top-level call frame
+
           val context = new EvmContext(
           BigInteger.valueOf(blockContext.chainID),
           blockContext.forgerAddress,
@@ -201,7 +202,9 @@ class StateTransition(
           BigInteger.valueOf(blockContext.blockNumber),
           BigInteger.valueOf(blockContext.timestamp),
           blockContext.baseFee,
-          blockContext.random)
+          blockContext.random,
+          new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
+
           tracer.CaptureStart(
             view.getStateDbHandle,
             context,

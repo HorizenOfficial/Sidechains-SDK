@@ -2,7 +2,7 @@ import json
 
 
 # execute a transaction/withdrawCoins call on account sidechain
-def withdrawcoins(sidechain_node, destMCAddress, amount_in_zennies, nonce=None, gas_limit=230000, max_fee_per_gas=900000000,
+def withdrawcoins(sidechain_node, destMCAddress, amount_in_zennies, nonce=None, gas_limit=230000, max_fee_per_gas=9000000000,
                   max_priority_fee_per_gas=900000000, api_key=None):
     j = {
         "nonce": nonce,

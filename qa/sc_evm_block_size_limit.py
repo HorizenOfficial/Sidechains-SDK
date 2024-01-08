@@ -11,6 +11,7 @@ from SidechainTestFramework.account.utils import convertZenToWei
 from test_framework.util import assert_equal, assert_true
 
 """
+
 Configuration: 
     - 2 SC nodes connected with each other
     - 1 MC node
@@ -21,6 +22,7 @@ Test:
     Moreover send many Eth txes having large size and check that only up to 2 MB of the remaining block size is used
     for including tx.
      
+This test doesn't support --allforks.
 """
 
 
@@ -64,6 +66,9 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
         return time.time()
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
 
         mc_node = self.nodes[0]
         ft_amount_in_zen = Decimal('500.0')

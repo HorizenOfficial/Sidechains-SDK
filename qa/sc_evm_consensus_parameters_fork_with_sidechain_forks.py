@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import time
+
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -12,9 +13,11 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConne
 from SidechainTestFramework.scutil import generate_next_block, bootstrap_sidechain_nodes, \
     AccountModel, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots
 from test_framework.util import assert_equal, websocket_port_by_mc_node_index, forward_transfer_to_sidechain, \
-    assert_true
+    assert_true, fail
 
 """
+This test doesn't support --allforks.
+
 Configuration:
     Start 1 MC node and 2 SC node.
     SC node 1 connected to the MC node 1.
@@ -79,6 +82,10 @@ class SCConsensusParamsForkWithSidechainForksTest(AccountChainSetup):
 
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         time.sleep(0.1)
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a

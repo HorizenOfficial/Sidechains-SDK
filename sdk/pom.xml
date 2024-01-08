@@ -473,6 +473,8 @@
         <configuration>
           <!-- increase stack size, mainly to support the required call depth for nested contract invocations -->
           <argLine>-Xss16m</argLine>
+          <!-- Set forkMode=always for running each test in a different JVM. This helps to find tests without proper initialization of static fields-->
+      <!--    <forkMode>always</forkMode> -->
         </configuration>
       </plugin>
       <plugin>
