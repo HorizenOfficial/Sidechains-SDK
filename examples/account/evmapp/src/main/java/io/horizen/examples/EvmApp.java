@@ -14,7 +14,7 @@ public class EvmApp {
             System.out.println("Please provide settings file name as first parameter!");
             System.out.println("Optional parameters:");
             System.out.println("MC Block Reference delay (int)");
-            System.out.println("All forks enabled (boolean, default false");
+            System.out.println("All forks enabled starting from epoch 2 (boolean, default false)");
             return;
         }
 

@@ -7,7 +7,7 @@ import io.horizen.utils.Pair;
 import java.math.BigInteger;
 import java.util.List;
 
-public class AppForkConfiguratorAll extends ForkConfigurator {
+public class AppForkConfiguratorAllEnabledFromEpoch2 extends ForkConfigurator {
     @Override
     public SidechainForkConsensusEpoch fork1activation() {
         return new SidechainForkConsensusEpoch(0, 0, 0);

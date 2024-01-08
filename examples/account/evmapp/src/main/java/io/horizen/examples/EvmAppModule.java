@@ -52,7 +52,7 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
-        ForkConfigurator forkConfigurator = allForksEnabled ? new AppForkConfiguratorAll() : new AppForkConfigurator();
+        ForkConfigurator forkConfigurator = allForksEnabled ? new AppForkConfiguratorAllEnabledFromEpoch2() : new AppForkConfigurator();
 
         // Here I can add my custom rest api and/or override existing one
         List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
