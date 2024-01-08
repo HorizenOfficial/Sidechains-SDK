@@ -1,3 +1,7 @@
+**0.11.0**
+1. Sparkz dependency updated to 2.3.0
+2. Updtated third-party dependencies
+
 **0.10.0**
 1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
 2. Added support for ZenIP 42203/42206: 
