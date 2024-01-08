@@ -51,6 +51,10 @@ INTEROPERABILITY_FORK_EPOCH = 50
 VERSION1_3_FORK_EPOCH = 70
 
 
+# They should have the same value as in src/main/java/io/horizen/examples/AppForkConfigurator.java
+INTEROPERABILITY_FORK_EPOCH = 50
+VER_1_2_FORK_EPOCH = 60
+
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000
 

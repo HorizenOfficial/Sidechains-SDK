@@ -14,7 +14,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@openzeppelin/contracts": "4.7.0",
+    "@openzeppelin/contracts": "4.9.3",
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@types/node": "^12.20.55",
     "ethers": "^5.6.9",

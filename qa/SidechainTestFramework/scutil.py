@@ -19,7 +19,7 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 
 WAIT_CONST = 1
 
-SNAPSHOT_VERSION_TAG = "0.10.0-SNAPSHOT"
+SNAPSHOT_VERSION_TAG = "0.11.0-SNAPSHOT"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -189,9 +189,9 @@ def launch_bootstrap_tool(command_name, json_parameters, model):
     try:
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
-    except ValueError:
-        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
-                     .format(command_name, json_param, sc_bootstrap_output.decode()))
+    except ValueError as e:
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\nException: {}\n"
+                     .format(command_name, json_param, sc_bootstrap_output.decode(), str(e)))
         raise Exception("Bootstrap tool error occurred")
 
 

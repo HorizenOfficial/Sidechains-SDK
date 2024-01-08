@@ -29,7 +29,7 @@ object Backend extends SparkzLogging {
   /**
    * Overload with default arguments.
    */
-  def suggestTipCap(history: AccountHistory): BigInteger = suggestTipCap(history, 20, 40, MAX_GAS_PRICE, BigInteger.TWO)
+  def suggestTipCap(history: AccountHistory): BigInteger = suggestTipCap(history, 20, 20, MAX_GAS_PRICE, BigInteger.TWO)
 
   /**
    * Get tip cap that newly created transactions can use to have a high chance to be included in the following blocks.
@@ -46,7 +46,7 @@ object Backend extends SparkzLogging {
    * @param blockCount
    *   default 20
    * @param percentile
-   *   default 60
+   *   default 20
    * @param maxPrice
    *   default 500 GWei
    * @param ignorePrice
@@ -57,7 +57,7 @@ object Backend extends SparkzLogging {
   def suggestTipCap(
       history: AccountHistory,
       blockCount: Int = 20,
-      percentile: Int = 40,
+      percentile: Int = 20,
       maxPrice: BigInteger = MAX_GAS_PRICE,
       ignorePrice: BigInteger = BigInteger.TWO
   ): BigInteger = {
