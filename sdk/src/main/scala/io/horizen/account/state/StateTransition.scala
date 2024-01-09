@@ -57,7 +57,7 @@ class StateTransition(
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
       // reset and prepare account access list
-      view.setupAccessList(msg, new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
+      view.setupAccessList(msg, blockContext.forgerAddress, new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
       // execute top-level call frame

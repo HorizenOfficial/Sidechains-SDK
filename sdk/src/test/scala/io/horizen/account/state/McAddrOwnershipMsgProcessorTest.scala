@@ -909,7 +909,6 @@ class McAddrOwnershipMsgProcessorTest
 
   def getAllOwnershipList(stateView: AccountStateView): Array[Byte] = {
     val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfAllOwnershipsCmd), randomNonce)
-    stateView.setupAccessList(msg,  new ForkRules(true))
 
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
@@ -930,7 +929,6 @@ class McAddrOwnershipMsgProcessorTest
     val msg = getMessage(
       contractAddress, 0,
       BytesUtils.fromHexString(GetListOfOwnershipsCmd) ++ data, randomNonce)
-    stateView.setupAccessList(msg, new ForkRules(true))
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
       (result, gas.getUsedGas)
