@@ -136,10 +136,36 @@ abstract class AbstractForger[
 
 
   protected def tryToCreateBlockNow(): Unit = {
+    // we are in the timer func, triggered periodically for automatic forging attempt
     val currentTime: Long = timeProvider.time() / 1000
+/* TODO remove after code review
+This could be enabled if we want to skip the forging step entirely while we are syncing, thus saving many cpu cycles. Otherwise the slot is skipped while trying to forge.
+The drawback of this approach is that we call an async func (with a future obj) for getting current tip info every timer expiration
+
+    val nextEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
+
+
+    // get current tip epoch, and try to see if we are too far in the past for performing a block forging
+    val getInfoMessage = ReceivableMessages.GetDataFromCurrentView[HIS, MS, VL, MP, ConsensusEpochAndSlot](getEpochAndSlotForBestBlock)
+    val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
+
+    epochAndSlotFut.onComplete {
+      case Success(currentTipBlockEpochAndSlot: ConsensusEpochAndSlot) =>
+        if ((nextEpochAndSlot.epochNumber - currentTipBlockEpochAndSlot.epochNumber) > 1) {
+          log.info(s"Chain tip with epoch ${currentTipBlockEpochAndSlot.epochNumber} is too far in past: next block epoch=${nextEpochAndSlot.epochNumber}/slot=${nextEpochAndSlot.slotNumber} (it is OK if we are syncing the node)")
+        } else {
+          log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $nextEpochAndSlot")
+          tryToCreateBlockForEpochAndSlot(nextEpochAndSlot.epochNumber, nextEpochAndSlot.slotNumber, None, Seq())
+        }
+
+      case failure@Failure(_) =>
+        log.error(s"Forging could not be started because we failed to get current tip epoch, failure: $failure")
+    }
+*/
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, Seq())
+/* comment the 3 lines above if enabling the snippet */
     recalculateSlotDuration()
   }
 
