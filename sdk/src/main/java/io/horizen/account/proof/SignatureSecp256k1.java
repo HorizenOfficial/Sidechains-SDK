@@ -8,6 +8,7 @@ import io.horizen.account.secret.PrivateKeySecp256k1;
 import io.horizen.account.utils.Secp256k1;
 import io.horizen.evm.Address;
 import io.horizen.json.serializer.HexNoPrefixBigIntegerSerializer;
+import io.horizen.json.serializer.SignatureVFieldSerializer;
 import io.horizen.proof.ProofOfKnowledge;
 import io.horizen.proof.ProofSerializer;
 import io.horizen.json.Views;
@@ -18,7 +19,7 @@ import java.math.BigInteger;
 public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
 
     @JsonProperty("v")
-    @JsonSerialize(using = HexNoPrefixBigIntegerSerializer.class)
+    @JsonSerialize(using = SignatureVFieldSerializer.class)
     private final BigInteger v;
 
     @JsonProperty("r")

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 
 from eth_utils import to_checksum_address
 
@@ -6,11 +7,13 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, deploy_smart_contract
 from SidechainTestFramework.account.utils import convertZenToWei, \
-    NULL_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS
+    NULL_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS, VER_1_2_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, EVM_APP_SLOT_TIME, SLOTS_IN_EPOCH
-from test_framework.util import (assert_equal, forward_transfer_to_sidechain, assert_false)
+from test_framework.util import (assert_equal, forward_transfer_to_sidechain, assert_false, fail)
 
 """
+This test doesn't support --allforks.
+
 Configuration: 
     - 1 SC node
     - 1 MC node
@@ -82,6 +85,10 @@ class SCEvmFtToNativeContract(AccountChainSetup):
             assert_equal(updated_burn_bal, start_burn_balance + ft_amount_wei)
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         sc_node = self.sc_nodes[0]
         self.sc_ac_setup(forwardTransfer=10)
 
@@ -103,7 +110,7 @@ class SCEvmFtToNativeContract(AccountChainSetup):
         # ------------------------------------------------------------------------------
         # Advance to epoch 60, enabling fork that allows FT to smart contract addresses
         # Repeat the FTs, now they should work
-        self.advance_to_epoch(60)
+        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
 
         # TEST 2.1 - ft to native SC - success
         self.check_ft_to_smart_contract(FORGER_STAKE_SMART_CONTRACT_ADDRESS, True)

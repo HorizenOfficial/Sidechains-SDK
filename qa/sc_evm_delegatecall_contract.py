@@ -11,6 +11,7 @@ from test_framework.util import assert_equal, assert_true
 """
 Check an EVM Contract with delegatecall instruction, which should work properly.
 Also verify the behavior of gas estimation in case errors in nested calls are not reported by the calling function.
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork

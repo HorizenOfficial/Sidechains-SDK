@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import pprint
 import time
 from _decimal import Decimal
 
@@ -30,6 +31,7 @@ from test_framework.util import (
 Checks Certificate automatic creation and submission to MC for an EVM Sidechain:
 1. Creation of Certificate with no backward transfers.
 2. Creation of Certificate with multiple backward transfers.
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 
 Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
@@ -96,6 +98,7 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         self.sc_ac_setup(ft_amount_in_zen=ft_amount_in_zen)
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+        pprint.pprint(str(sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]))
 
         hex_evm_addr = remove_0x_prefix(self.evm_address)
 
@@ -372,27 +375,28 @@ class SCEvmBackwardTransfer(AccountChainSetup):
         generate_next_block(sc_node, "first node")
 
         # Create and deploy evm proxy contract
-        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop)
+        proxy_contract = SimpleProxyContract(sc_node, evm_address_interop, self.options.all_forks)
 
         native_contract = SmartContract("WithdrawalRequests")
 
         # Test before interoperability fork
         method = "getBackwardTransfers(uint32)"
         native_input = format_eoa(native_contract.raw_encode_call(method, current_epoch_number))
-        try:
-            proxy_contract.do_static_call(evm_address_interop, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, native_input)
-            fail("Interoperability call should fail before fork point")
-        except RuntimeError as err:
-            print("Expected exception thrown: {}".format(err))
-            # error is raised from API since the address has no balance
-            assert_true("reverted" in str(err))
+        if self.options.all_forks is False:
+            try:
+                proxy_contract.do_static_call(evm_address_interop, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, native_input)
+                fail("Interoperability call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("reverted" in str(err))
 
-        # reach the Interoperability fork
-        current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+            # reach the Interoperability fork
+            current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
-            generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-            self.sc_sync_all()
+            for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
 
         res = proxy_contract.do_static_call(evm_address_interop, 1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
                                             native_input)

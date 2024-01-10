@@ -12,7 +12,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transacti
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VER_1_2_FORK_EPOCH
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
@@ -47,6 +47,8 @@ Test:
     - Forge SC block by the second SC node for the next consensus epoch (Second node ForgingStake must become active).
     - Generate MC and SC blocks to reach the end of the withdrawal epoch. 
     - Check forger payments for the SC nodes.
+    
+    This test doesn't support --allforks.
 """
 
 
@@ -68,6 +70,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
             current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
@@ -332,7 +338,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
         # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
-        self.advance_to_epoch(60)
+        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
         generate_next_blocks(sc_node_1, "first node", 4)
         generate_next_blocks(sc_node_2, "second node", 2)
 

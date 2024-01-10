@@ -24,6 +24,7 @@ from test_framework.util import (
 )
 
 """
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 Configuration: 
     - 2 SC nodes connected with each other
     - 1 MC node
@@ -493,7 +494,7 @@ class SCEvmForger(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
 
         # Deploy proxy contract
-        proxy_contract = SimpleProxyContract(sc_node_1, evm_address_interop)
+        proxy_contract = SimpleProxyContract(sc_node_1, evm_address_interop, self.options.all_forks)
 
         # Send some funds to the proxy smart contract. Note that nonce=1 because evm_address_interop has deployed the proxy contract.
         contract_funds_in_zen = 10
@@ -508,21 +509,22 @@ class SCEvmForger(AccountChainSetup):
         # Test before interoperability fork
         method = "getAllForgersStakes()"
         native_input = format_eoa(native_contract.raw_encode_call(method,))
-        try:
-            proxy_contract.do_static_call(evm_address_interop, 1, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
-            fail("Interoperability call should fail before fork point")
-        except RuntimeError as err:
-            print("Expected exception thrown: {}".format(err))
-            # error is raised from API since the address has no balance
-            assert_true("reverted" in str(err))
+        if self.options.all_forks is False:
+            try:
+                proxy_contract.do_static_call(evm_address_interop, 1, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+                fail("Interoperability call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("reverted" in str(err))
 
 
-        # reach the Interoperability fork
-        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+            # reach the Interoperability fork
+            current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
-            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
-            self.sc_sync_all()
+            for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
 
 
         # Test getAllForgersStakes()

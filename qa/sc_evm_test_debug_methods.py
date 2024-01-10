@@ -11,6 +11,7 @@ from test_framework.util import assert_equal, assert_true
 
 """
 Check debug methods.
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -266,7 +267,7 @@ class SCEvmDebugMethods(AccountChainSetup):
 
         assert_true("calls" not in trace_result)
         assert_equal("CREATE", trace_result["type"])
-        assert_equal(0, int(trace_result["gas"], 16))  # it is the input gas without the intrinsic gas
+        assert_equal("0x15864", trace_result["gas"], )  # it is the input gas without the intrinsic gas
         assert_equal("0x15864", trace_result["gasUsed"])
         assert_equal(trace_call_args['input'], trace_result["input"])
         assert_true("output" not in trace_result)

@@ -7,7 +7,10 @@ import io.horizen.json.serializer.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertNull, assertTrue}
 import org.junit.{Ignore, Test}
 import org.scalatestplus.junit.JUnitSuite
+import org.web3j.crypto.Sign
 import sparkz.util.SparkzEncoder
+
+import java.math.BigInteger
 
 class EthereumTransactionJsonSerializationTest
   extends JUnitSuite
@@ -154,10 +157,17 @@ class EthereumTransactionJsonSerializationTest
 
     if (transaction.getSignature != null) {
       val sig_v = node.path("signature").path("v").asText()
-      assertEquals("Transaction signature v json value must be the same.",
-        // in case of EIP155 tx signature data getV is the byte array carrying the chain id
-        // (actual V value is in getSignature())
-        SparkzEncoder.default.encode(transaction.getSignature.getV.toString(16)), sig_v)
+      if (transaction.isLegacy) {
+        assertEquals("Transaction signature v json value must be the same.",
+          // in case of EIP155 tx signature data getV is the byte array carrying the chain id
+          // (actual V value is in getSignature())
+          SparkzEncoder.default.encode(transaction.getSignature.getV.toString(16)), sig_v)
+      } else {
+        // isEIP1559 txs are defined to use 0 and 1 as their recovery
+        // id, subtract 27 to become equivalent to unprotected Homestead signatures.
+        assertEquals("Transaction signature v json value must be the same.",
+          SparkzEncoder.default.encode(transaction.getSignature.getV.subtract(BigInteger.valueOf(Sign.LOWER_REAL_V)).toString(16)), sig_v)
+      }
 
       val sig_r = node.path("signature").path("r").asText()
       assertEquals("Transaction signature r json value must be the same.",
