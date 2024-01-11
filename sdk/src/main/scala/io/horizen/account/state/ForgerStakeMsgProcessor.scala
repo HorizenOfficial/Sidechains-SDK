@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.fork.Version1_2_0Fork
+import io.horizen.account.fork.{Version1_2_0Fork, Version1_3_0Fork}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList._
@@ -156,7 +156,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress = cmdInput.ownerAddress
 
-    if (!view.isEoaAccount(cmdInput.ownerAddress)) {
+    if (!view.isEoaAccount(ownerAddress)) {
       throw new ExecutionRevertedException(s"Owner account is not an EOA")
     }
 
@@ -220,6 +220,20 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeList
   }
 
+  def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: Address): Seq[AccountForgingStakeInfo] = {
+    var stakeList = Seq[AccountForgingStakeInfo]()
+    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+
+    while (!linkedListNodeRefIsNull(nodeReference)) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
+      if (item.forgerStakeData.ownerPublicKey.address() == owner)
+        stakeList = item +: stakeList
+      nodeReference = prevNodeReference
+    }
+    stakeList
+  }
+
+
   def doUncheckedGetListOfForgersStakesCmd(view: BaseAccountStateView): Array[Byte] = {
     val stakeList = getListOfForgersStakes(view)
     AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
@@ -233,6 +247,33 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     checkGetListOfForgersCmd(invocation.input)
     doUncheckedGetListOfForgersStakesCmd(view)
   }
+
+  def doStakeOfCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    if (invocation.value.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    val inputParams = getArgumentsFromData(invocation.input)
+    val cmdInput = GetAllForgersStakesOfUserCmdInputDecoder.decode(inputParams)
+
+    val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
+    val totalStake = ownerStakeList.foldLeft(BigInteger.ZERO)( (sum, stake) => sum.add(stake.forgerStakeData.stakedAmount))
+    StakeOfResult(totalStake).encode()
+  }
+
+  def doGetAllForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    if (invocation.value.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    val inputParams = getArgumentsFromData(invocation.input)
+    val cmdInput = GetAllForgersStakesOfUserCmdInputDecoder.decode(inputParams)
+
+    val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
+    AccountForgingStakeInfoListEncoder.encode(ownerStakeList.asJava)
+  }
+
+
 
   def doRemoveStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
@@ -366,7 +407,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
       case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                            => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+                                => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+      case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                                => doStakeOfCmd(invocation, gasView)
+      case GetAllForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                                => doGetAllForgersStakesOfUserCmd(invocation, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
@@ -409,6 +454,8 @@ object ForgerStakeMsgProcessor {
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
   val OpenStakeForgerListCmd: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32")
   val OpenStakeForgerListCmdCorrect: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32)")
+  val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
+  val GetAllForgersStakesOfUserCmd: String = getABIMethodId("getAllForgersStakesOfUser(address)")
 
   // ensure we have strings consistent with size of opcode
   require(

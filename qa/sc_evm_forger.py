@@ -10,13 +10,13 @@ from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, r
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa, format_evm, ac_makeForgerStake, \
-    generate_block_and_get_tx_receipt
+    generate_block_and_get_tx_receipt, contract_function_static_call
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import convertZenToWei, \
     convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
+    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH, VERSION1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
@@ -46,6 +46,26 @@ Test:
 
 """
 
+def decode_list_of_forger_stakes(result, exp_num_of_stakes):
+    # result is (bytes32, uint256, address, bytes32, bytes32, bytes1)[]. Its ABI encoding in this case is
+    # - first 32 bytes is the offset
+    # - second 32 bytes is array length
+    # - the remaining are the bytes representing the various (bytes32, uint256, bytes20, bytes32, bytes32, bytes1) tuples.
+    # Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
+
+    res = result[32:]  # cut offset, don't care in this case
+    num_of_stakes = int(bytes_to_hex_str(res[0:32]), 16)
+    assert_equal(exp_num_of_stakes, num_of_stakes, "wrong number of forger stakes")
+    res = res[32:]  # cut the array length
+
+    elem_size = 192  # 32 * 6
+    list_of_elems = [res[i:i + elem_size] for i in range(0, num_of_stakes * elem_size, elem_size)]
+
+    list_of_stakes = []
+    for p in list_of_elems:
+        list_of_stakes.append(decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], p))
+
+    return list_of_stakes
 
 def get_sc_wallet_pubkeys(sc_node):
     wallet_propositions = sc_node.wallet_allPublicKeys()['result']['propositions']
@@ -100,7 +120,7 @@ def check_spend_forger_stake_event(event, owner, stake_id):
 class SCEvmForger(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH)
+                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION1_3_FORK_EPOCH)
 
     def run_test(self):
 
@@ -531,27 +551,10 @@ class SCEvmForger(AccountChainSetup):
 
         res = proxy_contract.do_static_call(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
 
-        # res is (bytes32,uint256,address, bytes32,bytes32,bytes1)[]. Its ABI encoding in this case is
-        # - first 32 bytes is the offset
-        # - second 32 bytes is array length
-        # - the remaining are the bytes representing the various (bytes32,uint256,bytes20, bytes32,bytes32,bytes1) tuples.
-        # Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
-
-        res = res[32:]  # cut offset, don't care in this case
-        num_of_stakes = int(bytes_to_hex_str(res[0:32]), 16)
-        assert_equal(2, num_of_stakes, "wrong number of forger stakes")
-        res = res[32:]  # cut the array length
-
-        elem_size = 192  # 32 * 6
-        list_of_elems = [res[i:i + elem_size] for i in range(0, num_of_stakes * elem_size, elem_size)]
-
-        stake_1 = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], list_of_elems[0])
-        stake_2 = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], list_of_elems[1])
-
+        list_of_stakes = decode_list_of_forger_stakes(res, 2)
         # Check the stakeId
-        assert_equal(stakeList[0]['stakeId'], bytes_to_hex_str(stake_1[0][0]), "wrong stakeId")
-        assert_equal(stakeList[1]['stakeId'], bytes_to_hex_str(stake_2[0][0]), "wrong stakeId")
-        logging.info("stakeList: {}".format(stakeList))
+        assert_equal(stakeList[0]['stakeId'], bytes_to_hex_str(list_of_stakes[0][0][0]), "wrong stakeId")
+        assert_equal(stakeList[1]['stakeId'], bytes_to_hex_str(list_of_stakes[1][0][0]), "wrong stakeId")
 
         # Test forger stake creation: delegate(bytes32,bytes32,bytes1,address)
 
@@ -639,6 +642,91 @@ class SCEvmForger(AccountChainSetup):
 
         #######################################################################################################
         # End Interoperability test
+        #######################################################################################################
+
+        #######################################################################################################
+        # Start stakeOf and getAllForgersStakesOfUser tests
+        #######################################################################################################
+        if self.options.all_forks is False:
+            method = 'getAllForgersStakesOfUser(address)'
+            try:
+                contract_function_static_call(sc_node_1, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                                              evm_address_sc_node_1, method, evm_address_sc_node_1)
+                fail("getAllForgersStakesOfUser call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("op code not supported" in str(err))
+
+            method = 'stakeOf(address)'
+            try:
+                contract_function_static_call(sc_node_1, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                                              evm_address_sc_node_1, method, evm_address_sc_node_1)
+                fail("stakeOf call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("op code not supported" in str(err))
+
+            # reach Version 1.3 fork
+            current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+            for i in range(0, VERSION1_3_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
+
+        method = 'getAllForgersStakesOfUser(address)'
+        native_input = native_contract.raw_encode_call(method, evm_address_sc_node_1)
+        result = sc_node_1.rpc_eth_call(
+            {
+                "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                "from": add_0x_prefix(evm_address_interop),
+                "nonce": 2,
+                "input": native_input
+            }, "latest"
+        )
+
+        res = hex_str_to_bytes(result['result'][2:])
+        list_of_stakes = decode_list_of_forger_stakes(res, 2)
+        assert_equal(evm_address_sc_node_1, list_of_stakes[0][0][2][2:], "wrong ownerPublicKey")
+        assert_equal(evm_address_sc_node_1, list_of_stakes[1][0][2][2:], "wrong ownerPublicKey")
+
+        # With interoperability
+        native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))
+
+        res = proxy_contract.do_static_call(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+
+        list_of_stakes = decode_list_of_forger_stakes(res, 2)
+        assert_equal(evm_address_sc_node_1, list_of_stakes[0][0][2][2:], "wrong ownerPublicKey")
+        assert_equal(evm_address_sc_node_1, list_of_stakes[1][0][2][2:], "wrong ownerPublicKey")
+
+        method = 'stakeOf(address)'
+        native_input = native_contract.raw_encode_call(method, evm_address_sc_node_1)
+        result = sc_node_1.rpc_eth_call(
+            {
+                "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                "from": add_0x_prefix(evm_address_interop),
+                "nonce": 2,
+                "input": native_input
+            }, "latest"
+        )
+
+        res = result['result'][2:]
+        amount = int(res, 16)
+        exp_total_amount = convertZenToWei(forgerStake1_amount) + convertZenToWei(forgerStake2_amount)
+        assert_equal(exp_total_amount, amount, "wrong stake amount")
+
+        # With interoperability
+        native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))
+
+        res = proxy_contract.do_static_call(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+        amount = int(bytes_to_hex_str(res), 16)
+
+        assert_equal(exp_total_amount, amount, "wrong stake amount")
+
+
+        #######################################################################################################
+        # End stakeOf and getAllForgersStakesOfUser tests
         #######################################################################################################
 
         # SC1 remove all the remaining stakes

@@ -47,13 +47,10 @@ NULL_ADDRESS = "0000000000000000000000000000000000000000"
 ZENDAO_FORK_EPOCH = 7
 # The activation epoch of the Contract Interoperability feature, as coded in the sdk
 INTEROPERABILITY_FORK_EPOCH = 50
+VER_1_2_FORK_EPOCH = 60
 # The activation epoch for features released in v1.3 (e.g. SHANGHAI EVM), as coded in the sdk
 VERSION1_3_FORK_EPOCH = 70
 
-
-# They should have the same value as in src/main/java/io/horizen/examples/AppForkConfigurator.java
-INTEROPERABILITY_FORK_EPOCH = 50
-VER_1_2_FORK_EPOCH = 60
 
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000

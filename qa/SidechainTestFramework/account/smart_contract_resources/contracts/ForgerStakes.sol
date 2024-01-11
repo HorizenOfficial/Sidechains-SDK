@@ -22,4 +22,8 @@ interface ForgerStakes {
     function withdraw(StakeID stakeId, bytes1 signatureV, bytes32 signatureR, bytes32 signatureS) external returns (StakeID);
 
     function openStakeForgerList(uint32 forgerIndex, bytes32 signature1, bytes32 signature2) external returns (bytes memory);
+    
+    function stakeOf(address owner) external view returns (uint256);
+    
+    function getAllForgersStakesOfUser(address owner) external view returns (StakeInfo[] memory);
 }
