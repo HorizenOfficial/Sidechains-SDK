@@ -337,7 +337,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
             Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
             try {
                 EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
-                ethTx.semanticValidity();
+                ethTx.semanticValidity(0);
                 System.out.println(strings[0] + "--->" + ethTx);
                 fail("Should not succeed");
 
@@ -369,7 +369,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
         try {
-            ethTx.semanticValidity();
+            ethTx.semanticValidity(0);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             fail("Should not fail");
@@ -388,7 +388,7 @@ public class EthereumTransactionRlpStreamCodecTest implements EthereumTransactio
         Reader reader = new VLQByteBufferReader(ByteBuffer.wrap(b));
         EthereumTransaction ethTx = EthereumTransactionDecoder.decode(reader);
         try {
-            ethTx.semanticValidity();
+            ethTx.semanticValidity(0);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             fail("Should not fail");

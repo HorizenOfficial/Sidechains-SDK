@@ -18,6 +18,7 @@ import io.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
+import scala.NotImplementedError;
 import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
@@ -221,7 +222,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @Deprecated
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
-        semanticValidity(0);
+        throw new NotImplementedError();
     }
 
     @Override

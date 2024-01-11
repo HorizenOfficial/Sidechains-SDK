@@ -11,17 +11,18 @@ import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.secret.PrivateKey25519
 import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, ListSerializer, MerklePath}
-import io.horizen.history.validation.InconsistentSidechainBlockDataException
+import io.horizen.utils.{BytesUtils, ListSerializer, MerklePath, TimeToEpochUtils}
+import io.horizen.history.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import io.horizen.vrf.VrfOutput
 import io.horizen.{SidechainTypes, account}
 import io.horizen.evm.TrieHasher
+import io.horizen.params.NetworkParams
 import sparkz.core.block.Block
 import sparkz.util.SparkzLogging
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import java.math.BigInteger
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "forgerPublicKey", "logger"))
@@ -113,6 +114,18 @@ class AccountBlock(override val header: AccountBlockHeader,
     new ListSerializer[SidechainTypes#SCAT](companion).toBytes(sidechainTransactions.asJava).length
   }
 
+  override def checkTxSemanticValidity(params: NetworkParams): Unit = {
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, this.timestamp)
+    for (tx <- sidechainTransactions) {
+      Try {
+        tx.semanticValidity(consensusEpochNumber)
+      } match {
+        case Success(_) =>
+        case Failure(e) => throw new InvalidSidechainBlockDataException(
+          s"${getClass.getSimpleName} $id Transaction ${tx.id} is semantically invalid: ${e.getMessage}.")
+      }
+    }
+  }
 }
 
 

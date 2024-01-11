@@ -27,6 +27,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
 
 
     final static int VERSION_1_3_FORK_EPOCH = 35;
+    final static int DEFAULT_CONSENSUS_EPOCH = 0;
+
     @Before
     public void setUp() {
         SimpleForkConfigurator forkConfigurator = new SimpleForkConfigurator() {
@@ -78,7 +80,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaEip155LegacyValidity() {
         var goodTx = getEoa2EoaEip155LegacyTransaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -90,7 +93,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         null, null, null, null,
                         null, null,
                         null);
-            tx.semanticValidity();
+            tx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx.semanticValidity(VERSION_1_3_FORK_EPOCH);
             assertTrue(!tx.isEIP155());
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
@@ -120,7 +124,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaLegacyValidity() {
         var goodTx = getEoa2EoaLegacyTransaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -149,7 +154,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaEip1559Validity() {
         var goodTx = getEoa2EoaEip1559Transaction();
         try {
-          goodTx.semanticValidity();
+          goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+          goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -478,7 +484,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testContractDeploymentValidity() {
         var goodTx = getContractDeploymentEip1559Transaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -547,6 +554,7 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         // data are charged with gas therefore we must set a gasLimit large enough.
         // As of now check on block max gas limit is not made in tx.semanticValidity (it is made in state.validate(tx))
         var goodTx = getBigDataTransaction(5000000, BigInteger.valueOf(100000000));
-        goodTx.semanticValidity();
+        goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+        goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
     }
 }
