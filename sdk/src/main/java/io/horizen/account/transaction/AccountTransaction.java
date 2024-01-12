@@ -12,6 +12,8 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
+    public abstract void semanticValidity(int consensusEpochNumber) throws TransactionSemanticValidityException;
+
     public abstract BigInteger getNonce();
 
     /**
