@@ -4,22 +4,23 @@ import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
-import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.evm.Address
+import io.horizen.json.Views
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
+import io.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
+import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
+import scala.collection.JavaConverters
 
 @JsonView(Array(classOf[Views.Default]))
 // used as element of the list to return when getting all forger stakes via msg processor
@@ -192,6 +193,17 @@ case class RemoveStakeCmdInput(
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), signature)
 }
 
+case class GetPagedListOfStakesCmdInput(size: Int, startNodeRef: Array[Byte]) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Uint32(size), new Bytes32(startNodeRef))
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(size: %s, skip: %s)".format(this.getClass.toString, size, BytesUtils.toHexString(startNodeRef))
+}
+
+
 object RemoveStakeCmdInputDecoder
   extends ABIDecoder[RemoveStakeCmdInput]
     with MsgProcessorInputDecoder [RemoveStakeCmdInput] {
@@ -215,9 +227,25 @@ object RemoveStakeCmdInputDecoder
   }
 }
 
+object GetPagedListOfStakesCmdInputDecoder
+  extends ABIDecoder[GetPagedListOfStakesCmdInput]
+    with MsgProcessorInputDecoder [GetPagedListOfStakesCmdInput] {
 
-case class OpenStakeForgerListCmdInput(
-                                        forgerIndex: Int, signature: Signature25519) extends ABIEncodable[StaticStruct] {
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Uint32]() {},
+      new TypeReference[Bytes32]() {}))
+
+  override def createType(listOfParams: util.List[Type[_]]): GetPagedListOfStakesCmdInput = {
+    val size = listOfParams.get(0).asInstanceOf[Uint32].getValue.intValueExact()
+    val startNodeRef = listOfParams.get(1).asInstanceOf[Bytes32].getValue
+
+    GetPagedListOfStakesCmdInput(size, startNodeRef)
+  }
+}
+
+case class OpenStakeForgerListCmdInput(forgerIndex: Int, signature: Signature25519)
+  extends ABIEncodable[StaticStruct] {
 
   require(!(forgerIndex <0))
 
@@ -296,4 +324,27 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
+}
+
+
+case class PagedListOfStakesOutput(startNodeRef: Array[Byte], listOfStakes: Seq[AccountForgingStakeInfo])
+  extends ABIEncodable[DynamicStruct] {
+
+  override def asABIType(): DynamicStruct = {
+
+    val seqOfStruct = listOfStakes.map(_.asABIType())
+    val listOfStruct = JavaConverters.seqAsJavaList(seqOfStruct)
+    val theType = classOf[StaticStruct]
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new Bytes32(startNodeRef),
+      new DynamicArray(theType, listOfStruct)
+    )
+    new DynamicStruct(listOfParams)
+
+  }
+
+  override def toString: String = "%s(startNodeRef: %s, listOfStake: %s)"
+    .format(
+      this.getClass.toString,
+      startNodeRef, listOfStakes)
 }

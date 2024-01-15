@@ -16,6 +16,7 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state.McAddrOwnershipMsgProcessor.{getMcSignature, getOwnershipId}
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS}
@@ -68,10 +69,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = pathPrefix(transactionPathPrefix) {
-    allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendTransaction ~
-      signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
-      allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
-      sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~ getKeysOwnerScAddresses
+    allTransactions ~ createLegacyEIP155Transaction ~ createEIP1559Transaction ~ createLegacyTransaction ~
+      sendTransaction ~ signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ pagedForgingStakes ~
+      createSmartContract ~ allWithdrawalRequests ~ allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~
+      openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~ sendKeysOwnership ~ getKeysOwnership ~
+      removeKeysOwnership ~ getKeysOwnerScAddresses ~ sendMultisigKeysOwnership
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -502,6 +504,23 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def pagedForgingStakes: Route = (post & path("pagedForgingStakes")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqPagedForgingStakes]) { body =>
+          withNodeView { sidechainNodeView =>
+            val accountState = sidechainNodeView.getNodeState
+            val startNodeRefString = body.startNodeRef.getOrElse(BytesUtils.toHexString(NULL_HEX_STRING_32))
+            val (nodeRef, listOfForgerStakes) = accountState.getPagedListOfForgersStakes(body.size, BytesUtils.fromHexString(startNodeRefString))
+
+            ApiResponseUtil.toResponse(RespPagedForgerStakes(BytesUtils.toHexString(nodeRef), listOfForgerStakes.toList))
+
+          }
+        }
+      }
+    }
+  }
+
   def allForgingStakes: Route = (post & path("allForgingStakes")) {
     withNodeView { sidechainNodeView =>
       val accountState = sidechainNodeView.getNodeState
@@ -714,6 +733,73 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     }
                 }
               }
+          }
+        }
+      }
+    }
+  }
+
+  def sendMultisigKeysOwnership: Route = (post & path("sendMultisigKeysOwnership")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqCreateMultisigMcAddrOwnership]) { body =>
+          // lock the view and try to create CoreTransaction
+          applyOnNodeView { sidechainNodeView =>
+            val valueInWei = BigInteger.ZERO
+
+            // default gas related params
+            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+            var maxPriorityFeePerGas = BigInteger.valueOf(120)
+            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+            var gasLimit = BigInteger.valueOf(500000)
+
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+            val secret = getFittingSecret(sidechainNodeView, Some(body.ownershipInfo.scAddress), txCost)
+
+            secret match {
+              case Some(secret) =>
+                val fromAddress = secret.publicImage.address
+                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(fromAddress))
+                Try {
+                  // it throws if the parameters are invalid
+                  encodeAddNewOwnershipCmdRequest(body.ownershipInfo)
+                } match {
+
+                  case Success(dataBytes) =>
+
+                    val ownershipId = getOwnershipId(body.ownershipInfo.mcMultisigAddress)
+
+                    if (sidechainNodeView.getNodeState.ownershipDataExist(ownershipId)) {
+                      ApiResponseUtil.toResponse(GenericTransactionError(s"Mc address: ${body.ownershipInfo.mcMultisigAddress} is already associated", JOptional.empty()))
+                    } else {
+                      val tmpTx: EthereumTransaction = new EthereumTransaction(
+                        params.chainId,
+                        JOptional.of(new AddressProposition(MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS)),
+                        nonce,
+                        gasLimit,
+                        maxPriorityFeePerGas,
+                        maxFeePerGas,
+                        valueInWei,
+                        dataBytes,
+                        null
+                      )
+                      validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                    }
+
+                  case Failure(exception) =>
+                    ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
+                }
+
+              case None =>
+                ApiResponseUtil.toResponse(ErrorInsufficientBalance(s"Account ${body.ownershipInfo.scAddress} is invalid or has insufficient balance", JOptional.empty()))
+            }
           }
         }
       }
@@ -950,6 +1036,22 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
   }
 
+
+  def encodeAddNewOwnershipCmdRequest(ownershipInfo: TransactionCreateMultisigMcAddrOwnershipInfo): Array[Byte] = {
+    // this throws if any of sc and mc addresses is not valid
+    checkMcAddresses(ownershipInfo.mcMultisigAddress)
+
+    // this throws if the signature is not correctly base64 encoded
+    /*getMcSignature(ownershipInfo.mcSignature)
+
+    val addMcAddrOwnershipInput = AddNewOwnershipCmdInput(ownershipInfo.mcTransparentAddress, ownershipInfo.mcSignature)
+
+    Bytes.concat(BytesUtils.fromHexString(McAddrOwnershipMsgProcessor.AddNewOwnershipCmd), addMcAddrOwnershipInput.encode())
+
+     */
+    new Array[Byte](0)
+  }
+
   def encodeRemoveOwnershipCmdRequest(ownershipInfo: TransactionRemoveMcAddrOwnershipInfo): Array[Byte] = {
     // this throws if any of sc and mc addresses is not valid
     if (ownershipInfo.mcTransparentAddress.isDefined)
@@ -1015,6 +1117,9 @@ object AccountTransactionRestScheme {
   private[horizen] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespPagedForgerStakes(startNodeRef: String, stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -1036,6 +1141,13 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class TransactionCreateMcAddrOwnershipInfo(var scAddress: String, mcTransparentAddress: String, mcSignature: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class TransactionCreateMultisigMcAddrOwnershipInfo(
+                                                                            var scAddress: String,
+                                                                            mcMultisigAddress: String,
+                                                                            mcSignatures: Array[String],
+                                                                            redeemScript: String)
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class TransactionRemoveMcAddrOwnershipInfo(var scAddress: String, mcTransparentAddress: Option[String])
@@ -1099,6 +1211,16 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqCreateMultisigMcAddrOwnership(
+                                                        nonce: Option[BigInteger],
+                                                        ownershipInfo: TransactionCreateMultisigMcAddrOwnershipInfo,
+                                                        gasInfo: Option[EIP1559GasInfo]
+                                                      ) {
+    require(ownershipInfo != null, "Multisig MC address ownership info must be provided")
+    ownershipInfo.scAddress = normalizeScAddress(ownershipInfo.scAddress)
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class ReqRemoveMcAddrOwnership(
                                                         nonce: Option[BigInteger],
                                                         var ownershipInfo: TransactionRemoveMcAddrOwnershipInfo,
@@ -1158,6 +1280,16 @@ object AccountTransactionRestScheme {
                                                 stakeId: String,
                                                 gasInfo: Option[EIP1559GasInfo]) {
     require(stakeId.nonEmpty, "Signature data must be provided")
+  }
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqPagedForgingStakes(
+                                                    nonce: Option[BigInteger],
+                                                    size: Int,
+                                                    startNodeRef: Option[String],
+                                                    gasInfo: Option[EIP1559GasInfo]) {
+    require(size > 0 , "Size must be positive")
   }
 
   @JsonView(Array(classOf[Views.Default]))

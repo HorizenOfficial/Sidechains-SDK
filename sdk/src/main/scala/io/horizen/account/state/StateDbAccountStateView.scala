@@ -8,15 +8,15 @@ import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStat
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
-import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
+import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
+import io.horizen.evm.results.{EvmLog, ProofAccountResult}
+import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
-import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
-import io.horizen.evm.results.{EvmLog, ProofAccountResult}
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.SparkzLogging
 
@@ -58,6 +58,9 @@ class StateDbAccountStateView(
 
   override def isForgingOpen: Boolean =
     forgerStakesProvider.isForgerListOpen(this)
+
+  override def getPagedListOfForgersStakes(size: Int, startNodeRef: Array[Byte]): (Array[Byte], Seq[AccountForgingStakeInfo]) =
+    forgerStakesProvider.getPagedListOfForgersStakes(this, size, startNodeRef)
 
   override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] =
     forgerStakesProvider.getListOfForgersStakes(this)

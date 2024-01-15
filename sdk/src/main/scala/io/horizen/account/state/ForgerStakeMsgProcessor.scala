@@ -22,6 +22,8 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
+  private[horizen] def getPagedListOfForgersStakes(view: BaseAccountStateView, size: Int, startNodeRef: Array[Byte]): (Array[Byte], Seq[AccountForgingStakeInfo])
+
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
 
   private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte]
@@ -199,6 +201,34 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeList
   }
 
+
+  override def getPagedListOfForgersStakes(view: BaseAccountStateView, size: Int = 0, startNodeRef: Array[Byte] = NULL_HEX_STRING_32): (Array[Byte], Seq[AccountForgingStakeInfo]) = {
+    var stakeList = Seq[AccountForgingStakeInfo]()
+
+    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
+    var listSizeLimit = Int.MaxValue
+
+    if (!startNodeRef.sameElements(NULL_HEX_STRING_32)) {
+        nodeReference = startNodeRef
+    }
+
+    if (size > 0) {
+      listSizeLimit = size
+    }
+
+    while (!linkedListNodeRefIsNull(nodeReference) && stakeList.size < listSizeLimit) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
+      stakeList = item +: stakeList
+      nodeReference = prevNodeReference
+    }
+
+    // check if we have collected all objs
+    if (linkedListNodeRefIsNull(nodeReference))
+      nodeReference = NULL_HEX_STRING_32
+
+    (nodeReference, stakeList)
+  }
+
   def doUncheckedGetListOfForgersStakesCmd(view: BaseAccountStateView): Array[Byte] = {
     val stakeList = getListOfForgersStakes(view)
     AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
@@ -211,6 +241,23 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     checkGetListOfForgersCmd(msg)
     doUncheckedGetListOfForgersStakesCmd(view)
+  }
+
+  def doGetPagedListOfForgersCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    val inputParams = getArgumentsFromData(msg.getData)
+    val cmdInput = GetPagedListOfStakesCmdInputDecoder.decode(inputParams)
+    val size = cmdInput.size
+    val startNodeRef = cmdInput.startNodeRef
+
+    val (nextNodeRef, stakeList) = getPagedListOfForgersStakes(view, size, startNodeRef)
+
+    //nextNodeRef ++ AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
+    PagedListOfStakesOutput(nextNodeRef, stakeList).encode()
+
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
@@ -340,6 +387,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(gas)
     getFunctionSignature(msg.getData) match {
+      case GetPagedListOfForgersCmd => doGetPagedListOfForgersCmd(msg, gasView)
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)
       case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
@@ -381,6 +429,7 @@ object ForgerStakeMsgProcessor {
   val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
 
 
+  val GetPagedListOfForgersCmd: String = getABIMethodId("getPagedForgersStakes(uint32,bytes32)")
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")

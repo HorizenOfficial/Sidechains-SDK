@@ -3,15 +3,15 @@ import json
 import logging
 import math
 
-from eth_utils import add_0x_prefix
+from eth_utils import add_0x_prefix, function_signature_to_4byte_selector, encode_hex, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_evm
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee
+    computeForgedTxFee, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, )
@@ -133,6 +133,38 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         # we now have 2 stakes, one from creation and one just added
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(2, len(stakeList))
+
+        # we now have 2 stakes, one from creation and one just added
+        res1 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1}))["result"]
+        res2 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1, "startNodeRef": str(res1['startNodeRef'])}))["result"]
+        res3 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 100}))["result"]
+
+        # execute native smart contract for getting all associations
+        method = 'getPagedForgersStakes()'
+        abi_str = function_signature_to_4byte_selector(method)
+        size_padded_str = "00"*31 + "01"
+        start_node_ref_str = "00"*32
+
+        req = {
+            "from": format_evm(evm_address_sc_node_2),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": 3,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": encode_hex(abi_str) + size_padded_str + start_node_ref_str
+        }
+        response = sc_node_1.rpc_eth_call(req, 'latest')
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
+        # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
+        exp_len = 32 + 32 + 12 * (3 * 32)
+        assert_equal(result_string_length, 2 * exp_len)
+
+        #check_get_key_ownership(abi_return_value, list_all_associations['keysOwnership'])
+
+
 
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)

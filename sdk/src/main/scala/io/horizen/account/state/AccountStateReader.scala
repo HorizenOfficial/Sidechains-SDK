@@ -22,6 +22,7 @@ trait AccountStateReader {
 
   def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest]
 
+  def getPagedListOfForgersStakes(size: Int, startNodeRef: Array[Byte]): (Array[Byte], Seq[AccountForgingStakeInfo])
   def getListOfForgersStakes: Seq[AccountForgingStakeInfo]
   def getForgerStakeData(stakeId: String): Option[ForgerStakeData]
   def isForgingOpen: Boolean
