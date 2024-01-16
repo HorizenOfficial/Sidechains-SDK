@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import logging
+import pprint
 import time
 from decimal import Decimal
 
@@ -16,7 +17,7 @@ from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import convertZenToWei, \
     convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH, VERSION1_3_FORK_EPOCH
+    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH, VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
@@ -120,7 +121,7 @@ def check_spend_forger_stake_event(event, owner, stake_id):
 class SCEvmForger(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION1_3_FORK_EPOCH)
+                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH)
 
     def run_test(self):
 
@@ -671,12 +672,13 @@ class SCEvmForger(AccountChainSetup):
             # reach Version 1.3 fork
             current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-            for i in range(0, VERSION1_3_FORK_EPOCH - current_best_epoch):
+            for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
                 generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
                 self.sc_sync_all()
 
         method = 'getAllForgersStakesOfUser(address)'
         native_input = native_contract.raw_encode_call(method, evm_address_sc_node_1)
+
         result = sc_node_1.rpc_eth_call(
             {
                 "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
@@ -690,6 +692,17 @@ class SCEvmForger(AccountChainSetup):
         list_of_stakes = decode_list_of_forger_stakes(res, 2)
         assert_equal(evm_address_sc_node_1, list_of_stakes[0][0][2][2:], "wrong ownerPublicKey")
         assert_equal(evm_address_sc_node_1, list_of_stakes[1][0][2][2:], "wrong ownerPublicKey")
+
+        result = sc_node_1.rpc_eth_estimateGas(
+            {
+                "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                "from": add_0x_prefix(evm_address_interop),
+                "nonce": 2,
+                "input": native_input
+            }, "latest"
+        )
+
+        assert_equal(57108, int(result["result"], 16))
 
         # With interoperability
         native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))
@@ -715,6 +728,17 @@ class SCEvmForger(AccountChainSetup):
         amount = int(res, 16)
         exp_total_amount = convertZenToWei(forgerStake1_amount) + convertZenToWei(forgerStake2_amount)
         assert_equal(exp_total_amount, amount, "wrong stake amount")
+
+        result = sc_node_1.rpc_eth_estimateGas(
+            {
+                "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                "from": add_0x_prefix(evm_address_interop),
+                "nonce": 2,
+                "input": native_input
+            }, "latest"
+        )
+
+        assert_equal(57108, int(result["result"], 16))
 
         # With interoperability
         native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))

@@ -1,5 +1,6 @@
 package io.horizen.account.state
 
+
 import com.google.common.primitives.Bytes
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.fork.{Version1_2_0Fork, Version1_3_0Fork}
@@ -1123,7 +1124,7 @@ class ForgerStakeMsgProcessorTest
       view.setupTxContext(txHash1, 10)
 
       var nonce = 0
-      var cmdInput = GetAllForgersStakesOfUserCmdInput(
+      var cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition.address()
       )
 
@@ -1193,7 +1194,7 @@ class ForgerStakeMsgProcessorTest
       val (listOfExpectedForgerStakes3, _) = addStakes(view, blockSignerProposition, vrfPublicKey, ownerAddressProposition3, 1)
 
       // get stakes for owner 1
-      cmdInput = GetAllForgersStakesOfUserCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition1.address()
       )
       msg = getMessage(
@@ -1204,7 +1205,7 @@ class ForgerStakeMsgProcessorTest
       assertArrayEquals(expectedListData1, returnData1)
 
       // get stakes for owner 2
-      cmdInput = GetAllForgersStakesOfUserCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition2.address()
       )
       msg = getMessage(
@@ -1215,7 +1216,7 @@ class ForgerStakeMsgProcessorTest
       assertArrayEquals(expectedListData2, returnData2)
 
       // get stakes for owner 3
-      cmdInput = GetAllForgersStakesOfUserCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition3.address()
       )
       msg = getMessage(
@@ -1267,7 +1268,7 @@ class ForgerStakeMsgProcessorTest
       view.setupTxContext(txHash1, 10)
 
       var nonce = 0
-      var cmdInput = StakeOfCmdInput(
+      var cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition.address()
       )
 
@@ -1335,7 +1336,7 @@ class ForgerStakeMsgProcessorTest
       val ownerAddressProposition3: AddressProposition = privateKey3.publicImage()
       val (_, expectedAmount3) = addStakes(view, blockSignerProposition, vrfPublicKey, ownerAddressProposition3, 5)
 
-      cmdInput = StakeOfCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition1.address()
       )
       msg = getMessage(
@@ -1344,7 +1345,7 @@ class ForgerStakeMsgProcessorTest
       assertEquals(expectedAmount1, decodeStakeOfResult(returnData1))
 
 
-      cmdInput = StakeOfCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition2.address()
       )
       msg = getMessage(
@@ -1352,7 +1353,7 @@ class ForgerStakeMsgProcessorTest
       val returnData2 = withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, blockContextAfterFork, _))
       assertEquals(expectedAmount2, decodeStakeOfResult(returnData2))
 
-      cmdInput = StakeOfCmdInput(
+      cmdInput = ForgerStakesFilterByOwner(
         ownerAddressProposition3.address()
       )
       msg = getMessage(
@@ -1373,8 +1374,6 @@ class ForgerStakeMsgProcessorTest
 
     }
   }
-
-
 
   private def addStakes(view: AccountStateView,
                         blockSignerProposition: PublicKey25519Proposition,

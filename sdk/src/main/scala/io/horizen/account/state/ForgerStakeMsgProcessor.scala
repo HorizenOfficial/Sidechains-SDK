@@ -209,24 +209,23 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   }
 
   override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    var stakeList = Seq[AccountForgingStakeInfo]()
-    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
-
-    while (!linkedListNodeRefIsNull(nodeReference)) {
-      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
-      stakeList = item +: stakeList
-      nodeReference = prevNodeReference
-    }
-    stakeList
+    def acceptAnyStake(stake: AccountForgingStakeInfo): Boolean = true
+    getListOfForgersStakesWithFilter(view, acceptAnyStake)
   }
 
   def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: Address): Seq[AccountForgingStakeInfo] = {
+    def acceptStakeWithSameOwner(stake: AccountForgingStakeInfo): Boolean =
+      stake.forgerStakeData.ownerPublicKey.address() == owner
+    getListOfForgersStakesWithFilter(view, acceptStakeWithSameOwner)
+ }
+
+  def getListOfForgersStakesWithFilter(view: BaseAccountStateView, filter: AccountForgingStakeInfo => Boolean): Seq[AccountForgingStakeInfo] = {
     var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
-      if (item.forgerStakeData.ownerPublicKey.address() == owner)
+      if (filter(item))
         stakeList = item +: stakeList
       nodeReference = prevNodeReference
     }
@@ -254,11 +253,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(invocation.input)
-    val cmdInput = GetAllForgersStakesOfUserCmdInputDecoder.decode(inputParams)
+    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
 
     val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
     val totalStake = ownerStakeList.foldLeft(BigInteger.ZERO)( (sum, stake) => sum.add(stake.forgerStakeData.stakedAmount))
-    StakeOfResult(totalStake).encode()
+    StakeAmount(totalStake).encode()
   }
 
   def doGetAllForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
@@ -267,7 +266,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     val inputParams = getArgumentsFromData(invocation.input)
-    val cmdInput = GetAllForgersStakesOfUserCmdInputDecoder.decode(inputParams)
+    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
 
     val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
     AccountForgingStakeInfoListEncoder.encode(ownerStakeList.asJava)
@@ -475,4 +474,3 @@ object ForgerStakeMsgProcessor {
     Bytes.concat(Ints.toByteArray(forgerIndex), from.toBytes, nonce)
   }
 }
-

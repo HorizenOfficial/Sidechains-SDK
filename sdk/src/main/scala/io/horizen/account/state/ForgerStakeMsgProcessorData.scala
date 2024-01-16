@@ -297,7 +297,7 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
   }
 }
 
-case class StakeOfCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
+case class ForgerStakesFilterByOwner(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
 
@@ -314,9 +314,9 @@ case class StakeOfCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStr
 
 }
 
-object StakeOfCmdInputDecoder
-  extends ABIDecoder[StakeOfCmdInput]
-  with MsgProcessorInputDecoder[StakeOfCmdInput] {
+object ForgerStakesFilterByOwnerDecoder
+  extends ABIDecoder[ForgerStakesFilterByOwner]
+  with MsgProcessorInputDecoder[ForgerStakesFilterByOwner] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -324,46 +324,13 @@ object StakeOfCmdInputDecoder
     ))
   }
 
-  override def createType(listOfParams: util.List[Type[_]]): StakeOfCmdInput = {
+  override def createType(listOfParams: util.List[Type[_]]): ForgerStakesFilterByOwner = {
     val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
-    StakeOfCmdInput(address)
+    ForgerStakesFilterByOwner(address)
   }
 }
 
-case class GetAllForgersStakesOfUserCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
-
-  override def asABIType(): StaticStruct = {
-
-    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
-      new AbiAddress(ownerAddress.toString)
-    )
-    new StaticStruct(listOfParams)
-  }
-
-  override def toString: String = "%s(ownerAddress: %s)"
-    .format(
-      this.getClass.toString,
-      ownerAddress.toString)
-
-}
-
-object GetAllForgersStakesOfUserCmdInputDecoder
-  extends ABIDecoder[GetAllForgersStakesOfUserCmdInput]
-  with MsgProcessorInputDecoder[GetAllForgersStakesOfUserCmdInput] {
-
-  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
-    org.web3j.abi.Utils.convert(util.Arrays.asList(
-      new TypeReference[AbiAddress]() {}
-    ))
-  }
-
-  override def createType(listOfParams: util.List[Type[_]]): GetAllForgersStakesOfUserCmdInput = {
-    val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
-    GetAllForgersStakesOfUserCmdInput(address)
-  }
-}
-
-case class StakeOfResult(totalStake: BigInteger) extends ABIEncodable[StaticStruct]{
+case class StakeAmount(totalStake: BigInteger) extends ABIEncodable[StaticStruct]{
   override def asABIType(): StaticStruct = {
 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
