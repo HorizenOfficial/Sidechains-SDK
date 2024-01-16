@@ -96,24 +96,22 @@ abstract class AbstractHistoryStorage[
     val blockIdBytes = new ByteArrayWrapper(idToBytes(blockId))
     val baw = storage.get(blockIdBytes).asScala
     baw match {
-      case Some(value) => {
+      case Some(value) =>
         blockSerializer.parseBytesTry(value.data()) match {
           case Success(block) => Option(block)
           case Failure(exception) =>
             log.error("Error while sidechain block parsing.", exception)
             Option.empty
         }
-      }
-      case None => {
+      case None =>
         log.info("SidechainHistoryStorage:blockById: byte array is empty")
         None
-      }
     }
   }
 
   //Block info shall be in history storage, otherwise something going totally wrong
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo = {
-    blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block ${blockId}"))
+    blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block $blockId"))
   }
 
   def blockInfoOptionById(blockId: ModifierId): Option[SidechainBlockInfo] = {
@@ -129,7 +127,7 @@ abstract class AbstractHistoryStorage[
   }
 
   private def blockInfoByIdFromStorage(blockId: ModifierId): SidechainBlockInfo = {
-    blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId ${blockId}"))
+    blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId $blockId"))
   }
 
   def getLastMainchainHeaderBaseInfoInclusion(blockId: ModifierId): MainchainHeaderBaseInfo = {
@@ -139,6 +137,23 @@ abstract class AbstractHistoryStorage[
     }
 
     sidechainBlockInfo.mainchainHeaderBaseInfo.last
+  }
+
+  def getNumOfScBlocksWithCountedMcRefDataSince(blockId: ModifierId, numOfMcRefToCount : Int = 0): Int = {
+    var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
+    var scBlocksCount : Int= 0
+    var mcRefsCount : Int= 0
+    var mcRefEmpty : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
+    while( mcRefEmpty && mcRefsCount <= numOfMcRefToCount) {
+
+      if (!mcRefEmpty)
+        mcRefsCount = mcRefsCount + 1
+
+      sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
+      scBlocksCount = scBlocksCount + 1
+      mcRefEmpty = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
+    }
+    scBlocksCount
   }
 
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)

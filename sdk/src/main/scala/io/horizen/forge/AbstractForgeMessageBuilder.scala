@@ -21,6 +21,7 @@ import sparkz.core.transaction.MemoryPool
 import sparkz.core.transaction.state.MinimalState
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.lang.IllegalStateException
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -67,6 +68,8 @@ abstract class AbstractForgeMessageBuilder[
     }
 
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
+    val qqq = nodeView.history.storage.getNumOfScBlocksWithCountedMcRefDataSince(parentBlockId, 1)
+    log.warn(s"####### Num of SC blocks with at most 1 mc refs: $qqq")
     val parentBlockInfo = nodeView.history.blockInfoById(parentBlockId)
 
     checkNextEpochAndSlot(parentBlockInfo.timestamp, nodeView.history.bestBlockInfo.timestamp,
@@ -209,7 +212,7 @@ abstract class AbstractForgeMessageBuilder[
     }
     else { // Some blocks in SC Active chain contains orphaned MainchainHeaders
       val orphanedMainchainHeadersNumber: Int = bestMainchainHeaderInfo.height - bestMainchainCommonPointHeight
-      val newMainchainHeadersNumber = newHeaderHashes.size
+      val newMainchainHeadersNumber = newHeaderHashes.size // + params.mcBlockRefDelay
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
         throw new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders.")
@@ -237,6 +240,9 @@ abstract class AbstractForgeMessageBuilder[
   def getMaxBlockOverheadSize() : Int
   // the max size of the block including txs
   def getMaxBlockSize() : Int
+
+  // TODO
+  def tooBlocksWithoutMcRefs(size: Int): Boolean = false
 
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
@@ -312,6 +318,11 @@ abstract class AbstractForgeMessageBuilder[
         case Failure(ex) => return ForgeFailed(ex)
       }
     })
+
+    // if we have no mc block ref, we must ensure we are not creating too long a chain without mc ref blocks
+    if (tooBlocksWithoutMcRefs(mainchainReferenceData.size)) {
+      return ForgeFailed(new IllegalStateException("TODO write reason for failure"))
+    }
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
 

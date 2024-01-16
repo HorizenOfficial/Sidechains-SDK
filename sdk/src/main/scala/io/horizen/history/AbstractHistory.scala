@@ -196,10 +196,11 @@ abstract class AbstractHistory[
     chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
       case Some(newBestChain) =>
         val commonBlockHeight = storage.blockInfoById(newBestChain.head).height
-        if(height - commonBlockHeight > params.maxHistoryRewritingLength)
-        // fork length is more than params.maxHistoryRewritingLength
+        if(height - commonBlockHeight > params.maxHistoryRewritingLength) {
+          // fork length is more than params.maxHistoryRewritingLength
+          log.error(s"fork length=${height-commonBlockHeight} is more than params.maxHistoryRewritingLength=${params.maxHistoryRewritingLength}; current height=$height, commonBlockHeight=$commonBlockHeight")
           (Seq[ModifierId](), Seq[ModifierId]())
-        else
+        } else
           (newBestChain, storage.activeChainSince(newBestChain.head, None))
 
       case None => (Seq[ModifierId](), Seq[ModifierId]())

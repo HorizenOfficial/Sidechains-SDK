@@ -9,10 +9,11 @@ from SidechainTestFramework.scutil import generate_next_blocks, generate_next_bl
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, event_signature_to_log_topic, to_hex
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_evm
 from SidechainTestFramework.account.httpCalls.transaction.openForgerList import open_forger_list
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.account.utils import convertZenToWei, convertZenToZennies
+from SidechainTestFramework.account.utils import convertZenToWei, convertZenToZennies, \
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
 from SidechainTestFramework.scutil import (generate_next_block, generate_secrets, generate_vrf_secrets,
                                            SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
@@ -118,6 +119,25 @@ class SCEvmClosedForgerList(AccountChainSetup):
             assert_true("error" in jsonRes)
             logging.info("Api failed as expected")
             return False
+
+        mempoolList = sc_node.transaction_allTransactions(json.dumps({"format": True}))['result']
+
+        data = mempoolList['transactions'][0]['data']
+        from_ = mempoolList['transactions'][0]['from']['address']
+        nonce_ = mempoolList['transactions'][0]['nonce']
+
+        req = {
+            "from": format_evm(from_),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": nonce_,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": "0x" + data
+        }
+        response = sc_node.rpc_eth_call(req, 'latest')
+        #abi_return_value = remove_0x_prefix(response['result'])
+        #print(abi_return_value)
 
         if forger_node is None:
             generate_next_block(sc_node, "first node")

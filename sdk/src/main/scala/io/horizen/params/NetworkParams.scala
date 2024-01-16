@@ -52,7 +52,7 @@ trait NetworkParams {
   val isHandlingTransactionsEnabled: Boolean = true
   val mcBlockRefDelay:Int
 
-  val maxHistoryRewritingLength: Int = 100
+  val maxHistoryRewritingLength: Int = 1000
 
   // Fee payment params:
   final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block

@@ -41,6 +41,7 @@ public class EvmApp {
         String settingsFileName = args[0];
 
         Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay, allForksEnabled));
+
         AccountSidechainApp sidechainApp = injector.getInstance(AccountSidechainApp.class);
 
         Logger logger = LogManager.getLogger(EvmApp.class);

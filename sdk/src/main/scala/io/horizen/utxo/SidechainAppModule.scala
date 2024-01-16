@@ -22,7 +22,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
   var app: SidechainApp = null
 
-
   override def configure(): Unit = {
 
     bind(classOf[NodeViewHelper])
