@@ -19,7 +19,7 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 
 WAIT_CONST = 1
 
-SNAPSHOT_VERSION_TAG = "0.10.0-SNAPSHOT"
+SNAPSHOT_VERSION_TAG = "0.11.0-SNAPSHOT"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -189,9 +189,9 @@ def launch_bootstrap_tool(command_name, json_parameters, model):
     try:
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
-    except ValueError:
-        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
-                     .format(command_name, json_param, sc_bootstrap_output.decode()))
+    except ValueError as e:
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\nException: {}\n"
+                     .format(command_name, json_param, sc_bootstrap_output.decode(), str(e)))
         raise Exception("Bootstrap tool error occurred")
 
 
@@ -683,12 +683,18 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     enabling the debug agent which will act as a server listening on the specified port.
     '''
     dbg_agent_opt = ''
-    if (extra_args is not None) and ("-agentlib" in extra_args):
-        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
-
-    mc_block_delay_ref = ''
-    if (extra_args is not None) and ("-mc_block_delay_ref" in extra_args):
-        mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+    additional_params = ''
+    if extra_args is not None:
+        if "-agentlib" in extra_args:
+            dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+        if "-mc_block_delay_ref" in extra_args:
+            additional_params = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+        if "-all_forks" in extra_args:
+            if additional_params != '':
+                additional_params = additional_params + " " + extra_args[extra_args.index("-all_forks") + 1]
+            else:
+                # Cmd line arguments are positional, so all_forks parameter needs to provide mc_block_delay_ref if not already set
+                additional_params = " 0 " + extra_args[extra_args.index("-all_forks") + 1]
 
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
@@ -705,10 +711,10 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if is_jacoco_included:
         bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + jacoco_cmd + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
-              + " " + mc_block_delay_ref
+              + " " + additional_params
     else:
         bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
-              + " " + mc_block_delay_ref
+              + " " + additional_params
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:

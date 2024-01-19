@@ -259,7 +259,7 @@ class AccountStateTest
   def testTransactionLimitExceedsBlockGasLimit(): Unit = {
     val tx = mock[EthereumTransaction]
 
-    Mockito.when(tx.semanticValidity()).thenAnswer(_ => true)
+    Mockito.when(tx.semanticValidity(ArgumentMatchers.anyInt())).thenAnswer(_ => true)
     Mockito.when(tx.getGasLimit).thenReturn(DefaultGasFeeFork.blockGasLimit.add(BigInteger.ONE))
 
     state.validate(tx) match {

@@ -16,11 +16,13 @@ from SidechainTestFramework.account.httpCalls.transaction.createLegacyEIP155Tran
 from SidechainTestFramework.account.utils import PROXY_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
-from test_framework.util import assert_equal, assert_false, assert_true, hex_str_to_bytes
+from test_framework.util import assert_equal, assert_false, assert_true, hex_str_to_bytes, fail
 
 """
 Check the Proxy native contract calling an EVM contract and also itself.
 
+ This test doesn't support --allforks.
+ 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
     - Create 1 SC node
@@ -62,6 +64,10 @@ class SCEvmProxyNsc(AccountChainSetup):
         return contract, contract_address
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         self.sc_ac_setup()
         sc_node = self.sc_nodes[0]
 

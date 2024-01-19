@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -9,7 +10,7 @@ from SidechainTestFramework.account.ac_utils import deploy_smart_contract, \
 from test_framework.util import assert_equal, assert_false, assert_true
 
 """
-Check that we corretly manage the EIP-1898 inputs for the following rpc methods:
+Check that we correctly manage the EIP-1898 inputs for the following rpc methods:
     - eth_getBalance
     - eth_getStorageAt
     - eth_getTransactionCount
@@ -17,6 +18,8 @@ Check that we corretly manage the EIP-1898 inputs for the following rpc methods:
     - eth_call
     - eth_getProof
 EIP-1898 details at: https://eips.ethereum.org/EIPS/eip-1898
+
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork

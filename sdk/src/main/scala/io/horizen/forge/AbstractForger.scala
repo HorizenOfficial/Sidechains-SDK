@@ -136,6 +136,7 @@ abstract class AbstractForger[
 
 
   protected def tryToCreateBlockNow(): Unit = {
+    // we are in the timer func, triggered periodically for automatic forging attempt
     val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot $epochAndSlot")

@@ -156,15 +156,7 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
     }
 
     // Check that SidechainTransactions are valid.
-    for(tx <- sidechainTransactions) {
-      Try {
-        tx.semanticValidity()
-      } match {
-        case Success(_) =>
-        case Failure(e) => throw new InvalidSidechainBlockDataException(
-          s"${getClass.getSimpleName} $id Transaction ${tx.id} is semantically invalid: ${e.getMessage}.")
-      }
-    }
+    checkTxSemanticValidity(params)
 
     // Check we do not exceed the block overhead size
     val blockOverheadSize = blockSize - blockTxSize()
@@ -184,6 +176,18 @@ abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBa
     verifyOmmersSeqData(params) match {
       case Success(_) =>
       case Failure(e) => throw e
+    }
+  }
+
+  def checkTxSemanticValidity(params: NetworkParams): Unit = {
+    for (tx <- sidechainTransactions) {
+      Try {
+        tx.semanticValidity()
+      } match {
+        case Success(_) =>
+        case Failure(e) => throw new InvalidSidechainBlockDataException(
+          s"${getClass.getSimpleName} $id Transaction ${tx.id} is semantically invalid: ${e.getMessage}.")
+      }
     }
   }
 }

@@ -1,21 +1,55 @@
 package io.horizen.account.transaction;
 
 import io.horizen.account.fixtures.EthereumTransactionFixture;
+import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.state.GasUtil;
+import io.horizen.account.state.ProtocolParams;
+import io.horizen.fork.ForkManagerUtil;
+import io.horizen.fork.OptionalSidechainFork;
+import io.horizen.fork.SidechainForkConsensusEpoch;
+import io.horizen.fork.SimpleForkConfigurator;
 import io.horizen.transaction.exception.TransactionSemanticValidityException;
 import io.horizen.utils.BytesUtils;
+import io.horizen.utils.Pair;
+import org.junit.Before;
 import org.junit.Test;
+
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class EthereumTransactionSemanticValidityTest implements EthereumTransactionFixture {
 
-    private void assertNotValid(EthereumTransaction tx) {
+
+    final static int VERSION_1_3_FORK_EPOCH = 35;
+    final static int DEFAULT_CONSENSUS_EPOCH = 0;
+
+    @Before
+    public void setUp() {
+        SimpleForkConfigurator forkConfigurator = new SimpleForkConfigurator() {
+            public List<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>> getOptionalSidechainForks() {
+                var listOfForks = new ArrayList<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>>();
+                listOfForks.add(
+                        new Pair<>(
+                                new SidechainForkConsensusEpoch(VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH),
+                                new Version1_3_0Fork(true)
+                        )
+                );
+                return listOfForks;
+            }
+        };
+
+        ForkManagerUtil.initializeForkManager(forkConfigurator,"regtest");
+    }
+
+    private void assertNotValid(EthereumTransaction tx, int consensusEpochNumber) {
         try {
-            tx.semanticValidity();
+            tx.semanticValidity(consensusEpochNumber);
             fail("Failure expected" );
         } catch (TransactionSemanticValidityException e) {
             // mostly expected
@@ -26,7 +60,11 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         }
     }
 
-    @Test
+    private void assertNotValid(EthereumTransaction tx) {
+        assertNotValid(tx, 0);
+    }
+
+        @Test
     public void testUnsignedEip155TxValidity() {
         var transaction = getUnsignedEip155LegacyTransaction();
         assertNotValid(transaction);
@@ -42,7 +80,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaEip155LegacyValidity() {
         var goodTx = getEoa2EoaEip155LegacyTransaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -54,7 +93,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
                         null, null, null, null,
                         null, null,
                         null);
-            tx.semanticValidity();
+            tx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx.semanticValidity(VERSION_1_3_FORK_EPOCH);
             assertTrue(!tx.isEIP155());
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
@@ -84,7 +124,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaLegacyValidity() {
         var goodTx = getEoa2EoaLegacyTransaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -113,7 +154,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testEoa2EoaEip1559Validity() {
         var goodTx = getEoa2EoaEip1559Transaction();
         try {
-          goodTx.semanticValidity();
+          goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+          goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -442,7 +484,8 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
     public void testContractDeploymentValidity() {
         var goodTx = getContractDeploymentEip1559Transaction();
         try {
-            goodTx.semanticValidity();
+            goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable e) {
             fail("Test1: Successful EthereumTransaction creation expected." + e);
         }
@@ -456,19 +499,62 @@ public class EthereumTransactionSemanticValidityTest implements EthereumTransact
         );
 
         // 2. gasLimit below intrinsic gas, computed without
+        BigInteger intrinsicGasInParis = GasUtil.intrinsicGas(goodTx.getData(), true, false);
+        assertNotValid(
+                copyEip1599EthereumTransaction(goodTx,
+                        null, null, null,
+                        intrinsicGasInParis.subtract(BigInteger.ONE), null, null, null,
+                        null, null)
+        );
+
+        // 3.Verify that, after Shanghai activation, the intrinsic gas is increased
         assertNotValid(
                 copyEip1599EthereumTransaction(goodTx,
                         null,null, null,
-                        GasUtil.TxGasContractCreation().subtract(BigInteger.ONE), null, null, null,
-                        null,null)
+                        intrinsicGasInParis, null, null, null,
+                        null,null), VERSION_1_3_FORK_EPOCH
         );
+
+        // 4. Verify that, after Shanghai activation, the init code size should be below limit.
+        // First check that in Paris it is valid
+        byte[] data = new byte[ProtocolParams.MaxInitCodeSize() + 1];
+        EthereumTransaction txWithBigContractCodeSize = copyEip1599EthereumTransaction(goodTx,
+                null, null, null,
+                BigInteger.valueOf(30000000), null, null, null,
+                BytesUtils.toHexString(data), null);
+        try {
+            txWithBigContractCodeSize.semanticValidity(VERSION_1_3_FORK_EPOCH - 1);
+        } catch (Throwable e) {
+            fail("Test4: Successful EthereumTransaction creation expected." + e);
+        }
+
+        // Check that in Shanghai it is not valid anymore
+        assertNotValid(
+                txWithBigContractCodeSize, VERSION_1_3_FORK_EPOCH
+        );
+
+        // Check that this limit only applies to contract creation
+
+        EthereumTransaction txWithBigCDataSize = copyEip1599EthereumTransaction(goodTx,
+                null, Optional.of("0x11223344556677889900112233445566778899da"), null,
+                BigInteger.valueOf(30000000), null, null, null,
+                BytesUtils.toHexString(data), null);
+        try {
+            txWithBigCDataSize.semanticValidity(VERSION_1_3_FORK_EPOCH);
+        } catch (Throwable e) {
+            fail("Test4: Successful EthereumTransaction with function execution expected." + e);
+        }
+
+
+
     }
 
     @Test
     public void testBigTxValidity() throws TransactionSemanticValidityException {
-        // data are charged with gas therefore we must set a gasLimt large enough.
+        // data are charged with gas therefore we must set a gasLimit large enough.
         // As of now check on block max gas limit is not made in tx.semanticValidity (it is made in state.validate(tx))
         var goodTx = getBigDataTransaction(5000000, BigInteger.valueOf(100000000));
-        goodTx.semanticValidity();
+        goodTx.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+        goodTx.semanticValidity(VERSION_1_3_FORK_EPOCH);
     }
 }

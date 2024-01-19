@@ -20,6 +20,7 @@ Configuration:
     ActiveSlotCoefficientFork:
         - Epoch: 35,  ActiveSlotCoefficient: 0.05, ConsensusSlotsInEpoch: 1500
 
+    This test doesn't support --allforks.
 Test:
     - Perform a FT.
     - Verify that the forging info are coherent with the default consensus params fork
@@ -62,6 +63,10 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
 
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         time.sleep(0.1)
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a

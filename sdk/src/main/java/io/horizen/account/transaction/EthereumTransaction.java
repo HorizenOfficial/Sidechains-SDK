@@ -1,10 +1,12 @@
 package io.horizen.account.transaction;
 
 import com.fasterxml.jackson.annotation.*;
+import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.account.proof.SignatureSecp256k1;
 import io.horizen.account.proposition.AddressProposition;
 import io.horizen.account.state.GasUtil;
 import io.horizen.account.state.Message;
+import io.horizen.account.state.ProtocolParams;
 import io.horizen.account.utils.BigIntegerUtil;
 import io.horizen.account.utils.EthereumTransactionEncoder;
 import io.horizen.account.utils.Secp256k1;
@@ -16,6 +18,7 @@ import io.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.utils.Numeric;
+import scala.NotImplementedError;
 import sparkz.crypto.hash.Keccak256;
 import sparkz.util.ByteArrayBuilder;
 import sparkz.util.serialization.VLQByteBufferWriter;
@@ -216,8 +219,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return EthereumTransactionSerializer.getSerializer();
     }
 
+    @Deprecated
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
+        throw new NotImplementedError();
+    }
+
+    @Override
+    public void semanticValidity(int consensusEpochNumber) throws TransactionSemanticValidityException {
 
         if (!isSigned()) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is not signed", id()));
@@ -276,10 +285,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "legacy transaction gasPrice bit length [%d] is too high", id(), getGasPrice().bitLength()));
         }
-        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo().isEmpty())) < 0) {
+        boolean isShanghaiActive = Version1_3_0Fork.get(consensusEpochNumber).active();
+        BigInteger intrinsicGas = GasUtil.intrinsicGas(getData(), getTo().isEmpty(), isShanghaiActive);
+        if (getGasLimit().compareTo(intrinsicGas) < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "gas limit %s is below intrinsic gas %s",
-                    id(), getGasLimit(), GasUtil.intrinsicGas(getData(), getTo().isEmpty())));
+                            "gas limit %s is below intrinsic gas %s",
+                    id(), getGasLimit(), intrinsicGas));
+        }
+        if (isShanghaiActive && getTo().isEmpty() && getData().length > ProtocolParams.MaxInitCodeSize()){
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "max initcode size %s exceeded limit %s",
+                    id(), getData().length, ProtocolParams.MaxInitCodeSize()));
         }
 
         if (getFrom() == null) {
@@ -287,6 +303,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             // signature
             throw new TransactionSemanticValidityException("Invalid signature: " + this.getSignature().toString());
         }
+
     }
 
     @Override

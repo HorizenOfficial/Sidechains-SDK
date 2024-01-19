@@ -520,6 +520,18 @@ class EthService(
     }
   }
 
+
+  private def getStateViewAndStateRootAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, Hash) => A): A = {
+    val (block, blockInfo) = getBlockByTag(nodeView, tag)
+    val stateRootHash = new Hash(block.header.stateRoot)
+    if (tag == "pending") {
+      using(getPendingStateView(nodeView, block, blockInfo))(fun(_, stateRootHash))
+    } else {
+      using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, stateRootHash))
+    }
+  }
+
+
   private def parseBlockTag(nodeView: NV, tag: String): Int = {
     tag match {
       case "earliest" => 1
@@ -1018,8 +1030,8 @@ class EthService(
     applyOnAccountView { nodeView =>
       try {
         val tag = getBlockTagByEip1898Input(nodeView, input)
-        getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-          stateView.getProof(address, storageKeys)
+        getStateViewAndStateRootAtTag(nodeView, tag) { (stateView, stateRootHash) =>
+         stateView.getProof(address, storageKeys, stateRootHash)
         }
       } catch {
         case _: BlockNotFoundException => null
@@ -1114,6 +1126,19 @@ class EthService(
           } else {
             val start = parseBlockTag(nodeView, query.fromBlock)
             val end = parseBlockTag(nodeView, query.toBlock)
+            if (start < 0 || end < 0){
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "negative values not admitted for fromBlock and toBlock parameters"))
+            }
+            val maxHeight = nodeView.history.getCurrentHeight;
+            if (start > maxHeight +1){
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "fromBlock value too high (max height in local history =  "+maxHeight+")"))
+            }
+            if (end > maxHeight +1) {
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "toBlock value too high (max height in local history =  " + maxHeight + ")"))
+            }
             if (start > end || end - start > settings.getLogsBlockLimit) {
               throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
                 "invalid block range. fromBlock should be before toBlock and range should be not over " + settings.getLogsBlockLimit))
@@ -1127,7 +1152,7 @@ class EthService(
                 .map(ModifierId(_))
                 .flatMap(nodeView.history.getStorageBlockById)
                 .map(RpcFilter.getBlockLogs(stateView, _, query))
-                .get
+                .getOrElse(Seq.empty)
 
               resultCount += logs.length
               if (resultCount > settings.getLogsSizeLimit)
