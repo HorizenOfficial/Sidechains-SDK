@@ -55,7 +55,8 @@ abstract class AbstractSidechainApp
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
    val chainInfo : ChainInfo,
-   val mcBlockReferenceDelay : Int
+   val mcBlockReferenceDelay : Int,
+   val maxHistoryRewriteLength: Int
   )
   extends Application with SparkzLogging
 {
@@ -174,7 +175,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        maxHistoryRewritingLength = maxHistoryRewriteLength
       )
 
 

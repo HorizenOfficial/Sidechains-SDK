@@ -31,11 +31,14 @@ public class EvmAppModule extends AccountAppModule {
     // WARNING. It must be constant and should not be changed inside Sidechain network
     private final int mcBlockRefDelay;
     private final boolean allForksEnabled;
+    private final int maxHistRewLen;
 
-    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference, boolean allForksEnabled) {
+
+    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference, boolean allForksEnabled, int maxHistRewLen) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
         this.mcBlockRefDelay = mcBlockDelayReference;
         this.allForksEnabled = allForksEnabled;
+        this.maxHistRewLen = maxHistRewLen;
     }
 
     @Override
@@ -114,5 +117,8 @@ public class EvmAppModule extends AccountAppModule {
         bind(Integer.class)
                 .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
                 .toInstance(mcBlockRefDelay);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MaxHistoryRewriteLength"))
+                .toInstance(maxHistRewLen);
     }
 }

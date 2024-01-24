@@ -1,6 +1,6 @@
 package io.horizen.history
 
-import io.horizen.SidechainSyncInfo
+import io.horizen.{SidechainSyncInfo, params}
 import io.horizen.account.state.HistoryBlockHashProvider
 import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain._
@@ -601,9 +601,28 @@ abstract class AbstractHistory[
       case None => Optional.empty()
     }
   }
+
+  def tooManyBlocksWithoutMcRefs(parentBlockId: ModifierId, noMcRefInCurrentBlock: Boolean): Boolean = {
+    if (noMcRefInCurrentBlock) {
+      val count = storage.getNumOfScBlocksWithNoMcRefDataSince(parentBlockId) + 1
+      if (count >= params.maxHistoryRewritingLength) {
+        log.warn(s"####### Num of SC blocks with no mc refs: $count >= max number of revertible sc blocks (${params.maxHistoryRewritingLength})")
+        true
+      } else {
+        // they are not too many, since we are below the critical threshold
+        false
+      }
+    }
+    else {
+      // they are not too many because in the current block we have mc refs
+      false
+    }
+  }
 }
 
 object AbstractHistory {
+  val MAX_HISTORY_REWRITING_LENGTH: Int = 100
+
   def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
 

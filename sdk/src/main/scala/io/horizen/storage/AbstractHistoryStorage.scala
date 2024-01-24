@@ -139,19 +139,24 @@ abstract class AbstractHistoryStorage[
     sidechainBlockInfo.mainchainHeaderBaseInfo.last
   }
 
-  def getNumOfScBlocksWithCountedMcRefDataSince(blockId: ModifierId, numOfMcRefToCount : Int = 0): Int = {
+  def getNumOfScBlocksWithNoMcRefDataSince(blockId: ModifierId): Int = {
     var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
     var scBlocksCount : Int= 0
-    var mcRefsCount : Int= 0
     var mcRefEmpty : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
-    while( mcRefEmpty && mcRefsCount <= numOfMcRefToCount) {
 
-      if (!mcRefEmpty)
-        mcRefsCount = mcRefsCount + 1
+    // we are going backwards until we find a mc block reference, it should not be possible to
+    // have an infinite loop. But just to be on the safe side we set a limit
+    val safeGuardLimit = params.maxHistoryRewritingLength*100
 
+    while( mcRefEmpty) {
       sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
       scBlocksCount = scBlocksCount + 1
       mcRefEmpty = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
+
+      if (scBlocksCount >= safeGuardLimit) {
+        log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references: $safeGuardLimit")
+        return scBlocksCount
+      }
     }
     scBlocksCount
   }

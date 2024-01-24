@@ -34,10 +34,14 @@ public class SimpleAppModule extends SidechainAppModule
     // 1 or 2 should be enough to avoid SC block reverting in the most cases.
     // WARNING. It must be constant and should not be changed inside Sidechain network
     private final int mcBlockRefDelay;
+    private final int maxHistRewLen;
 
-    public SimpleAppModule(String userSettingsFileName, int mcBlockDelayReference) {
+
+    public SimpleAppModule(String userSettingsFileName, int mcBlockDelayReference, boolean allForksEnabled, int maxHistRewLen) {
+        // note: allForksEnabled param currently not used
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
         this.mcBlockRefDelay = mcBlockDelayReference;
+        this.maxHistRewLen = maxHistRewLen;
     }
 
     @Override
@@ -170,5 +174,8 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Integer.class)
                 .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
                 .toInstance(mcBlockRefDelay);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MaxHistoryRewriteLength"))
+                .toInstance(maxHistRewLen);
     }
 }

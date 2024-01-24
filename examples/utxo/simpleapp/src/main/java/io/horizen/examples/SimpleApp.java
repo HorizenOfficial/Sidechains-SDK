@@ -1,5 +1,6 @@
 package io.horizen.examples;
 
+import io.horizen.history.AbstractHistory;
 import io.horizen.utxo.SidechainApp;
 
 import com.google.inject.Guice;
@@ -33,8 +34,22 @@ public class SimpleApp {
             System.out.println("MC Block Referenced delay can not be parsed.");
         }
 
+        boolean allForksEnabled = false;
+        if (args.length >= 3) {
+            allForksEnabled = Boolean.parseBoolean(args[2]);
+        }
 
-        Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName, mcBlockReferenceDelay));
+        int maxHistRewLen = AbstractHistory.MAX_HISTORY_REWRITING_LENGTH();
+        try {
+            if (args.length >= 4) {
+                maxHistRewLen = Integer.parseInt(args[3]);
+            }
+        } catch (NumberFormatException ex) {
+            System.out.println("Max History rewrite Length can not be parsed.");
+        }
+
+
+        Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName, mcBlockReferenceDelay, allForksEnabled, maxHistRewLen));
         SidechainApp sidechainApp = injector.getInstance(SidechainApp.class);
 
         Logger logger = LogManager.getLogger(io.horizen.examples.SimpleApp.class);

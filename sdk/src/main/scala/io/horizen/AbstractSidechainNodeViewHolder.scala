@@ -3,6 +3,7 @@ package io.horizen
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.consensus.{ConsensusEpochNumber, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.forge.SkipSlot
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation._
 import io.horizen.params.NetworkParams
@@ -18,6 +19,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifiersCache, idToVersion}
+import sparkz.util.ModifierId
 
 import java.util.concurrent.TimeUnit
 import scala.util.{Failure, Success, Try}
@@ -421,6 +423,19 @@ abstract class AbstractSidechainNodeViewHolder[
               return failureInformation
             case Success(success) =>
               success
+          }
+
+          // check that the chain with this tip has enough mc references in the latest blocks: we must refuse a block that would form too long a chain without mc ref blocks
+          if (history.tooManyBlocksWithoutMcRefs(modToApply.parentId, modToApply.mainchainBlockReferencesData.isEmpty)) {
+            val errMsg = s"We can not forge until we have at least a mc block reference included, skipping this slot..."
+            log.error(errMsg)
+
+            val failureInformation : Try[SidechainNodeUpdateInformation] = updateInfo.history.reportModifierIsInvalid(modToApply, progressInfo).map {
+              case (historyAfterApply, newProgressInfo) =>
+                context.system.eventStream.publish(SemanticallyFailedModification(modToApply, new InvalidSidechainBlockDataException(errMsg)))
+                SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, updateInfo.wallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+            }
+            return failureInformation
           }
 
           // if a crash happens here the inconsistency between state and history wont appear: we should check the wallet storages and if a inconsistency is seen, rollback it

@@ -7,6 +7,7 @@ import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
+import io.horizen.history.AbstractHistory.MAX_HISTORY_REWRITING_LENGTH
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
@@ -42,6 +43,7 @@ case class RegTestParams(
                           override val isHandlingTransactionsEnabled: Boolean = true,
                           override val mcBlockRefDelay: Int = 0,
                           override val resetModifiersStatus: Boolean = false,
+                          override val maxHistoryRewritingLength: Int = MAX_HISTORY_REWRITING_LENGTH,
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
