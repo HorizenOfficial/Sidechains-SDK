@@ -6,6 +6,8 @@ import io.horizen.account.transaction.EthereumTransaction;
 import io.horizen.evm.Address;
 import io.horizen.evm.Hash;
 import io.horizen.utils.BytesUtils;
+import org.web3j.crypto.Sign;
+
 import java.math.BigInteger;
 import java.util.Objects;
 
@@ -71,7 +73,13 @@ public class EthereumTransactionView {
         if (signature == null) {
             v = null; r = null; s = null;
         } else {
-            v = signature.getV();
+            if (tx.isEIP1559()) {
+                // isEIP1559 txs are defined to use 0 and 1 as their recovery
+                // id, subtract 27 to become equivalent to unprotected Homestead signatures.
+                v = signature.getV().subtract(BigInteger.valueOf(Sign.LOWER_REAL_V));
+            } else {
+                v = signature.getV();
+            }
             r = signature.getR();
             s = signature.getS();
         }
