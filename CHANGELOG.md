@@ -1,3 +1,6 @@
+**0.10.1**
+* [eth RPC endpoint] Additional fix on json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
+
 **0.10.0**
 1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
 2. Added support for ZenIP 42203/42206: 
