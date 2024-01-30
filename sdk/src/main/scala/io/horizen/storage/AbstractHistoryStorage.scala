@@ -148,15 +148,18 @@ abstract class AbstractHistoryStorage[
     // have an infinite loop. But just to be on the safe side we set a limit
     val safeGuardLimit = params.maxHistoryRewritingLength*100
 
-    while( mcRefEmpty) {
+    while(mcRefEmpty) {
       sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
       scBlocksCount = scBlocksCount + 1
-      mcRefEmpty = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
 
       if (scBlocksCount >= safeGuardLimit) {
         log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references: $safeGuardLimit")
         return scBlocksCount
       }
+
+      mcRefEmpty = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
+      if (!mcRefEmpty)
+        log.debug(s"found sc block ${sidechainBlockInfo.parentId} which has ${sidechainBlockInfo.mainchainHeaderBaseInfo.size} mc block references")
     }
     scBlocksCount
   }

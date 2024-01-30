@@ -1,6 +1,7 @@
 package io.horizen.history
 
-import io.horizen.{SidechainSyncInfo, params}
+import io.horizen.SidechainSyncInfo
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.state.HistoryBlockHashProvider
 import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain._
@@ -96,14 +97,13 @@ abstract class AbstractHistory[
                   storage.update(block, blockInfo),
                   progInfo
                 )
-              case Failure(e) => {
+              case Failure(e) =>
                 log.error("New best block found, but it can not be applied: %s".format(e.getMessage), e)
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                   ProgressInfo[PM](None, Seq(), Seq())
                 )
-              }
             }
           } else {
             // We retrieved block from another chain that is not the best one
@@ -602,22 +602,30 @@ abstract class AbstractHistory[
     }
   }
 
-  def tooManyBlocksWithoutMcRefs(parentBlockId: ModifierId, noMcRefInCurrentBlock: Boolean): Boolean = {
+  def tooManyBlocksWithoutMcRefs(parentBlockId: ModifierId, noMcRefInCurrentBlock: Boolean, consensusEpochNumber: Int): Boolean = {
     if (noMcRefInCurrentBlock) {
-      val count = storage.getNumOfScBlocksWithNoMcRefDataSince(parentBlockId) + 1
-      if (count >= params.maxHistoryRewritingLength) {
-        log.warn(s"####### Num of SC blocks with no mc refs: $count >= max number of revertible sc blocks (${params.maxHistoryRewritingLength})")
-        true
-      } else {
-        // they are not too many, since we are below the critical threshold
+      if (!Version1_3_0Fork.get(consensusEpochNumber).active) {
+        // fork is not active for computing the number of sc blocks without mc refs
+        log.debug(s"Fork for version 1.3 not active, skipping counting of sc blocks without mc references")
         false
+      } else {
+
+        val count = storage.getNumOfScBlocksWithNoMcRefDataSince(parentBlockId) + 1
+        if (count >= params.maxHistoryRewritingLength) {
+          log.warn(s"####### Num of SC blocks with no mc refs: $count >= max number of revertible sc blocks (${params.maxHistoryRewritingLength})")
+          true
+        } else {
+          // they are not too many, since we are below the critical threshold
+          log.debug(s"Num of SC blocks with no mc refs: $count")
+          false
+        }
       }
-    }
-    else {
-      // they are not too many because in the current block we have mc refs
+    } else {
+      // not too many because in the current block we have mc refs
       false
     }
   }
+
 }
 
 object AbstractHistory {

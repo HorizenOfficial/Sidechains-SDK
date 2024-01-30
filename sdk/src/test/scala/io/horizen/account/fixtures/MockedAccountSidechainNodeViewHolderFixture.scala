@@ -9,6 +9,7 @@ import io.horizen.account.state.AccountState
 import io.horizen.account.wallet.AccountWallet
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.block.Block.Timestamp
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 
 class MockedAccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -29,6 +30,8 @@ class MockedAccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     null ) {
 
   override def dumpStorages(): Unit = {}
+
+  override def getConsensusEpochNumber(timestamp: Timestamp) : Int = 100
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     Some(history, state, wallet, mempool)

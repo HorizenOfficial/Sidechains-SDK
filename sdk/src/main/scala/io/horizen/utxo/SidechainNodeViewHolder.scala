@@ -40,7 +40,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
 
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, timeProvider, params) {
   override type HSTOR = SidechainHistoryStorage
   override type HIS = SidechainHistory
   override type MS = SidechainState
