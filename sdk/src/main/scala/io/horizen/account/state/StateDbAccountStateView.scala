@@ -12,7 +12,7 @@ import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransfer
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.evm.results.{EvmLog, ProofAccountResult}
-import io.horizen.evm.{Address, Hash, ResourceHandle, StateDB}
+import io.horizen.evm.{Address, ForkRules, Hash, ResourceHandle, StateDB}
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
@@ -330,8 +330,9 @@ class StateDbAccountStateView(
   final override def removeAccountStorageBytes(address: Address, key: Array[Byte]): Unit =
     updateAccountStorageBytes(address, key, Array.empty)
 
-  def getProof(address: Address, keys: Array[Array[Byte]]): ProofAccountResult =
-    stateDb.getProof(address, keys.map(new Hash(_)))
+  def getProof(address: Address, keys: Array[Array[Byte]], stateRoot: Hash): ProofAccountResult = {
+    stateDb.getProof(address, stateRoot, keys.map(new Hash(_)))
+  }
 
   // account specific getters
   override def getNonce(address: Address): BigInteger = stateDb.getNonce(address)
@@ -359,7 +360,8 @@ class StateDbAccountStateView(
   def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = stateDb.setTxContext(new Hash(txHash), idx)
 
   // reset and prepare account access list
-  def setupAccessList(msg: Message): Unit = stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO))
+  def setupAccessList(msg: Message, forgerAddress: Address, rules: ForkRules): Unit =
+    stateDb.accessSetup(msg.getFrom, msg.getTo.orElse(Address.ZERO), forgerAddress, rules)
 
   def getRefund: BigInteger = stateDb.getRefund
 

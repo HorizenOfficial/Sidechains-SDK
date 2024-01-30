@@ -1,13 +1,14 @@
 package io.horizen.account.block
 
 import io.horizen.account.fixtures.{AccountBlockFixture, ForgerAccountGenerationMetadata}
+import io.horizen.consensus.ConsensusParamsUtil
 import io.horizen.fixtures.CompanionsFixture
-import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.params.{MainNetParams, NetworkParams}
 import io.horizen.proof.VrfProof
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.VrfSecretKey
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.history.validation.InvalidSidechainBlockHeaderException
 import io.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
@@ -40,6 +41,11 @@ class AccountBlockHeaderTest extends JUnitSuite with CompanionsFixture with Acco
   @Before
   def init(): Unit = {
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
+    ConsensusParamsUtil.setConsensusParamsForkActivation(Seq(
+      ConsensusParamsForkInfo(0, ConsensusParamsFork.DefaultConsensusParamsFork),
+    ))
+    ConsensusParamsUtil.setConsensusParamsForkTimestampActivation(Seq(TimeToEpochUtils.virtualGenesisBlockTimeStamp(params.sidechainGenesisBlockTimestamp)))
+
   }
 
   @Test

@@ -1,3 +1,8 @@
+**0.11.0**
+1. EVM Shangai support  
+2. Sparkz dependency updated to 2.3.0
+3. Updtated third-party dependencies
+
 **0.10.1**
 * [eth RPC endpoint] Additional fix on json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
 

@@ -12,10 +12,14 @@ class SimpleProxyContract:
     call_sig = "doCall(address,uint256,bytes)"
     static_call_sig = "doStaticCall(address,bytes)"
 
-    def __init__(self, sc_node, evm_address):
+    def __init__(self, sc_node, evm_address, use_shanghai=False):
         logging.info(f"Creating smart contract utilities for SimpleProxy")
         self.sc_node = sc_node
-        self.contract = SmartContract("SimpleProxy")
+
+        if use_shanghai:
+            self.contract = SmartContract("SimpleProxyShanghai")
+        else:
+            self.contract = SmartContract("SimpleProxy")
         logging.info(self.contract)
         self.contract_address = deploy_smart_contract(sc_node, self.contract, evm_address, None, '', True)
 

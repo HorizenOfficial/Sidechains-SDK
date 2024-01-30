@@ -54,7 +54,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     "reply at /ethv1 - single request - parse error no quotes" in {
       rpc(
         """{"jsonrpc":"2.0","id":"225","method":"eth_chainId_",params:[]}""",
-        """{"error":{"code":-32700,"message":"Parse error","data":"Unexpected character ('p' (code 112)): was expecting double-quote to start field name\n at [Source: (String)\"{\"jsonrpc\":\"2.0\",\"id\":\"225\",\"method\":\"eth_chainId_\",params:[]}\"; line: 1, column: 54]"},"jsonrpc":"2.0","id":null}"""
+        """{"error":{"code":-32700,"message":"Parse error","data":"Unexpected character ('p' (code 112)): was expecting double-quote to start field name\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 54]"},"jsonrpc":"2.0","id":null}"""
       )
     }
 

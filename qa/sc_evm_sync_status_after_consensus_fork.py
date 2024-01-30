@@ -9,10 +9,9 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, start_sc_node, wait_for_sc_node_initialization, \
     generate_next_block, EVM_APP_BINARY, AccountModel, disconnect_sc_nodes_bi
+from httpCalls.block.forgingInfo import http_block_forging_info
 from test_framework.util import assert_equal, assert_true, fail, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
-from httpCalls.block.forgingInfo import http_block_forging_info
-
 
 """
 Test that the eth_syncing rpc method answer in a correct way if the node is currently syncing a batch of new blocks
