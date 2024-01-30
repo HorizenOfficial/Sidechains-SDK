@@ -1144,8 +1144,8 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
   def zen_getFeePayments(): Unit = {
     val validCases = Table(
       ("Block id", "Expected output"),
-      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", "null"),
-      ("0x2", "null"),
+      ("0xdc7ac3d7de9d7fc524bbb95025a98c3e9290b041189ee73c638cf981e7f99bfc", """{"payments":[]}"""),
+      ("0x2", """{"payments":[]}"""),
     )
 
     val invalidCases =
