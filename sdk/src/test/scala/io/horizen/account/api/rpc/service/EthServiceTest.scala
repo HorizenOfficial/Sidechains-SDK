@@ -84,7 +84,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
       "gasPrice": "0x342770c1",
       "chainId": "0x10f447",
       "accessList": [],
-      "v": "0x1c",
+      "v": "0x1",
       "r": "0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
       "s": "0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"
     }"""
@@ -143,7 +143,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
                "maxPriorityFeePerGas":"0x6ef91",
                "maxFeePerGas":"0x3b9aca64",
                "chainId":"0x7cd",
-               "v":"0x1c",
+               "v":"0x1",
                "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
                "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
                "accessList":[]
@@ -164,7 +164,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
                "maxPriorityFeePerGas":"0x6ef91",
                "maxFeePerGas":"0x3b9aca64",
                "chainId":"0x7cd",
-               "v":"0x1c",
+               "v":"0x1",
                "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
                "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
                "accessList":[]
@@ -187,7 +187,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
                "maxPriorityFeePerGas":"0x6ef91",
                "maxFeePerGas":"0x3b9aca64",
                "chainId":"0x7cd",
-               "v":"0x1c",
+               "v":"0x1",
                "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
                "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
                "accessList":[]
@@ -212,7 +212,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
                "maxPriorityFeePerGas":"0x6ef91",
                "maxFeePerGas":"0x3b9aca64",
                "chainId":"0x7cd",
-               "v":"0x1c",
+               "v":"0x1",
                "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
                "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
                "accessList":[]
@@ -239,7 +239,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
          "maxPriorityFeePerGas":"0x6ef91",
          "maxFeePerGas":"0x3b9aca64",
          "chainId":"0x7cd",
-         "v":"0x1c",
+         "v":"0x1",
          "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
          "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
          "accessList":[]
@@ -266,7 +266,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
              "maxPriorityFeePerGas":"0x6ef91",
              "maxFeePerGas":"0x3b9aca64",
              "chainId":"0x7cd",
-             "v":"0x1c",
+             "v":"0x1",
              "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
              "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
              "accessList":[]
@@ -289,7 +289,7 @@ class EthServiceTest extends JUnitSuite with MockitoSugar with ReceiptFixture wi
              "maxPriorityFeePerGas":"0x6ef91",
              "maxFeePerGas":"0x3b9aca64",
              "chainId":"0x7cd",
-             "v":"0x1c",
+             "v":"0x1",
              "r":"0x805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023",
              "s":"0x568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d",
              "accessList":[]
