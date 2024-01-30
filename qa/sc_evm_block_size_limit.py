@@ -84,8 +84,6 @@ class SCEvmBlockSizeLimit(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        input("____")
-
         evm_address_sc1 = remove_0x_prefix(self.evm_address)
         evm_address_sc2 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 

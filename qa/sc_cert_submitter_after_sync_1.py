@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
+from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
+    generate_next_block, connect_sc_nodes, sync_sc_blocks, EVM_APP_BINARY, SIMPLE_APP_BINARY
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks
-from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Certificate submission behaviour for the node after sync from scratch with an existing chain.
@@ -35,6 +34,8 @@ Test:
     - Generate a few more MC and SC blocks to reach the end of the withdrawal epoch.
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
 """
+
+NUM_BLOCKS = 2000
 
 
 class ScCertSubmitterAfterSync1(SidechainTestFramework):
@@ -79,7 +80,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return self.sc_setup_nodes_with_extra_arg('-max_hist_rew_len', str(NUM_BLOCKS + 1), SIMPLE_APP_BINARY)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -87,7 +88,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         sc_node2 = self.sc_nodes[1]
 
         # Generate 2000 SC blocks on SC node 1
-        for i in range(2000):
+        for i in range(NUM_BLOCKS):
             generate_next_block(sc_node1, "first node")
 
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes

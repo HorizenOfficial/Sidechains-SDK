@@ -91,6 +91,10 @@ class SCEvmGasPrice(AccountChainSetup):
 
         self.__do_check_gas_price(maxPriorityFeePerGas, generate_blocks=40)
 
+        # mine an mc block otherwise we have SC a long chain span (limit is 100) without mc block references, and the forging
+        # of new SC blocks would be paused
+        self.nodes[0].generate(1)
+
         maxPriorityFeePerGas = 600000000000
         for j in range(10):
             for i in range(5):
