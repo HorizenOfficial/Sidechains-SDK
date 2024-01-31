@@ -3,33 +3,15 @@ package io.horizen.account.state
 import io.horizen.account.state.MessageProcessorUtil.NativeSmartContractLinkedList
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 
-import scala.util.{Failure, Success}
-
 object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
 
-  override val listTipKey: Array[Byte] = ForgerStakeMsgProcessor.LinkedListTipKey
-  override val listTipNullValue: Array[Byte] = ForgerStakeMsgProcessor.LinkedListNullValue
-
-  def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-    val data = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
-    if (data.length == 0) {
-      // getting a not existing key from state DB using RAW strategy
-      // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-      // gives an empty array instead
-      None
-    } else {
-      ForgerStakeDataSerializer.parseBytesTry(data) match {
-        case Success(obj) => Some(obj)
-        case Failure(exception) =>
-          throw new ExecutionRevertedException("Error while parsing forger data.", exception)
-      }
-    }
-  }
+  override val listTipKey: Array[Byte] = ForgerStakeStorageV1.LinkedListTipKey
+  override val listTipNullValue: Array[Byte] = ForgerStakeStorageV1.LinkedListNullValue
 
   def getStakeListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
     if (!linkedListNodeRefIsNull(tip)) {
       val node = getLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
-      val stakeData = findStakeData(view, node.dataKey).get
+      val stakeData = ForgerStakeStorageV1.findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
         node.dataKey,
         ForgerStakeData(

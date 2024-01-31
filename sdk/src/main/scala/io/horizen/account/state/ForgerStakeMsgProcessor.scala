@@ -5,8 +5,11 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.fork.{Version1_2_0Fork, Version1_3_0Fork}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.ForgerStakeLinkedList._
+import io.horizen.account.state.ForgerStakeLinkedList.{getStakeListItem, linkedListNodeRefIsNull, removeNode}
 import io.horizen.account.state.ForgerStakeMsgProcessor._
+import io.horizen.account.state.ForgerStakeStorage.getStorageVersionFromDb
+import io.horizen.account.state.ForgerStakeStorageV1.LinkedListTipKey
+import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
@@ -24,11 +27,11 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
-  private[horizen] def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
+  private[horizen] def getListOfForgersStakes(view: BaseAccountStateView, isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
 
   private[horizen] def addScCreationForgerStake(view: BaseAccountStateView, owner: Address, value: BigInteger, data: AddNewStakeCmdInput): Array[Byte]
 
-  private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
+  private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte], isForkV1_3Active: Boolean): Option[ForgerStakeData]
 
   private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean
 
@@ -49,17 +52,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
   override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
     super.init(view, consensusEpochNumber)
-    // set the initial value for the linked list last element (null hash)
 
-    // check we do not have this key set to any value yet
-    val initialTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
-
-    // getting a not existing key from state DB using RAW strategy as the api is doing
-    // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead)
-    if (!initialTip.sameElements(NULL_HEX_STRING_32))
-      throw new MessageProcessorInitializationException("initial tip already set")
-
-    view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
+    ForgerStakeStorageV1.setupStorage(view)
 
     // forger list
     /* Do not initialize it here since bootstrapping tool can not do the same as of now. That would result in
@@ -69,38 +63,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       throw new MessageProcessorInitializationException("restrictForgerList already set")
   }
 
-  def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
-    // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
-    val data = view.getAccountStorage(contractAddress, stakeId)
-    // getting a not existing key from state DB using RAW strategy
-    // gives an array of 32 bytes filled with 0, while using CHUNK strategy
-    // gives an empty array instead
-    !data.sameElements(NULL_HEX_STRING_32)
+  def getForgerStakeStorageVersion(view: BaseAccountStateView,isForkV1_3Active: Boolean): ForgerStakeStorageVersion ={
+    if (isForkV1_3Active)
+      getStorageVersionFromDb(view)
+    else
+      ForgerStakeStorageVersion.VERSION_1
   }
 
-  def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
-                     blockSignProposition: PublicKey25519Proposition,
-                     vrfPublicKey: VrfPublicKey,
-                     ownerPublicKey: Address,
-                     stakedAmount: BigInteger): Unit = {
-
-    // add a new node to the linked list pointing to this forger stake data
-    addNewNode(view, stakeId, contractAddress)
-
-    val forgerStakeData = ForgerStakeData(
-      ForgerPublicKeys(blockSignProposition, vrfPublicKey), new AddressProposition(ownerPublicKey), stakedAmount)
-
-    // store the forger stake data
-    view.updateAccountStorageBytes(contractAddress, stakeId,
-      ForgerStakeDataSerializer.toBytes(forgerStakeData))
-  }
-
-  private def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    // remove the data from the linked list
-    removeNode(view, stakeId, contractAddress)
-
-    // remove the stake
-    view.removeAccountStorageBytes(contractAddress, stakeId)
+  def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte], isForkV1_3Active: Boolean): Option[ForgerStakeData] = {
+    val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, isForkV1_3Active)
+    stakeStorage.findStakeData(view, stakeId)
   }
 
   override def addScCreationForgerStake(
@@ -122,10 +94,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), data.encode()),
       false
     )
-    doAddNewStakeCmd(Invocation.fromMessage(msg), view, msg, isGenesisScCreation = true)
+    doAddNewStakeCmd(Invocation.fromMessage(msg), view, msg, Version1_3_0Fork.get(0).active, isGenesisScCreation = true)
   }
 
-  def doAddNewStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isGenesisScCreation: Boolean = false): Array[Byte] = {
+  def doAddNewStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isForkV1_3_Active: Boolean, isGenesisScCreation: Boolean = false): Array[Byte] = {
 
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
@@ -172,13 +144,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     // compute stakeId
     val newStakeId = getStakeId(msg)
 
+    val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, isForkV1_3_Active)
+
     // check we do not already have this stake obj in the db
-    if (existsStakeData(view, newStakeId)) {
+    if (stakeStorage.existsStakeData(view, newStakeId)) {
       throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already exists")
     }
 
     // add the obj to stateDb
-    addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
+    stakeStorage.addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
+
     log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
     val addNewStakeEvt = DelegateForgerStake(invocation.caller, ownerAddress, newStakeId, stakedAmount)
@@ -199,6 +174,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     newStakeId
   }
 
+
   private def checkGetListOfForgersCmd(calldata: Array[Byte]): Unit = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(calldata).length > 0) {
@@ -208,73 +184,101 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
   }
 
-  override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    def acceptAnyStake(stake: AccountForgingStakeInfo): Boolean = true
-    getListOfForgersStakesWithFilter(view, acceptAnyStake)
+  override def getListOfForgersStakes(view: BaseAccountStateView, isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] = {
+    val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, isForkV1_3Active)
+    stakeStorage.getListOfForgersStakes(view)
   }
 
-  def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: Address): Seq[AccountForgingStakeInfo] = {
-    def acceptStakeWithSameOwner(stake: AccountForgingStakeInfo): Boolean =
-      stake.forgerStakeData.ownerPublicKey.address() == owner
-    getListOfForgersStakesWithFilter(view, acceptStakeWithSameOwner)
- }
-
-  def getListOfForgersStakesWithFilter(view: BaseAccountStateView, filter: AccountForgingStakeInfo => Boolean): Seq[AccountForgingStakeInfo] = {
-    var stakeList = Seq[AccountForgingStakeInfo]()
-    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
-
-    while (!linkedListNodeRefIsNull(nodeReference)) {
-      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
-      if (filter(item))
-        stakeList = item +: stakeList
-      nodeReference = prevNodeReference
-    }
-    stakeList
+  private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean) = {
+    val forgerStakeStorageVersion = getForgerStakeStorageVersion(view, isForkV1_3Active)
+    val stakeStorage = ForgerStakeStorage(forgerStakeStorageVersion)
+    stakeStorage
   }
 
-
-  def doUncheckedGetListOfForgersStakesCmd(view: BaseAccountStateView): Array[Byte] = {
-    val stakeList = getListOfForgersStakes(view)
+  def doUncheckedGetListOfForgersStakesCmd(view: BaseAccountStateView, isForkV1_3Active: Boolean): Array[Byte] = {
+    val stakeList = getListOfForgersStakes(view, isForkV1_3Active)
     AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
   }
 
-  def doGetListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+  def doGetListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView, isForkV1_3Active: Boolean): Array[Byte] = {
     if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
     checkGetListOfForgersCmd(invocation.input)
-    doUncheckedGetListOfForgersStakesCmd(view)
+    doUncheckedGetListOfForgersStakesCmd(view, isForkV1_3Active)
   }
+
+  def doUpgradeCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    if (invocation.value.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+    if (getArgumentsFromData(invocation.input).length > 0) {
+      val msgStr = s"invalid msg data length: ${invocation.input.length}, expected $METHOD_ID_LENGTH"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
+    }
+
+    if (getStorageVersionFromDb(view) == ForgerStakeStorageVersion.VERSION_2) {
+      val msgStr = s"Forger stake storage already upgraded"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
+    }
+
+    var nodeReference = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
+
+    while (!linkedListNodeRefIsNull(nodeReference)) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
+      ForgerStakeStorageV2.addForgerStake(view, item.stakeId,
+        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey, item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
+        item.forgerStakeData.ownerPublicKey.address(), item.forgerStakeData.stakedAmount)
+      removeNode(view, item.stakeId, FORGER_STAKE_SMART_CONTRACT_ADDRESS)
+      nodeReference = prevNodeReference
+    }
+    view.removeAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
+
+    ForgerStakeStorage.saveStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
+  }
+
 
   def doStakeOfCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
     if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
-    val inputParams = getArgumentsFromData(invocation.input)
-    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
-
-    val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
-    val totalStake = ownerStakeList.foldLeft(BigInteger.ZERO)( (sum, stake) => sum.add(stake.forgerStakeData.stakedAmount))
-    StakeAmount(totalStake).encode()
-  }
-
-  def doGetAllForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
-    if (invocation.value.signum() != 0) {
-      throw new ExecutionRevertedException("Call value must be zero")
+    if (getStorageVersionFromDb(view) != ForgerStakeStorageVersion.VERSION_2) {
+      val msgStr = s"Forger stake storage not upgraded yet"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
     }
 
     val inputParams = getArgumentsFromData(invocation.input)
     val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
 
-    val ownerStakeList = getListOfForgersStakesOfUser(view, cmdInput.ownerAddress)
+    val totalStake = ForgerStakeStorageV2.getOwnerStake(view, new AddressProposition(cmdInput.ownerAddress))
+    StakeAmount(totalStake).encode()
+  }
+
+  def doGetAllForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+
+    if (invocation.value.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
+    if (getStorageVersionFromDb(view) != ForgerStakeStorageVersion.VERSION_2) {
+      val msgStr = s"Forger stake storage not upgraded yet"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
+    }
+
+    val inputParams = getArgumentsFromData(invocation.input)
+    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
+
+    val ownerStakeList = ForgerStakeStorageV2.getListOfForgersStakesOfUser(view, new AddressProposition(cmdInput.ownerAddress))
     AccountForgingStakeInfoListEncoder.encode(ownerStakeList.asJava)
   }
 
-
-
-  def doRemoveStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
+  def doRemoveStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isForkV1_3Active: Boolean): Array[Byte] = {
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
       throw new ExecutionRevertedException("Call must include a nonce")
@@ -289,8 +293,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val stakeId: Array[Byte] = cmdInput.stakeId
     val signature: SignatureSecp256k1 = cmdInput.signature
 
-    // get the forger stake data to remove
-    val stakeData = findStakeData(view, stakeId)
+    val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, isForkV1_3Active)
+
+    val stakeData = stakeStorage.findForgerStakeStorageElem(view, stakeId)
       .getOrElse(throw new ExecutionRevertedException("No such stake id in state-db"))
 
     // check signature
@@ -300,7 +305,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     } match {
       case Success(result) => result
       case Failure(ex) =>
-        // can throw IllegalArgumentexception if the signature data are really wrong
+        // can throw IllegalArgumentException if the signature data are really wrong
         throw new ExecutionRevertedException("Could not verify ill-formed signature: " + ex.getMessage)
     }
     if (!isValid) {
@@ -308,7 +313,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
 
     // remove the forger stake data
-    removeForgerStake(view, stakeId)
+    stakeStorage.removeForgerStake(view, stakeId, stakeData)
 
     val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey.address(), stakeId)
     val evmLog = getEthereumConsensusDataLog(removeStakeEvt)
@@ -323,6 +328,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     // Maybe result is not useful in case of success execution (used probably for RPC commands only)
     stakeId
   }
+
+
 
   private def getAllowedForgersIndexList(view: BaseAccountStateView): Array[Byte] = {
 
@@ -401,12 +408,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
-      case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView)
-      case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg)
-      case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg)
+      case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
+      case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg,
+                              Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
+      case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
       case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
       case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
                                 => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+      case UpgradeCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                                => doUpgradeCmd(invocation, gasView)
       case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
                                 => doStakeOfCmd(invocation, gasView)
       case GetAllForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
@@ -415,10 +425,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
   }
 
-  override private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] =
-    ForgerStakeLinkedList.findStakeData(view, stakeId)
 
-  override private[horizen] def isForgerListOpen(view: BaseAccountStateView) : Boolean = {
+  override private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean = {
     if (params.restrictForgers) {
       val restrictForgerList = getAllowedForgersIndexList(view)
       isForgerListOpenUnchecked(restrictForgerList)
@@ -428,7 +436,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   }
 
   // length is not checked, useful when the list has already been fetched and the gas paid
-  private def isForgerListOpenUnchecked(list: Array[Byte]) : Boolean = {
+  private def isForgerListOpenUnchecked(list: Array[Byte]): Boolean = {
     list.sum > list.length/2
   }
 
@@ -439,20 +447,21 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     } else {
       Seq()
     }
+
+
 }
 
 object ForgerStakeMsgProcessor {
 
-  val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
-  val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
   val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
-
 
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
   val OpenStakeForgerListCmd: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32")
   val OpenStakeForgerListCmdCorrect: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32)")
+  val UpgradeCmd: String = getABIMethodId("upgrade()")
+
   val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
   val GetAllForgersStakesOfUserCmd: String = getABIMethodId("getAllForgersStakesOfUser(address)")
 
