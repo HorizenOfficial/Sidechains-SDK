@@ -64,7 +64,7 @@ class AccountForgeMessageBuilder(
       sidechainTransactions: Iterable[SidechainTypes#SCAT],
       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       blockContext: BlockContext,
-      forgerAddress: AddressProposition,
+      rewardAddress: AddressProposition,
       blockSize: Long
   ): (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
 
@@ -74,7 +74,7 @@ class AccountForgeMessageBuilder(
     val (receiptList, appliedTransactions, cumBaseFee, cumForgerTips) =
       tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, blockContext, blockSize).get
 
-    (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
+    (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, rewardAddress))
   }
 
   private def tryApplyAndGetBlockInfo(
@@ -190,10 +190,12 @@ class AccountForgeMessageBuilder(
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
-    val forgerAddress = addressList.asScala.headOption.map(_.publicImage().asInstanceOf[AddressProposition]).getOrElse(
-      if (isPending) new AddressProposition(Address.ZERO)
-      else throw new IllegalArgumentException("No addresses in wallet!")
-    )
+    val forgerAddress = params.rewardAddress.getOrElse {
+      addressList.asScala.headOption.map(_.publicImage().asInstanceOf[AddressProposition]).getOrElse(
+        if (isPending) new AddressProposition(Address.ZERO)
+        else throw new IllegalArgumentException("No addresses in wallet!")
+      )
+    }
 
     // 2. calculate baseFee
     val baseFee = calculateBaseFee(nodeView.history, parentId)

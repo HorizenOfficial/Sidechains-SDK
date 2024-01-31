@@ -31,6 +31,7 @@ import io.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import io.horizen.utils.*;
 import io.horizen.vrf.VrfOutput;
 import scala.Enumeration;
+import scala.Option;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.io.BufferedReader;
@@ -938,11 +939,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, Option.empty());
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, Option.empty());
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, Option.empty());
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

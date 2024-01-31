@@ -98,9 +98,10 @@ Configuration that enables the possibility to restrict the forging phase
 
 
 class SCForgerConfiguration(object):
-    def __init__(self, restrict_forgers=False, allowed_forgers=[]):
+    def __init__(self, restrict_forgers=False, allowed_forgers=[], forger_reward_address=""):
         self.restrict_forgers = restrict_forgers
         self.allowed_forgers = []
+        self.forger_reward_address = forger_reward_address
         for forger in allowed_forgers:
             self.allowed_forgers.append(
                 '{ blockSignProposition = "' + forger[0] + '" NEW_LINE vrfPublicKey = "' + forger[1] + '" }')

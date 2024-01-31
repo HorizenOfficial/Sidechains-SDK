@@ -4,6 +4,7 @@ import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Sid
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
@@ -11,6 +12,7 @@ import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, Vr
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
+
 import scala.concurrent.duration._
 
 case class RegTestParams(
@@ -42,6 +44,7 @@ case class RegTestParams(
                           override val isHandlingTransactionsEnabled: Boolean = true,
                           override val mcBlockRefDelay: Int = 0,
                           override val resetModifiersStatus: Boolean = false,
+                          override val rewardAddress: Option[AddressProposition] = None,
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
