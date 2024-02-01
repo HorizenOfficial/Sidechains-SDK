@@ -1252,7 +1252,7 @@ class ForgerStakeMsgProcessorTest
 
       // Check that it cannot be called twice
       exc = intercept[ExecutionRevertedException] {
-        assertGas(GasUtil.ColdSloadCostEIP2929, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+        assertGas(0, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       }
       assertEquals(s"Forger stake storage already upgraded", exc.getMessage)
 
@@ -1660,13 +1660,15 @@ class ForgerStakeMsgProcessorTest
       val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
       val returnData = assertGas(1999200, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       checkListOfStakesV2(view,returnData, expectedList)
-      view.commit(bytesToVersion(getVersion.data()))
 
       // Checking log
       val listOfLogs = view.getLogs(txHash1)
       assertEquals("Wrong number of logs", 1, listOfLogs.length)
       val expectedEvent = StakeUpgrade(ForgerStakeStorageVersion.VERSION_1.id, ForgerStakeStorageVersion.VERSION_2.id)
       checkUpgradeStakeEvent(expectedEvent, listOfLogs(0))
+
+      view.commit(bytesToVersion(getVersion.data()))
+
     }
   }
 
@@ -2179,6 +2181,44 @@ class ForgerStakeMsgProcessorTest
     }
   }
 
+  //This test is for chains that use the V2 storage model from the beginning, activating Fork 1.3
+  @Test
+  def testInitV2(): Unit = {
+
+    val forkConfigurator = new SimpleForkConfigurator() {
+      override def getOptionalSidechainForks: util.List[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] = List(
+
+        new Pair[SidechainForkConsensusEpoch, OptionalSidechainFork](
+          SidechainForkConsensusEpoch(0, 0, 0),
+          new Version1_3_0Fork(true)
+        )
+      ).asJava
+    }
+    ForkManagerUtil.initializeForkManager(forkConfigurator, "regtest")
+
+    usingView(forgerStakeMessageProcessor) { view =>
+      // we have to call init beforehand
+      assertFalse(view.accountExists(contractAddress))
+      assertEquals(ForgerStakeStorageVersion.VERSION_1, getStorageVersionFromDb(view))
+
+      forgerStakeMessageProcessor.init(view, view.getConsensusEpochNumberAsInt)
+      assertTrue(view.accountExists(contractAddress))
+      assertTrue(view.isSmartContractAccount(contractAddress))
+
+      assertEquals(ForgerStakeStorageVersion.VERSION_2, getStorageVersionFromDb(view))
+
+      // Check that "upgrade" cannot be called twice
+      val nonce = 0
+      // Test upgrade before reaching the fork point. It should fail.
+      val msg = getMessage(
+        contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd), nonce, ownerAddressProposition.address())
+      val exc = intercept[ExecutionRevertedException] {
+        assertGas(0, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      }
+      assertEquals(s"Forger stake storage already upgraded", exc.getMessage)
+      view.commit(bytesToVersion(getVersion.data()))
+    }
+  }
 
   private def addStakes(view: AccountStateView,
                         blockSignerProposition: PublicKey25519Proposition,

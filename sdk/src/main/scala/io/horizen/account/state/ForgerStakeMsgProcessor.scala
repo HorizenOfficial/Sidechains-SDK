@@ -53,7 +53,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
     super.init(view, consensusEpochNumber)
 
-    ForgerStakeStorageV1.setupStorage(view)
+    val forgingStakeStorageVersion = if (Version1_3_0Fork.get(consensusEpochNumber).active)
+     ForgerStakeStorageVersion.VERSION_2
+    else
+      ForgerStakeStorageVersion.VERSION_1
+
+    val forgingStakeStorage = ForgerStakeStorage(forgingStakeStorageVersion)
+    forgingStakeStorage.setupStorage(view)
 
     // forger list
     /* Do not initialize it here since bootstrapping tool can not do the same as of now. That would result in
@@ -189,7 +195,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeStorage.getListOfForgersStakes(view)
   }
 
-  private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean) = {
+  private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean): ForgerStakeStorage = {
     val forgerStakeStorageVersion = getForgerStakeStorageVersion(view, isForkV1_3Active)
     val stakeStorage = ForgerStakeStorage(forgerStakeStorageVersion)
     stakeStorage

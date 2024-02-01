@@ -3,6 +3,8 @@ package io.horizen.account.state
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList.{addNewNode, getStakeListItem, linkedListNodeRefIsNull, removeNode}
+import io.horizen.account.state.ForgerStakeStorage.saveStorageVersion
+import io.horizen.account.state.ForgerStakeStorageV1.{LinkedListNullValue, LinkedListTipKey}
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.WithdrawalMsgProcessor.calculateKey
@@ -54,14 +56,14 @@ trait ForgerStakeStorage {
 
   def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte], stake: ForgerStakeStorageElem): Unit
 
-
+  def setupStorage(view: BaseAccountStateView): Unit
 }
 
 object ForgerStakeStorageV1 extends ForgerStakeStorage {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
-  def setupStorage(view: BaseAccountStateView): Unit = {
+  override def setupStorage(view: BaseAccountStateView): Unit = {
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
@@ -123,6 +125,9 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
   val forgerStakeArray: StateDbArray = new StateDbArray(FORGER_STAKE_SMART_CONTRACT_ADDRESS, "ForgerStakeList".getBytes("UTF-8"))
 
+  override def setupStorage(view: BaseAccountStateView): Unit = {
+    saveStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
+  }
 
   override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
     val numOfForgerStakes = forgerStakeArray.getSize(view)

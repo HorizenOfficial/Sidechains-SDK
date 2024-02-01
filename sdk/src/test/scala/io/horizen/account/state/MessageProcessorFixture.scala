@@ -86,12 +86,9 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
     view.setupAccessList(msg, ctx.forgerAddress, new ForkRules(true))
     val gas = new GasPool(1000000000)
     val result = Try.apply(TestContext.process(processor, msg, view, ctx, gas))
-    result match {
-      case Success(value) =>
-        assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-        value
-      case Failure(_) => result.get
-    }
+    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+    // return result or rethrow any exception
+    result.get
   }
 
   def getEventSignature(eventABISignature: String): Array[Byte] =
