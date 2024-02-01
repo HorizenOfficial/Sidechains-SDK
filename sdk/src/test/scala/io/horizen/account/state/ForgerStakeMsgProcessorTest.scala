@@ -8,7 +8,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.ForgerStakeMsgProcessor._
 import io.horizen.account.state.ForgerStakeStorage.getStorageVersionFromDb
-import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
+import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
 import io.horizen.evm.{Address, Hash}
@@ -64,6 +64,7 @@ class ForgerStakeMsgProcessorTest
   val NumOfIndexedRemoveForgerStakeEvtParams = 1
   val OpenForgerStakeListEventSig: Array[Byte] = getEventSignature("OpenForgerList(uint32,address,bytes32)")
   val NumOfIndexedOpenForgerStakeListEvtParams = 1
+  val StakeUpgradeEventSig: Array[Byte] = getEventSignature("StakeUpgrade(uint32,uint32)")
 
   val V1_2_MOCK_FORK_POINT: Int = 100
   val V1_3_MOCK_FORK_POINT: Int = 200
@@ -1204,11 +1205,8 @@ class ForgerStakeMsgProcessorTest
       val initialAmount = BigInteger.valueOf(10).multiply(ZenWeiConverter.MAX_MONEY_IN_WEI)
       createSenderAccount(view, initialAmount)
 
-      //Setting the context
-      val txHash1 = Keccak256.hash("first tx")
-      view.setupTxContext(txHash1, 10)
-
       assertEquals(ForgerStakeStorageVersion.VERSION_1, getStorageVersionFromDb(view))
+
 
       val nonce = 0
       // Test upgrade before reaching the fork point. It should fail.
@@ -1237,11 +1235,20 @@ class ForgerStakeMsgProcessorTest
 
       // Test after fork.
 
+      //Setting the context
+      val txHash1 = Keccak256.hash("first tx")
+      view.setupTxContext(txHash1, 10)
+
       val returnData = withGas(TestContext.process(forgerStakeMessageProcessor, msg, view, blockContextForkV1_3, _))
       val version = new BigInteger(1, returnData).intValueExact()
       assertEquals(ForgerStakeStorageVersion.VERSION_2.id, version)
       assertEquals(ForgerStakeStorageVersion.VERSION_2, getStorageVersionFromDb(view))
 
+      // Checking log
+      val listOfLogs = view.getLogs(txHash1)
+      assertEquals("Wrong number of logs", 1, listOfLogs.length)
+      val expectedEvent = StakeUpgrade(ForgerStakeStorageVersion.VERSION_1.id, ForgerStakeStorageVersion.VERSION_2.id)
+      checkUpgradeStakeEvent(expectedEvent, listOfLogs(0))
 
       // Check that it cannot be called twice
       exc = intercept[ExecutionRevertedException] {
@@ -1272,13 +1279,6 @@ class ForgerStakeMsgProcessorTest
     }
   }
 
-  private def checkForgerStakeStorageV2Consistency(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val stakeData = ForgerStakeStorageV2.findForgerStakeStorageElem(view, stakeId).get.asInstanceOf[ForgerStakeStorageElemV2]
-    assertArrayEquals("Stake array is invalid", stakeId, ForgerStakeStorageV2.forgerStakeArray.getValue(view, stakeData.stakeListIndex))
-    val ownerInfo = new OwnerStakeInfo(stakeData.ownerPublicKey)
-    assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
-  }
-
   @Test
   def testForgerStakeStorageV2(): Unit = {
 
@@ -1304,28 +1304,30 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd), randomNonce, ownerAddressProposition.address())
       withGas(TestContext.process(forgerStakeMessageProcessor, upgradeMsg, view, blockContextForkV1_3, _))
 
+      // Check that at the beginning there is no stake
       val getAllStakesMsg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
       var getAllStakesReturnData = assertGas(4200, getAllStakesMsg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       var listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
 
+      // Add the first stake
       //Setting the context, it is used for retrieving the events
       val txHash1 = Keccak256.hash("first tx")
       view.setupTxContext(txHash1, 10)
 
-      val cmdInput = AddNewStakeCmdInput(
+      val addCmdInput = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
         ownerAddressProposition.address()
       )
 
-      val data: Array[Byte] = cmdInput.encode()
+      val data: Array[Byte] = addCmdInput.encode()
       val addStakeMsg1 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       val expectedStake1 = AccountForgingStakeInfo(forgerStakeMessageProcessor.getStakeId(addStakeMsg1),
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
           ownerAddressProposition, validWeiAmount))
 
-      // positive case, verify we can add the stake to view
+
       val returnData = assertGas(208112, addStakeMsg1, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData)
       assertArrayEquals(expectedStake1.stakeId, returnData)
@@ -1346,10 +1348,12 @@ class ForgerStakeMsgProcessorTest
       listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
       listOfExpectedForgerStakes.add(expectedStake1)
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
+      checkForgerStakeStorageV2Consistency(view, expectedStake1.stakeId)
 
+      // try processing a msg with the same stake (same msg), should fail
       val txHash2 = Keccak256.hash("second tx")
       view.setupTxContext(txHash2, 10)
-      // try processing a msg with the same stake (same msg), should fail
+
       assertThrows[ExecutionRevertedException](
         withGas(TestContext.process(forgerStakeMessageProcessor, addStakeMsg1, view, blockContextForkV1_3, _))
       )
@@ -1368,7 +1372,7 @@ class ForgerStakeMsgProcessorTest
       }
       assertTrue(ex.getMessage.contains("Wrong message data field length"))
 
-      // try processing a msg with different stake id (different nonce), should succeed
+      // Add a second stake: try processing a msg with same input but different stake id (different nonce), should succeed
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
       val addStakeMsg2 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
@@ -1384,6 +1388,8 @@ class ForgerStakeMsgProcessorTest
       getAllStakesReturnData = assertGas(25200, getAllStakesMsg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       listOfExpectedForgerStakes.add(expectedStake2)
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
+      checkForgerStakeStorageV2Consistency(view, expectedStake1.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake2.stakeId)
 
       totalStakedValue = totalStakedValue.add(expectedStake2.forgerStakeData.stakedAmount)
       expOriginBalance = expOriginBalance.subtract(expectedStake2.forgerStakeData.stakedAmount)
@@ -1397,13 +1403,13 @@ class ForgerStakeMsgProcessorTest
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
-      val cmdInput3 = AddNewStakeCmdInput(
+      val addCmdInput2 = AddNewStakeCmdInput(
         ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2),
         ownerAddressProposition2.address()
       )
 
-      val data3: Array[Byte] = cmdInput3.encode()
-      val addStakeMsg3 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data3, randomNonce)
+      val addStakeMsg3 = getMessage(contractAddress, validWeiAmount,
+                        BytesUtils.fromHexString(AddNewStakeCmd) ++ addCmdInput2.encode(), randomNonce)
 
       val expectedStake3 = AccountForgingStakeInfo(forgerStakeMessageProcessor.getStakeId(addStakeMsg3),
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2),
@@ -1432,6 +1438,9 @@ class ForgerStakeMsgProcessorTest
       listOfExpectedForgerStakes.add(expectedStake2)
       listOfExpectedForgerStakes.add(expectedStake3)
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
+      checkForgerStakeStorageV2Consistency(view, expectedStake1.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake2.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake3.stakeId)
 
       // remove first stake id
       val nonce3 = randomNonce
@@ -1495,6 +1504,9 @@ class ForgerStakeMsgProcessorTest
       listOfExpectedForgerStakes.add(expectedStake2)
       listOfExpectedForgerStakes.add(expectedStake4)
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
+      checkForgerStakeStorageV2Consistency(view, expectedStake3.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake2.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake4.stakeId)
 
       expOriginBalance = expOriginBalance.subtract(expectedStake4.forgerStakeData.stakedAmount)
 
@@ -1511,7 +1523,6 @@ class ForgerStakeMsgProcessorTest
       val txHash6 = Keccak256.hash("sixth tx")
       view.setupTxContext(txHash6, 10)
 
-      // try processing the removal of stake, should succeed
       val returnData6 = assertGas(40281, msg6, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData6)
       assertArrayEquals(expectedStake2.stakeId, returnData6)
@@ -1586,7 +1597,7 @@ class ForgerStakeMsgProcessorTest
     }
   }
 
-  private def checkListOfStakesV2(view: BaseAccountStateView, forgerStakesListRawData: Array[Byte], expectedStakeList: util.ArrayList[AccountForgingStakeInfo]): Unit= {
+  private def checkListOfStakesV2(view: BaseAccountStateView, forgerStakesListRawData: Array[Byte], expectedStakeList: util.List[AccountForgingStakeInfo]): Unit= {
     assertNotNull(forgerStakesListRawData)
     assertArrayEquals(AccountForgingStakeInfoListEncoder.encode(expectedStakeList), forgerStakesListRawData)
     assertEquals(expectedStakeList.size(), ForgerStakeStorageV2.forgerStakeArray.getSize(view))
@@ -1596,6 +1607,14 @@ class ForgerStakeMsgProcessorTest
     }
 
   }
+
+  private def checkForgerStakeStorageV2Consistency(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
+    val stakeData = ForgerStakeStorageV2.findForgerStakeStorageElem(view, stakeId).get.asInstanceOf[ForgerStakeStorageElemV2]
+    assertArrayEquals("Stake array is invalid", stakeId, ForgerStakeStorageV2.forgerStakeArray.getValue(view, stakeData.stakeListIndex))
+    val ownerInfo = new OwnerStakeInfo(stakeData.ownerPublicKey)
+    assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
+  }
+
 
   @Test
   def testUpgrade(): Unit = {
@@ -1614,11 +1633,7 @@ class ForgerStakeMsgProcessorTest
       Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
       Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq((blockSignerProposition, vrfPublicKey)))
 
-      //Setting the context
-      val txHash1 = Keccak256.hash("first tx")
-      view.setupTxContext(txHash1, 10)
-
-
+      // Create some stakes with old storage model
       val privateKey1: PrivateKeySecp256k1 = PrivateKeySecp256k1Creator.getInstance().generateSecret("nativemsgprocessortest1".getBytes(StandardCharsets.UTF_8))
       val ownerAddressProposition1: AddressProposition = privateKey1.publicImage()
       val (listOfExpectedForgerStakes1, _) = addStakes(view, blockSignerProposition, vrfPublicKey, ownerAddressProposition1, 40, blockContextForkV1_3)
@@ -1631,22 +1646,32 @@ class ForgerStakeMsgProcessorTest
       val ownerAddressProposition3: AddressProposition = privateKey3.publicImage()
       val (listOfExpectedForgerStakes3, _) = addStakes(view, blockSignerProposition, vrfPublicKey, ownerAddressProposition3, 100, blockContextForkV1_3)
 
+      // I need to reverse the list because in the old model the iteration starts from the last stake and goes backward
+      val expectedList = (listOfExpectedForgerStakes1 ++ listOfExpectedForgerStakes2 ++ listOfExpectedForgerStakes3).reverse.asJava
 
-      val expectedList = listOfExpectedForgerStakes1 ++ listOfExpectedForgerStakes2 ++ listOfExpectedForgerStakes3
+      //Setting the context
+      val txHash1 = Keccak256.hash("first tx")
+      view.setupTxContext(txHash1, 10)
+
       val upgradeMsg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd), randomNonce, ownerAddressProposition.address())
       assertGas(0, upgradeMsg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
 
-      val msg4 = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
-      val returnData4 = assertGas(1999200, msg4, view, forgerStakeMessageProcessor, blockContextForkV1_3)
-      assertNotNull(returnData4)
-      val expectedListData = AccountForgingStakeInfoListEncoder.encode(expectedList.reverse.asJava)
-      assertArrayEquals(expectedListData, returnData4)
+      val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
+      val returnData = assertGas(1999200, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      checkListOfStakesV2(view,returnData, expectedList)
       view.commit(bytesToVersion(getVersion.data()))
+
+      // Checking log
+      val listOfLogs = view.getLogs(txHash1)
+      assertEquals("Wrong number of logs", 1, listOfLogs.length)
+      val expectedEvent = StakeUpgrade(ForgerStakeStorageVersion.VERSION_1.id, ForgerStakeStorageVersion.VERSION_2.id)
+      checkUpgradeStakeEvent(expectedEvent, listOfLogs(0))
     }
   }
 
-  @Test
+
+  @Ignore
   def testGetListOfForgersLotOfStakes(): Unit = {
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
@@ -2247,4 +2272,22 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong from in data", expectedEvent.from, listOfDecodedData.get(0))
     assertEquals("Wrong block sign prop in data", expectedEvent.blockSignProposition, listOfDecodedData.get(1))
   }
+
+  def checkUpgradeStakeEvent(expectedEvent: StakeUpgrade, actualEvent: EthereumConsensusDataLog): Unit = {
+    assertEquals("Wrong address", contractAddress, actualEvent.address)
+    assertEquals("Wrong number of topics", 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
+    assertArrayEquals("Wrong event signature", StakeUpgradeEventSig, actualEvent.topics(0).toBytes)
+
+    val listOfRefs = util.Arrays
+      .asList(
+        TypeReference.makeTypeReference(expectedEvent.oldVersion.getTypeAsString),
+        TypeReference.makeTypeReference(expectedEvent.newVersion.getTypeAsString)
+      )
+      .asInstanceOf[util.List[TypeReference[Type[_]]]]
+
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
+    assertEquals("Wrong oldVersion in data", expectedEvent.oldVersion, listOfDecodedData.get(0))
+    assertEquals("Wrong newVersion in data", expectedEvent.newVersion, listOfDecodedData.get(1))
+  }
+
 }

@@ -11,7 +11,7 @@ import io.horizen.account.state.ForgerStakeStorage.getStorageVersionFromDb
 import io.horizen.account.state.ForgerStakeStorageV1.LinkedListTipKey
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, WithdrawForgerStake}
+import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import io.horizen.evm.Address
@@ -237,7 +237,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     }
     view.removeAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, LinkedListTipKey)
 
+    val upgradeEvent = StakeUpgrade(ForgerStakeStorageVersion.VERSION_1.id, ForgerStakeStorageVersion.VERSION_2.id)
+    val evmLog = getEthereumConsensusDataLog(upgradeEvent)
+    view.addLog(evmLog)
+
     ForgerStakeStorage.saveStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
+
   }
 
 
