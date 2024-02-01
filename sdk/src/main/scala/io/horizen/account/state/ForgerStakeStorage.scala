@@ -1,10 +1,9 @@
 package io.horizen.account.state
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.google.common.primitives.Bytes
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList.{addNewNode, getStakeListItem, linkedListNodeRefIsNull, removeNode}
 import io.horizen.account.state.ForgerStakeStorage.saveStorageVersion
-import io.horizen.account.state.ForgerStakeStorageV1.{LinkedListNullValue, LinkedListTipKey}
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.WithdrawalMsgProcessor.calculateKey
@@ -129,29 +128,18 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     saveStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
   }
 
-  override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    val numOfForgerStakes = forgerStakeArray.getSize(view)
-    val stakeList = (0 until numOfForgerStakes).map(index => {
-      val currentStakeId = forgerStakeArray.getValue(view, index)
-      val stakeData = ForgerStakeDataSerializer.parseBytes(view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, currentStakeId))
-      AccountForgingStakeInfo(
-        currentStakeId,
-        stakeData
-      )
-    })
-    stakeList
-  }
 
-  override def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
-                       blockSignProposition: PublicKey25519Proposition,
-                       vrfPublicKey: VrfPublicKey,
-                       ownerPublicKey: Address,
-                       stakedAmount: BigInteger): Unit = {
+  override def addForgerStake(view: BaseAccountStateView,
+                              stakeId: Array[Byte],
+                              blockSignProposition: PublicKey25519Proposition,
+                              vrfPublicKey: VrfPublicKey,
+                              ownerPublicKey: Address,
+                              stakedAmount: BigInteger): Unit = {
 
     val forgerListIndex: Int = forgerStakeArray.append(view, stakeId)
 
     val ownerAddressProposition = new AddressProposition(ownerPublicKey)
-    val ownerInfo = new OwnerStakeInfo(ownerAddressProposition)
+    val ownerInfo = OwnerStakeInfo(ownerAddressProposition)
     val ownerListIndex: Int = ownerInfo.append(view, stakeId)
 
     ownerInfo.addToTotalStake(view, stakedAmount)
@@ -165,7 +153,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
   }
 
   def getOwnerStake(view: BaseAccountStateView, owner: AddressProposition): BigInteger = {
-    val ownerInfo = new OwnerStakeInfo(owner)
+    val ownerInfo = OwnerStakeInfo(owner)
     ownerInfo.getOwnerStake(view)
   }
 
@@ -192,7 +180,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     val stakeIdToMove = forgerStakeArray.removeAndRearrange(view, stakeListIndex)
     updateStake(view, stakeIdToMove, stake => {stake.stakeListIndex = stakeListIndex; stake})
 
-    val ownerStakeInfo = new OwnerStakeInfo(stakeToRemove.ownerPublicKey)
+    val ownerStakeInfo = OwnerStakeInfo(stakeToRemove.ownerPublicKey)
     val ownerStakeListIndex = stakeToRemove.ownerListIndex
     val stakeIdToMoveFromOwnerList = ownerStakeInfo.removeAndRearrange(view, ownerStakeListIndex)
     updateStake(view, stakeIdToMoveFromOwnerList, stake => {stake.ownerListIndex = ownerStakeListIndex; stake})
@@ -210,12 +198,20 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
       ForgerStakeStorageElemV2Serializer.toBytes(updatedStake))
   }
 
+  override def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
+    getListOfForgersStakesFromList(view, forgerStakeArray)
+  }
+
   def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: AddressProposition): Seq[AccountForgingStakeInfo] = {
-    val ownerStakeIdArray = new OwnerStakeInfo(owner)
-    val numOfForgerStakes = ownerStakeIdArray.getSize(view)
+    val ownerStakeIdArray = OwnerStakeInfo(owner)
+    getListOfForgersStakesFromList(view, ownerStakeIdArray)
+  }
+
+  private def getListOfForgersStakesFromList(view: BaseAccountStateView, stakeArray: StateDbArray): Seq[AccountForgingStakeInfo] = {
+    val numOfForgerStakes = stakeArray.getSize(view)
     val stakeList = (0 until numOfForgerStakes).map(index => {
-      val currentStakeId = ownerStakeIdArray.getValue(view, index)
-      val stakeData = ForgerStakeStorageV1.findStakeData(view, currentStakeId).get
+      val currentStakeId = stakeArray.getValue(view, index)
+      val stakeData = findStakeData(view, currentStakeId).get
       AccountForgingStakeInfo(
         currentStakeId,
         ForgerStakeData(
@@ -225,6 +221,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
       )
     })
     stakeList
+
   }
 
 }
@@ -264,7 +261,7 @@ object ForgerStakeStorageVersion extends Enumeration {
   val VERSION_1, VERSION_2 = Value
 }
 
-class OwnerStakeInfo(owner: AddressProposition)
+case class OwnerStakeInfo(owner: AddressProposition)
   extends StateDbArray(FORGER_STAKE_SMART_CONTRACT_ADDRESS, owner.pubKeyBytes()) {
 
   val OwnerTotalStakeKey: Array[Byte] = calculateKey(Bytes.concat("Stake".getBytes("UTF-8"), keySeed))
@@ -287,57 +284,3 @@ class OwnerStakeInfo(owner: AddressProposition)
 }
 
 
-class StateDbArray(val account: Address, val keySeed: Array[Byte]) {
-  protected val baseArrayKey: Array[Byte] = Blake2b256.hash(keySeed)
-
-  def getSize(view: BaseAccountStateView): Int = {
-    val size = new BigInteger(1, view.getAccountStorage(account, baseArrayKey)).intValueExact()
-    size
-  }
-
-  def append(view: BaseAccountStateView, value: Array[Byte]): Int = {
-    val numOfElem: Int = getSize(view)
-    val key = getElemKey(numOfElem)
-    view.updateAccountStorage(account, key, value)
-    updateSize(view, numOfElem + 1)
-    numOfElem
-  }
-
-  private def updateSize(view: BaseAccountStateView, newSize: Int): Unit = {
-    val paddedSize = BigIntegerUtil.toUint256Bytes(BigInteger.valueOf(newSize))
-    view.updateAccountStorage(account, baseArrayKey, paddedSize)
-  }
-
-  private def removeLast(view: BaseAccountStateView): Array[Byte] = {
-    val size: Int = getSize(view)
-    val lastElemIndex: Int = size - 1
-    val key = getElemKey(lastElemIndex)
-    val value = view.getAccountStorage(account, key)
-    updateSize(view, size - 1)
-    view.removeAccountStorage(account, key)
-    value
-  }
-
-  def removeAndRearrange(view: BaseAccountStateView, index: Int): Array[Byte] = {
-    // Remove last elem from the array and put its value to the position left empty, so there aren't gaps in the array
-    val lastElemValue = removeLast(view)
-    updateValue(view, index, lastElemValue)
-    lastElemValue
-  }
-
-  def updateValue(view: BaseAccountStateView, index: Int, newValue: Array[Byte]): Unit = {
-    val key = getElemKey(index)
-    view.updateAccountStorage(account, key, newValue)
-  }
-
-  def getValue(view: BaseAccountStateView, index: Int): Array[Byte] = {
-    val key = getElemKey(index)
-    val value = view.getAccountStorage(account, key)
-    value
-  }
-
-  private def getElemKey(index: Int): Array[Byte] = {
-    calculateKey(Bytes.concat(baseArrayKey, Ints.toByteArray(index)))
-  }
-
-}

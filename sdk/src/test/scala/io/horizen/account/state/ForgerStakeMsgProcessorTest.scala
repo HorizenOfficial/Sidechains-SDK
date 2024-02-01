@@ -782,6 +782,7 @@ class ForgerStakeMsgProcessorTest
       }
       assertTrue(ex.getMessage.contains("op code not supported"))
 
+      // Same test after Forger Stake Storage activation
       val upgradeMsg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd), randomNonce, ownerAddressProposition.address())
       withGas(TestContext.process(forgerStakeMessageProcessor, upgradeMsg, view, blockContextForkV1_3, _))
@@ -1268,13 +1269,13 @@ class ForgerStakeMsgProcessorTest
 
       // try processing a msg with a trailing byte in the arguments
       val badData = new Array[Byte](1)
-      val msgBad = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(UpgradeCmd) ++ badData, randomNonce)
+      val msgBad = getMessage(contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd) ++ badData, randomNonce)
 
       // should fail because input has a trailing byte
       exc = intercept[ExecutionRevertedException] {
         withGas(TestContext.process(forgerStakeMessageProcessor, msgBad, view, blockContextForkV1_3, _))
       }
-      assertEquals(s"Call value must be zero", exc.getMessage)
+      assertTrue(exc.getMessage.contains("invalid msg data length"))
 
     }
   }

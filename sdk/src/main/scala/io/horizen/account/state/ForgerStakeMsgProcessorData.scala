@@ -261,7 +261,7 @@ object OpenStakeForgerListCmdInputDecoder
 }
 
 
-trait ForgerStakeStorageElem {
+trait ForgerStakeStorageElem{
   val forgerPublicKeys: ForgerPublicKeys
   val ownerPublicKey: AddressProposition
   val stakedAmount: BigInteger
@@ -344,34 +344,6 @@ object ForgerStakeStorageElemV2Serializer extends SparkzSerializer[ForgerStakeSt
     ForgerStakeStorageElemV2(forgerPublicKeys, ownerPublicKey, stakeAmount, stakeListIndex, ownerListIndex)
   }
 }
-
-case class ForgerStakeStorageIndexes(
-                                     var stakeListIndex: Int,
-                                     var ownerListIndex: Int)
-  extends BytesSerializable {
-
-  override type M = ForgerStakeStorageIndexes
-
-  override def serializer: SparkzSerializer[ForgerStakeStorageIndexes] = ForgerStakeStorageIndexesSerializer
-
-  override def toString: String = "%s(stakeListIndex: %s, ownerListIndex: %s)"
-    .format(this.getClass.toString, stakeListIndex, ownerListIndex)
-}
-
-
-object ForgerStakeStorageIndexesSerializer extends SparkzSerializer[ForgerStakeStorageIndexes] {
-  override def serialize(s: ForgerStakeStorageIndexes, w: Writer): Unit = {
-    w.putInt(s.stakeListIndex)
-    w.putInt(s.ownerListIndex)
-  }
-
-  override def parse(r: Reader): ForgerStakeStorageIndexes = {
-    val stakeListIndex = r.getInt()
-    val ownerListIndex = r.getInt()
-    ForgerStakeStorageIndexes(stakeListIndex, ownerListIndex)
-  }
-}
-
 
 case class ForgerStakesFilterByOwner(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
 
