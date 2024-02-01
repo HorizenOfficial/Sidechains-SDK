@@ -154,6 +154,10 @@ abstract class AbstractForgeMessageBuilder[
     val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
+    if ((nextEpochNumber - currentTipBlockEpochAndSlot.epochNumber) > 1) {
+      return Some(SkipSlot(s"Chain tip with epoch ${currentTipBlockEpochAndSlot.epochNumber} is too far in past: next block epoch=${nextBlockEpochAndSlot.epochNumber}/slot=${nextBlockEpochAndSlot.slotNumber} (it is OK if we are syncing the node)"))
+    }
+
     if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
       return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")))
     }
