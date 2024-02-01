@@ -416,7 +416,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
                                 => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
       case UpgradeCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doUpgradeCmd(invocation, gasView)
+                                => doUpgradeCmd(invocation, view)// This doesn't consume gas, so it doesn't use GasTrackedView
       case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
                                 => doStakeOfCmd(invocation, gasView)
       case GetAllForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
@@ -460,8 +460,8 @@ object ForgerStakeMsgProcessor {
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
   val OpenStakeForgerListCmd: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32")
   val OpenStakeForgerListCmdCorrect: String = getABIMethodId("openStakeForgerList(uint32,bytes32,bytes32)")
+  // Methods added after Fork v. 1.3
   val UpgradeCmd: String = getABIMethodId("upgrade()")
-
   val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
   val GetAllForgersStakesOfUserCmd: String = getABIMethodId("getAllForgersStakesOfUser(address)")
 

@@ -260,8 +260,8 @@ object OpenStakeForgerListCmdInputDecoder
   }
 }
 
-trait Prova
-trait ForgerStakeStorageElem extends Prova{
+
+trait ForgerStakeStorageElem {
   val forgerPublicKeys: ForgerPublicKeys
   val ownerPublicKey: AddressProposition
   val stakedAmount: BigInteger

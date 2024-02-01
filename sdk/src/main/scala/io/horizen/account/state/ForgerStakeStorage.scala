@@ -185,29 +185,24 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
     val stakeListIndex = stakeToRemove.stakeListIndex
     val stakeIdToMove = forgerStakeArray.removeAndRearrange(view, stakeListIndex)
-
-    val stakeToMoveData = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeIdToMove)
-    val stakeToMove = ForgerStakeStorageElemV2Serializer.parseBytesTry(stakeToMoveData).get
-    stakeToMove.stakeListIndex = stakeListIndex
-
-    view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeIdToMove,
-      ForgerStakeStorageElemV2Serializer.toBytes(stakeToMove))
+    updateStake(view, stakeIdToMove, stake => {stake.stakeListIndex = stakeListIndex; stake})
 
     val ownerStakeInfo = new OwnerStakeInfo(stakeToRemove.ownerPublicKey)
     val ownerStakeListIndex = stakeToRemove.ownerListIndex
     val stakeIdToMoveFromOwnerList = ownerStakeInfo.removeAndRearrange(view, ownerStakeListIndex)
-
-    val stakeToMoveDataOwner = view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeIdToMoveFromOwnerList)
-    val stakeToMoveOwner = ForgerStakeStorageElemV2Serializer.parseBytesTry(stakeToMoveDataOwner).get
-    stakeToMoveOwner.ownerListIndex = stakeListIndex//TODO this is a bug that I will remove only after creating a test for it
-
-    view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeIdToMoveFromOwnerList,
-      ForgerStakeStorageElemV2Serializer.toBytes(stakeToMoveOwner))
+    updateStake(view, stakeIdToMoveFromOwnerList, stake => {stake.ownerListIndex = ownerStakeListIndex; stake})
 
     ownerStakeInfo.subOwnerStake(view, stake.stakedAmount)
 
     // remove the stake
     view.removeAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
+  }
+
+  private def updateStake(view: BaseAccountStateView, stakeId: Array[Byte], fun: ForgerStakeStorageElemV2 => ForgerStakeStorageElemV2): Unit = {
+    val stake = findForgerStakeStorageElem(view, stakeId).get.asInstanceOf[ForgerStakeStorageElemV2]
+    val updatedStake = fun(stake)
+    view.updateAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId,
+      ForgerStakeStorageElemV2Serializer.toBytes(updatedStake))
   }
 
   def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: AddressProposition): Seq[AccountForgingStakeInfo] = {
