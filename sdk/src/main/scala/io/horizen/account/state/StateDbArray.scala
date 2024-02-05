@@ -29,20 +29,21 @@ class StateDbArray(val account: Address, val keySeed: Array[Byte]) {
     numOfElem
   }
 
-  private def removeLast(view: BaseAccountStateView): Array[Byte] = {
+  private def removeLast(view: BaseAccountStateView): (Array[Byte], Int) = {
     val size: Int = getSize(view)
     val lastElemIndex: Int = size - 1
     val key = getElemKey(lastElemIndex)
     val value = view.getAccountStorage(account, key)
     updateSize(view, size - 1)
     view.removeAccountStorage(account, key)
-    value
+    (value, lastElemIndex)
   }
 
   def removeAndRearrange(view: BaseAccountStateView, index: Int): Array[Byte] = {
     // Remove last elem from the array and put its value to the position left empty, so there aren't gaps in the array
-    val lastElemValue = removeLast(view)
-    updateValue(view, index, lastElemValue)
+    val (lastElemValue, lastElemIndex) = removeLast(view)
+    if (lastElemIndex != index)
+      updateValue(view, index, lastElemValue)
     lastElemValue
   }
 

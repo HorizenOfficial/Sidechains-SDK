@@ -8,6 +8,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import io.horizen.account.state.ForgerStakeMsgProcessor._
 import io.horizen.account.state.ForgerStakeStorage.getStorageVersionFromDb
+import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.{EthereumTransactionDecoder, ZenWeiConverter}
@@ -1508,6 +1509,7 @@ class ForgerStakeMsgProcessorTest
       checkForgerStakeStorageV2Consistency(view, expectedStake3.stakeId)
       checkForgerStakeStorageV2Consistency(view, expectedStake2.stakeId)
       checkForgerStakeStorageV2Consistency(view, expectedStake4.stakeId)
+      assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 3))
 
       expOriginBalance = expOriginBalance.subtract(expectedStake4.forgerStakeData.stakedAmount)
 
@@ -1535,54 +1537,56 @@ class ForgerStakeMsgProcessorTest
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
       checkForgerStakeStorageV2Consistency(view, expectedStake3.stakeId)
       checkForgerStakeStorageV2Consistency(view, expectedStake4.stakeId)
+      assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 2))
 
-      // remove stake id 3
+      // remove stake id 4
       val nonce5 = randomNonce
 
-      val msgToSign_3 = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(expectedStake3.stakeId, origin, nonce5.toByteArray)
-      val msgSignature_3 = privateKey2.sign(msgToSign_3)
+      val msgToSign_3 = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(expectedStake4.stakeId, origin, nonce5.toByteArray)
+      val msgSignature_3 = privateKey.sign(msgToSign_3)
 
       // create command arguments
-      val removeCmdInput_3 = RemoveStakeCmdInput(expectedStake3.stakeId, msgSignature_3)
+      val removeCmdInput_3 = RemoveStakeCmdInput(expectedStake4.stakeId, msgSignature_3)
 
       val msg7 = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ removeCmdInput_3.encode(), nonce5)
       val txHash7 = Keccak256.hash("seventh tx")
       view.setupTxContext(txHash7, 10)
 
       // try processing the removal of stake, should succeed
-      val returnData7 = assertGas(58081, msg7, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData7 = assertGas(26081, msg7, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData7)
-      assertArrayEquals(expectedStake3.stakeId, returnData7)
+      assertArrayEquals(expectedStake4.stakeId, returnData7)
 
       assertEquals(validWeiAmount, view.getBalance(contractAddress))
       assertEquals(expOriginBalance, view.getBalance(origin))
-      assertEquals(validWeiAmount, view.getBalance(ownerAddressProposition2.address()))
-      assertEquals(validWeiAmount.multiply(BigInteger.TWO), view.getBalance(ownerAddressProposition.address()))
+      assertEquals(BigInteger.ZERO, view.getBalance(ownerAddressProposition2.address()))
+      assertEquals(validWeiAmount.multiply(BigInteger.valueOf(3)), view.getBalance(ownerAddressProposition.address()))
 
       getAllStakesReturnData = assertGas(14700, getAllStakesMsg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
 
       listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
-      listOfExpectedForgerStakes.add(expectedStake4)
+      listOfExpectedForgerStakes.add(expectedStake3)
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
-      checkForgerStakeStorageV2Consistency(view, expectedStake4.stakeId)
+      checkForgerStakeStorageV2Consistency(view, expectedStake3.stakeId)
+      assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 1))
 
       // remove last stake id
       val nonce6 = randomNonce
 
-      val msgToSign_4 = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(expectedStake4.stakeId, origin, nonce6.toByteArray)
-      val msgSignature_4 = privateKey.sign(msgToSign_4)
+      val msgToSign_4 = ForgerStakeMsgProcessor.getRemoveStakeCmdMessageToSign(expectedStake3.stakeId, origin, nonce6.toByteArray)
+      val msgSignature_4 = privateKey2.sign(msgToSign_4)
 
       // create command arguments
-      val removeCmdInput_4 = RemoveStakeCmdInput(expectedStake4.stakeId, msgSignature_4)
+      val removeCmdInput_4 = RemoveStakeCmdInput(expectedStake3.stakeId, msgSignature_4)
 
       val msg8 = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ removeCmdInput_4.encode(), nonce6)
       val txHash8 = Keccak256.hash("eighth tx")
       view.setupTxContext(txHash8, 10)
 
       // try processing the removal of stake, should succeed
-      val returnData8 = assertGas(67881, msg8, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData8 = assertGas(26081, msg8, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData8)
-      assertArrayEquals(expectedStake4.stakeId, returnData8)
+      assertArrayEquals(expectedStake3.stakeId, returnData8)
 
       assertEquals(BigInteger.ZERO, view.getBalance(contractAddress))
       assertEquals(expOriginBalance, view.getBalance(origin))
@@ -1594,6 +1598,9 @@ class ForgerStakeMsgProcessorTest
       listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
       checkListOfStakesV2(view, getAllStakesReturnData, listOfExpectedForgerStakes)
 
+      // Check that the forgerStakeArray is really empty
+      assertEquals(0,  ForgerStakeStorageV2.forgerStakeArray.getSize(view))
+      assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 0))
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
@@ -1612,9 +1619,17 @@ class ForgerStakeMsgProcessorTest
   private def checkForgerStakeStorageV2Consistency(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val stakeData = ForgerStakeStorageV2.findForgerStakeStorageElem(view, stakeId).get.asInstanceOf[ForgerStakeStorageElemV2]
     assertArrayEquals("Stake array is invalid", stakeId, ForgerStakeStorageV2.forgerStakeArray.getValue(view, stakeData.stakeListIndex))
-    val ownerInfo = new OwnerStakeInfo(stakeData.ownerPublicKey)
+    val ownerInfo = OwnerStakeInfo(stakeData.ownerPublicKey)
     assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
   }
+
+//  private def checkForgerStakeStorageV2IsEmpty(view: BaseAccountStateView): Unit = {
+//    assertEquals(0,  ForgerStakeStorageV2.forgerStakeArray.getSize(view))
+//    assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 0))
+//
+//    val ownerInfo = OwnerStakeInfo(stakeData.ownerPublicKey)
+//    assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
+//  }
 
 
   @Test

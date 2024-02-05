@@ -6,6 +6,7 @@ import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
 import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import io.horizen.json.Views
@@ -386,5 +387,5 @@ case class StakeAmount(totalStake: BigInteger) extends ABIEncodable[StaticStruct
     )
     new StaticStruct(listOfParams)
   }
-
 }
+

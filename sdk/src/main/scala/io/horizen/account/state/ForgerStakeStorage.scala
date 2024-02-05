@@ -178,12 +178,14 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
     val stakeListIndex = stakeToRemove.stakeListIndex
     val stakeIdToMove = forgerStakeArray.removeAndRearrange(view, stakeListIndex)
-    updateStake(view, stakeIdToMove, stake => {stake.stakeListIndex = stakeListIndex; stake})
+    if (!stakeIdToMove.sameElements(stakeId))
+      updateStake(view, stakeIdToMove, stake => {stake.stakeListIndex = stakeListIndex; stake})
 
     val ownerStakeInfo = OwnerStakeInfo(stakeToRemove.ownerPublicKey)
     val ownerStakeListIndex = stakeToRemove.ownerListIndex
     val stakeIdToMoveFromOwnerList = ownerStakeInfo.removeAndRearrange(view, ownerStakeListIndex)
-    updateStake(view, stakeIdToMoveFromOwnerList, stake => {stake.ownerListIndex = ownerStakeListIndex; stake})
+    if (!stakeIdToMoveFromOwnerList.sameElements(stakeId))
+      updateStake(view, stakeIdToMoveFromOwnerList, stake => {stake.ownerListIndex = ownerStakeListIndex; stake})
 
     ownerStakeInfo.subOwnerStake(view, stake.stakedAmount)
 
