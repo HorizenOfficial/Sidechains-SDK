@@ -42,7 +42,8 @@ class StateDbArray(val account: Address, val keySeed: Array[Byte]) {
   def removeAndRearrange(view: BaseAccountStateView, index: Int): Array[Byte] = {
     // Remove last elem from the array and put its value to the position left empty, so there aren't gaps in the array
     val (lastElemValue, lastElemIndex) = removeLast(view)
-    if (lastElemIndex != index)
+    require(index <= lastElemIndex, "Index out of range")
+    if (index != lastElemIndex)
       updateValue(view, index, lastElemValue)
     lastElemValue
   }

@@ -26,4 +26,7 @@ interface ForgerStakes {
     function stakeOf(address owner) external view returns (uint256);
     
     function getAllForgersStakesOfUser(address owner) external view returns (StakeInfo[] memory);
+
+    function upgrade() external view returns (uint32);
+
 }
