@@ -63,6 +63,9 @@ class StateDbAccountStateView(
   override def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] =
     forgerStakesProvider.getListOfForgersStakes(this, isForkV1_3Active)
 
+  override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int,isForkV1_3Active: Boolean): (Int, Seq[AccountForgingStakeInfo]) =
+    forgerStakesProvider.getPagedListOfForgersStakes(this, startPos, pageSize, isForkV1_3Active)
+
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)
 

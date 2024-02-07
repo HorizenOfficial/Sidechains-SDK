@@ -13,13 +13,14 @@ import io.horizen.utils.{BytesUtils, Ed25519}
 import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Int32, Uint256, Uint32}
+import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
+import scala.collection.JavaConverters
 
 @JsonView(Array(classOf[Views.Default]))
 // used as element of the list to return when getting all forger stakes via msg processor
@@ -191,6 +192,17 @@ case class RemoveStakeCmdInput(
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), signature)
 }
 
+
+case class GetPagedListOfStakesCmdInput(startPos: Int, size: Int) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Uint32(startPos), new Uint32(size))
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(startPos: %s, size: %s)".format(this.getClass.toString, startPos, size)
+}
+
 object RemoveStakeCmdInputDecoder
   extends ABIDecoder[RemoveStakeCmdInput]
     with MsgProcessorInputDecoder [RemoveStakeCmdInput] {
@@ -214,6 +226,23 @@ object RemoveStakeCmdInputDecoder
   }
 }
 
+
+object GetPagedListOfStakesCmdInputDecoder
+  extends ABIDecoder[GetPagedListOfStakesCmdInput]
+    with MsgProcessorInputDecoder [GetPagedListOfStakesCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Uint32]() {},
+      new TypeReference[Uint32]() {}))
+
+  override def createType(listOfParams: util.List[Type[_]]): GetPagedListOfStakesCmdInput = {
+    val startPos = listOfParams.get(0).asInstanceOf[Uint32].getValue.intValueExact()
+    val size = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValueExact()
+
+    GetPagedListOfStakesCmdInput(startPos, size)
+  }
+}
 
 case class OpenStakeForgerListCmdInput(
                                         forgerIndex: Int, signature: Signature25519) extends ABIEncodable[StaticStruct] {
@@ -415,4 +444,26 @@ case class StakeAmount(totalStake: BigInteger) extends ABIEncodable[StaticStruct
     new StaticStruct(listOfParams)
   }
 
+}
+
+case class PagedListOfStakesOutput(nextStartPos: Int, listOfStakes: Seq[AccountForgingStakeInfo])
+  extends ABIEncodable[DynamicStruct] {
+
+  override def asABIType(): DynamicStruct = {
+
+    val seqOfStruct = listOfStakes.map(_.asABIType())
+    val listOfStruct = JavaConverters.seqAsJavaList(seqOfStruct)
+    val theType = classOf[StaticStruct]
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new Int32(nextStartPos),
+      new DynamicArray(theType, listOfStruct)
+    )
+    new DynamicStruct(listOfParams)
+
+  }
+
+  override def toString: String = "%s(startPos: %s, listOfStake: %s)"
+    .format(
+      this.getClass.toString,
+      nextStartPos, listOfStakes)
 }

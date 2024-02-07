@@ -4,7 +4,6 @@ import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList.{addNewNode, getStakeListItem, linkedListNodeRefIsNull, removeNode}
 import io.horizen.account.state.ForgerStakeStorage.saveStorageVersion
-import io.horizen.account.state.ForgerStakeStorageV1.{LinkedListNullValue, LinkedListTipKey}
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.WithdrawalMsgProcessor.calculateKey
@@ -45,6 +44,7 @@ trait ForgerStakeStorage {
   }
 
   def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
+  def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
 
   def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
                      blockSignProposition: PublicKey25519Proposition,
@@ -119,6 +119,8 @@ object ForgerStakeStorageV1 extends ForgerStakeStorage {
     view.removeAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
   }
 
+  override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =
+    throw new IllegalArgumentException(s"Method not supported before fork point 1_3")
 }
 
 object ForgerStakeStorageV2 extends ForgerStakeStorage {
@@ -140,6 +142,38 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
       )
     })
     stakeList
+  }
+
+
+  override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = {
+
+    val stakeListSize = forgerStakeArray.getSize(view)
+    if (startPos < 0)
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos, can not be negative")
+    if (startPos > stakeListSize-1)
+      throw new IllegalArgumentException(s"Invalid position where to start reading forger stakes: $startPos, stakes array size: $stakeListSize")
+    if (pageSize < 0)
+      throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
+
+    var endPos = startPos + pageSize
+    if (endPos > stakeListSize)
+      endPos = stakeListSize
+
+    val stakeList = (startPos until endPos).map(index => {
+      val currentStakeId = forgerStakeArray.getValue(view, index)
+      val stakeData = ForgerStakeDataSerializer.parseBytes(view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, currentStakeId))
+      AccountForgingStakeInfo(
+        currentStakeId,
+        stakeData
+      )
+    })
+
+    if (endPos == stakeListSize) {
+      // tell the caller we are done with the array
+      endPos = -1
+    }
+
+    (endPos, stakeList)
   }
 
   override def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
