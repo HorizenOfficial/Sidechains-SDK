@@ -10,6 +10,7 @@ import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
 import io.horizen.account.api.rpc.utils._
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.forger.AccountForgeMessageBuilder
 import io.horizen.account.fork.Version1_2_0Fork
@@ -49,6 +50,7 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.util.Collections
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
@@ -1004,10 +1006,11 @@ class EthService(
   @RpcMethod("zen_getFeePayments")
   def getFeePayments(blockHashOrNumber: String): FeePaymentsView = {
     applyOnAccountView { nodeView =>
-      nodeView.history
+      val feePaymentsInfo = nodeView.history
         .feePaymentsInfo(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
-        .map(new FeePaymentsView(_))
-        .orNull
+        .getOrElse(AccountFeePaymentsInfo(Seq.empty))
+
+      new FeePaymentsView(feePaymentsInfo)
     }
   }
 
