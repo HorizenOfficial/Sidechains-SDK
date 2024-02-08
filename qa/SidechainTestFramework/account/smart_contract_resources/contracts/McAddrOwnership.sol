@@ -11,6 +11,14 @@ interface McAddrOwnership {
         bytes32 mcAddrBytes2;
     }
 
+
+    // Event declaration
+    // Up to 3 parameters can be indexed.
+    // Indexed parameters helps you filter the logs by the indexed parameter
+
+    event AddMcAddrOwnership(address indexed scAddress, bytes3 mcAddress_3, bytes32 mcAddress_32);
+    event RemoveMcAddrOwnership(address indexed scAddress, bytes3 mcAddress_3, bytes32 mcAddress_32);
+    
     function getAllKeyOwnerships() external view returns (McAddrOwnershipData[] memory);
 
     function getKeyOwnerships(address scAddress) external view returns (McAddrOwnershipData[] memory);
