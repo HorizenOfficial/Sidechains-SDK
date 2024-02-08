@@ -15,6 +15,14 @@ interface ForgerStakes {
         bytes1 vrf2;
     }
 
+    // Event declaration
+    // Up to 3 parameters can be indexed.
+    // Indexed parameters helps you filter the logs by the indexed parameter
+    event DelegateForgerStake(address indexed sender, address indexed owner, bytes32 stakeId, uint256 value);
+    event WithdrawForgerStake(address indexed owner, bytes32 stakeId);
+    event StakeUpgrade(uint32 oldVersion, uint32 newVersion);
+    event OpenForgerList(uint32 indexed forgerIndex, address sender, bytes32 blockSignProposition);
+
     function getAllForgersStakes() external view returns (StakeInfo[] memory);
 
     function delegate(bytes32 publicKey, bytes32 vrf1, bytes1 vrf2, address owner) external payable returns (StakeID);
@@ -26,6 +34,8 @@ interface ForgerStakes {
     function stakeOf(address owner) external view returns (uint256);
 
     function getAllForgersStakesOfUser(address owner) external view returns (StakeInfo[] memory);
+
+    function getPagedForgersStakesByUser(address owner, uint32 startIndex, uint32 pageSize) external view returns (uint32, StakeInfo[] memory);
 
     function upgrade() external view returns (uint32);
 

@@ -11,6 +11,12 @@ interface WithdrawalRequests {
         uint256 value;
     }
 
+    // Event declaration
+    // Up to 3 parameters can be indexed.
+    // Indexed parameters helps you filter the logs by the indexed parameter
+    event AddWithdrawalRequest(address indexed sender, bytes20 indexed mcDest, uint256 value, uint32 epochNumber);
+
+
     function getBackwardTransfers(uint32 withdrawalEpoch) external view returns (WithdrawalRequest[] memory);
 
     function backwardTransfer(MCAddress mcAddress) external payable returns (WithdrawalRequest memory);
