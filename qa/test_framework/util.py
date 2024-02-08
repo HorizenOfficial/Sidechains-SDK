@@ -378,7 +378,7 @@ def gather_inputs(from_node, amount_needed, confirmations_required=1):
     inputs = []
     total_in = Decimal("0.00000000")
     while total_in < amount_needed and len(utxo) > 0:
-        t = pop()
+        t = utxo.pop()
         total_in += t["amount"]
         inputs.append({"txid": t["txid"], "vout": t["vout"], "address": t["address"]})
     if total_in < amount_needed:

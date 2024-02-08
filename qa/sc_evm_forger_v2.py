@@ -31,10 +31,10 @@ Configuration:
 
 Test:
     - Create some stakes with different owners for node 1 forger before changing storage model 
-    - Check that upgrade, stakeOf and getAllStakesOfUser cannot be called before fork 1.3
-    - Reach fork point 1.3. Check that stakeOf and getAllStakesOfUser cannot be called before calling upgrade
+    - Check that upgrade, stakeOf and getPagedForgersStakesByUser cannot be called before fork 1.3
+    - Reach fork point 1.3. Check that stakeOf and getPagedStakesOfUser cannot be called before calling upgrade
     - Execute upgrade and verify that the stakes are the same as before
-    - test getAllStakesOfUser
+    - test getPagedStakesOfUser
     - test stakeOf
     - Execute some basic tests just to be sure everything works as before:
         - try spending a stake which does not own (exception expected)
@@ -44,7 +44,7 @@ Test:
     - Check that SC2 can not forge before two epochs are passed by, and afterwards it can
     - SC1 spends all its stake
     - SC1 can still forge blocks but after two epochs it can not anymore
-    - Test the getAllStakesOfUser and stakeOf can be called by an EVM Smart contract
+    - Test the getPagedStakesOfUser and stakeOf can be called by an EVM Smart contract
     - removes all remaining stakes
     - Verify that it is not possible to forge new SC blocks from the next epoch switch on
     
@@ -76,6 +76,14 @@ def check_upgrade_event(event, old, new):
     assert_equal(old, old_version, "Wrong old version in event")
     assert_equal(new, new_version, "Wrong new version in event")
 
+
+def decode_paged_list_of_forger_stakes(result, exp_num_of_stakes):
+    next_pos = decode(['int32'], result[0:32])[0]
+    # next_pos = int(bytes_to_hex_str(result[0:32]), 16)
+    res = result[32:]
+    list_of_stakes = decode_list_of_forger_stakes(res, exp_num_of_stakes)
+
+    return next_pos, list_of_stakes
 
 
 class SCEvmForgerV2(AccountChainSetup):
@@ -123,9 +131,9 @@ class SCEvmForgerV2(AccountChainSetup):
         print_current_epoch_and_slot(sc_node_1)
 
         # Get node 1 forger keys
-
         forger_stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        block_sign_pub_key_1 = forger_stake_list[0]['forgerStakeData']["forgerPublicKeys"]["blockSignPublicKey"]["publicKey"]
+        block_sign_pub_key_1 = forger_stake_list[0]['forgerStakeData']["forgerPublicKeys"]["blockSignPublicKey"][
+            "publicKey"]
         vrf_pub_key_1 = forger_stake_list[0]['forgerStakeData']["forgerPublicKeys"]["vrfPublicKey"]["publicKey"]
 
         # Create forger keys on node 2
@@ -137,7 +145,7 @@ class SCEvmForgerV2(AccountChainSetup):
         evm_address_4 = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         evm_address_5 = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
 
-        """Create some stakes:
+        """Create some stakes for node 1 forger:
             - 1 with evm_address_sc_node_1 as owner
             - 3 with evm_address_sc_node_2 as owner
             - 2 with evm_address_3 as owner
@@ -190,14 +198,14 @@ class SCEvmForgerV2(AccountChainSetup):
                 genesis_stake = stake
 
         if self.options.all_forks is False:
-            # Check that upgrade, stakeOf and getAllStakesOfUser cannot be called before fork 1.3
+            # Check that upgrade, stakeOf and getPagedStakesOfUser cannot be called before fork 1.3
 
             native_contract = SmartContract("ForgerStakes")
-            method = 'getAllForgersStakesOfUser(address)'
+            method = 'getPagedForgersStakesByUser(address,uint32,uint32)'
             try:
                 contract_function_static_call(sc_node_1, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                                              evm_address_sc_node_1, method, evm_address_sc_node_1)
-                fail("getAllForgersStakesOfUser call should fail before fork point")
+                                              evm_address_sc_node_1, method, evm_address_sc_node_1, 0, 1)
+                fail("getPagedStakesOfUser call should fail before fork point")
             except RuntimeError as err:
                 print("Expected exception thrown: {}".format(err))
                 assert_true("op code not supported" in str(err))
@@ -226,13 +234,13 @@ class SCEvmForgerV2(AccountChainSetup):
                 generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
                 self.sc_sync_all()
 
-        # Check that stakeOf and getAllStakesOfUser cannot be called before calling upgrade
+        # Check that stakeOf and getPagedForgersStakesByUser cannot be called before calling upgrade
         native_contract = SmartContract("ForgerStakes")
-        method = 'getAllForgersStakesOfUser(address)'
+        method = 'getPagedForgersStakesByUser(address,uint32,uint32)'
         try:
             contract_function_static_call(sc_node_1, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                                          evm_address_sc_node_1, method, evm_address_sc_node_1)
-            fail("getAllForgersStakesOfUser call should fail before fork point")
+                                          evm_address_sc_node_1, method, evm_address_sc_node_1, 0, 1)
+            fail("getPagedForgersStakesByUser call should fail before fork point")
         except RuntimeError as err:
             print("Expected exception thrown: {}".format(err))
             assert_true("Forger stake storage not upgraded yet" in str(err))
@@ -255,7 +263,7 @@ class SCEvmForgerV2(AccountChainSetup):
 
         assert_equal(1, res[0], "Storage version should have been version 2")  # Version 2 has value 1
 
-        # Try estimate gas, it should only charge the intrinsic gas
+        # Try estimate_gas, it should only charge the intrinsic gas
         native_input = native_contract.raw_encode_call(method)
         result = estimate_gas(sc_node_1,  '0x' + evm_address_sc_node_1, '0x' + FORGER_STAKE_SMART_CONTRACT_ADDRESS, data=native_input)
 
@@ -280,37 +288,53 @@ class SCEvmForgerV2(AccountChainSetup):
         new_stake_list.reverse()
         assert_equal(orig_stake_list, new_stake_list)
 
-        # Try getAllForgersStakesOfUser for all users
-        method = 'getAllForgersStakesOfUser(address)'
-        native_input = native_contract.raw_encode_call(method, evm_address_sc_node_1)
+        # Try getPagedForgersStakesByUser for all users
+        method = 'getPagedForgersStakesByUser(address,uint32,uint32)'
+        native_input = native_contract.raw_encode_call(method, evm_address_sc_node_1, 0, 1)
 
         result = estimate_gas(sc_node_1,  '0x' + evm_address_sc_node_1, '0x' + FORGER_STAKE_SMART_CONTRACT_ADDRESS, data=native_input)
-        assert_equal(36108, int(result["result"], 16))
+        assert_equal(36376, int(result["result"], 16))
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_1))
+        start_pos = 0
+        page_size = 2
+        # evm_address_sc_node_1 owns just 1 stake
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, len(exp_stake_own_1))
         exp_stake_own_1.reverse()
         check_list_of_stakes(exp_stake_own_1, list_of_stakes)
+        assert_equal(-1, next_pos)
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_sc_node_2, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_2))
+        # evm_address_sc_node_2 owns 3 stakes
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_2, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, page_size)
         exp_stake_own_2.reverse()
-        check_list_of_stakes(exp_stake_own_2, list_of_stakes)
+        check_list_of_stakes(exp_stake_own_2[:page_size], list_of_stakes)
+        assert_equal(page_size, next_pos)
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_2, next_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 1)
+        check_list_of_stakes(exp_stake_own_2[page_size:], list_of_stakes)
+        assert_equal(-1, next_pos)
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_3, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_3))
+        # evm_address_3 owns 2 stakes
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_3, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, len(exp_stake_own_3))
         exp_stake_own_3.reverse()
         check_list_of_stakes(exp_stake_own_3, list_of_stakes)
+        assert_equal(-1, next_pos)
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_4, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_4))
+        # evm_address_4 owns 1 stake
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_4, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, len(exp_stake_own_4))
         exp_stake_own_4.reverse()
         check_list_of_stakes(exp_stake_own_4, list_of_stakes)
+        assert_equal(-1, next_pos)
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_5, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_5))
+        # evm_address_5 owns 1 stake
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_5, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, len(exp_stake_own_5))
         exp_stake_own_5.reverse()
         check_list_of_stakes(exp_stake_own_5, list_of_stakes)
+        assert_equal(-1, next_pos)
 
         # Try stakeOf
 
@@ -507,7 +531,7 @@ class SCEvmForgerV2(AccountChainSetup):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        # Generate SC block on SC node forcing epoch change
+        # Generate SC block on SC node 1 forcing epoch change
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
@@ -527,16 +551,20 @@ class SCEvmForgerV2(AccountChainSetup):
             http_wallet_balance(sc_node_1, FORGER_STAKE_SMART_CONTRACT_ADDRESS))
         total_stake = convertZenToWei(forger_stake1_amount) + convertZenToWei(forger_stake2_amount) + orig_stake_amount
 
-        # try getallstakesofuser again
-
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
-        list_of_stakes = decode_list_of_forger_stakes(res, len(exp_stake_own_1) + 2)
-
+        # try getPagedForgersStakesByUser(address,uint32,uint32) again. evm_address_sc_node_1 now owns 3 stakes
         exp_stake_own_1 = []
         for stake in latest_stake_list:
             if stake['forgerStakeData']['ownerPublicKey']['address'] == evm_address_sc_node_1:
                 exp_stake_own_1.append(stake)
-        check_list_of_stakes(exp_stake_own_1, list_of_stakes)
+
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, page_size)
+        check_list_of_stakes(exp_stake_own_1[:page_size], list_of_stakes)
+        assert_equal(page_size, next_pos)
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, next_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 1)
+        check_list_of_stakes(exp_stake_own_1[page_size:], list_of_stakes)
+        assert_equal(-1, next_pos)
 
         # try stakeOf again
         amount = self.call_stake_of(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
@@ -571,7 +599,6 @@ class SCEvmForgerV2(AccountChainSetup):
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
-        initial_balance_1 = account_1_balance
 
         # Check the new stake list. The latest stake in the old list is moved in the old position of the genesis stake
         current_stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
@@ -581,9 +608,14 @@ class SCEvmForgerV2(AccountChainSetup):
         assert_equal(latest_stake_list[len(latest_stake_list) - 2], current_stake_list[9])
         latest_stake_list = current_stake_list
 
-        res = self.call_list_of_stakes_of_user(native_contract, genesis_stake['forgerStakeData']['ownerPublicKey']['address'], evm_address_sc_node_1)
-        decode_list_of_forger_stakes(res, 0)
-        amount = self.call_stake_of(native_contract, genesis_stake['forgerStakeData']['ownerPublicKey']['address'], evm_address_sc_node_1)
+        res = self.call_paged_list_of_stakes_of_user(native_contract, genesis_stake['forgerStakeData']['ownerPublicKey']['address'],
+                                                     start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 0)
+        assert_equal(0, len(list_of_stakes))
+        assert_equal(-1, next_pos)
+
+        amount = self.call_stake_of(native_contract, genesis_stake['forgerStakeData']['ownerPublicKey']['address'],
+                                    evm_address_sc_node_1)
         assert_equal(0, amount)
 
         # Remove all forger 1 stakes and check that node 1 cannot forge anymore
@@ -611,7 +643,7 @@ class SCEvmForgerV2(AccountChainSetup):
         assert_equal(2, len(current_stake_list))
         latest_stake_list = current_stake_list
 
-       # Generate 2 SC block on SC node 2 for switching 2 epochs
+        # Generate 2 SC block on SC node 2 for switching 2 epochs
 
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
@@ -626,20 +658,20 @@ class SCEvmForgerV2(AccountChainSetup):
         else:
             fail("No forging stakes expected for SC node 1.")
 
-
         #######################################################################################################
         # Interoperability test with an EVM smart contract calling forger stakes native contract
         #######################################################################################################
 
-        method = 'getAllForgersStakesOfUser(address)'
+        method = 'getPagedForgersStakesByUser(address,uint32,uint32)'
 
-        native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))
+        native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1, start_pos, page_size))
 
         res = proxy_contract.do_static_call(evm_address_sc_node_1, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
 
-        list_of_stakes = decode_list_of_forger_stakes(res, 2)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 2)
         assert_equal(evm_address_sc_node_1, list_of_stakes[0][0][2][2:], "wrong ownerPublicKey")
         assert_equal(evm_address_sc_node_1, list_of_stakes[1][0][2][2:], "wrong ownerPublicKey")
+        assert_equal(-1, next_pos)
 
         method = 'stakeOf(address)'
         native_input = format_eoa(native_contract.raw_encode_call(method, evm_address_sc_node_1))
@@ -677,8 +709,11 @@ class SCEvmForgerV2(AccountChainSetup):
         stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(1, len(stake_list))
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
-        decode_list_of_forger_stakes(res, 1)
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, start_pos, page_size, evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 1)
+        assert_equal(1, len(list_of_stakes))
+        assert_equal(-1, next_pos)
+
         amount = self.call_stake_of(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
         assert_equal(convertZenToWei(forger_stake2_amount), amount)
 
@@ -689,7 +724,6 @@ class SCEvmForgerV2(AccountChainSetup):
         else:
             logging.info("Forger stake removed: " + json.dumps(spend_forger_stake_json_res))
         self.sc_sync_all()
-        tx_hash = spend_forger_stake_json_res['result']['transactionId']
 
         # Generate SC block on SC node
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
@@ -700,11 +734,14 @@ class SCEvmForgerV2(AccountChainSetup):
         stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stake_list), 0)
 
-        res = self.call_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
-        decode_list_of_forger_stakes(res, 0)
+        res = self.call_paged_list_of_stakes_of_user(native_contract, evm_address_sc_node_1, start_pos, page_size,
+                                                     evm_address_sc_node_1)
+        next_pos, list_of_stakes = decode_paged_list_of_forger_stakes(res, 0)
+        assert_equal(0, len(list_of_stakes))
+        assert_equal(-1, next_pos)
+
         amount = self.call_stake_of(native_contract, evm_address_sc_node_1, evm_address_sc_node_1)
         assert_equal(0, amount)
-
 
     def call_stake_of(self, native_contract, owner, sender):
         method = 'stakeOf(address)'
@@ -722,9 +759,9 @@ class SCEvmForgerV2(AccountChainSetup):
         res = result['result'][2:]
         return int(res, 16)
 
-    def call_list_of_stakes_of_user(self, native_contract, owner, sender):
-        method = 'getAllForgersStakesOfUser(address)'
-        native_input = native_contract.raw_encode_call(method, owner)
+    def call_paged_list_of_stakes_of_user(self, native_contract, owner, start_pos, page_size, sender):
+        method = 'getPagedForgersStakesByUser(address,uint32,uint32)'
+        native_input = native_contract.raw_encode_call(method, owner, start_pos, page_size)
         sc_node_1 = self.sc_nodes[0]
 
         result = sc_node_1.rpc_eth_call(
@@ -738,9 +775,6 @@ class SCEvmForgerV2(AccountChainSetup):
         res = hex_str_to_bytes(result['result'][2:])
 
         return res
-
-
-
 
 
 if __name__ == "__main__":

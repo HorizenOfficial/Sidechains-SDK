@@ -204,9 +204,46 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     getListOfForgersStakesFromList(view, forgerStakeArray)
   }
 
-  def getListOfForgersStakesOfUser(view: BaseAccountStateView, owner: AddressProposition): Seq[AccountForgingStakeInfo] = {
+  def getPagedListOfForgersStakesOfUser(view: BaseAccountStateView, owner: AddressProposition, startPos: Int, size: Int): (Int, Seq[AccountForgingStakeInfo]) = {
     val ownerStakeIdArray = OwnerStakeInfo(owner)
-    getListOfForgersStakesFromList(view, ownerStakeIdArray)
+    getPagedListOfForgersStakesFromList(view, ownerStakeIdArray, startPos, size)
+  }
+
+
+  def getPagedListOfForgersStakesFromList(view: BaseAccountStateView, stakeArray: StateDbArray, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = {
+
+    val stakeListSize = stakeArray.getSize(view)
+    if (startPos < 0)
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos, can not be negative")
+    if (pageSize < 0) {
+      throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
+    }
+
+    if (startPos == 0 && stakeListSize == 0)
+      return (-1, Seq.empty[AccountForgingStakeInfo])
+
+    if (startPos > stakeListSize-1)
+      throw new IllegalArgumentException(s"Invalid position where to start reading forger stakes: $startPos, stakes array size: $stakeListSize")
+
+    var endPos = startPos + pageSize
+    if (endPos > stakeListSize)
+      endPos = stakeListSize
+
+    val stakeList = (startPos until endPos).map(index => {
+      val currentStakeId = stakeArray.getValue(view, index)
+      val stakeData = ForgerStakeDataSerializer.parseBytes(view.getAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, currentStakeId))
+      AccountForgingStakeInfo(
+        currentStakeId,
+        stakeData
+      )
+    })
+
+    if (endPos == stakeListSize) {
+      // tell the caller we are done with the array
+      endPos = -1
+    }
+
+    (endPos, stakeList)
   }
 
   private def getListOfForgersStakesFromList(view: BaseAccountStateView, stakeArray: StateDbArray): Seq[AccountForgingStakeInfo] = {
