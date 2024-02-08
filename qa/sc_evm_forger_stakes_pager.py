@@ -5,12 +5,12 @@ from binascii import hexlify
 from decimal import Decimal
 
 from eth_abi import decode
-from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0x_prefix, to_checksum_address
+from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, contract_function_call, format_evm
-from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, VERSION_1_3_FORK_EPOCH, \
+from SidechainTestFramework.account.utils import convertZenToZennies, VERSION_1_3_FORK_EPOCH, \
     FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_block
 from test_framework.util import (
@@ -281,47 +281,43 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         assert_equal(http_api_all_res['stakes'], list_all_http_api)
 
         # Negative Test 4 - use bad start_pos value
-        next_pos = 2*NUM_OF_STAKES
+        start_pos = 2*NUM_OF_STAKES
         PAGE_SIZE = 10
-        while next_pos != -1:
-            start_pos = next_pos
-            try:
-                next_pos, _ = get_paged_forging_stakes_via_eth_call(sc_node_2, evm_address_sc_node_2,
-                                                                    start_pos, PAGE_SIZE)
-            except Exception as e:
-                logging.info("We had an exception as expected: {}".format(str(e)))
-            else:
-                fail("No forging stakes expected for SC node 2.")
+        try:
+            get_paged_forging_stakes_via_eth_call(sc_node_2, evm_address_sc_node_2,
+                                                                start_pos, PAGE_SIZE)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        else:
+            fail("No forging stakes expected for SC node 2.")
 
-            try:
-                sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
-                    "result"]
-            except Exception as e:
-                logging.info("We had an exception as expected: {}".format(str(e)))
-            else:
-                fail("No forging stakes expected for SC node 2.")
+        try:
+            sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
+                "result"]
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        else:
+            fail("No forging stakes expected for SC node 2.")
 
 
         # Negative Test 5 - use bad size value
-        next_pos = 0
+        start_pos = 0
         PAGE_SIZE = -2
-        while next_pos != -1:
-            start_pos = next_pos
-            try:
-                next_pos, _ = get_paged_forging_stakes_via_eth_call(sc_node_2, evm_address_sc_node_2,
-                                                                    start_pos, PAGE_SIZE)
-            except Exception as e:
-                logging.info("We had an exception as expected: {}".format(str(e)))
-            else:
-                fail("No forging stakes expected for SC node 2.")
+        try:
+            get_paged_forging_stakes_via_eth_call(sc_node_2, evm_address_sc_node_2,
+                                                                start_pos, PAGE_SIZE)
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        else:
+            fail("No forging stakes expected for SC node 2.")
 
-            try:
-                sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
-                    "result"]
-            except Exception as e:
-                logging.info("We had an exception as expected: {}".format(str(e)))
-            else:
-                fail("No forging stakes expected for SC node 2.")
+        try:
+            sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
+                "result"]
+        except Exception as e:
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        else:
+            fail("No forging stakes expected for SC node 2.")
 
 
 if __name__ == "__main__":
