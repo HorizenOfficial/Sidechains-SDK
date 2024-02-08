@@ -27,7 +27,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
-  private[horizen] def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int, isForkV1_3Active: Boolean): (Int, Seq[AccountForgingStakeInfo])
+  private[horizen] def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
 
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView, isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
 
@@ -197,9 +197,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeStorage.getListOfForgersStakes(view)
   }
 
-  override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int, isForkV1_3Active: Boolean): (Int, Seq[AccountForgingStakeInfo]) = {
-    val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, isForkV1_3Active)
-    stakeStorage.getPagedListOfForgersStakes(view, startPos, pageSize)
+  override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = {
+    ForgerStakeStorageV2.getPagedListOfForgersStakes(view, startPos, pageSize)
   }
 
   private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean): ForgerStakeStorage = {
@@ -220,17 +219,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     doUncheckedGetListOfForgersStakesCmd(view, isForkV1_3Active)
   }
 
-  def doGetPagedListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView, isForkV1_3Active: Boolean): Array[Byte] = {
-    if (invocation.value.signum() != 0) {
-      throw new ExecutionRevertedException("Call value must be zero")
-    }
+  def doGetPagedListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    requireIsNotPayable(invocation)
 
     val inputParams = getArgumentsFromData(invocation.input)
     val cmdInput = GetPagedListOfStakesCmdInputDecoder.decode(inputParams)
     val size = cmdInput.size
     val startPos = cmdInput.startPos
 
-    val (nextPos, stakeList) = getPagedListOfForgersStakes(view, startPos, size, isForkV1_3Active)
+    val (nextPos, stakeList) = getPagedListOfForgersStakes(view, startPos, size)
 
     PagedListOfStakesOutput(nextPos, stakeList).encode()
   }
@@ -426,8 +423,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
-      case GetPagedListOfForgersCmd => doGetPagedListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
-
+      case GetPagedListOfForgersCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                               => doGetPagedListOfForgersCmd(invocation, gasView)
       case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
       case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg,
                               Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)

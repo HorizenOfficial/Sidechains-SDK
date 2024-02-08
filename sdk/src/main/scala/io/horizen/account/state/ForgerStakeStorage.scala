@@ -139,7 +139,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
       throw new IllegalArgumentException(s"Invalid startPos input: $startPos, can not be negative")
     if (startPos > stakeListSize-1)
       throw new IllegalArgumentException(s"Invalid position where to start reading forger stakes: $startPos, stakes array size: $stakeListSize")
-    if (pageSize < 0)
+    if (pageSize <= 0)
       throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
 
     var endPos = startPos + pageSize
