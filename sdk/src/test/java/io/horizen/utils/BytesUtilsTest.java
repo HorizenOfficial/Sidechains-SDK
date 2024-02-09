@@ -247,7 +247,7 @@ public class BytesUtilsTest {
 
 
     @Test
-    public void fromHorizenPublicKeyAddress() {
+    public void fromHorizenMcTransparentAddress() {
         // Test 1: valid MainNet addresses in MainNet network
         NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());
         String pubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK";
@@ -315,9 +315,58 @@ public class BytesUtilsTest {
             exceptionOccurred = true;
         }
         assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+
+
     }
 
     @Test
+    public void fromHorizenMcTransparentKeyAddress() {
+        byte[] expectedPublicKeyHashBytes = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
+
+        // Test 1: valid MainNet addresses in MainNet network
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        String pubKeyAddressMainNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, mainNetParams);
+
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentKeyAddress(pubKeyAddressMainNet, mainNetParams));
+
+        // Test 2:  MainNet script addresses in MainNet network
+        String scriptAddMainNet  = BytesUtils.toHorizenScriptAddress(expectedPublicKeyHashBytes, mainNetParams);
+
+        //This is just to verify that the address is valid, but it is not a pubkey
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(scriptAddMainNet, mainNetParams));
+        try {
+            BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddMainNet, mainNetParams);
+            fail("should fail with a script address");
+        } catch (IllegalArgumentException e) {
+        }
+
+        // Test 3: valid TestNet addresses in TestNet network
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        String pubKeyAddressTestNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, testNetParams);
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(pubKeyAddressTestNet, testNetParams));
+
+        // Test 4:  TestNet script addresses in TestNet network
+        String scriptAddTestNet  = BytesUtils.toHorizenScriptAddress(expectedPublicKeyHashBytes, testNetParams);
+
+        //This is just to verify that the address is valid, but it is not a pubkey
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(scriptAddTestNet, testNetParams));
+        try {
+            BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddTestNet, testNetParams);
+            fail("should fail with a script address");
+        } catch (IllegalArgumentException e) {
+        }
+    }
+
+    @Test
+
     public void toHorizenPublicKeyAddress() {
         // Test 1: valid MainNet addresses in MainNet network
         NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());

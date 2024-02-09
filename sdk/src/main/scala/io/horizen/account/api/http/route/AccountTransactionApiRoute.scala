@@ -565,7 +565,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqWithdrawCoins]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
             val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
             val gasInfo = body.gasInfo
 
@@ -585,20 +584,25 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(secret) =>
-
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val tmpTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
-                JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
-                nonce,
-                gasLimit,
-                maxPriorityFeePerGas,
-                maxFeePerGas,
-                valueInWei,
-                dataBytes,
-                null
-              )
-              validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
+              dataBytes match {
+                case Some(data) =>
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    data,
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInvalidMcAddress(s"Invalid Mc address ${body.withdrawalRequest.mainchainAddress}"))
+              }
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
           }
@@ -1106,12 +1110,18 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode())
   }
 
-  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Array[Byte] = {
-    // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
-    // different to `getnewaddress "" true` hash that is in BE endianness.
-    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(withdrawal.mainchainAddress, params))
-    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
-    Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
+  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Option[Array[Byte]] = {
+    Try(BytesUtils.fromHorizenMcTransparentKeyAddress(withdrawal.mainchainAddress, params)) match {
+      case Success(pubKeyHash) =>
+        // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+        // different to `getnewaddress "" true` hash that is in BE endianness.
+        val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(pubKeyHash)
+        val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
+        Some(Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode()))
+      case Failure(exc) =>
+        log.debug("Error while preparing pubkey hash from Mc transparent address", exc)
+        None
+    }
   }
 
 
@@ -1488,6 +1498,11 @@ object AccountTransactionErrorResponse {
 
   case class ErrorInvalidKeyRotationProof(description: String) extends ErrorResponse {
     override val code: String = "0209"
+    override val exception: JOptional[Throwable] = JOptional.empty()
+  }
+
+  case class ErrorInvalidMcAddress(description: String) extends ErrorResponse {
+    override val code: String = "0210"
     override val exception: JOptional[Throwable] = JOptional.empty()
   }
 

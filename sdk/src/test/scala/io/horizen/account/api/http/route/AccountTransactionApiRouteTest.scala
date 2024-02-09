@@ -2,6 +2,7 @@ package io.horizen.account.api.http.route
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
+import io.horizen.account.api.http.route.AccountTransactionErrorResponse.ErrorInvalidMcAddress
 import io.horizen.account.api.http.route.AccountTransactionRestScheme._
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.api.http.route.TransactionBaseErrorResponse.ErrorByteTransactionParsing
@@ -194,6 +195,18 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("transactionId").isTextual)
       }
+      // Try with a pay to script hash
+      val mcScriptAddr = BytesUtils.toHorizenScriptAddress(utilMocks.getMCPublicKeyHashProposition.bytes(),params)
+      Post(basePath + "withdrawCoins")
+        .addCredentials(credentials)
+        .withEntity(SerializationUtil.serialize(ReqWithdrawCoins(Some(BigInteger.ONE),
+          TransactionWithdrawalRequest(mcScriptAddr, amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        // assert we got an error of the expected type
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidMcAddress("").code)
+      }
+
     }
 
 
