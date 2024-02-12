@@ -318,7 +318,7 @@ abstract class AbstractForgeMessageBuilder[
 
     // if we have no mc block ref, we must ensure we are not creating too long a chain without mc ref blocks
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp)
-    if (nodeView.history.tooManyBlocksWithoutMcRefs(branchPointInfo.branchPointId, mainchainReferenceData.isEmpty, consensusEpochNumber)) {
+    if (nodeView.history.tooManyBlocksWithoutMcHeaders(branchPointInfo.branchPointId, mainchainHeaders.isEmpty, consensusEpochNumber)) {
       return SkipSlot(s"We can not forge until we have at least a mc block reference included, skipping this slot...")
     }
 

@@ -335,14 +335,6 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
-  class OnUpdateEventHandlerImpl extends OnUpdateTipEventHandler {
-    override def onEvent(eventPayload: OnUpdateTipEventPayload): Unit = {
-      log.warn(s"MC block mined, height=${eventPayload.height}")
-    }
-  }
-  val handler = new OnUpdateEventHandlerImpl()
-  mainchainNodeChannel.subscribeOnUpdateTipEvent(handler)
-
 //  val rejectedApiRoutes: Seq[SidechainRejectionApiRoute]
 //  val applicationApiRoutes: Seq[ApplicationApiRoute]
 

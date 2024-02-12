@@ -4,7 +4,7 @@ import logging
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
-from SidechainTestFramework.account.utils import convertZenToZennies, VERSION1_3_FORK_EPOCH
+from SidechainTestFramework.account.utils import convertZenToZennies, VER_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_blocks, start_sc_nodes, EVM_APP_BINARY, generate_next_block, \
     SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME
 from test_framework.util import assert_equal, assert_true, fail, forward_transfer_to_sidechain, assert_not_equal
@@ -107,9 +107,9 @@ class SCEvmPauseForging(AccountChainSetup):
             generate_next_block(sc_node_1, "second node")
             self.sc_sync_all()
 
-        # reach the SHANGHAI fork
+        # reach the v1.3 fork
         current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
-        for i in range(0, VERSION1_3_FORK_EPOCH - current_best_epoch):
+        for i in range(0, VER_1_3_FORK_EPOCH - current_best_epoch):
             try:
                 generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
                 self.sc_sync_all()
@@ -118,7 +118,7 @@ class SCEvmPauseForging(AccountChainSetup):
                 # having more than 100 sc blocks without mc block refs
                 logging.error("Assertion failed: " + str(msg))
                 assert_true("No mc refs in a long row of blocks error" in str(msg))
-                assert_true(sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"], VERSION1_3_FORK_EPOCH)
+                assert_true(sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"], VER_1_3_FORK_EPOCH)
 
         mc_node.generate(1)
         self.sc_sync_all()

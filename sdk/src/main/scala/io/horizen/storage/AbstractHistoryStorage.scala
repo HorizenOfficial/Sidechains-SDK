@@ -139,29 +139,28 @@ abstract class AbstractHistoryStorage[
     sidechainBlockInfo.mainchainHeaderBaseInfo.last
   }
 
-  def getNumOfScBlocksWithNoMcRefDataSince(blockId: ModifierId): Int = {
+  def tooManyBlocksWithoutMcHeadersDataSince(blockId: ModifierId): Boolean = {
     var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
-    var scBlocksCount : Int= 0
-    var mcRefEmpty : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
+    var scBlocksCount : Int = 0
+    var blockHasMcHeaders : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.nonEmpty
 
-    // we are going backwards until we find a mc block reference, it should not be possible to
-    // have an infinite loop. But just to be on the safe side we set a limit
-    val safeGuardLimit = params.maxHistoryRewritingLength*100
-
-    while(mcRefEmpty) {
+    // go backwards on the chain until we found a mc header or we hit the genesis block, and break if we
+    // cross the threshold value of max revertable number of blocks
+    while(!blockHasMcHeaders || sidechainBlockInfo.parentId == params.sidechainGenesisBlockId) {
       sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
       scBlocksCount = scBlocksCount + 1
 
-      if (scBlocksCount >= safeGuardLimit) {
-        log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references: $safeGuardLimit")
-        return scBlocksCount
+      if (scBlocksCount >= params.maxHistoryRewritingLength ) {
+        log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references")
+        return true
       }
 
-      mcRefEmpty = sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty
-      if (!mcRefEmpty)
-        log.debug(s"found sc block ${sidechainBlockInfo.parentId} which has ${sidechainBlockInfo.mainchainHeaderBaseInfo.size} mc block references")
+      blockHasMcHeaders = sidechainBlockInfo.mainchainHeaderBaseInfo.nonEmpty
+      if (blockHasMcHeaders)
+        log.debug(s"found sc block ${sidechainBlockInfo.parentId} which has ${sidechainBlockInfo.mainchainHeaderBaseInfo.size} mc block headers")
     }
-    scBlocksCount
+    // ok, we found a block with mc headers (or genesis block) before the limit
+    false
   }
 
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)

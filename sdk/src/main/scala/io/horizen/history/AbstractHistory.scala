@@ -602,29 +602,7 @@ abstract class AbstractHistory[
     }
   }
 
-  def tooManyBlocksWithoutMcRefs(parentBlockId: ModifierId, noMcRefInCurrentBlock: Boolean, consensusEpochNumber: Int): Boolean = {
-    if (noMcRefInCurrentBlock) {
-      if (!Version1_3_0Fork.get(consensusEpochNumber).active) {
-        // fork is not active for computing the number of sc blocks without mc refs
-        log.debug(s"Fork for version 1.3 not active, skipping counting of sc blocks without mc references")
-        false
-      } else {
-
-        val count = storage.getNumOfScBlocksWithNoMcRefDataSince(parentBlockId) + 1
-        if (count >= params.maxHistoryRewritingLength) {
-          log.warn(s"####### Num of SC blocks with no mc refs: $count >= max number of revertible sc blocks (${params.maxHistoryRewritingLength})")
-          true
-        } else {
-          // they are not too many, since we are below the critical threshold
-          log.debug(s"Num of SC blocks with no mc refs: $count")
-          false
-        }
-      }
-    } else {
-      // not too many because in the current block we have mc refs
-      false
-    }
-  }
+  def tooManyBlocksWithoutMcHeaders(parentBlockId: ModifierId, noMcHeadersInCurrentBlock: Boolean, consensusEpochNumber: Int): Boolean
 
 }
 

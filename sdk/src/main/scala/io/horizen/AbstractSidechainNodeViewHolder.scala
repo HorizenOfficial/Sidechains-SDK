@@ -428,7 +428,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
           // check that the chain with this tip has enough mc references in the latest blocks: we must refuse a block that would form too long a chain without mc ref blocks
           val consensusEpochNumber = getConsensusEpochNumber(modToApply.timestamp)
-          if (history.tooManyBlocksWithoutMcRefs(modToApply.parentId, modToApply.mainchainBlockReferencesData.isEmpty, consensusEpochNumber)) {
+          if (history.tooManyBlocksWithoutMcHeaders(modToApply.parentId, modToApply.mainchainBlockReferencesData.isEmpty, consensusEpochNumber)) {
             val errMsg = s"Block is not valid since we would have too many blocks without a mc block reference included (max=${networkParams.maxHistoryRewritingLength})"
             log.error(errMsg)
 
