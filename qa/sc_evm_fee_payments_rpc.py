@@ -201,10 +201,10 @@ class ScEvmFeePaymentsRpc(AccountChainSetup):
                 forger_fees[sc_block_fee.node] += 1
 
         forger_data = sc_node_1.rpc_zen_getFeePayments(add_0x_prefix(sc_middle_we_block_id))
-        assert_equal(forger_data["result"], None)
+        assert_equal(0, len(forger_data["result"]["payments"]))
 
         forger_data = sc_node_1.rpc_zen_getFeePayments(sc_middle_we_block_height)
-        assert_equal(forger_data["result"], None)
+        assert_equal(0, len(forger_data["result"]["payments"]))
 
         exp_forger_address_1 = add_0x_prefix(stakeList[0]["forgerStakeData"]["ownerPublicKey"]["address"])
         exp_forger_address_2 = add_0x_prefix(stakeList[1]["forgerStakeData"]["ownerPublicKey"]["address"])
