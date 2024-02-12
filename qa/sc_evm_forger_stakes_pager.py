@@ -9,13 +9,14 @@ from eth_utils import function_signature_to_4byte_selector, encode_hex, remove_0
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, contract_function_call, format_evm
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, contract_function_call, format_evm, format_eoa
+from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import convertZenToZennies, VERSION_1_3_FORK_EPOCH, \
     FORGER_STAKE_SMART_CONTRACT_ADDRESS
 from SidechainTestFramework.scutil import generate_next_block
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, hex_str_to_bytes, assert_true
+    assert_equal, fail, forward_transfer_to_sidechain, hex_str_to_bytes, assert_true, bytes_to_hex_str
 )
 
 """
@@ -29,6 +30,7 @@ Test:
     - Create a number of forging delegations from SC1 to SC2
     - Test we can retrieve stakes via paginated api
     - Do some negative test
+    - Test smart contract interoperability call
 
 
 """
@@ -36,7 +38,7 @@ NUM_OF_STAKES = 51
 NUM_OF_STAKE_TXES = 50
 
 
-def get_forger_stake_amount_from_abi(abi_return_value):
+def get_paged_stakes_from_abi(abi_return_value):
     # each byte is 2 ascii chars,therefore when dealing with offsets we multiply bytes by 2
     start_offset = 0
 
@@ -114,7 +116,7 @@ def get_paged_forging_stakes_via_eth_call(sc_node, from_address, start_pos, page
 
     abi_return_value = remove_0x_prefix(response['result'])
     # print(abi_return_value)
-    return get_forger_stake_amount_from_abi(abi_return_value)
+    return get_paged_stakes_from_abi(abi_return_value)
 
 
 class SCEvmForgerStakesPager(AccountChainSetup):
@@ -331,6 +333,25 @@ class SCEvmForgerStakesPager(AccountChainSetup):
 
         else:
             fail("No forging stakes expected for SC node 2.")
+
+        # Interoperability test with an EVM smart contract calling forger stakes native contract
+        start_pos = 4
+        PAGE_SIZE = 5
+
+        # get one page starting at specific position and check we have the same result with an interop call
+        http_api_res = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
+            "result"]
+
+        proxy_contract = SimpleProxyContract(sc_node_1, evm_address_sc_node_1, use_shanghai=True)
+
+        method = 'getPagedForgersStakes(uint32,uint32)'
+
+        native_input = format_eoa(native_contract.raw_encode_call(method, start_pos, PAGE_SIZE))
+
+        interop_res_bytes = proxy_contract.do_static_call(evm_address_sc_node_1, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+        interop_next_pos, interop_stakes = get_paged_stakes_from_abi(bytes_to_hex_str(interop_res_bytes))
+        assert_equal(interop_stakes, http_api_res['stakes'])
+        assert_equal(interop_next_pos, http_api_res['nextPos'])
 
 if __name__ == "__main__":
     SCEvmForgerStakesPager().main()
