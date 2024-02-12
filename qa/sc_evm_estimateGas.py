@@ -5,7 +5,7 @@ from decimal import Decimal
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import estimate_gas, deploy_smart_contract
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.utils import VER_1_3_FORK_EPOCH
+from SidechainTestFramework.account.utils import VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from test_framework.util import assert_equal
 
@@ -35,7 +35,7 @@ Test:
 class SCEvmEstimateGas(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VER_1_3_FORK_EPOCH, withdrawalEpochLength=10)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH, withdrawalEpochLength=10)
 
     def run_test(self):
         sc_node = self.sc_nodes[0]
@@ -143,7 +143,7 @@ class SCEvmEstimateGas(AccountChainSetup):
             # reach the SHANGHAI fork
             current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-            for i in range(0, VER_1_3_FORK_EPOCH - current_best_epoch):
+            for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
                 generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
                 self.sc_sync_all()
 

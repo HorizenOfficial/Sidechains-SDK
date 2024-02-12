@@ -8,7 +8,7 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract, format_evm
 from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS, \
-    INTEROPERABILITY_FORK_EPOCH, VER_1_3_FORK_EPOCH
+    INTEROPERABILITY_FORK_EPOCH, VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import EVM_APP_SLOT_TIME, generate_next_block
 from test_framework.util import assert_equal, assert_false, assert_true, fail
 
@@ -105,7 +105,7 @@ class SCEvmNativeInterop(AccountChainSetup):
             # reach the SHANGHAI fork
             current_best_epoch = node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-            for i in range(0, VER_1_3_FORK_EPOCH - current_best_epoch):
+            for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
                 generate_next_block(node, "first node", force_switch_to_next_epoch=True)
                 self.sc_sync_all()
 

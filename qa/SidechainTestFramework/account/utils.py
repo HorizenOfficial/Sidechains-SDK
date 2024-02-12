@@ -49,9 +49,9 @@ NULL_ADDRESS = "0000000000000000000000000000000000000000"
 ZENDAO_FORK_EPOCH = 7
 # The activation epoch of the Contract Interoperability feature, as coded in the sdk
 INTEROPERABILITY_FORK_EPOCH = 50
-# The activation epoch for features released in forks from v1.2 on
-VER_1_2_FORK_EPOCH = 60
-VER_1_3_FORK_EPOCH = 70
+# The activation epochs for features released in forks from v1.2 on
+VERSION_1_2_FORK_EPOCH = 60
+VERSION_1_3_FORK_EPOCH = 70
 
 
 # Block gas limit

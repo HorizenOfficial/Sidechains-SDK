@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT, VER_1_3_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH
+from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT, VERSION_1_3_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, \
     assert_equal, \
     assert_true, EVM_APP_SLOT_TIME
@@ -38,7 +38,7 @@ Test:
 
 class SCEvmMempoolInvalidTxs(AccountChainSetup):
     def __init__(self):
-        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VER_1_3_FORK_EPOCH, max_mempool_slots=20, max_nonexec_pool_slots=19)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH, max_mempool_slots=20, max_nonexec_pool_slots=19)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -282,7 +282,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         # reach the SHANGHAI fork
         current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, VER_1_3_FORK_EPOCH - current_best_epoch):
+        for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
             generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 
