@@ -143,6 +143,7 @@ testScriptsEvm=(
     'sc_evm_ft_to_smart_contract.py'
     'sc_evm_forging_fee_payments_rollback.py'
     'sc_evm_forger_v2.py'
+    'sc_evm_forger_stakes_pager.py'
 );
 
 testScriptsUtxo=(
