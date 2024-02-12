@@ -39,4 +39,5 @@ interface ForgerStakes {
 
     function upgrade() external view returns (uint32);
 
+    function getPagedForgersStakes(uint32 startIndex, uint32 pageSize) external view returns (uint32, StakeInfo[] memory);
 }
