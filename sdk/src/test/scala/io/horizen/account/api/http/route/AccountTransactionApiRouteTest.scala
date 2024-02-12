@@ -204,7 +204,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest with M
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         // assert we got an error of the expected type
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidMcAddress("").code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidMcAddress("", Optional.empty()).code)
       }
 
     }

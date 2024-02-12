@@ -586,7 +586,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             case Some(secret) =>
               val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
               dataBytes match {
-                case Some(data) =>
+                case Success(data) =>
                   val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
                   val tmpTx: EthereumTransaction = new EthereumTransaction(
                     params.chainId,
@@ -600,8 +600,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     null
                   )
                   validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-                case None =>
-                  ApiResponseUtil.toResponse(ErrorInvalidMcAddress(s"Invalid Mc address ${body.withdrawalRequest.mainchainAddress}"))
+                case Failure(exc) =>
+                  ApiResponseUtil.toResponse(ErrorInvalidMcAddress(s"Invalid Mc address ${body.withdrawalRequest.mainchainAddress}", JOptional.of(exc)))
               }
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -1110,17 +1110,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode())
   }
 
-  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Option[Array[Byte]] = {
-    Try(BytesUtils.fromHorizenMcTransparentKeyAddress(withdrawal.mainchainAddress, params)) match {
-      case Success(pubKeyHash) =>
+  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Try[Array[Byte]] = {
+    Try(BytesUtils.fromHorizenMcTransparentKeyAddress(withdrawal.mainchainAddress, params)).map {
+      pubKeyHash =>
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
         val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(pubKeyHash)
         val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
-        Some(Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode()))
-      case Failure(exc) =>
-        log.debug("Error while preparing pubkey hash from Mc transparent address", exc)
-        None
+        Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
     }
   }
 
@@ -1501,9 +1498,8 @@ object AccountTransactionErrorResponse {
     override val exception: JOptional[Throwable] = JOptional.empty()
   }
 
-  case class ErrorInvalidMcAddress(description: String) extends ErrorResponse {
+  case class ErrorInvalidMcAddress(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0210"
-    override val exception: JOptional[Throwable] = JOptional.empty()
   }
 
 }
