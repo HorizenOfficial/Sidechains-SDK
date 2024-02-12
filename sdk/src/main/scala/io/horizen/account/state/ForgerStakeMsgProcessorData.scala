@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
-import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.evm.Address
+import io.horizen.json.Views
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
+import io.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Int32, Uint256, Uint32}
+import org.web3j.abi.datatypes.generated._
 import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
@@ -374,7 +374,7 @@ object ForgerStakeStorageElemV2Serializer extends SparkzSerializer[ForgerStakeSt
   }
 }
 
-case class ForgerStakesFilterByOwner(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
+case class StakeOfCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
 
@@ -391,9 +391,9 @@ case class ForgerStakesFilterByOwner(ownerAddress: Address) extends ABIEncodable
 
 }
 
-object ForgerStakesFilterByOwnerDecoder
-  extends ABIDecoder[ForgerStakesFilterByOwner]
-  with MsgProcessorInputDecoder[ForgerStakesFilterByOwner] {
+object StakeOfCmdInputDecoder
+  extends ABIDecoder[StakeOfCmdInput]
+  with MsgProcessorInputDecoder[StakeOfCmdInput] {
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -401,9 +401,9 @@ object ForgerStakesFilterByOwnerDecoder
     ))
   }
 
-  override def createType(listOfParams: util.List[Type[_]]): ForgerStakesFilterByOwner = {
+  override def createType(listOfParams: util.List[Type[_]]): StakeOfCmdInput = {
     val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
-    ForgerStakesFilterByOwner(address)
+    StakeOfCmdInput(address)
   }
 }
 
@@ -417,6 +417,46 @@ case class StakeAmount(totalStake: BigInteger) extends ABIEncodable[StaticStruct
   }
 }
 
+case class GetPagedForgersStakesOfUserCmdInput(ownerAddress: Address, startPos: Int, size: Int) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(ownerAddress.toString),
+      new Uint32(startPos),
+      new Uint32(size)
+    )
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(ownerAddress: %s, startPos: %s, size: %s)"
+    .format(
+      this.getClass.toString,
+      ownerAddress.toString,
+      startPos,
+      size)
+
+}
+
+object GetPagedForgersStakesOfUserCmdInputDecoder
+  extends ABIDecoder[GetPagedForgersStakesOfUserCmdInput]
+    with MsgProcessorInputDecoder[GetPagedForgersStakesOfUserCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[AbiAddress]() {},
+      new TypeReference[Uint32]() {},
+      new TypeReference[Uint32]() {}
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): GetPagedForgersStakesOfUserCmdInput = {
+    val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    val startPos = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValueExact()
+    val size = listOfParams.get(2).asInstanceOf[Uint32].getValue.intValueExact()
+    GetPagedForgersStakesOfUserCmdInput(address, startPos, size)
+  }
+}
 
 case class PagedListOfStakesOutput(nextStartPos: Int, listOfStakes: Seq[AccountForgingStakeInfo])
   extends ABIEncodable[DynamicStruct] {

@@ -280,22 +280,25 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     checkCurrentStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
 
     val inputParams = getArgumentsFromData(invocation.input)
-    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
+    val cmdInput = StakeOfCmdInputDecoder.decode(inputParams)
 
     val totalStake = ForgerStakeStorageV2.getOwnerStake(view, new AddressProposition(cmdInput.ownerAddress))
     StakeAmount(totalStake).encode()
   }
 
-  def doGetAllForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+  def doGetPagedForgersStakesOfUserCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
     requireIsNotPayable(invocation)
 
     checkCurrentStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
 
     val inputParams = getArgumentsFromData(invocation.input)
-    val cmdInput = ForgerStakesFilterByOwnerDecoder.decode(inputParams)
+    val cmdInput = GetPagedForgersStakesOfUserCmdInputDecoder.decode(inputParams)
 
-    val ownerStakeList = ForgerStakeStorageV2.getListOfForgersStakesOfUser(view, new AddressProposition(cmdInput.ownerAddress))
-    AccountForgingStakeInfoListEncoder.encode(ownerStakeList.asJava)
+    val (nextPos, stakeList) = ForgerStakeStorageV2.getPagedListOfForgersStakesOfUser(view,
+      new AddressProposition(cmdInput.ownerAddress),
+      cmdInput.startPos,
+      cmdInput.size)
+    PagedListOfStakesOutput(nextPos, stakeList).encode()
   }
 
   def doRemoveStakeCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message, isForkV1_3Active: Boolean): Array[Byte] = {
@@ -436,8 +439,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
                                 => doUpgradeCmd(invocation, view)// This doesn't consume gas, so it doesn't use GasTrackedView
       case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
                                 => doStakeOfCmd(invocation, gasView)
-      case GetAllForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doGetAllForgersStakesOfUserCmd(invocation, gasView)
+      case GetPagedForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                                => doGetPagedForgersStakesOfUserCmd(invocation, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
     }
   }
@@ -480,7 +483,7 @@ object ForgerStakeMsgProcessor {
   // Methods added after Fork v. 1.3
   val UpgradeCmd: String = getABIMethodId("upgrade()")
   val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
-  val GetAllForgersStakesOfUserCmd: String = getABIMethodId("getAllForgersStakesOfUser(address)")
+  val GetPagedForgersStakesOfUserCmd: String = getABIMethodId("getPagedForgersStakesByUser(address,uint32,uint32)")
 
   // ensure we have strings consistent with size of opcode
   require(
@@ -492,7 +495,7 @@ object ForgerStakeMsgProcessor {
       OpenStakeForgerListCmdCorrect.length == 2 * METHOD_ID_LENGTH &&
       UpgradeCmd.length == 2 * METHOD_ID_LENGTH &&
       StakeOfCmd.length == 2 * METHOD_ID_LENGTH &&
-      GetAllForgersStakesOfUserCmd.length == 2 * METHOD_ID_LENGTH
+      GetPagedForgersStakesOfUserCmd.length == 2 * METHOD_ID_LENGTH
   )
 
   def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Address, nonce: Array[Byte]): Array[Byte] = {
