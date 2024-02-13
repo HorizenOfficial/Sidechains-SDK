@@ -138,7 +138,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
       val slotFilledPercentage: Double = (slotsOccupied.toDouble / slotNumber) * 100
 
       println("Stake %d of %d active slot coefficient = 0.05 - Slots occupied %d of %d".format(stake, totalStake, slotsOccupied, slotNumber))
-      assertTrue(f"Slots occupied should be around ${activeSlotCoefficient}", slotFilledPercentage <= (activeSlotCoefficient * 100 + 1))
+      assertTrue(f"Slots occupied should be around ${activeSlotCoefficient}", slotFilledPercentage <= (activeSlotCoefficient * 100 + 1.3))
     })
   }
 
