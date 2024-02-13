@@ -57,7 +57,7 @@ trait NetworkParams {
 
   // Fee payment params:
   final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
-  val rewardAddress: Option[AddressProposition] = None // Address to send fees to. If None - chosen from a local list.
+  val rewardAddress: Option[AddressProposition] = None // Address to send fees to. If None - chosen from the local wallet (first key found)
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC
