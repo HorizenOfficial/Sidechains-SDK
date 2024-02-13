@@ -234,17 +234,31 @@ public final class BytesUtils {
         // Check version
         byte[] prefix = Arrays.copyOfRange(addressBytes, 0, HORIZEN_ADDRESS_PREFIX_LENGTH);
         if(params instanceof MainNetParams) {
-            if(!Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD) &&
-                    (onlyPubKey || !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX_OLD)))
-                throw new IllegalArgumentException(String.format(
-                        "Incorrect Horizen address format, pubKey or script MainNet prefix expected, got %s",
-                        BytesUtils.toHexString(prefix)));
+            if(!Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD)){
+                if (onlyPubKey){
+                    throw new IllegalArgumentException(String.format(
+                            "Incorrect Horizen address format, pubKey MainNet prefix expected, got %s",
+                            BytesUtils.toHexString(prefix)));
+                }
+                else if (!Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX_OLD)){
+                    throw new IllegalArgumentException(String.format(
+                            "Incorrect Horizen address format, pubKey or script MainNet prefix expected, got %s",
+                            BytesUtils.toHexString(prefix)));
+                }
+            }
         }
-        else if(!Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD) &&
-                (onlyPubKey || !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX_OLD)))
-            throw new IllegalArgumentException(String.format(
-                    "Incorrect Horizen address format,  pubKey or script TestNet prefix expected, got %s",
-                    BytesUtils.toHexString(prefix)));
+        else if(!Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD)){
+            if (onlyPubKey) {
+                throw new IllegalArgumentException(String.format(
+                        "Incorrect Horizen address format,  pubKey TestNet prefix expected, got %s",
+                        BytesUtils.toHexString(prefix)));
+            }
+            else if (!Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX_OLD)){
+                throw new IllegalArgumentException(String.format(
+                        "Incorrect Horizen address format,  pubKey or script TestNet prefix expected, got %s",
+                        BytesUtils.toHexString(prefix)));
+            }
+        }
 
         byte[] addressDataHash = Arrays.copyOfRange(addressBytes, HORIZEN_ADDRESS_PREFIX_LENGTH, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH);
 
