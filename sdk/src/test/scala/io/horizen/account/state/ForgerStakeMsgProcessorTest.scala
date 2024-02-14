@@ -1752,7 +1752,7 @@ class ForgerStakeMsgProcessorTest
       var msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(GetPagedForgersStakesOfUserCmd) ++ cmdInput.encode(), nonce, ownerAddressProposition.address())
 
-      // should fail because, before Version 1.3 fork, GetAllForgersStakesOfUserCmd is not a valid function signature
+      // should fail because, before Version 1.3 fork, GetPagedForgersStakesOfUserCmd is not a valid function signature
       val blockContextBeforeFork = new BlockContext(
         Address.ZERO,
         0,

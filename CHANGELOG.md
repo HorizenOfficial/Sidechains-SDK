@@ -1,7 +1,7 @@
 **0.11.0**
 1. Sparkz dependency updated to 2.3.0
 2. Updated third-party dependencies
-3. Forger Stake native smart contract: added getAllForgersStakesOfUser and stakeOf methods.
+3. Forger Stake native smart contract: added getPagedForgersStakesByUser and stakeOf methods.
 
 **0.10.0**
 1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
