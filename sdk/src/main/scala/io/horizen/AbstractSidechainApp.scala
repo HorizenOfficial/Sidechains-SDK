@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.javadsl.Sink
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
@@ -138,6 +139,10 @@ abstract class AbstractSidechainApp
   val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
 
+  private val forgerRewardAddress: Option[AddressProposition] = Option(sidechainSettings.forger.forgerRewardAddress)
+    .filter(_.nonEmpty)
+    .map(address => new AddressProposition(BytesUtils.fromHexString(address)))
+
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" =>
@@ -174,7 +179,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        rewardAddress = forgerRewardAddress
       )
 
 
@@ -212,7 +218,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        rewardAddress = forgerRewardAddress
       )
 
 
@@ -250,7 +257,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        rewardAddress = forgerRewardAddress
       )
 
 

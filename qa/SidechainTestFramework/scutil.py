@@ -550,7 +550,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
         'TX_LIFETIME': sc_node_config.tx_lifetime,
-        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false"),
+        'FORGER_REWARD_ADDRESS': sc_node_config.forger_options.forger_reward_address
 
     }
     config = config.replace("'", "")

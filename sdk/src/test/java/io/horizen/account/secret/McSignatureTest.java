@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
+import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
@@ -123,7 +124,7 @@ public class McSignatureTest {
                         null, null, null,
                         null, null, false, null,
                         null, 0, false, false,
-                        false, 0, false));
+                        false, 0, false, Option.empty()));
 
         System.out.println(computedTaddr);
         assertEquals("ztTw2K532ewo9gynBJv7FFUgbD19Wpifv8G", computedTaddr);
@@ -284,7 +285,7 @@ public class McSignatureTest {
                         null, null, null,
                         null, null, false, null,
                         null, 0,false, false,
-                        false, 0, false));
+                        false, 0, false, Option.empty()));
 
         assertEquals(taddr, computedTaddr);
 
