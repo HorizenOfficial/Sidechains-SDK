@@ -1,9 +1,7 @@
 package io.horizen.account.state.events
 
-import io.horizen.account.state.events.annotation.{Indexed, Parameter}
-import io.horizen.evm.Address
-import org.web3j.abi.datatypes.generated.{Bytes32, Uint32}
-import org.web3j.abi.datatypes.{Address => AbiAddress}
+import io.horizen.account.state.events.annotation.Parameter
+import org.web3j.abi.datatypes.generated.Uint32
 
 import scala.annotation.meta.getter
 

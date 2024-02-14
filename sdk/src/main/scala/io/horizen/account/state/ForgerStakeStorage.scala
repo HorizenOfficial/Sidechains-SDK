@@ -58,6 +58,21 @@ trait ForgerStakeStorage {
   def setupStorage(view: BaseAccountStateView): Unit
 }
 
+/*
+In Forger Stake Storage model version 1, stake objects are saved in the statedb in a sort of map, where stake_id is the
+key and the value is the serialization of the object ForgerStakeData. Since it is not possible to iterate over a map in
+the statedb, in order to be able iterate over all the stakes and to retrieve them, the stakes are inserted in a linked
+list data structure. Each node of the linked list contains 3 fields: the key for the stake (stake_id) and the keys to the
+2 contiguous nodes, previous and next. The key to the last inserted node in the linked list (Tip) is saved in the
+state db. The node pointed to by the tip will have next field equal to null and previous field equal to the old tip.
+The key for retrieving each node is calculated from the stake_id of the corresponding stake.
+When a new stake is created, a new node is inserted in the linked list and the tip will be updated to point to it.
+Its "previous" field will point to the old tip and the old tip "next" field will point to the new tip.
+When a stake is deleted, the key to the corresponding node is calculated from the stake_id. The previous node will be
+updated in order to point to node after the deleted one and vice-versa.
+For retrieving the list of all the stakes, the list of stake_ids is retrieved iterating over the linked-list, starting
+from the node pointed to by the tip and going backward.
+ */
 object ForgerStakeStorageV1 extends ForgerStakeStorage {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
@@ -120,6 +135,24 @@ object ForgerStakeStorageV1 extends ForgerStakeStorage {
 
 }
 
+/*
+In Forger Stake Storage model version 2, stake objects are saved in the statedb in a sort of map, where stake_id is the
+key and the value is the serialization of the object ForgerStakeStorageElemV2. For keeping track of all the stakes, an
+array-like data structure is created containing all the stake_ids. The array is realized using a set of key-value
+storage elements, where the keys are calculated from the hash of the concatenation of a fixed string and the index of
+the element in the array. The value contains the stake_id of the corresponding stake. An additional array element is
+used for keeping the number of element in the array. When a new stake is created, a new element is added at the end of
+the array and the array length is increased by 1. The array index where the new element is inserted is then saved as a
+field of ForgerStakeStorageElemV2 object in the stake map. When a stake is deleted, the ForgerStakeStorageElemV2 object
+is retrieved using the stake_id as a key and deleted. In the array, instead of deleting the corresponding element and
+shifting one position the remaining ones, the last element in the array is moved to the position that was occupied by the
+deleted stake. For retrieving the list of all the stakes, the list of all stake_ids is retrieved from the array and then
+the stake_ids are used as keys for retrieving the Forger Stake objects.
+For speeding up the search of the stakes belonging to a specific owner, an array with the stake_ids for each owner is also
+saved.
+The array structure is described in https://medium.com/robhitchens/solidity-crud-part-1-824ffa69509a.
+
+ */
 object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
   val forgerStakeArray: StateDbArray = new StateDbArray(FORGER_STAKE_SMART_CONTRACT_ADDRESS, "ForgerStakeList".getBytes("UTF-8"))
@@ -142,7 +175,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     val ownerInfo = OwnerStakeInfo(ownerAddressProposition)
     val ownerListIndex: Int = ownerInfo.append(view, stakeId)
 
-    ownerInfo.addToTotalStake(view, stakedAmount)
+    ownerInfo.addOwnerStake(view, stakedAmount)
 
     val forgerStakeData = ForgerStakeStorageElemV2(
       ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerAddressProposition, stakedAmount, forgerListIndex, ownerListIndex)
@@ -215,7 +248,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     val stakeListSize = stakeArray.getSize(view)
     if (startPos < 0)
       throw new IllegalArgumentException(s"Invalid startPos input: $startPos, can not be negative")
-    if (pageSize < 0) {
+    if (pageSize <= 0) {
       throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
     }
 
@@ -305,7 +338,7 @@ case class OwnerStakeInfo(owner: AddressProposition)
 
   val OwnerTotalStakeKey: Array[Byte] = calculateKey(Bytes.concat("Stake".getBytes("UTF-8"), keySeed))
 
-  def addToTotalStake(view: BaseAccountStateView, stakeAmount: BigInteger): Unit = {
+  def addOwnerStake(view: BaseAccountStateView, stakeAmount: BigInteger): Unit = {
     val currentAmount = new BigInteger(1, view.getAccountStorage(account, OwnerTotalStakeKey))
     view.updateAccountStorage(account, OwnerTotalStakeKey, BigIntegerUtil.toUint256Bytes(currentAmount.add(stakeAmount)))
   }

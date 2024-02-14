@@ -227,6 +227,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
+    var numOfMigratedElem = 0
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getStakeListItem(view, nodeReference)
 
@@ -236,6 +237,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
       removeNode(view, item.stakeId, contractAddress)
       nodeReference = prevNodeReference
+      numOfMigratedElem = numOfMigratedElem + 1
     }
     view.removeAccountStorage(contractAddress, LinkedListTipKey)
 
@@ -243,7 +245,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     val evmLog = getEthereumConsensusDataLog(upgradeEvent)
     view.addLog(evmLog)
 
+    log.info(s"Forger stakes storage upgraded successfully to version 2 - $numOfMigratedElem items migrated")
+
     ForgerStakeStorage.saveStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
+
 
   }
 

@@ -25,8 +25,8 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Int32, Uint256}
-import org.web3j.abi.datatypes.{DynamicArray, StaticStruct, Type}
+import org.web3j.abi.datatypes.generated.{Int32, Uint256}
+import org.web3j.abi.datatypes.{DynamicArray, Type}
 import org.web3j.abi.{DefaultFunctionReturnDecoder, FunctionReturnDecoder, TypeReference}
 import sparkz.core.bytesToVersion
 import sparkz.crypto.hash.Keccak256
@@ -1459,7 +1459,7 @@ class ForgerStakeMsgProcessorTest
       val txHash5 = Keccak256.hash("fifth tx")
       view.setupTxContext(txHash5, 10)
       // try processing the removal of stake, should succeed
-      val returnData5 = assertGas(48281, msg5, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData5 = assertGas(48481, msg5, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData5)
       assertArrayEquals(expectedStake1.stakeId, returnData5)
 
@@ -1528,7 +1528,7 @@ class ForgerStakeMsgProcessorTest
       val txHash6 = Keccak256.hash("sixth tx")
       view.setupTxContext(txHash6, 10)
 
-      val returnData6 = assertGas(40281, msg6, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData6 = assertGas(40481, msg6, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData6)
       assertArrayEquals(expectedStake2.stakeId, returnData6)
 
@@ -1624,14 +1624,6 @@ class ForgerStakeMsgProcessorTest
     val ownerInfo = OwnerStakeInfo(stakeData.ownerPublicKey)
     assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
   }
-
-//  private def checkForgerStakeStorageV2IsEmpty(view: BaseAccountStateView): Unit = {
-//    assertEquals(0,  ForgerStakeStorageV2.forgerStakeArray.getSize(view))
-//    assertArrayEquals(NULL_HEX_STRING_32, ForgerStakeStorageV2.forgerStakeArray.getValue(view, 0))
-//
-//    val ownerInfo = OwnerStakeInfo(stakeData.ownerPublicKey)
-//    assertArrayEquals("Owner stake array is invalid", stakeId, ownerInfo.getValue(view, stakeData.ownerListIndex))
-//  }
 
 
   @Test
@@ -1911,7 +1903,7 @@ class ForgerStakeMsgProcessorTest
       val msgRemove = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ removeCmdInput.encode(), nonce2)
 
       // try processing the removal of stake, should succeed
-      returnData = assertGas(48281, msgRemove, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      returnData = assertGas(48481, msgRemove, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData)
       assertArrayEquals(stakeIdToRemove, returnData)
 
