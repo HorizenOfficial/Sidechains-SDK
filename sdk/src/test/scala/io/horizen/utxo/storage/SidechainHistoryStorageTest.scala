@@ -604,59 +604,6 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       exceptionThrown)
   }
 
-  def getData(spanLength: Int) : (SidechainHistoryStorage, Seq[SidechainBlock]) = {
-    val chainList = new ListBuffer[SidechainBlock]()
-    val chainInfoList  = new ListBuffer[SidechainBlockInfo]()
-    val localStoredDataList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
-
-    val genesisBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
-    chainInfoList += generateGenesisBlockInfo(
-      genesisMainchainHeaderHash = Some(activeChainBlockList.head.mainchainHeaders.head.hash),
-      genesisMainchainReferenceDataHeaderHash = Some(activeChainBlockList.head.mainchainBlockReferencesData.head.headerHash),
-      timestamp = Some(genesisBlock.timestamp))
-
-    chainList += genesisBlock
-
-    // declare real genesis block id
-    class HistoryTestParams extends MainNetParams {
-      override val sidechainGenesisBlockId: ModifierId = chainList.head.id
-      override val mainchainCreationBlockHeight: Int = 24
-      override val maxHistoryRewritingLength: Int = 5
-    }
-    val localParams = new HistoryTestParams()
-
-    Mockito.when(mockedStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
-      .thenAnswer(answer => {
-        localStoredDataList.find(_.getKey.equals(answer.getArgument(0))) match {
-          case Some(pair) => JOptional.of(pair.getValue)
-          case None => JOptional.empty()
-        }
-      })
-
-    for ( _ <-  1 to spanLength) {
-
-      val nextTipBlock = generateNextSidechainBlock(chainList.last, sidechainTransactionsCompanion, localParams)
-      chainList += nextTipBlock
-
-      val www = getLastMainchainBaseInfoInclusion(chainInfoList) match {
-        case ttt: Some[SidechainBlockInfo] =>
-          ttt.get.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash
-        case _ =>
-          Array[Byte]()
-      }
-
-      val nextTipBlockInfo = generateBlockInfo(
-        nextTipBlock, chainInfoList.last, localParams, www)
-      chainInfoList += nextTipBlockInfo
-    }
-
-    localStoredDataList ++= generateStoredData(chainList zip chainInfoList)
-
-    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, localParams)
-
-    (historyStorage, chainList)
-  }
-
   def getTestChainData(spanLength: Int, mcHeaderPos: Int = -1, inMaxHistoryRewritingLength: Int = 10) : (SidechainHistoryStorage, Seq[SidechainBlock]) = {
     val chainList = new ListBuffer[SidechainBlock]()
     val chainInfoList  = new ListBuffer[SidechainBlockInfo]()
