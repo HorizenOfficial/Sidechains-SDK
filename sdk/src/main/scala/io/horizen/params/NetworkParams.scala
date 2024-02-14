@@ -6,6 +6,7 @@ import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
 import io.horizen.history.AbstractHistory
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
@@ -58,6 +59,7 @@ trait NetworkParams {
 
   // Fee payment params:
   final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
+  val rewardAddress: Option[AddressProposition] = None // Address to send fees to. If None - chosen from the local wallet (first key found)
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC

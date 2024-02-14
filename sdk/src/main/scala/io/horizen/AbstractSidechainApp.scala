@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.javadsl.Sink
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.api.http._
 import io.horizen.api.http.client.SecureEnclaveApiClient
 import io.horizen.api.http.route.{DisableApiRoute, SidechainRejectionApiRoute}
@@ -15,7 +16,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
@@ -136,8 +137,13 @@ abstract class AbstractSidechainApp
   // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
-  val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
+  val consensusParamsForkList: mutable.Buffer[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+    forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
+
+  private val forgerRewardAddress: Option[AddressProposition] = Option(sidechainSettings.forger.forgerRewardAddress)
+    .filter(_.nonEmpty)
+    .map(address => new AddressProposition(BytesUtils.fromHexString(address)))
 
   // Init proper NetworkParams depend on MC network
   lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -176,7 +182,9 @@ abstract class AbstractSidechainApp
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
         resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
-        maxHistoryRewritingLength = maxHistoryRewriteLength
+        maxHistoryRewritingLength = maxHistoryRewriteLength,
+        rewardAddress = forgerRewardAddress
+
       )
 
 
@@ -214,7 +222,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        rewardAddress = forgerRewardAddress
       )
 
 
@@ -252,7 +261,8 @@ abstract class AbstractSidechainApp
         isNonCeasing = sidechainSettings.genesisData.isNonCeasing,
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
-        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus
+        resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        rewardAddress = forgerRewardAddress
       )
 
 

@@ -147,6 +147,7 @@ testScriptsEvm=(
     'sc_evm_forging_fee_payments_rollback.py'
     'sc_evm_shanghai.py'
     'sc_evm_pause_forging.py'
+    'sc_evm_forger_reward_address.py'
 );
 
 testScriptsUtxo=(
