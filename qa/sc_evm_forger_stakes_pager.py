@@ -126,6 +126,9 @@ class SCEvmForgerStakesPager(AccountChainSetup):
                          forward_amount=99, block_timestamp_rewind=720 * 120 * 10)
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
 
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
@@ -163,7 +166,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("op code not supported" in str(e))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should not be cative before shanghai fork activation")
 
 
         ret = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
@@ -188,7 +191,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("array size" in str(e))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should not be cative before shanghai fork activation")
 
         ret = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
         assert_true("error" in ret)
@@ -234,6 +237,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         http_api_all_res = sc_node_1.transaction_allForgingStakes()["result"]
 
         assert_equal(http_api_res['nextPos'], next_pos)
+        assert_equal(http_api_res['nextPos'], -1)
         assert_equal(http_api_res['stakes'], stake_list)
         assert_equal(http_api_all_res['stakes'], stake_list)
 
@@ -285,7 +289,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad start_pos value")
 
         try: #'Invalid position where to start reading forger stakes: 102, stakes array size: 52'
             ret = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))[
@@ -293,7 +297,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad indexes")
 
         # Negative Test 5 - use bad size value
         start_pos = 0
@@ -304,7 +308,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad size value")
 
         try:
             sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
@@ -312,7 +316,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("Size must be positive" in str(e.error))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad size value")
 
         # Negative Test 6 - use bad size value
         start_pos = 0
@@ -323,7 +327,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad size value")
 
         try:
             sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
@@ -332,7 +336,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             assert_true("Size must be positive" in str(e.error))
 
         else:
-            fail("No forging stakes expected for SC node 2.")
+            fail("Paginated api should fail with bad size value")
 
         # Interoperability test with an EVM smart contract calling forger stakes native contract
         start_pos = 4

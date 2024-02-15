@@ -1432,7 +1432,6 @@ object AccountTransactionRestScheme {
                                                      startPos: Int = -1,
                                                      size: Int = -1,
                                                      gasInfo: Option[EIP1559GasInfo]) {
-    require(size > 0 , "Size must be positive")
   }
 
   @JsonView(Array(classOf[Views.Default]))

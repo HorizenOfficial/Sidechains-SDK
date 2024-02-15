@@ -136,7 +136,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
     val stakeListSize = forgerStakeArray.getSize(view)
     if (startPos < 0)
-      throw new IllegalArgumentException(s"Invalid startPos input: $startPos, can not be negative")
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos can not be negative")
     if (startPos > stakeListSize-1)
       throw new IllegalArgumentException(s"Invalid position where to start reading forger stakes: $startPos, stakes array size: $stakeListSize")
     if (pageSize <= 0)

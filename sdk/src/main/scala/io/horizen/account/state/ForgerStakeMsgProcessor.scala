@@ -221,6 +221,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
   def doGetPagedListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
     requireIsNotPayable(invocation)
+    checkCurrentStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
 
     val inputParams = getArgumentsFromData(invocation.input)
     val cmdInput = GetPagedListOfStakesCmdInputDecoder.decode(inputParams)
