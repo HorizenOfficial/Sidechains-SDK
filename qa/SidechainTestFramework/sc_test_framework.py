@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
 import logging
-from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH
-from test_framework.test_framework import BitcoinTestFramework
-from test_framework.authproxy import JSONRPCException
-from SidechainTestFramework.sidechainauthproxy import SCAPIException
-from test_framework.util import check_json_precision, \
-    initialize_chain_clean, \
-    start_nodes, stop_nodes, \
-    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test
+import os
+import shutil
+import sys
+import tempfile
+import traceback
+
+from SidechainTestFramework.sc_boostrap_info import LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
+from SidechainTestFramework.scutil import APP_LEVEL_DEBUG, TEST_LEVEL_INFO, TEST_LEVEL_DEBUG
+from SidechainTestFramework.scutil import UtxoModel
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
     sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes, APP_LEVEL_INFO, set_sc_parallel_test, \
     SNAPSHOT_VERSION_TAG, set_jacoco
-import os
-import tempfile
-import traceback
-import sys
-import shutil
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-
-from SidechainTestFramework.scutil import APP_LEVEL_ERROR, APP_LEVEL_DEBUG, TEST_LEVEL_INFO, TEST_LEVEL_DEBUG
-
-from SidechainTestFramework.scutil import UtxoModel
+from SidechainTestFramework.sidechainauthproxy import SCAPIException
+from test_framework.authproxy import JSONRPCException
+from test_framework.test_framework import BitcoinTestFramework
+from test_framework.util import check_json_precision, \
+    initialize_chain_clean, \
+    start_nodes, stop_nodes, \
+    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index, set_mc_parallel_test
 
 '''
 The workflow is the following:
@@ -93,6 +92,22 @@ class SidechainTestFramework(BitcoinTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
+
+    def sc_setup_nodes_with_extra_arg(self, extra_arg_tag, extra_arg_val, binary=None, api_key=DEFAULT_API_KEY):
+        # Start SC nodes with a custom value for max number of SC blocks that can be reverted, this constant will be
+        # used for determining how many consecutive blocks without MC block refs can be added to the tip
+        extra_args = []
+        for i in range(0, self.number_of_sidechain_nodes):
+            if self.debug_extra_args is not None:
+                dbg_arg = self.debug_extra_args[i]
+            else:
+                dbg_arg = ['']
+            extra_args.append([extra_arg_tag, extra_arg_val] + dbg_arg)
+
+        return start_sc_nodes(
+            self.number_of_sidechain_nodes,
+            self.options.tmpdir, extra_args=extra_args,
+            binary=[binary] * self.number_of_sidechain_nodes, auth_api_key=api_key)
 
     def sc_split_network(self):
         pass
@@ -190,6 +205,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Stores jacoco flag assigned to current test")
         parser.add_option("--allforks", dest="all_forks", default=False, action="store_true",
                           help="Enables all existing fork points at the first epoch")
+        parser.add_option("--maxhistoryrewritinglength", dest="maxhistoryrewritinglength", type=int, default=100, action="store",
+                          help="Stores max number of blocks that can be reverted")
 
         self.add_options(parser)
         self.sc_add_options(parser)

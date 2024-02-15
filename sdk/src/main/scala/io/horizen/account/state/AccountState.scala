@@ -20,6 +20,7 @@ import io.horizen.params.NetworkParams
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import io.horizen.evm._
+import io.horizen.transaction.exception.TransactionSemanticValidityException
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
@@ -82,9 +83,11 @@ class AccountState(
         throw new IllegalStateException(errMsg)
       }
 
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
+
       // Check Txs semantic validity first
       for (tx <- mod.sidechainTransactions)
-        tx.semanticValidity()
+        tx.semanticValidity(consensusEpochNumber)
 
       // TODO: keep McBlockRef validation in a view style, so in the applyMainchainBlockReferenceData method
       // Validate top quality certificate in the end of the submission window:
@@ -125,7 +128,6 @@ class AccountState(
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       var cumGasUsed: BigInteger = BigInteger.ZERO
@@ -480,10 +482,12 @@ class AccountState(
       }
     }
 
-    ethTx.semanticValidity()
+    val consensusEpochNumber = stateMetadataStorage.getConsensusEpochNumber.getOrElse(0)
+    ethTx.semanticValidity(consensusEpochNumber)
+
     val sender = ethTx.getFrom.address()
 
-    val feeFork = GasFeeFork.get(stateMetadataStorage.getConsensusEpochNumber.getOrElse(0))
+    val feeFork = GasFeeFork.get(consensusEpochNumber)
     if (feeFork.blockGasLimit.compareTo(ethTx.getGasLimit) < 0)
       throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${ethTx.getGasLimit}, block gas limit ${feeFork.blockGasLimit}")
 

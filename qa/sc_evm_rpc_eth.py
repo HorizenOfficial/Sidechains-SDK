@@ -44,7 +44,7 @@ class SCEvmRPCEth(AccountChainSetup):
         res = sc_node.rpc_eth_getTransactionByHash("0xcccbbb")
         assert_true("error" in res)
         assert_false("result" in res)
-        assert_equal("Invalid params", res['error']['message'])
+        assert_true("Invalid params" in res['error']['message'])
 
         # Test with valid input transaction id but not existing tx
         res = sc_node.rpc_eth_getTransactionByHash("0xcccbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")

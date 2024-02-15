@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
+from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
+    generate_next_block, connect_sc_nodes, sync_sc_blocks, SIMPLE_APP_BINARY
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks
-from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Certificate submission behaviour for the node after sync from scratch with an existing chain.
@@ -84,7 +83,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 10)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return self.sc_setup_nodes_with_extra_arg('-max_hist_rew_len', str(3000 + 1), SIMPLE_APP_BINARY)
 
     def do_cert_cycle(self, mc_node, sc_forger_node, sc_submitter_node, mc_blocks_in_epoch_left, additional_sc_blocks):
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)

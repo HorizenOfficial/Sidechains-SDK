@@ -22,7 +22,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
   var app: SidechainApp = null
 
-
   override def configure(): Unit = {
 
     bind(classOf[NodeViewHelper])
@@ -66,7 +65,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
            @Named("AppVersion") appVersion: String,
-           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
+           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int,
+           @Named("MaxHistoryRewriteLength") maxHistoryRewriteLength : Int
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -93,7 +93,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           applicationStopper,
           forkConfigurator,
           appVersion,
-          mcBlockReferenceDelay
+          mcBlockReferenceDelay,
+          maxHistoryRewriteLength
         )
       }
     }

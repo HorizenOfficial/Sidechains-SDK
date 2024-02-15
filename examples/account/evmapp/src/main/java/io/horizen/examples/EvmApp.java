@@ -3,6 +3,7 @@ package io.horizen.examples;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.horizen.account.AccountSidechainApp;
+import io.horizen.history.AbstractHistory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,10 +38,19 @@ public class EvmApp {
             allForksEnabled = Boolean.parseBoolean(args[2]);
         }
 
+        int maxHistRewLen = AbstractHistory.MAX_HISTORY_REWRITING_LENGTH();
+        try {
+            if (args.length >= 4) {
+                maxHistRewLen = Integer.parseInt(args[3]);
+            }
+        } catch (NumberFormatException ex) {
+            System.out.println("Max History rewrite Length can not be parsed.");
+        }
 
         String settingsFileName = args[0];
 
-        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay, allForksEnabled));
+        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName, mcBlockReferenceDelay, allForksEnabled, maxHistRewLen));
+
         AccountSidechainApp sidechainApp = injector.getInstance(AccountSidechainApp.class);
 
         Logger logger = LogManager.getLogger(EvmApp.class);

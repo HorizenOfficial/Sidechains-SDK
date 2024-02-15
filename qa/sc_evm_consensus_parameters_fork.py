@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 import time
 
-
+from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
-from SidechainTestFramework.sc_forging_util import *
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, AccountModel, \
-    disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
-from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from test_framework.util import assert_equal, assert_true, websocket_port_by_mc_node_index
-import pprint
+from SidechainTestFramework.sc_forging_util import *
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, \
+    AccountModel, \
+    disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, EVM_APP_BINARY
+from test_framework.util import assert_equal, websocket_port_by_mc_node_index
 
 """
 This test doesn't support --allforks.
@@ -67,6 +66,9 @@ class SCConsensusParamsForkTest(AccountChainSetup):
                                             *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
 
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(10000), EVM_APP_BINARY, self.API_KEY)
 
     def run_test(self):
         if self.options.all_forks:

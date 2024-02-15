@@ -72,6 +72,7 @@ case class ForgerSettings(
     automaticForging: Boolean = false,
     restrictForgers: Boolean = false,
     allowedForgersList: Seq[ForgerKeysData] = Seq(),
+    forgerRewardAddress: String = null,
 ) extends SensitiveStringer
 
 case class MempoolSettings(

@@ -1,12 +1,18 @@
 package io.horizen.account.transaction;
 
 import io.horizen.account.fixtures.EthereumTransactionFixture;
+import io.horizen.account.fork.Version1_3_0Fork;
 import io.horizen.account.secret.PrivateKeySecp256k1;
 import io.horizen.account.secret.PrivateKeySecp256k1Serializer;
 import io.horizen.account.state.GasUtil;
+import io.horizen.fork.ForkManagerUtil;
+import io.horizen.fork.OptionalSidechainFork;
+import io.horizen.fork.SidechainForkConsensusEpoch;
+import io.horizen.fork.SimpleForkConfigurator;
 import io.horizen.transaction.TransactionSerializer;
 import io.horizen.utils.BytesUtils;
-import org.junit.Ignore;
+import io.horizen.utils.Pair;
+import org.junit.Before;
 import org.junit.Test;
 import scala.Option;
 import scala.util.Try;
@@ -15,10 +21,33 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class EthereumTransactionSerializerTest implements EthereumTransactionFixture {
+
+    final static int VERSION_1_3_FORK_EPOCH = 35;
+    final static int DEFAULT_CONSENSUS_EPOCH = 0;
+
+    @Before
+    public void setUp() {
+        SimpleForkConfigurator forkConfigurator = new SimpleForkConfigurator() {
+            public List<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>> getOptionalSidechainForks() {
+                var listOfForks = new ArrayList<Pair<SidechainForkConsensusEpoch, OptionalSidechainFork>>();
+                listOfForks.add(
+                        new Pair<>(
+                                new SidechainForkConsensusEpoch(VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH, VERSION_1_3_FORK_EPOCH),
+                                new Version1_3_0Fork(true)
+                        )
+                );
+                return listOfForks;
+            }
+        };
+
+        ForkManagerUtil.initializeForkManager(forkConfigurator,"regtest");
+    }
 
     // Check that using the same key pair for signing two transactions give the same from address
     @Test
@@ -36,7 +65,8 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         var tx1 = createLegacyTransaction(value, nonce, account1Key, gasPrice, gasLimit);
 
         try {
-            tx1.semanticValidity();
+            tx1.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx1.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable t) {
             fail("Expected a valid tx: " + t.getMessage());
         }
@@ -44,7 +74,8 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         var tx2 = createLegacyTransaction(value, nonce.add(BigInteger.ONE), account1Key, gasPrice, gasLimit);
 
         try {
-            tx2.semanticValidity();
+            tx2.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx2.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable t) {
             fail("Expected a valid tx: " + t.getMessage());
         }
@@ -58,7 +89,8 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         var tx3 = createEIP1559Transaction(value, nonce.add(BigInteger.ONE), account1Key, maxFeePerGas, maxPriorityFeePerGas, gasLimit, new byte[0]);
 
         try {
-            tx3.semanticValidity();
+            tx3.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx3.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable t) {
             fail("Expected a valid tx: " + t.getMessage());
         }
@@ -70,7 +102,8 @@ public class EthereumTransactionSerializerTest implements EthereumTransactionFix
         var tx4 = createLegacyEip155Transaction(value, nonce.add(BigInteger.ONE), account1Key, gasPrice, gasLimit);
 
         try {
-            tx4.semanticValidity();
+            tx4.semanticValidity(DEFAULT_CONSENSUS_EPOCH);
+            tx4.semanticValidity(VERSION_1_3_FORK_EPOCH);
         } catch (Throwable t) {
             fail("Expected a valid tx: " + t.getMessage());
         }

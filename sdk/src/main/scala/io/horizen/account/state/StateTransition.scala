@@ -52,12 +52,17 @@ class StateTransition(
     // trace TX start
     tracer.foreach(_.CaptureTxStart(gasPool.initialGas))
     try {
+      val isShanghaiActive = Version1_3_0Fork.get(blockContext.consensusEpochNumber).active
       // consume intrinsic gas
-      val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
+      val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty, isShanghaiActive)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
+
+      if (isShanghaiActive && msg.getTo.isEmpty && msg.getData.length > ProtocolParams.MaxInitCodeSize){
+          throw MaxInitCodeSizeExceededException(msg.getData.length, ProtocolParams.MaxInitCodeSize)
+      }
       // reset and prepare account access list
-      view.setupAccessList(msg, blockContext.forgerAddress, new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
+      view.setupAccessList(msg, blockContext.forgerAddress, new ForkRules(isShanghaiActive))
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
       // execute top-level call frame

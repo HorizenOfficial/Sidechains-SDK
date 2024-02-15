@@ -13,13 +13,15 @@ from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransactio
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
     computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VERSION_1_2_FORK_EPOCH
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
+    SCCreationInfo, SCForgerConfiguration
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
-    generate_next_blocks, )
+    generate_next_blocks, bootstrap_sidechain_nodes, AccountModel, )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, assert_false, )
+    assert_equal, fail, forward_transfer_to_sidechain, assert_false, websocket_port_by_mc_node_index, )
 
 """
 Info about forger account block fee payments
@@ -53,6 +55,8 @@ Test:
 
 
 class ScEvmForgingFeePayments(AccountChainSetup):
+    FORGER_REWARD_ADDRESS = '0000000000000000000012341234123412341234'
+
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=20, forward_amount=3,
                          block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 100)
@@ -68,6 +72,28 @@ class ScEvmForgingFeePayments(AccountChainSetup):
             self.sc_sync_all()
             forging_info = sc_node.block_forgingInfo()
             current_epoch = forging_info["result"]["bestBlockEpochNumber"]
+
+    def sc_setup_chain(self):
+        mc_node = self.nodes[0]
+        sc_node_configuration = [
+            SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                api_key='Horizen',
+                cert_submitter_enabled=True),
+
+            SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                forger_options=SCForgerConfiguration(forger_reward_address=self.FORGER_REWARD_ADDRESS),
+                api_key='Horizen',
+                cert_submitter_enabled=False
+            )
+        ]
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 3, 20), *sc_node_configuration)
+        self.sc_nodes_bootstrap_info = \
+            bootstrap_sidechain_nodes(self.options, network,
+                                      block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 100,
+                                      model=AccountModel)
 
     def run_test(self):
         if self.options.all_forks:
@@ -290,7 +316,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         # Check forger fee payments
         assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
                      "Wrong fee payment amount for SC node 1")
-        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
+        # SC node 2 is configured to send rewards to some other address
+        reward_address_balance = http_wallet_balance(sc_node_2, self.FORGER_REWARD_ADDRESS)
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees,
+                     sc_node_2_balance_after_payments + reward_address_balance,
                      "Wrong fee payment amount for SC node 2")
 
         # Check fee payments from API perspective
@@ -351,12 +380,15 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         node_2_fees = per_block_fee * 3
 
         sc_node_1_balance_before_payments = sc_node_1_balance_after_payments
-        sc_node_2_balance_before_payments = sc_node_2_balance_after_payments
+        sc_node_2_balance_before_payments = sc_node_2_balance_after_payments + reward_address_balance
         sc_node_1_balance_after_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
         sc_node_2_balance_after_payments = sc_node_2.wallet_getTotalBalance()['result']['balance']
         assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
                      "Wrong fee payment amount for SC node 1")
-        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
+        # SC node 2 is configured to send rewards to some other address
+        reward_address_balance = http_wallet_balance(sc_node_2, self.FORGER_REWARD_ADDRESS)
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees,
+                     sc_node_2_balance_after_payments + reward_address_balance,
                      "Wrong fee payment amount for SC node 2")
 
         # assert forger pool balance is 0 now, as the fees are distributed

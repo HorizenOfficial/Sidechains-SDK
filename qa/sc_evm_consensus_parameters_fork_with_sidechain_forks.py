@@ -11,9 +11,10 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
 from SidechainTestFramework.scutil import generate_next_block, bootstrap_sidechain_nodes, \
-    AccountModel, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots
+    AccountModel, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots, \
+    EVM_APP_BINARY
 from test_framework.util import assert_equal, websocket_port_by_mc_node_index, forward_transfer_to_sidechain, \
-    assert_true, fail
+    assert_true
 
 """
 This test doesn't support --allforks.
@@ -79,6 +80,11 @@ class SCConsensusParamsForkWithSidechainForksTest(AccountChainSetup):
                                                         circuit_type=KEY_ROTATION_CIRCUIT),
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
+
+
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(1000), EVM_APP_BINARY, self.API_KEY)
 
 
     def run_test(self):
@@ -258,6 +264,7 @@ class SCConsensusParamsForkWithSidechainForksTest(AccountChainSetup):
         block_created_percentage = len(forged_block_ids) / slot_until_next_epoch * 100
 
         #Verify that we have more or less 5% of slots filled
+        print("block_created_percentage={}".format(block_created_percentage))
         assert_true(4.0 < block_created_percentage < 6.0)
 
 

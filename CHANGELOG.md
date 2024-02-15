@@ -2,6 +2,10 @@
 1. Sparkz dependency updated to 2.3.0
 2. Updated third-party dependencies
 3. Forger Stake native smart contract: added getPagedForgersStakesByUser, stakeOf and upgrade methods.
+4. EVM Shangai support  
+
+**0.10.1**
+* [eth RPC endpoint] Additional fix on json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
 
 **0.10.0**
 1. Added support for multisig MC addresses in ZenDAO Native Smart Contract

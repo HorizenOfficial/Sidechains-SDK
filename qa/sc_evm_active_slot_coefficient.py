@@ -4,8 +4,10 @@ import time
 
 from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_forging_util import *
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, AccountModel, \
-    try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
+from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, bootstrap_sidechain_nodes, \
+    AccountModel, \
+    try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, start_sc_nodes, \
+    EVM_APP_BINARY
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -62,6 +64,11 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
 
 
+
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(2000), EVM_APP_BINARY, self.API_KEY)
+
     def run_test(self):
         if self.options.all_forks:
             logging.info("This test cannot be executed with --allforks")
@@ -107,6 +114,7 @@ class SCActiveSlotCoefficientTest(AccountChainSetup):
         block_created_percentage = len(forged_block_ids) / slot_until_next_epoch * 100
 
         #Verify that the we have more or less 5% of slots filled
+        print("block_created_percentage={}".format(block_created_percentage))
         assert_true(block_created_percentage > 4.0 and block_created_percentage < 6.0)
 
         # Reconnect the SC node 1 and the SC node 2 and verify that SC node 2 is able to sync blocks

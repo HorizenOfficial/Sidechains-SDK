@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import logging
 
 from eth_utils import add_0x_prefix
@@ -7,14 +8,11 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import CallMethod, deploy_smart_contract, \
     contract_function_static_call, contract_function_call, ac_makeForgerStake
-from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
-from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
-from SidechainTestFramework.account_websocket_client import AccountWebsocketClient
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenToWei
-import pprint
-import json
-
+from SidechainTestFramework.account_websocket_client import AccountWebsocketClient
+from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
+from test_framework.util import assert_equal, forward_transfer_to_sidechain
 
 global_call_method = CallMethod.RPC_EIP155
 

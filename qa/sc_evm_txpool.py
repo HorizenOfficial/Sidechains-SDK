@@ -300,7 +300,7 @@ class SCEvmTxPool(AccountChainSetup):
         # txpool content from using request parameter that doesn't make sense
         content_from_res = sc_node.rpc_txpool_contentFrom('0x0')['error']
         assert_true(content_from_res['code'] == -32602)
-        assert_true(content_from_res['message'] == 'Invalid params')
+        assert_true(content_from_res['message'] == 'Invalid params: invalid length: want 42 hex characters got 3')
         assert_true(content_from_res['data'] == 'invalid length: want 42 hex characters got 3')
 
         # generate block and finalize the transactions in the mempool

@@ -306,6 +306,8 @@ class SCEvmMcAddressOwnershipPerfTest(AccountChainSetup):
 
             tx_count = 0
             for entry in reversed(list_mc_addresses):
+                self.nodes[0].generate(1)
+
                 if (entry not in first_round_mc_addrs):
                     tx_count += 1
                     tx_hash_list.append(removeKeysOwnership(sc_node, nonce=nonce,

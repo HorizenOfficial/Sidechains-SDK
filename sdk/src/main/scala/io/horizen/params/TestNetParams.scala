@@ -4,12 +4,14 @@ import io.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Sid
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSignatureCircuit}
 import io.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import sparkz.util.ModifierId
 import sparkz.util.bytesToId
+
 import scala.concurrent.duration._
 
 case class TestNetParams(
@@ -41,6 +43,7 @@ case class TestNetParams(
                           override val isHandlingTransactionsEnabled: Boolean = true,
                           override val mcBlockRefDelay: Int = 0,
                           override val resetModifiersStatus: Boolean = false,
+                          override val rewardAddress: Option[AddressProposition] = None,
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
