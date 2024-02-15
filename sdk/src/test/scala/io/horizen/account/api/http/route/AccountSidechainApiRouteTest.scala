@@ -22,6 +22,7 @@ import io.horizen.consensus.ConsensusEpochAndSlot
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import io.horizen.forge.AbstractForger
+import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import io.horizen.json.serializer.ApplicationJsonSerializer
 import io.horizen.params.MainNetParams
 import io.horizen.secret.SecretSerializer
@@ -52,6 +53,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
+  ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
   val genesisBlock: AccountBlock = mock[AccountBlock]
 

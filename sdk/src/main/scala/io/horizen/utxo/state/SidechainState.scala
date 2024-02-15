@@ -717,13 +717,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq()
-    if(forgingStakes.isEmpty) {
-      throw new IllegalStateException("ForgerStakes list can't be empty.")
-    }
 
     stateStorage.getConsensusEpochNumber match {
       case Some(consensusEpochNumber) =>
+        val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq(consensusEpochNumber)
+        if(forgingStakes.isEmpty) {
+          throw new IllegalStateException("ForgerStakes list can't be empty.")
+        }
         val lastBlockInEpoch = bytesToId(stateStorage.lastVersionId.get.data) // we use block id as version
         val consensusEpochInfo = ConsensusEpochInfo(
           consensusEpochNumber,
@@ -739,7 +739,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: we consider ordering of the result to keep it deterministic for all Nodes.
   // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
-  def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
+  override def getOrderedForgingStakesInfoSeq(epochNumber: Int): Seq[ForgingStakeInfo] = {
     ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
   }
 

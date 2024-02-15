@@ -57,7 +57,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
-    Mockito.when(accountState.getListOfForgersStakes).thenReturn(listOfStakes)
+    Mockito.when(accountState.getListOfForgersStakes(ArgumentMatchers.anyBoolean())).thenReturn(listOfStakes)
     Mockito.when(accountState.getWithdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
     Mockito
       .when(accountState.getBalance(ArgumentMatchers.any[Address]))
@@ -75,12 +75,17 @@ class AccountNodeViewUtilMocks extends MockitoSugar
       .when(accountState.getNextBaseFee)
       .thenReturn(BigInteger.valueOf(1234))
     Mockito
-      .when(accountState.getForgerStakeData(ArgumentMatchers.anyString()))
+      .when(accountState.getForgerStakeData(ArgumentMatchers.anyString(), ArgumentMatchers.anyBoolean()))
       .thenAnswer(myStakeId =>
         getListOfStakes
           .find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0)))
           .map(stakeInfo => stakeInfo.forgerStakeData)
       )
+    Mockito
+      .when(accountState.getConsensusEpochNumber)
+      .thenReturn(None)
+
+
     accountState
   }
 

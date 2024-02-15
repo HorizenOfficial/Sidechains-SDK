@@ -11,11 +11,12 @@ import io.horizen.account.api.http.route.AccountTransactionRestScheme._
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{checkMcAddresses, checkMcRedeemScriptForMultisig, getMcSignature, getOwnershipId, checkMultisigAddress}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
@@ -465,7 +466,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(txCreatorSecret) =>
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
-              val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
+              val epochNumber = sidechainNodeView.getNodeState.getConsensusEpochNumber.getOrElse(0)
+              val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId, Version1_3_0Fork.get(epochNumber).active)
               stakeDataOpt match {
                 case Some(stakeData) =>
                   val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
@@ -506,7 +508,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def allForgingStakes: Route = (post & path("allForgingStakes")) {
     withNodeView { sidechainNodeView =>
       val accountState = sidechainNodeView.getNodeState
-      val listOfForgerStakes = accountState.getListOfForgersStakes
+      val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+      val listOfForgerStakes = accountState.getListOfForgersStakes(Version1_3_0Fork.get(epochNumber).active)
       ApiResponseUtil.toResponse(RespForgerStakes(listOfForgerStakes.toList))
     }
   }
@@ -539,8 +542,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       _ => {
         withNodeView { sidechainNodeView =>
           val accountState = sidechainNodeView.getNodeState
-          val listOfForgerStakes = accountState.getListOfForgersStakes
-
+          val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+          val listOfForgerStakes = accountState.getListOfForgersStakes(Version1_3_0Fork.get(epochNumber).active)
           if (listOfForgerStakes.nonEmpty) {
             val wallet = sidechainNodeView.getNodeWallet
             val walletPubKeys = wallet.allSecrets().map(_.publicImage).toSeq

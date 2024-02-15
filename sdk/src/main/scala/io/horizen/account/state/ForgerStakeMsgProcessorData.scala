@@ -4,22 +4,23 @@ import com.fasterxml.jackson.annotation.JsonView
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder, MsgProcessorInputDecoder}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.{BigIntegerUInt256, Secp256k1}
-import BigIntegerUInt256.getUnsignedByteArray
+import io.horizen.evm.Address
+import io.horizen.json.Views
 import io.horizen.proof.Signature25519
 import io.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import io.horizen.json.Views
-import io.horizen.utils.{BytesUtils, Ed25519}
-import io.horizen.evm.Address
 import io.horizen.utils.BytesUtils.padWithZeroBytes
+import io.horizen.utils.{BytesUtils, Ed25519}
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Int32, Uint256, Uint32}
+import org.web3j.abi.datatypes.{DynamicArray, DynamicStruct, StaticStruct, Type, Address => AbiAddress}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
+import scala.collection.JavaConverters
 
 @JsonView(Array(classOf[Views.Default]))
 // used as element of the list to return when getting all forger stakes via msg processor
@@ -138,7 +139,6 @@ case class AddNewStakeCmdInput(
   override def asABIType(): StaticStruct = {
     val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
     val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
-    //val listOfParams = new util.ArrayList(forgerPublicKeysAbi.getValue)
     listOfParams.add(new AbiAddress(ownerAddress.toString))
     new StaticStruct(listOfParams)
   }
@@ -261,13 +261,20 @@ object OpenStakeForgerListCmdInputDecoder
   }
 }
 
+
+trait ForgerStakeStorageElem{
+  val forgerPublicKeys: ForgerPublicKeys
+  val ownerPublicKey: AddressProposition
+  val stakedAmount: BigInteger
+}
+
 // the forger stake data record, stored in stateDb as: key=stakeId / value=data
 @JsonView(Array(classOf[Views.Default]))
 case class ForgerStakeData(
-                            forgerPublicKeys: ForgerPublicKeys,
-                            ownerPublicKey: AddressProposition,
-                            stakedAmount: BigInteger)
-  extends BytesSerializable {
+                            override val forgerPublicKeys: ForgerPublicKeys,
+                            override val ownerPublicKey: AddressProposition,
+                            override val stakedAmount: BigInteger)
+  extends BytesSerializable with ForgerStakeStorageElem {
 
   require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
 
@@ -297,3 +304,153 @@ object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
 }
+
+@JsonView(Array(classOf[Views.Default]))
+case class ForgerStakeStorageElemV2(
+                              override val forgerPublicKeys: ForgerPublicKeys,
+                              override val ownerPublicKey: AddressProposition,
+                              override val stakedAmount: BigInteger,
+                              var stakeListIndex: Int,
+                              var ownerListIndex: Int)
+  extends BytesSerializable with ForgerStakeStorageElem {
+
+  require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
+
+  override type M = ForgerStakeStorageElemV2
+
+  override def serializer: SparkzSerializer[ForgerStakeStorageElemV2] = ForgerStakeStorageElemV2Serializer
+
+  override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s, stakedAmount: %s, stakeListIndex: %s, ownerListIndex: %s)"
+    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount, stakeListIndex, ownerListIndex)
+}
+
+object ForgerStakeStorageElemV2Serializer extends SparkzSerializer[ForgerStakeStorageElemV2] {
+  override def serialize(s: ForgerStakeStorageElemV2, w: Writer): Unit = {
+    ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    w.putInt(s.stakedAmount.toByteArray.length)
+    w.putBytes(s.stakedAmount.toByteArray)
+    w.putInt(s.stakeListIndex)
+    w.putInt(s.ownerListIndex)
+  }
+
+  override def parse(r: Reader): ForgerStakeStorageElemV2 = {
+    val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
+    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+
+    val stakeAmountLength = r.getInt()
+    val stakeAmount = new BigIntegerUInt256(r.getBytes(stakeAmountLength)).getBigInt
+    val stakeListIndex = r.getInt()
+    val ownerListIndex = r.getInt()
+    ForgerStakeStorageElemV2(forgerPublicKeys, ownerPublicKey, stakeAmount, stakeListIndex, ownerListIndex)
+  }
+}
+
+case class StakeOfCmdInput(ownerAddress: Address) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(ownerAddress.toString)
+    )
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(ownerAddress: %s)"
+    .format(
+      this.getClass.toString,
+      ownerAddress.toString)
+
+}
+
+object StakeOfCmdInputDecoder
+  extends ABIDecoder[StakeOfCmdInput]
+  with MsgProcessorInputDecoder[StakeOfCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[AbiAddress]() {}
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): StakeOfCmdInput = {
+    val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    StakeOfCmdInput(address)
+  }
+}
+
+case class StakeAmount(totalStake: BigInteger) extends ABIEncodable[StaticStruct]{
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new Uint256(totalStake)
+    )
+    new StaticStruct(listOfParams)
+  }
+}
+
+
+case class GetPagedForgersStakesOfUserCmdInput(ownerAddress: Address, startPos: Int, size: Int) extends ABIEncodable[StaticStruct] {
+
+  override def asABIType(): StaticStruct = {
+
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new AbiAddress(ownerAddress.toString),
+      new Uint32(startPos),
+      new Uint32(size)
+    )
+    new StaticStruct(listOfParams)
+  }
+
+  override def toString: String = "%s(ownerAddress: %s, startPos: %s, size: %s)"
+    .format(
+      this.getClass.toString,
+      ownerAddress.toString,
+      startPos,
+      size)
+
+}
+
+object GetPagedForgersStakesOfUserCmdInputDecoder
+  extends ABIDecoder[GetPagedForgersStakesOfUserCmdInput]
+    with MsgProcessorInputDecoder[GetPagedForgersStakesOfUserCmdInput] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[AbiAddress]() {},
+      new TypeReference[Uint32]() {},
+      new TypeReference[Uint32]() {}
+    ))
+  }
+
+  override def createType(listOfParams: util.List[Type[_]]): GetPagedForgersStakesOfUserCmdInput = {
+    val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
+    val startPos = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValueExact()
+    val size = listOfParams.get(2).asInstanceOf[Uint32].getValue.intValueExact()
+    GetPagedForgersStakesOfUserCmdInput(address, startPos, size)
+  }
+}
+
+case class PagedListOfStakesOutput(nextStartPos: Int, listOfStakes: Seq[AccountForgingStakeInfo])
+  extends ABIEncodable[DynamicStruct] {
+
+  override def asABIType(): DynamicStruct = {
+
+    val seqOfStruct = listOfStakes.map(_.asABIType())
+    val listOfStruct = JavaConverters.seqAsJavaList(seqOfStruct)
+    val theType = classOf[StaticStruct]
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
+      new Int32(nextStartPos),
+      new DynamicArray(theType, listOfStruct)
+    )
+    new DynamicStruct(listOfParams)
+
+  }
+
+  override def toString: String = "%s(startPos: %s, listOfStake: %s)"
+    .format(
+      this.getClass.toString,
+      nextStartPos, listOfStakes)
+}
+
+
