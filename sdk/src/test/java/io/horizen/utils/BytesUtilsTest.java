@@ -324,7 +324,7 @@ public class BytesUtilsTest {
         byte[] expectedPublicKeyHashBytes = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
 
         // Test 1: valid MainNet addresses in MainNet network
-        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, null);
         String pubKeyAddressMainNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, mainNetParams);
 
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
@@ -345,7 +345,7 @@ public class BytesUtilsTest {
         }
 
         // Test 3: valid TestNet addresses in TestNet network
-        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, null);
         String pubKeyAddressTestNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, testNetParams);
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
                 expectedPublicKeyHashBytes,

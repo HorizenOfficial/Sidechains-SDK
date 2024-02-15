@@ -398,43 +398,49 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqCreateForgerStake]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
+            val accountState = sidechainNodeView.getNodeState
+            val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+            if (!sidechainNodeView.getNodeState.isForgerStakeAvailable(Version1_3_0Fork.get(epochNumber).active)) {
+              ApiResponseUtil.toResponse(GenericTransactionError("Unable to add", JOptional.empty()))
+            } else {
+              val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
-            // default gas related params
-            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-            var maxPriorityFeePerGas = BigInteger.valueOf(120)
-            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-            var gasLimit = BigInteger.valueOf(500000)
+              // default gas related params
+              val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+              var maxPriorityFeePerGas = BigInteger.valueOf(120)
+              var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+              var gasLimit = BigInteger.valueOf(500000)
 
-            if (body.gasInfo.isDefined) {
-              maxFeePerGas = body.gasInfo.get.maxFeePerGas
-              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-              gasLimit = body.gasInfo.get.gasLimit
-            }
+              if (body.gasInfo.isDefined) {
+                maxFeePerGas = body.gasInfo.get.maxFeePerGas
+                maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+                gasLimit = body.gasInfo.get.gasLimit
+              }
 
-            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+              val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-            val secret = getFittingSecret(sidechainNodeView, None, txCost)
+              val secret = getFittingSecret(sidechainNodeView, None, txCost)
 
-            secret match {
-              case Some(secret) =>
+              secret match {
+                case Some(secret) =>
 
-                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
-                val tmpTx: EthereumTransaction = new EthereumTransaction(
-                  params.chainId,
-                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
-                  nonce,
-                  gasLimit,
-                  maxPriorityFeePerGas,
-                  maxFeePerGas,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    dataBytes,
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+              }
             }
           }
         }

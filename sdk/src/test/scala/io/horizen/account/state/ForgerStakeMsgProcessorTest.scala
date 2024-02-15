@@ -581,7 +581,7 @@ class ForgerStakeMsgProcessorTest
         msg.getFrom.toBytes, msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(186112, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+      val returnData = assertGas(186212, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
 //      val returnData = assertGas(139712, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData)
       println("This is the returned value: " + BytesUtils.toHexString(returnData))
@@ -629,7 +629,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(195012, msg2, view, forgerStakeMessageProcessor, defaultBlockContext)
+      val returnData2 = assertGas(195512, msg2, view, forgerStakeMessageProcessor, defaultBlockContext)
 //      val returnData2 = assertGas(119812, msg2, view, forgerStakeMessageProcessor, defaultBlockContext)
       assertNotNull(returnData2)
       println("This is the returned value: " + BytesUtils.toHexString(returnData2))
@@ -723,7 +723,7 @@ class ForgerStakeMsgProcessorTest
 
       // should fail because forger is not in the allowed list
       var ex = intercept[ExecutionRevertedException] {
-        assertGas(4800, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+        assertGas(6900, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
       assertTrue(ex.getMessage.contains("Forger is not in the allowed list"))
 
@@ -884,7 +884,7 @@ class ForgerStakeMsgProcessorTest
 
        // should fail because recipient is a smart contract
       assertThrows[ExecutionRevertedException] {
-        assertGas(200, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
+        assertGas(2300, msg, view, forgerStakeMessageProcessor, defaultBlockContext)
       }
 
       // test with new storage model

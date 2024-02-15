@@ -35,6 +35,8 @@ trait ForgerStakesProvider {
 
   private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean
 
+  private[horizen] def isForgerStakeAvailable(view: BaseAccountStateView, isForkV1_3Active: Boolean): Boolean
+
   private[horizen] def getAllowedForgerListIndexes(view: BaseAccountStateView): Seq[Int]
 }
 
@@ -81,6 +83,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeStorage.findStakeData(view, stakeId)
   }
 
+  override private[horizen] def  isForgerStakeAvailable(view: BaseAccountStateView, isForkV1_3Active: Boolean): Boolean = {
+    if (!isForkV1_3Active){
+       true
+    }else{
+      val stakeStorage: ForgerStakeStorage = getForgerStakeStorage(view, true)
+      stakeStorage.isForgerStakeAvailable(view)
+    }
+  }
+
+
   override def addScCreationForgerStake(
       view: BaseAccountStateView,
       owner: Address,
@@ -125,6 +137,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     // check that sender account exists (unless we are staking in the sc creation phase)
     if (!view.accountExists(invocation.caller) && !isGenesisScCreation) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${invocation.caller}")
+    }
+
+    // check that we are able to add new forger stake
+    if (!isForgerStakeAvailable(view, isForkV1_3_Active)) {
+      throw new ExecutionRevertedException("Unable to add new forger stake")
     }
 
     val inputParams = getArgumentsFromData(invocation.input)

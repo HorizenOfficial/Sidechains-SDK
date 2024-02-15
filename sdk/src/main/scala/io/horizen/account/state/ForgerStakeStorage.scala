@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.ForgerStakeLinkedList.{addNewNode, getStakeListItem, linkedListNodeRefIsNull, removeNode}
+import io.horizen.account.state.ForgerStakeLinkedList.{addNewNode, getStakeListItem, getStakeListSize, linkedListNodeRefIsNull, removeNode}
 import io.horizen.account.state.ForgerStakeStorage.saveStorageVersion
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
@@ -54,6 +54,8 @@ trait ForgerStakeStorage {
   def findForgerStakeStorageElem(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeStorageElem]
 
   def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte], stake: ForgerStakeStorageElem): Unit
+
+  def isForgerStakeAvailable(view: BaseAccountStateView): Boolean
 
   def setupStorage(view: BaseAccountStateView): Unit
 }
@@ -133,6 +135,9 @@ object ForgerStakeStorageV1 extends ForgerStakeStorage {
     view.removeAccountStorageBytes(FORGER_STAKE_SMART_CONTRACT_ADDRESS, stakeId)
   }
 
+  override def isForgerStakeAvailable(view: BaseAccountStateView): Boolean = {
+    getStakeListSize(view) <= 5000
+  }
 }
 
 /*
@@ -296,6 +301,9 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 
   }
 
+  override def isForgerStakeAvailable(view: BaseAccountStateView): Boolean = {
+    forgerStakeArray.getSize(view)  <= 5000
+  }
 }
 
 

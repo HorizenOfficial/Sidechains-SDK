@@ -57,6 +57,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
+    Mockito.when(accountState.isForgerStakeAvailable(ArgumentMatchers.anyBoolean())).thenReturn(true)
     Mockito.when(accountState.getListOfForgersStakes(ArgumentMatchers.anyBoolean())).thenReturn(listOfStakes)
     Mockito.when(accountState.getWithdrawalRequests(ArgumentMatchers.anyInt())).thenReturn(listOfWithdrawalRequests)
     Mockito
