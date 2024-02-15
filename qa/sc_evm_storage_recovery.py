@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, launch_db_tool, start_sc_node, \
     wait_for_sc_node_initialization, DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND, EVM_APP_BINARY, \
-    AccountModel
+    AccountModel, SLOTS_IN_EPOCH
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_true, fail
 
@@ -166,6 +166,9 @@ class EvmStorageRecoveryTest(SidechainTestFramework):
         NUM_BLOCKS = 5
         logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS))
+        # mine an mc block otherwise we have SC a long chain span (limit is 100) without mc block references, and the forging
+        # of new SC blocks would be paused
+        self.nodes[0].generate(1)
 
         logging.info("Test 0 ######")
         # Check that in the stopped SC2 node all storages versioned with blockid (as of now just "state")
@@ -212,10 +215,25 @@ class EvmStorageRecoveryTest(SidechainTestFramework):
         # reach the end of consensus epoch
         h = len(self.blocks) + 1
         logging.info("Reaching end of consensus epoch, currently at bloch height {}...".format(h))
-        NUM_BLOCKS = 722 - h
+        NUM_BLOCKS = (SLOTS_IN_EPOCH) + 2 - h
         logging.info("SC1 generates {} blocks...".format(NUM_BLOCKS))
-        self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS, verbose=False))
-        self.sc_sync_all()
+
+        # mine some mc block now and then, otherwise we have SC a long chain span (limit is 100) without mc block references, and the forging
+        # of new SC blocks would be paused
+        # However, do not mine too mc blocks (==chunks) otherwise the SC may cease
+        CHUNK_SIZE = 90
+        CHUNKS = NUM_BLOCKS//CHUNK_SIZE
+        REMAINDER = NUM_BLOCKS-(CHUNKS*CHUNK_SIZE)
+        for i in range(CHUNKS):
+
+            self.nodes[0].generate(1)
+            self.blocks.extend(generate_next_blocks(sc_node1, "first node", CHUNK_SIZE, verbose=False))
+            self.sc_sync_all()
+
+        if REMAINDER > 0:
+            self.nodes[0].generate(1)
+            self.blocks.extend(generate_next_blocks(sc_node1, "first node", REMAINDER, verbose=False))
+            self.sc_sync_all()
 
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
         stop_sc_node(sc_node2, 1)

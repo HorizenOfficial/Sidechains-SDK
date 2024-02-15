@@ -2,16 +2,17 @@ package io.horizen
 
 import io.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain.AbstractFeePaymentsInfo
-import io.horizen.consensus.{ConsensusEpochNumber, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
+import io.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation._
 import io.horizen.params.NetworkParams
 import io.horizen.secret.{Secret, SecretCreator}
 import io.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
 import io.horizen.transaction.Transaction
-import io.horizen.utils.BytesUtils
+import io.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import io.horizen.wallet.AbstractWallet
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.block.Block.Timestamp
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.settings.SparkzSettings
@@ -26,7 +27,8 @@ abstract class AbstractSidechainNodeViewHolder[
   TX <: Transaction, H <: SidechainBlockHeaderBase, PMOD <: SidechainBlockBase[TX, H]]
 (
   sidechainSettings: SidechainSettings,
-  timeProvider: NetworkTimeProvider
+  timeProvider: NetworkTimeProvider,
+  networkParams: NetworkParams
 )
   extends sparkz.core.NodeViewHolder[TX, PMOD]
     with SidechainTypes {
@@ -375,6 +377,7 @@ abstract class AbstractSidechainNodeViewHolder[
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
 
+  def getConsensusEpochNumber(timestamp: Timestamp) : Int = TimeToEpochUtils.timeStampToEpochNumber(networkParams.sidechainGenesisBlockTimestamp, timestamp)
 
   // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   protected def applyStateAndWallet(history: HIS,
@@ -421,6 +424,20 @@ abstract class AbstractSidechainNodeViewHolder[
               return failureInformation
             case Success(success) =>
               success
+          }
+
+          // check that the chain with this tip has enough mc references in the latest blocks: we must refuse a block that would form too long a chain without mc ref blocks
+          val consensusEpochNumber = getConsensusEpochNumber(modToApply.timestamp)
+          if (history.tooManyBlocksWithoutMcHeaders(modToApply.parentId, modToApply.mainchainBlockReferencesData.isEmpty, consensusEpochNumber)) {
+            val errMsg = s"Block is not valid since we would have too many blocks without a mc block reference included (max=${networkParams.maxHistoryRewritingLength})"
+            log.error(errMsg)
+
+            val failureInformation : Try[SidechainNodeUpdateInformation] = updateInfo.history.reportModifierIsInvalid(modToApply, progressInfo).map {
+              case (historyAfterApply, newProgressInfo) =>
+                context.system.eventStream.publish(SemanticallyFailedModification(modToApply, new InvalidSidechainBlockDataException(errMsg)))
+                SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, updateInfo.wallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+            }
+            return failureInformation
           }
 
           // if a crash happens here the inconsistency between state and history wont appear: we should check the wallet storages and if a inconsistency is seen, rollback it

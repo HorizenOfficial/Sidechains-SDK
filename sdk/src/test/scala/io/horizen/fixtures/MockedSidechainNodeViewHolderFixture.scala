@@ -1,16 +1,17 @@
 package io.horizen.fixtures
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.testkit.TestActorRef
 import io.horizen._
+import io.horizen.utxo.SidechainNodeViewHolder
+import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.history.SidechainHistory
 import io.horizen.utxo.mempool.SidechainMemoryPool
 import io.horizen.utxo.state.SidechainState
-import io.horizen.utxo.SidechainNodeViewHolder
 import io.horizen.utxo.wallet.SidechainWallet
-import io.horizen.utxo.block.SidechainBlock
-import akka.testkit.TestActorRef
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
+import sparkz.core.block.Block.Timestamp
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 
 class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -25,6 +26,8 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     Some(history, state, wallet, mempool)
   }
+
+  override def getConsensusEpochNumber(timestamp: Timestamp) : Int = 100
 
   def updateMempool(blocksRemoved: Seq[SidechainBlock], blocksApplied: Seq[SidechainBlock], state: SidechainState): Unit = {
      this.mempool = this.updateMemPool(blocksRemoved, blocksApplied, this.mempool, state)

@@ -16,7 +16,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.{CircuitTypes, NaiveThresholdSi
 import io.horizen.cryptolibprovider.{CircuitTypes, CommonCircuit, CryptoLibProvider}
 import io.horizen.customconfig.CustomAkkaConfiguration
 import io.horizen.forge.MainchainSynchronizer
-import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager}
+import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
 import io.horizen.params._
@@ -56,7 +56,8 @@ abstract class AbstractSidechainApp
    val applicationStopper : SidechainAppStopper,
    val forkConfigurator : ForkConfigurator,
    val chainInfo : ChainInfo,
-   val mcBlockReferenceDelay : Int
+   val mcBlockReferenceDelay : Int,
+   val maxHistoryRewriteLength: Int
   )
   extends Application with SparkzLogging
 {
@@ -136,7 +137,8 @@ abstract class AbstractSidechainApp
   // We need to have it initializes before the creation of the SidechainState and ConsensusParamsUtil
   ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
 
-  val consensusParamsForkList = forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
+  val consensusParamsForkList: mutable.Buffer[Pair[SidechainForkConsensusEpoch, OptionalSidechainFork]] =
+    forkConfigurator.getOptionalSidechainForks.asScala.filter(fork => fork.getValue.isInstanceOf[ConsensusParamsFork])
   val defaultConsensusForks: ConsensusParamsFork = ConsensusParamsFork.DefaultConsensusParamsFork
 
   private val forgerRewardAddress: Option[AddressProposition] = Option(sidechainSettings.forger.forgerRewardAddress)
@@ -180,7 +182,9 @@ abstract class AbstractSidechainApp
         isHandlingTransactionsEnabled = sidechainSettings.sparkzSettings.network.handlingTransactionsEnabled,
         mcBlockRefDelay = mcBlockReferenceDelay,
         resetModifiersStatus = sidechainSettings.history.resetModifiersStatus,
+        maxHistoryRewritingLength = maxHistoryRewriteLength,
         rewardAddress = forgerRewardAddress
+
       )
 
 

@@ -147,7 +147,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       while ((blockInfo.mainchainHeaderBaseInfo.isEmpty)
         && (i > 0)) {
         i -= 1
-        blockInfo = blockInfoSequence(-1)
+        blockInfo = blockInfoSequence.last
       }
 
       if (!blockInfo.mainchainHeaderBaseInfo.isEmpty)
@@ -602,5 +602,123 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     assertTrue("HistoryStorage constructor. Exception must be thrown if params object is not specified.",
       exceptionThrown)
+  }
+
+  def getTestChainData(spanLength: Int, mcHeaderPos: Int = -1, inMaxHistoryRewritingLength: Int = 10) : (SidechainHistoryStorage, Seq[SidechainBlock]) = {
+    val chainList = new ListBuffer[SidechainBlock]()
+    val chainInfoList  = new ListBuffer[SidechainBlockInfo]()
+    val localStoredDataList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+
+    val genesisBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
+    chainInfoList += generateGenesisBlockInfo(
+      genesisMainchainHeaderHash = Some(activeChainBlockList.head.mainchainHeaders.head.hash),
+      genesisMainchainReferenceDataHeaderHash = Some(activeChainBlockList.head.mainchainBlockReferencesData.head.headerHash),
+      timestamp = Some(genesisBlock.timestamp))
+
+    chainList += genesisBlock
+
+    // declare real genesis block id
+    class HistoryTestParams extends MainNetParams {
+      override val sidechainGenesisBlockId: ModifierId = chainList.head.id
+      override val mainchainCreationBlockHeight: Int = 24
+      override val maxHistoryRewritingLength: Int = inMaxHistoryRewritingLength
+    }
+    val localParams = new HistoryTestParams()
+
+
+    var nextTipBlock : SidechainBlock = null
+    for ( i <-  1 to spanLength) {
+
+      if (i == mcHeaderPos) {
+        nextTipBlock = generateSidechainBlockSeq(
+          count = 1,
+          companion = sidechainTransactionsCompanion,
+          params = localParams,
+          parentOpt = Some(chainList.last.id),
+          mcParent = Some(byteArrayToWrapper(Array[Byte](32)))).last
+
+      } else {
+        nextTipBlock = generateNextSidechainBlock(chainList.last, sidechainTransactionsCompanion, localParams)
+      }
+
+      val cumHash = getLastMainchainBaseInfoInclusion(chainInfoList) match {
+        case someInfo: Some[SidechainBlockInfo] =>
+          someInfo.get.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash
+        case None =>
+          Array[Byte]()
+      }
+
+      val nextTipBlockInfo = generateBlockInfo(nextTipBlock, chainInfoList.last, localParams, cumHash)
+
+      chainList += nextTipBlock
+      chainInfoList += nextTipBlockInfo
+    }
+
+    localStoredDataList ++= generateStoredData(chainList zip chainInfoList)
+
+    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, localParams)
+
+    Mockito.when(mockedStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
+      .thenAnswer(answer => {
+        localStoredDataList.find(_.getKey.equals(answer.getArgument(0))) match {
+          case Some(pair) => JOptional.of(pair.getValue)
+          case None => JOptional.empty()
+        }
+      })
+
+    (historyStorage, chainList)
+  }
+
+  @Test
+  def testChainWithoutMcBlockHeaders(): Unit = {
+
+    // build a chain with genesis block + 10 sc blocks with no mc references but the 4th block
+    // the history storage and all mocked data have params.maxHistoryRewritingLength=5
+    //   G <- B1 <- B2 <-.. <-B4 <- .. <-B10
+    //   ^                    ^
+    //   |                    |
+    //  mcRef                mcRef
+
+    val t : (SidechainHistoryStorage, Seq[SidechainBlock]) = getTestChainData(spanLength = 10, mcHeaderPos = 4, inMaxHistoryRewritingLength = 5)
+    val historyStorage = t._1
+    val chainList = t._2
+    assertTrue(chainList.size == 1 + 10)
+
+    assertTrue(chainList(0).mainchainHeaders.nonEmpty) // test 1
+    assertTrue(chainList(1).mainchainHeaders.isEmpty)  // test 2
+    assertTrue(chainList(2).mainchainHeaders.isEmpty)
+    assertTrue(chainList(3).mainchainHeaders.isEmpty)
+    assertTrue(chainList(4).mainchainHeaders.nonEmpty) // test 3
+    assertTrue(chainList(5).mainchainHeaders.isEmpty)
+    assertTrue(chainList(6).mainchainHeaders.isEmpty)
+    assertTrue(chainList(7).mainchainHeaders.isEmpty)
+    assertTrue(chainList(8).mainchainHeaders.isEmpty)  // test 4
+    assertTrue(chainList(9).mainchainHeaders.isEmpty)  // test 5 ---> too many blocks without mc refs
+    assertTrue(chainList(10).mainchainHeaders.isEmpty) // test 6 ---> too many blocks without mc refs
+
+    // test that starting from genesis is OK
+    var block = chainList(0)
+    assertFalse(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
+    // test that starting from the next block is OK too
+    block = chainList(1)
+    assertFalse(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
+    // test that starting from the block with mc ref is OK
+    block = chainList(4)
+    assertFalse(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
+    // test that starting from the block which tips a sequence of blocks of params.maxHistoryRewritingLength-1 is OK
+    block = chainList(8)
+    assertFalse(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
+    // test that starting from the block which tips a sequence of blocks of params.maxHistoryRewritingLength is NOT OK
+    block = chainList(9)
+    assertTrue(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
+    // test that starting from the current tip is NOT OK
+    block = chainList(10)
+    assertTrue(historyStorage.tooManyBlocksWithoutMcHeadersDataSince(block.id))
+
   }
 }

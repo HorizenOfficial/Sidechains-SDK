@@ -12,9 +12,9 @@ from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transacti
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VER_1_2_FORK_EPOCH
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VERSION_1_2_FORK_EPOCH
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
-    SCCreationInfo, SC_CREATION_VERSION_2, SCForgerConfiguration
+    SCCreationInfo, SCForgerConfiguration
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
@@ -367,7 +367,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
         # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
-        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
+        self.advance_to_epoch(VERSION_1_2_FORK_EPOCH)
         generate_next_blocks(sc_node_1, "first node", 4)
         generate_next_blocks(sc_node_2, "second node", 2)
 

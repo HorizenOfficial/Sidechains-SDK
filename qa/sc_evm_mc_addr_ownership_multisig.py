@@ -17,7 +17,7 @@ from SidechainTestFramework.account.httpCalls.transaction.sendKeysOwnership impo
 from SidechainTestFramework.account.httpCalls.transaction.sendMultisigKeysOwnership import sendMultisigKeysOwnership
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, \
-    ZENDAO_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH, VER_1_2_FORK_EPOCH
+    ZENDAO_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH, VERSION_1_2_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import (assert_equal, assert_true, fail, hex_str_to_bytes, assert_false,
@@ -211,7 +211,7 @@ class SCEvmMcMultisigAddressOwnership(AccountChainSetup):
         # reach the VER_1_2 fork, which enables multisig support
         current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        for i in range(0, VER_1_2_FORK_EPOCH - current_best_epoch):
+        for i in range(0, VERSION_1_2_FORK_EPOCH - current_best_epoch):
             generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
 

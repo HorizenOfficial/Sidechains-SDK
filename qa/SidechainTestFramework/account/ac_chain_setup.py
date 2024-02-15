@@ -186,6 +186,8 @@ class AccountChainSetup(SidechainTestFramework):
             additional_params[index].append(str(self.options.mcblockdelay))
             additional_params[index].append('-all_forks')
             additional_params[index].append(str(self.options.all_forks))
+            additional_params[index].append('-max_hist_rew_len')
+            additional_params[index].append(str(self.options.maxhistoryrewritinglength))
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * self.number_of_sidechain_nodes,
