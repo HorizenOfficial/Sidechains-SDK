@@ -166,7 +166,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("op code not supported" in str(e))
         else:
-            fail("Paginated api should not be cative before shanghai fork activation")
+            fail("Paginated api should not be active before shanghai fork activation")
 
 
         ret = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
@@ -191,7 +191,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
             logging.info("We had an exception as expected: {}".format(str(e)))
             assert_true("array size" in str(e))
         else:
-            fail("Paginated api should not be cative before shanghai fork activation")
+            fail("Paginated api should not be active before shanghai fork activation")
 
         ret = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": PAGE_SIZE, "startPos": start_pos}))
         assert_true("error" in ret)
