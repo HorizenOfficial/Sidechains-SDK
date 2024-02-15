@@ -9,7 +9,7 @@ import io.horizen.utxo.storage.SidechainHistoryStorage
 import io.horizen.SidechainTypes
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import sparkz.util.{SparkzEncoding, SparkzLogging}
+import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
 import scala.util.Try
 
@@ -35,6 +35,7 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
   override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
+  override def tooManyBlocksWithoutMcHeaders(parentBlockId: ModifierId, noMcHeadersInCurrentBlock: Boolean, consensusEpochNumber: Int): Boolean = false
 }
 
 object SidechainHistory

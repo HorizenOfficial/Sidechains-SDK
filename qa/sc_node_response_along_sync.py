@@ -5,10 +5,10 @@ import time
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import connect_sc_nodes, bootstrap_sidechain_nodes, generate_next_blocks, \
+    sync_sc_blocks, SIMPLE_APP_BINARY
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_not_equal
-from SidechainTestFramework.scutil import connect_sc_nodes, bootstrap_sidechain_nodes, start_sc_nodes, \
-    generate_next_blocks, sync_sc_blocks
 
 """
 Check that a node could response to api calls though if it is Syncronizing
@@ -62,7 +62,8 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 8)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return self.sc_setup_nodes_with_extra_arg('-max_hist_rew_len', str(BLOCKS_TO_FORGE + 1), SIMPLE_APP_BINARY)
+
 
     # RUN TEST
     def run_test(self):
@@ -92,7 +93,7 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)
 
 
-        attempt = 0;
+        attempt = 0
         synchStarted = False
         while (attempt < 30 and synchStarted == False):
             attempt = attempt + 1

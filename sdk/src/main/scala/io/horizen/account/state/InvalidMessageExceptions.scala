@@ -69,3 +69,8 @@ case class FeeCapTooLowException(address: Address, maxFeePerGas: BigInteger, bas
 /** ErrSenderNoEOA is returned if the sender of a transaction is a contract. */
 case class SenderNotEoaException(address: Address, codeHash: Array[Byte])
   extends InvalidMessageException(s"sender not an eoa: address $address, codeHash ${toHex(codeHash)}")
+
+/** ErrMaxInitCodeSizeExceeded is returned if creation transaction provides the init code bigger
+ * than init code size limit.*/
+case class MaxInitCodeSizeExceededException(initCodeLength: Int, maxInitCodeSize: Int)
+  extends InvalidMessageException(s"max initcode size $initCodeLength exceeded limit $maxInitCodeSize")

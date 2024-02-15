@@ -550,7 +550,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
         'TX_LIFETIME': sc_node_config.tx_lifetime,
-        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false"),
+        'FORGER_REWARD_ADDRESS': sc_node_config.forger_options.forger_reward_address
 
     }
     config = config.replace("'", "")
@@ -684,17 +685,25 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     '''
     dbg_agent_opt = ''
     additional_params = ''
+
+    # Cmd line arguments are positional, so parameters might need to provide default values
+    val_mc_block_delay_ref = "0"
+    val_all_forks = "0"
+    val_max_hist_rew_len = "100" # default value defined in io/horizen/history/AbstractHistory.scala, it can be overridden only in regtest
+
     if extra_args is not None:
         if "-agentlib" in extra_args:
             dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
         if "-mc_block_delay_ref" in extra_args:
-            additional_params = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+            val_mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+
         if "-all_forks" in extra_args:
-            if additional_params != '':
-                additional_params = additional_params + " " + extra_args[extra_args.index("-all_forks") + 1]
-            else:
-                # Cmd line arguments are positional, so all_forks parameter needs to provide mc_block_delay_ref if not already set
-                additional_params = " 0 " + extra_args[extra_args.index("-all_forks") + 1]
+            val_all_forks = extra_args[extra_args.index("-all_forks") + 1]
+
+        if "-max_hist_rew_len" in extra_args:
+            val_max_hist_rew_len = extra_args[extra_args.index("-max_hist_rew_len") + 1]
+
+        additional_params = val_mc_block_delay_ref + " " + val_all_forks + " " + val_max_hist_rew_len
 
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
@@ -1229,6 +1238,8 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError("One transaction in the block is semantically invalid")
         if ("CertificateKeyRotationTransaction" in forge_result["error"]["description"]):
             raise AssertionError("CertificateKeyRotationTransaction error: {}".format(forge_result["error"]["description"]))
+        if ("We can not forge until we have at least a mc block reference" in forge_result["error"]["description"]):
+            raise AssertionError("No mc refs in a long row of blocks error: {}".format(forge_result["error"]["description"]))
 
         count_slot -= 1
         if (count_slot <= 0):
@@ -1253,7 +1264,6 @@ def generate_next_blocks(node, node_name, blocks_count, verbose=True):
     for i in range(blocks_count):
         blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
-
 
 def try_to_generate_block_in_slot(node, next_epoch, next_slot):
 

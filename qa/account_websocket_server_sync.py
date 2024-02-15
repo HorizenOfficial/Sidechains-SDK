@@ -4,7 +4,8 @@ import logging
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import CallMethod
-from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, generate_next_blocks
+from SidechainTestFramework.scutil import generate_next_block, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, \
+    generate_next_blocks, start_sc_nodes, EVM_APP_BINARY
 from test_framework.util import assert_equal, assert_true, assert_false
 from SidechainTestFramework.account_websocket_client import AccountWebsocketClient
 import pprint
@@ -37,7 +38,7 @@ Test:
 """
 
 websocket_server_port = 8027
-
+NUM_BLOCKS = 600
 
 class SCWsAccountServerSyncTest(AccountChainSetup):
 
@@ -50,6 +51,9 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         assert_true("currentBlock" in wsEvent["status"]) #Due to the behavior of the STF we can't check this value
         assert_true("highestBlock" in wsEvent["status"]) #Due to the behavior of the STF we can't check this value
 
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(NUM_BLOCKS+1), EVM_APP_BINARY, self.API_KEY)
 
     def run_test(self):
         SC_NODE1_ID = 1
@@ -76,7 +80,6 @@ class SCWsAccountServerSyncTest(AccountChainSetup):
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
 
         # forge 600 blocks on SC node 1
-        NUM_BLOCKS = 600
         logging.info("SC node 1 generates {} blocks...".format(NUM_BLOCKS))
         generate_next_blocks(sc_node, "first node", NUM_BLOCKS, verbose=False)
 

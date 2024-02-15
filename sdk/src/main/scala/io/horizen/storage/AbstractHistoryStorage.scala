@@ -96,24 +96,22 @@ abstract class AbstractHistoryStorage[
     val blockIdBytes = new ByteArrayWrapper(idToBytes(blockId))
     val baw = storage.get(blockIdBytes).asScala
     baw match {
-      case Some(value) => {
+      case Some(value) =>
         blockSerializer.parseBytesTry(value.data()) match {
           case Success(block) => Option(block)
           case Failure(exception) =>
             log.error("Error while sidechain block parsing.", exception)
             Option.empty
         }
-      }
-      case None => {
+      case None =>
         log.info("SidechainHistoryStorage:blockById: byte array is empty")
         None
-      }
     }
   }
 
   //Block info shall be in history storage, otherwise something going totally wrong
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo = {
-    blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block ${blockId}"))
+    blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block $blockId"))
   }
 
   def blockInfoOptionById(blockId: ModifierId): Option[SidechainBlockInfo] = {
@@ -129,7 +127,7 @@ abstract class AbstractHistoryStorage[
   }
 
   private def blockInfoByIdFromStorage(blockId: ModifierId): SidechainBlockInfo = {
-    blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId ${blockId}"))
+    blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId $blockId"))
   }
 
   def getLastMainchainHeaderBaseInfoInclusion(blockId: ModifierId): MainchainHeaderBaseInfo = {
@@ -139,6 +137,33 @@ abstract class AbstractHistoryStorage[
     }
 
     sidechainBlockInfo.mainchainHeaderBaseInfo.last
+  }
+
+  def tooManyBlocksWithoutMcHeadersDataSince(blockId: ModifierId): Boolean = {
+    var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
+    var scBlocksCount : Int = 0
+    var blockHasMcHeaders : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.nonEmpty
+
+    // go backwards on the chain until we found a mc header or we hit the genesis block, and break if we
+    // cross the threshold value of max revertable number of blocks
+    while(!blockHasMcHeaders) {
+      scBlocksCount = scBlocksCount + 1
+
+      if (scBlocksCount >= params.maxHistoryRewritingLength ) {
+        log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references")
+        return true
+      }
+
+      if (sidechainBlockInfo.parentId == params.sidechainGenesisBlockId)
+        return false
+
+      sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
+      blockHasMcHeaders = sidechainBlockInfo.mainchainHeaderBaseInfo.nonEmpty
+      if (blockHasMcHeaders)
+        log.debug(s"found sc block ${sidechainBlockInfo.parentId} which has ${sidechainBlockInfo.mainchainHeaderBaseInfo.size} mc block headers")
+    }
+    // ok, we found a block with mc headers (or genesis block) before the limit
+    false
   }
 
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)

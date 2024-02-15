@@ -4,10 +4,10 @@ import logging
 import pprint
 import time
 from decimal import Decimal
-from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, disconnect_sc_nodes_bi, \
-    AccountModel
+
 from eth_abi import decode
 from eth_utils import add_0x_prefix, remove_0x_prefix, encode_hex, event_signature_to_log_topic, to_hex
+
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.httpCalls.transaction.openForgerList import open_forger_list
@@ -17,6 +17,7 @@ from SidechainTestFramework.sc_boostrap_info import SCForgerConfiguration
 from SidechainTestFramework.scutil import (generate_next_block, generate_secrets, generate_vrf_secrets,
                                            SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
                                            )
+from SidechainTestFramework.scutil import generate_next_blocks, AccountModel
 from test_framework.util import (
     assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, hex_str_to_bytes, fail, )
 

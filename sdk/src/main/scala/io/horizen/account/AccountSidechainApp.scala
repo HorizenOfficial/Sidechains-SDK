@@ -57,7 +57,8 @@ class AccountSidechainApp @Inject()
    @Named("ForkConfiguration") forkConfigurator: ForkConfigurator,
    @Named("ChainInfo") chainInfo: ChainInfo,
    @Named("AppVersion") appVersion: String,
-   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
+   @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int,
+   @Named("MaxHistoryRewriteLength") maxHistoryRewriteLength : Int
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -66,7 +67,8 @@ class AccountSidechainApp @Inject()
     applicationStopper,
     forkConfigurator,
     chainInfo,
-    mcBlockReferenceDelay
+    mcBlockReferenceDelay,
+    maxHistoryRewriteLength
   )
 {
 

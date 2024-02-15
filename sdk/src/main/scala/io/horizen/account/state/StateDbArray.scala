@@ -29,31 +29,37 @@ class StateDbArray(val account: Address, val keySeed: Array[Byte]) {
     numOfElem
   }
 
-  private def removeLast(view: BaseAccountStateView): (Array[Byte], Int) = {
-    val size: Int = getSize(view)
-    val lastElemIndex: Int = size - 1
-    val key = getElemKey(lastElemIndex)
-    val value = view.getAccountStorage(account, key)
-    updateSize(view, size - 1)
-    view.removeAccountStorage(account, key)
-    (value, lastElemIndex)
-  }
-
   def removeAndRearrange(view: BaseAccountStateView, index: Int): Array[Byte] = {
-    // Remove last elem from the array and put its value to the position left empty, so there aren't gaps in the array
-    val (lastElemValue, lastElemIndex) = removeLast(view)
-    require(index <= lastElemIndex, "Index out of range")
+    // Remove item at position "index" and move the last element of the array to that place, so there aren't gaps in
+    // the array
+    require(index  >=  0, "Index cannot be negative")
+
+    val size: Int = getSize(view)
+    require(index < size, "Index out of range")
+
+    val lastElemIndex: Int = size - 1
+    val lastElemKey = getElemKey(lastElemIndex)
+    val lastElemValue = view.getAccountStorage(account, lastElemKey)
+    view.removeAccountStorage(account, lastElemKey)
+    updateSize(view, size - 1)
+
     if (index != lastElemIndex)
       updateValue(view, index, lastElemValue)
     lastElemValue
   }
 
   def updateValue(view: BaseAccountStateView, index: Int, newValue: Array[Byte]): Unit = {
+    require(index >= 0, "Index cannot be negative")
+
+    val size: Int = getSize(view)
+    require(index < size, "Index out of range")
+
     val key = getElemKey(index)
     view.updateAccountStorage(account, key, newValue)
   }
 
   def getValue(view: BaseAccountStateView, index: Int): Array[Byte] = {
+    require(index  >=  0, "Index cannot be negative")
     val key = getElemKey(index)
     val value = view.getAccountStorage(account, key)
     value

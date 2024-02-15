@@ -23,7 +23,8 @@ public class RpcError {
     }
 
     public static RpcError fromCode(RpcCode code, String data) {
-        return new RpcError(code.code, code.message, data);
+        String message = data == null ? code.message : code.message + ": " + data;
+        return new RpcError(code.code, message, data);
     }
 
     public static RpcError fromCode(RpcCode code) {

@@ -1,10 +1,14 @@
 **0.11.0**
 1. Sparkz dependency updated to 2.3.0
 2. Updated third-party dependencies
-3. Forger Stake native smart contract: added getPagedForgersStakesByUser and stakeOf methods.
+3. Forger Stake native smart contract: added getPagedForgersStakesByUser, stakeOf and upgrade methods.
+4. EVM Shangai support  
+
+**0.10.1**
+* [eth RPC endpoint] Additional fix on json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
 
 **0.10.0**
-1. Added support for multisg MC addresses in ZenDAO Native Smart Contract
+1. Added support for multisig MC addresses in ZenDAO Native Smart Contract
 2. Added support for ZenIP 42203/42206: 
     *  it is now possible to move founds with a forward transfer directly to a smart contract address in the EON sidechain
     *  it is now possible to increment the EON forgers reward pool with a forward transfer to a specific address
@@ -29,7 +33,7 @@
 
 **0.8.0**
 1. ZenDao native smart contracts
-2. Added support for consensus parameter change (epoch lenght, slottime, active slot coefficient) using an hardfork 
+2. Added support for consensus parameter change (epoch length, slot time, active slot coefficient) using an hardfork 
 3. Added support for delayed mainchain block inclusion
 4. Sparkz dependency updated to 2.1.0
 
