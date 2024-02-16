@@ -182,11 +182,25 @@ class SCEvmBackwardTransfer(AccountChainSetup):
                      "Backward transfer amount in certificate is wrong.")
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        # Try to withdraw coins from SC to MC: 2 withdrawals
-        mc_address1 = mc_node.getnewaddress()
-
         bt_amount_in_zen_1 = ft_amount_in_zen - 3
         sc_bt_amount_in_zennies_1 = convertZenToZennies(bt_amount_in_zen_1)
+
+        # Try using a script address as mc return address, it should fail
+        mc_script_address = "zrE6EyAvxrW9uDzTPsekiq5mjawetEEE8p7"
+
+        try:
+            withdrawcoins(sc_node, mc_script_address, sc_bt_amount_in_zennies_1)
+        except RuntimeError as err:
+            print("Expected error thrown: {}".format(err))
+            assert_true("Invalid Mc address" in str(err))
+            pass
+        else:
+            fail("Exception expected")
+
+        # Try to withdraw coins from SC to MC: 2 withdrawals
+
+        mc_address1 = mc_node.getnewaddress()
+
         res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1)
 
         tx_id = add_0x_prefix(res["result"]["transactionId"])

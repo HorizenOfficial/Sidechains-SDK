@@ -735,7 +735,7 @@ class ForgerStakeMsgProcessorTest
 
       // should fail because forger is not in the allowed list
       ex = intercept[ExecutionRevertedException] {
-        assertGas(4800, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+        assertGas(9000, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       }
       assertTrue(ex.getMessage.contains("Forger is not in the allowed list"))
 
@@ -892,7 +892,7 @@ class ForgerStakeMsgProcessorTest
         contractAddress, 0, BytesUtils.fromHexString(UpgradeCmd), randomNonce, ownerAddressProposition.address())
       withGas(TestContext.process(forgerStakeMessageProcessor, upgradeMsg, view, blockContextForkV1_3, _))
       assertThrows[ExecutionRevertedException] {
-        assertGas(200, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+        assertGas(4400, msg, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       }
 
       view.commit(bytesToVersion(getVersion.data()))
@@ -1332,7 +1332,7 @@ class ForgerStakeMsgProcessorTest
           ownerAddressProposition, validWeiAmount))
 
 
-      val returnData = assertGas(208112, addStakeMsg1, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData = assertGas(208312, addStakeMsg1, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData)
       assertArrayEquals(expectedStake1.stakeId, returnData)
 
@@ -1385,7 +1385,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(148412, addStakeMsg2, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData2 = assertGas(148612, addStakeMsg2, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData2)
       assertArrayEquals(expectedStake2.stakeId, returnData2)
 
@@ -1419,7 +1419,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2),
           ownerAddressProposition2, validWeiAmount))
 
-      val returnData3 = assertGas(188212, addStakeMsg3, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData3 = assertGas(188412, addStakeMsg3, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData3)
       assertArrayEquals(expectedStake3.stakeId, returnData3)
 
@@ -1497,7 +1497,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData11 = assertGas(148412, addStakeMsg4, view, forgerStakeMessageProcessor, blockContextForkV1_3)
+      val returnData11 = assertGas(148612, addStakeMsg4, view, forgerStakeMessageProcessor, blockContextForkV1_3)
       assertNotNull(returnData11)
       assertArrayEquals(expectedStake4.stakeId, returnData11)
 

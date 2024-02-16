@@ -60,6 +60,9 @@ class StateDbAccountStateView(
   override def isForgingOpen: Boolean =
     forgerStakesProvider.isForgerListOpen(this)
 
+  override def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean =
+    forgerStakesProvider.isForgerStakeAvailable(this, isForkV1_3Active)
+    
   override def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] =
     forgerStakesProvider.getListOfForgersStakes(this, isForkV1_3Active)
 

@@ -26,6 +26,7 @@ trait AccountStateReader {
   def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
   def getForgerStakeData(stakeId: String, isForkV1_3Active: Boolean): Option[ForgerStakeData]
   def isForgingOpen: Boolean
+  def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean
   def getAllowedForgerList: Seq[Int]
 
   def getListOfMcAddrOwnerships(scAddress: Option[String] = None): Seq[McAddrOwnershipData]

@@ -26,4 +26,14 @@ object ForgerStakeLinkedList  extends NativeSmartContractLinkedList {
     }
   }
 
+  def getStakeListSize(view: BaseAccountStateView): Int = {
+    var tip = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, listTipKey)
+    var size = 0
+    while (!linkedListNodeRefIsNull(tip)) {
+      size += 1
+      val node = getLinkedListNode(view, tip, FORGER_STAKE_SMART_CONTRACT_ADDRESS).get
+      tip = node.previousNodeKey
+    }
+    size
+  }
 }

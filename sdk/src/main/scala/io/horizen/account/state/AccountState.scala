@@ -531,6 +531,8 @@ class AccountState(
       true
   }
 
+  override def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean = using(getView)(_.isForgerStakeAvailable(isForkV1_3Active))
+
   override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     // TODO: no CSW support expected for the Eth sidechain
     None
