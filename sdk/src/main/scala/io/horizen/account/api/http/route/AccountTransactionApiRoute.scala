@@ -73,7 +73,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
       invokeProxyCall ~ invokeProxyStaticCall  ~ sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~
-      getKeysOwnerScAddresses ~ sendMultisigKeysOwnership
+      getKeysOwnerScAddresses ~ sendMultisigKeysOwnership ~ pagedForgingStakes
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -504,6 +504,32 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                 }
               case None =>
                 ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def pagedForgingStakes: Route = (post & path("pagedForgingStakes")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqPagedForgingStakes]) { body =>
+          withNodeView { sidechainNodeView =>
+            val accountState = sidechainNodeView.getNodeState
+            val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+            if (Version1_3_0Fork.get(epochNumber).active) {
+              Try {
+                accountState.getPagedListOfForgersStakes(body.startPos, body.size)
+              } match {
+                case Success((nextPos, listOfForgerStakes)) =>
+                  ApiResponseUtil.toResponse(RespPagedForgerStakes(nextPos, listOfForgerStakes.toList))
+                case Failure(exception) =>
+                  ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
+              }
+            } else {
+              ApiResponseUtil.toResponse(GenericTransactionError(s"Fork 1.3 is not active, can not invoke this command",
+                JOptional.empty()))
             }
           }
         }
@@ -1236,6 +1262,9 @@ object AccountTransactionRestScheme {
   private[horizen] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespPagedForgerStakes(nextPos: Int, stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -1407,6 +1436,15 @@ object AccountTransactionRestScheme {
                                                 stakeId: String,
                                                 gasInfo: Option[EIP1559GasInfo]) {
     require(stakeId.nonEmpty, "Signature data must be provided")
+  }
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqPagedForgingStakes(
+                                                     nonce: Option[BigInteger],
+                                                     startPos: Int = -1,
+                                                     size: Int = -1,
+                                                     gasInfo: Option[EIP1559GasInfo]) {
   }
 
   @JsonView(Array(classOf[Views.Default]))

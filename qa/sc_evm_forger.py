@@ -10,7 +10,7 @@ from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, r
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_eoa, format_evm, ac_makeForgerStake, \
-    generate_block_and_get_tx_receipt, contract_function_static_call
+    generate_block_and_get_tx_receipt
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract

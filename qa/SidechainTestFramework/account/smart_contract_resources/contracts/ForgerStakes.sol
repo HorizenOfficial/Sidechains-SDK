@@ -32,9 +32,10 @@ interface ForgerStakes {
     function openStakeForgerList(uint32 forgerIndex, bytes32 signature1, bytes32 signature2) external returns (bytes memory);
     
     function stakeOf(address owner) external view returns (uint256);
-    
+
     function getPagedForgersStakesByUser(address owner, uint32 startIndex, uint32 pageSize) external view returns (uint32, StakeInfo[] memory);
 
     function upgrade() external view returns (uint32);
 
+    function getPagedForgersStakes(uint32 startIndex, uint32 pageSize) external view returns (uint32, StakeInfo[] memory);
 }

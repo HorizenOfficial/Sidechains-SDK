@@ -27,6 +27,8 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
+  private[horizen] def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
+
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView, isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
 
   private[horizen] def addScCreationForgerStake(view: BaseAccountStateView, owner: Address, value: BigInteger, data: AddNewStakeCmdInput): Array[Byte]
@@ -212,6 +214,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeStorage.getListOfForgersStakes(view)
   }
 
+  override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = {
+    ForgerStakeStorageV2.getPagedListOfForgersStakes(view, startPos, pageSize)
+  }
+
   private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean): ForgerStakeStorage = {
     val forgerStakeStorageVersion = getForgerStakeStorageVersion(view, isForkV1_3Active)
     val stakeStorage = ForgerStakeStorage(forgerStakeStorageVersion)
@@ -228,6 +234,20 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
 
     checkInputDoesntContainParams(invocation.input)
     doUncheckedGetListOfForgersStakesCmd(view, isForkV1_3Active)
+  }
+
+  def doGetPagedListOfForgersCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    requireIsNotPayable(invocation)
+    checkCurrentStorageVersion(view, ForgerStakeStorageVersion.VERSION_2)
+
+    val inputParams = getArgumentsFromData(invocation.input)
+    val cmdInput = GetPagedListOfStakesCmdInputDecoder.decode(inputParams)
+    val size = cmdInput.size
+    val startPos = cmdInput.startPos
+
+    val (nextPos, stakeList) = getPagedListOfForgersStakes(view, startPos, size)
+
+    PagedListOfStakesOutput(nextPos, stakeList).encode()
   }
 
   def doUpgradeCmd(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
@@ -429,6 +449,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
     val gasView = view.getGasTrackedView(invocation.gasPool)
     getFunctionSignature(invocation.input) match {
+      case GetPagedListOfForgersCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+                               => doGetPagedListOfForgersCmd(invocation, gasView)
       case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
       case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg,
                               Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
@@ -469,13 +491,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
       Seq()
     }
 
-
 }
 
 object ForgerStakeMsgProcessor {
 
   val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
 
+  val GetPagedListOfForgersCmd: String = getABIMethodId("getPagedForgersStakes(uint32,uint32)")
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
@@ -488,7 +510,8 @@ object ForgerStakeMsgProcessor {
 
   // ensure we have strings consistent with size of opcode
   require(
-    GetListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
+    GetPagedListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
+      GetListOfForgersCmd.length == 2 * METHOD_ID_LENGTH &&
       AddNewStakeCmd.length == 2 * METHOD_ID_LENGTH &&
       RemoveStakeCmd.length == 2 * METHOD_ID_LENGTH &&
       OpenStakeForgerListCmd.length == 2 * METHOD_ID_LENGTH &&
