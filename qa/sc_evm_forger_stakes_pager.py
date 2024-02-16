@@ -97,7 +97,7 @@ def padded_32_hex(s):
 
 def get_paged_forging_stakes_via_eth_call(sc_node, from_address, start_pos, page_size):
     # execute native smart contract for getting all associations
-    method = 'getPagedForgersStakes(uint32,uint32)'
+    method = 'getPagedForgersStakes(int32,int32)'
     abi_str = function_signature_to_4byte_selector(method)
     start_pos = padded_32_hex(hex(start_pos))
     size_padded_str = padded_32_hex(hex(page_size))
@@ -189,7 +189,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
                                                   start_pos, PAGE_SIZE)
         except Exception as e:
             logging.info("We had an exception as expected: {}".format(str(e)))
-            assert_true("array size" in str(e))
+            assert_true("Forger stake storage not upgraded yet" in str(e))
         else:
             fail("Paginated api should not be active before shanghai fork activation")
 
@@ -348,7 +348,7 @@ class SCEvmForgerStakesPager(AccountChainSetup):
 
         proxy_contract = SimpleProxyContract(sc_node_1, evm_address_sc_node_1, use_shanghai=True)
 
-        method = 'getPagedForgersStakes(uint32,uint32)'
+        method = 'getPagedForgersStakes(int32,int32)'
 
         native_input = format_eoa(native_contract.raw_encode_call(method, start_pos, PAGE_SIZE))
 

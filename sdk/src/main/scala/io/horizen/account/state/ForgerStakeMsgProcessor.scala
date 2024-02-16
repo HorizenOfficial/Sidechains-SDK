@@ -497,7 +497,7 @@ object ForgerStakeMsgProcessor {
 
   val RestrictedForgerFlagsList: Array[Byte] = Blake2b256.hash("ClosedForgerList")
 
-  val GetPagedListOfForgersCmd: String = getABIMethodId("getPagedForgersStakes(uint32,uint32)")
+  val GetPagedListOfForgersCmd: String = getABIMethodId("getPagedForgersStakes(int32,int32)")
   val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
@@ -506,7 +506,7 @@ object ForgerStakeMsgProcessor {
   // Methods added after Fork v. 1.3
   val UpgradeCmd: String = getABIMethodId("upgrade()")
   val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
-  val GetPagedForgersStakesOfUserCmd: String = getABIMethodId("getPagedForgersStakesByUser(address,uint32,uint32)")
+  val GetPagedForgersStakesOfUserCmd: String = getABIMethodId("getPagedForgersStakesByUser(address,int32,int32)")
 
   // ensure we have strings consistent with size of opcode
   require(

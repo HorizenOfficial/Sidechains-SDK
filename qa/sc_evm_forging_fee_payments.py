@@ -209,7 +209,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         #res3 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 100}))["result"]
 
         # execute native smart contract for getting all associations
-        method = 'getPagedForgersStakes(uint32,uint32)'
+        method = 'getPagedForgersStakes(int32,int32)'
         abi_str = function_signature_to_4byte_selector(method)
         start_pos = "00"*32
         size_padded_str = "00"*31 + "01"
@@ -227,8 +227,8 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
         result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes and 12 records with 3 chunks of 32 bytes
-        exp_len = 32 + 32 + 12 * (3 * 32)
+        # we have an offset of 64 bytes (32 byte for nextStartPos + 32 byte for DynamicaArray lenght)  and 1 record with 6 chunks of 32 bytes
+        exp_len = 32 + 32 + 1 * (6 * 32)
         assert_equal(result_string_length, 2 * exp_len)
 
         # Generate SC block on SC node 1 for the next consensus epoch
