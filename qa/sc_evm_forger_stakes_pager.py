@@ -46,12 +46,6 @@ def get_paged_stakes_from_abi(abi_return_value):
     end_offset = 2 * 32
     next_pos = decode(['int32'], hex_str_to_bytes(abi_return_value[start_offset:end_offset]))[0]
 
-    # next we have the offset at which dynamic data start, should be 64 (0x40)
-    start_offset = end_offset
-    end_offset = end_offset + 2 * 32
-    dynamic_data_start_offset = decode(['uint32'], hex_str_to_bytes(abi_return_value[start_offset:end_offset]))[0]
-    assert_equal(dynamic_data_start_offset, 64)
-
     # size of the dynamic array of stakes
     start_offset = end_offset
     end_offset = end_offset + 2 * 32  # read 32 bytes
