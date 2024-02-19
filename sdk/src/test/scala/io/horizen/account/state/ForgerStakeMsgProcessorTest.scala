@@ -161,7 +161,8 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong MethodId for OpenStakeForgerListCmdCorrect", "06f12075", ForgerStakeMsgProcessor.OpenStakeForgerListCmdCorrect)
 
     assertEquals("Wrong MethodId for StakeOfCmd", "42623360", ForgerStakeMsgProcessor.StakeOfCmd)
-    assertEquals("Wrong MethodId for GetPagedForgersStakesOfUserCmd", "7ee8d536", ForgerStakeMsgProcessor.GetPagedForgersStakesOfUserCmd)
+    assertEquals("Wrong MethodId for GetPagedListOfForgersCmd", "af5f63ef", ForgerStakeMsgProcessor.GetPagedListOfForgersCmd)
+    assertEquals("Wrong MethodId for GetPagedForgersStakesOfUserCmd", "5f6dfc1d", ForgerStakeMsgProcessor.GetPagedForgersStakesOfUserCmd)
     assertEquals("Wrong MethodId for UpgradeCmd", "d55ec697", ForgerStakeMsgProcessor.UpgradeCmd)
   }
 

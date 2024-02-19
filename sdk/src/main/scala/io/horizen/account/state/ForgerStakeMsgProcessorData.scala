@@ -459,17 +459,19 @@ object GetPagedForgersStakesOfUserCmdInputDecoder
 }
 
 case class PagedListOfStakesOutput(nextStartPos: Int, listOfStakes: Seq[AccountForgingStakeInfo])
-  extends ABIEncodable[StaticStruct] {
+  extends ABIEncodable[DynamicStruct] {
 
-  override def asABIType(): StaticStruct = {
+  override def asABIType(): DynamicStruct = {
 
     val seqOfStruct = listOfStakes.map(_.asABIType())
     val listOfStruct = JavaConverters.seqAsJavaList(seqOfStruct)
     val theType = classOf[StaticStruct]
-    new StaticStruct(
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new Int32(nextStartPos),
       new DynamicArray(theType, listOfStruct)
     )
+    new DynamicStruct(listOfParams)
+
   }
 
   override def toString: String = "%s(startPos: %s, listOfStake: %s)"

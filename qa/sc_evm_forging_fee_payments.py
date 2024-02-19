@@ -446,9 +446,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         abi_return_value = remove_0x_prefix(response['result'])
         print(abi_return_value)
         result_string_length = len(abi_return_value)
-        # we have an offset of 64 bytes (32 byte for nextStartPos + 32 byte for DynamicaArray lenght)  and 1 record with 6 chunks of 32 bytes
-        exp_len = 32 + 32 + 1 * (6 * 32)
-        assert_equal(result_string_length, 2 * exp_len)
+        # we have an offset of 96 bytes (32 bytes for nextStartPos + 32 bytes for DynamicArray offset + 32 bytes for
+        # DynamicArray length) and 1 record with 6 chunks of 32 bytes
+        exp_len = 32 + 32 + 32 + 1 * (6 * 32)
+        assert_equal(2 * exp_len, result_string_length)
 
 
 if __name__ == "__main__":
