@@ -196,7 +196,7 @@ case class RemoveStakeCmdInput(
 case class GetPagedListOfStakesCmdInput(startPos: Int, size: Int) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
-    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Uint32(startPos), new Uint32(size))
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Int32(startPos), new Int32(size))
     new StaticStruct(listOfParams)
   }
 
@@ -233,12 +233,12 @@ object GetPagedListOfStakesCmdInputDecoder
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
-      new TypeReference[Uint32]() {},
-      new TypeReference[Uint32]() {}))
+      new TypeReference[Int32]() {},
+      new TypeReference[Int32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): GetPagedListOfStakesCmdInput = {
-    val startPos = listOfParams.get(0).asInstanceOf[Uint32].getValue.intValueExact()
-    val size = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValueExact()
+    val startPos = listOfParams.get(0).asInstanceOf[Int32].getValue.intValueExact()
+    val size = listOfParams.get(1).asInstanceOf[Int32].getValue.intValueExact()
 
     GetPagedListOfStakesCmdInput(startPos, size)
   }
@@ -423,8 +423,8 @@ case class GetPagedForgersStakesOfUserCmdInput(ownerAddress: Address, startPos: 
 
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(
       new AbiAddress(ownerAddress.toString),
-      new Uint32(startPos),
-      new Uint32(size)
+      new Int32(startPos),
+      new Int32(size)
     )
     new StaticStruct(listOfParams)
   }
@@ -445,15 +445,15 @@ object GetPagedForgersStakesOfUserCmdInputDecoder
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = {
     org.web3j.abi.Utils.convert(util.Arrays.asList(
       new TypeReference[AbiAddress]() {},
-      new TypeReference[Uint32]() {},
-      new TypeReference[Uint32]() {}
+      new TypeReference[Int32]() {},
+      new TypeReference[Int32]() {}
     ))
   }
 
   override def createType(listOfParams: util.List[Type[_]]): GetPagedForgersStakesOfUserCmdInput = {
     val address = new Address(listOfParams.get(0).asInstanceOf[AbiAddress].toString)
-    val startPos = listOfParams.get(1).asInstanceOf[Uint32].getValue.intValueExact()
-    val size = listOfParams.get(2).asInstanceOf[Uint32].getValue.intValueExact()
+    val startPos = listOfParams.get(1).asInstanceOf[Int32].getValue.intValueExact()
+    val size = listOfParams.get(2).asInstanceOf[Int32].getValue.intValueExact()
     GetPagedForgersStakesOfUserCmdInput(address, startPos, size)
   }
 }

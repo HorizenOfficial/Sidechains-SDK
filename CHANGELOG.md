@@ -1,7 +1,7 @@
 **0.11.0**
 1. Sparkz dependency updated to 2.3.0
 2. Updated third-party dependencies
-3. Forger Stake native smart contract: added getPagedForgersStakesByUser, stakeOf and upgrade methods.
+3. Forger Stake native smart contract: added getPagedForgersStakesByUser,getPagedForgersStakes,  stakeOf and upgrade methods.
 4. EVM Shangai support  
 
 **0.10.1**

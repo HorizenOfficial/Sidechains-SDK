@@ -52,8 +52,8 @@ def decode_list_of_forger_stakes(result, exp_num_of_stakes):
     # result is (bytes32, uint256, address, bytes32, bytes32, bytes1)[]. Its ABI encoding in this case is
     # - first 32 bytes is the offset
     # - second 32 bytes is array length
-    # - the remaining are the bytes representing the various (bytes32, uint256, bytes20, bytes32, bytes32, bytes1)
-    # tuples. Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
+    # - the remaining are the bytes representing the various (bytes32, uint256, bytes20, bytes32, bytes32, bytes1) tuples.
+    # Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
 
     res = result[32:]  # cut offset, don't care in this case
     num_of_stakes = int(bytes_to_hex_str(res[0:32]), 16)

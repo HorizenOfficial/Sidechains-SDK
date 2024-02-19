@@ -1442,9 +1442,10 @@ object AccountTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class ReqPagedForgingStakes(
                                                      nonce: Option[BigInteger],
-                                                     startPos: Int = -1,
-                                                     size: Int = -1,
+                                                     startPos: Int = 0,
+                                                     size: Int = 10,
                                                      gasInfo: Option[EIP1559GasInfo]) {
+    require(size > 0 , "Size must be positive")
   }
 
   @JsonView(Array(classOf[Views.Default]))
