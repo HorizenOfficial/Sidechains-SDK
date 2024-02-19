@@ -12,7 +12,8 @@
 6. Minor fixes:
     * [eth RPC endpoint] Fixed eth_getLogs errors in case of wrong usage of input parameters (for example negative integer values in fromBlock/toBlock)
     * [eth RPC endpoint] json "data" field in case of errors will contain more meaningful info on the root cause
-    * [http endpoint] /transaction/withdrawCoins: check withdraw to a mainchain address different than "Pay to key hash" is blocked
+    * [eth RPC endpoint] Fixed json result of  zen_getFeePayments method (if there are no fee payments in the block now it returns an empty array instead of null)
+    * [http endpoint] /transaction/withdrawCoins: additional check to raise an error in case a withdraw to a mainchain address different than "Pay to key hash" is requested
     * Avoid to start forging activitiy if a forger node is not at the tip (avoid forging if consensus epoch and slot derived from block history is  too far from consensus epoch and block calculated by elasped time since the genesis block)
     * 
 
