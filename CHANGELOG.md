@@ -1,8 +1,21 @@
 **0.11.0**
 1. Sparkz dependency updated to 2.3.0
 2. Updated third-party dependencies
-3. Forger Stake native smart contract: added getPagedForgersStakesByUser,getPagedForgersStakes,  stakeOf and upgrade methods.
-4. EVM Shangai support  
+3. Forger Stake native smart contract: added getPagedForgersStakesByUser, getPagedForgersStakes, stakeOf and upgrade methods
+4. EVM implementation updated from go-ethereum Paravin (v1.10.26) to  go-ethereum Archanes (v1.13.4) compatibility. As a result:
+    * Solidity compiler supported version upgraded from  0.8.19 to  0.8.23
+    * Added compatibility  of following Ethereum EIPs:
+        * EIP-3651: Warm COINBASE: with this EIP, the COINBASE address will be loaded at the beginning of a transaction in order to save some gas. 
+        * EIP-3855: PUSH0 instruction, which pushes the constant value 0 onto the stack. It is used by Solidity compiler from version 0.8.20. 
+        * EIP-3860: Limit and meter initcode. This introduces a maximum size limit for initcode. In addition, it introduces a charge of 2 gas for every 32-byte chunk of initcode.  
+5. Pause forging: block production is temporary paused if no mainchain references are present in the last 99 EON blocks
+6. For forger nodes it is now possible to specify a custom address where the block reward will be directed
+7. Minor fixes:
+    * [eth RPC endpoint] Fixed eth_getLogs errors in case of wrong usage of input parameters (for example negative integer values in fromBlock/toBlock)
+    * [eth RPC endpoint] json "data" field in case of errors will contain more meaningful info on the root cause
+    * [eth RPC endpoint] Fixed json result of  zen_getFeePayments method (if there are no fee payments in the block now it returns an empty array instead of null)
+    * [http endpoint] /transaction/withdrawCoins: additional check to raise an error in case a withdraw to a mainchain address different than "Pay to key hash" is requested
+    * Avoid to start forging activity if a forger node is not at the tip (avoid forging if consensus epoch and slot derived from block history is  too far from consensus epoch and block calculated by elapsed time since the genesis block)
 
 **0.10.1**
 * [eth RPC endpoint] Additional fix on json representation in RPC response of signature V field for transaction type 2 - it should be in range of 0-1.
