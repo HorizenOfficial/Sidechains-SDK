@@ -792,6 +792,21 @@ class SCEvmMcAddressOwnership(AccountChainSetup):
                                                   0, native_input)
         forge_and_check_receipt(self, sc_node, tx_hash, sc_addr=evm_address_interop, mc_addr=taddr_interop, evt_op="remove")
 
+        # Test that we have the expected error if we debug a call which tries to remove an ownership not in the state DB
+        # even if we omit the optional nonce (in this case we try to remove the ownership just removed)
+        trace_response_1 = sc_node.rpc_debug_traceCall(
+            {
+                "from": add_0x_prefix(evm_address_interop),
+                "to": add_0x_prefix(native_contract_address),
+                "gas": "0x1e8480",
+                "input": add_0x_prefix(native_input)
+            }, "latest", {"tracer": "callTracer"}
+        )
+
+        assert_true("error" in trace_response_1['result'])
+        assert_true("does not exist" in trace_response_1['result']['error'])
+
+
         # Compare estimated gas with actual used gas. They are not equal because, during the tx execution, more gas than
         # actually needed is removed from the gas pool and then refunded. This causes the gas estimation algorithm to
         # overestimate the gas.
