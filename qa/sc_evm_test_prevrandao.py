@@ -100,7 +100,13 @@ class SCEvmPrevrandao(AccountChainSetup):
 
         # Generate some more SC blocks to be able to interact with smart contract for  "safe" tag
         safe_block_id = generate_next_block(sc_node, "first node")
-        generate_next_blocks(sc_node, "first node", 100)
+
+        generate_next_blocks(sc_node, "first node", 50)
+        # mine an mc block otherwise we have SC a long chain span (limit is 100) without mc block references, and the forging
+        # of new SC blocks would be paused
+        self.nodes[0].generate(1)
+
+        generate_next_blocks(sc_node, "first node", 50)
 
         # Get best block info and expected random value
         best_block = sc_node.block_best()["result"]

@@ -293,11 +293,6 @@ case class McAddrOwnershipMsgProcessor(networkParams: NetworkParams) extends Nat
   }
 
   def doRemoveOwnershipCmd(invocation: Invocation, view: BaseAccountStateView, msg: Message): Array[Byte] = {
-    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
-    if (msg.getNonce == null) {
-      throw new ExecutionRevertedException("Call must include a nonce")
-    }
-
     // check that msg.value is zero
     if (invocation.value.signum() != 0) {
       throw new ExecutionRevertedException("Value must be zero")

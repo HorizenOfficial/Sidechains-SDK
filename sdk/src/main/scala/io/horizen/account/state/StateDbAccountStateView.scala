@@ -1,18 +1,17 @@
 package io.horizen.account.state
 
 import io.horizen.SidechainTypes
-import io.horizen.account.fork.Version1_2_0Fork
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.state.ForgerStakeMsgProcessor.AddNewStakeCmd
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
-import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, WellKnownAddresses, ZenWeiConverter}
+import io.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import io.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput}
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofTypes}
 import io.horizen.consensus.ForgingStakeInfo
 import io.horizen.evm.results.{EvmLog, ProofAccountResult}
-import io.horizen.evm.{Address, ForkRules, Hash, ResourceHandle, StateDB}
+import io.horizen.evm._
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import io.horizen.utils.BytesUtils
@@ -55,14 +54,20 @@ class StateDbAccountStateView(
   override def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
 
-  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
-    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
+  override def getForgerStakeData(stakeId: String, isForkV1_3Active: Boolean): Option[ForgerStakeData] =
+    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId), isForkV1_3Active)
 
   override def isForgingOpen: Boolean =
     forgerStakesProvider.isForgerListOpen(this)
 
-  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] =
-    forgerStakesProvider.getListOfForgersStakes(this)
+  override def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean =
+    forgerStakesProvider.isForgerStakeAvailable(this, isForkV1_3Active)
+    
+  override def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] =
+    forgerStakesProvider.getListOfForgersStakes(this, isForkV1_3Active)
+
+  override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =
+    forgerStakesProvider.getPagedListOfForgersStakes(this, startPos, pageSize)
 
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)
@@ -131,9 +136,9 @@ class StateDbAccountStateView(
     })
   }
 
-  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq(epochNumber: Int): Seq[ForgingStakeInfo] = {
     // get forger stakes list view (scala lazy collection)
-    getListOfForgersStakes.view
+    getListOfForgersStakes(Version1_3_0Fork.get(epochNumber).active).view
 
       // group delegation stakes by blockSignPublicKey/vrfPublicKey pairs
       .groupBy(stake =>

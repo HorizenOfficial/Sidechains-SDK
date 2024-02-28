@@ -188,12 +188,12 @@ class AccountForgeMessageBuilder(
       isPending: Boolean = false
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
-    // 1. As forger address take first address from the wallet
-    val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
+    // 1. Forger address can be configured or take first address from the wallet
     val forgerAddress = params.rewardAddress.getOrElse {
+      val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
       addressList.asScala.headOption.map(_.publicImage().asInstanceOf[AddressProposition]).getOrElse(
         if (isPending) new AddressProposition(Address.ZERO)
-        else throw new IllegalArgumentException("No addresses in wallet!")
+        else throw new IllegalArgumentException("No forger reward address configured and no addresses in wallet!")
       )
     }
 
@@ -263,10 +263,10 @@ class AccountForgeMessageBuilder(
               // get all previous payments for current ending epoch and append the one of the current block
               val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber, Some(currentBlockPayments))
 
+              dummyView.resetForgerPoolAndBlockCounters(consensusEpochNumber)
+
               // add rewards to forgers balance
               feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))
-
-              dummyView.resetForgerPoolAndBlockCounters(consensusEpochNumber)
 
               feePayments
             } else {
@@ -409,7 +409,7 @@ class AccountForgeMessageBuilder(
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) {
       stateViewFromRoot =>
-        stateViewFromRoot.getOrderedForgingStakesInfoSeq
+        stateViewFromRoot.getOrderedForgingStakesInfoSeq(nextConsensusEpochNumber)
     }
 
     // 3. using wallet secrets, filter out the not-mine forging stakes

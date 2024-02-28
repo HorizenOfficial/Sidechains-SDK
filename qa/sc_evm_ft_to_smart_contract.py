@@ -7,7 +7,7 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import format_evm, format_eoa, deploy_smart_contract
 from SidechainTestFramework.account.utils import convertZenToWei, \
-    NULL_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS, VER_1_2_FORK_EPOCH
+    NULL_ADDRESS, FORGER_STAKE_SMART_CONTRACT_ADDRESS, VERSION_1_2_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_blocks, generate_next_block, EVM_APP_SLOT_TIME, SLOTS_IN_EPOCH
 from test_framework.util import (assert_equal, forward_transfer_to_sidechain, assert_false, fail)
 
@@ -110,7 +110,7 @@ class SCEvmFtToNativeContract(AccountChainSetup):
         # ------------------------------------------------------------------------------
         # Advance to epoch 60, enabling fork that allows FT to smart contract addresses
         # Repeat the FTs, now they should work
-        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
+        self.advance_to_epoch(VERSION_1_2_FORK_EPOCH)
 
         # TEST 2.1 - ft to native SC - success
         self.check_ft_to_smart_contract(FORGER_STAKE_SMART_CONTRACT_ADDRESS, True)

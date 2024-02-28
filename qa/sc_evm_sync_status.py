@@ -25,7 +25,7 @@ Test:
     - Test that node can detect `isSync` when the sender peer was stopped and restarted in the middle of sync.
 """
 
-WITHDRAWAL_EPOCH_LENGTH = 10
+WITHDRAWAL_EPOCH_LENGTH = 900
 
 class EvmSyncStatus(SidechainTestFramework):
     number_of_mc_nodes = 1
@@ -151,9 +151,16 @@ class EvmSyncStatus(SidechainTestFramework):
         sc_node1 = self.sc_nodes[1]
 
         # Note: in case machine is too fast we need more blocks to be able to get sync
-        num_blocks = 1500
+        NUM_BLOCKS = 1500
 
         self.sync_all()
+
+        # mine some mc block now and then, otherwise we have SC a long chain span (limit is 100) without mc block references, and the forging
+        # of new SC blocks would be paused
+        # However, do not mine too mc blocks (==chunks) otherwise the SC may cease
+        CHUNK_SIZE = 90
+        CHUNKS = NUM_BLOCKS//CHUNK_SIZE
+        REMAINDER = NUM_BLOCKS-(CHUNKS*CHUNK_SIZE)
 
         # -------------------------------------------------------------------------------------
         # Test 1
@@ -165,8 +172,15 @@ class EvmSyncStatus(SidechainTestFramework):
         logging.info("Stopping SC node 1")
         stop_sc_node(sc_node1, 1)
 
-        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
-        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
+        logging.info("SC node 0 generates {} blocks...".format(NUM_BLOCKS))
+
+        for i in range(CHUNKS):
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", CHUNK_SIZE, verbose=False)
+
+        if REMAINDER > 0:
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", REMAINDER, verbose=False)
 
         # run the sidechain node 2 and sync it
         self.run_sc_node(1)
@@ -190,9 +204,14 @@ class EvmSyncStatus(SidechainTestFramework):
 
         sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
         # forge 1500 blocks on SC1
-        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
-        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
+        logging.info("SC node 0 generates {} blocks...".format(NUM_BLOCKS))
+        for i in range(CHUNKS):
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", CHUNK_SIZE, verbose=False)
 
+        if REMAINDER > 0:
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", REMAINDER, verbose=False)
         assert_equal(sc_node_1_height, int(sc_node1.block_best()["result"]["height"]), "nodes are wrongly connected")
 
         logging.info("Reconnect sidechain nodes")
@@ -219,10 +238,19 @@ class EvmSyncStatus(SidechainTestFramework):
         logging.info("Stopping SC node 1")
         stop_sc_node(sc_node1, 1)
 
-        num_blocks = num_blocks * 2
-        logging.info("SC node 0 generates {} blocks...".format(num_blocks))
-        generate_next_blocks(sc_node0, "node 0", num_blocks, verbose=False)
+        NUM_BLOCKS = NUM_BLOCKS * 2
+        CHUNK_SIZE = 90
+        CHUNKS = NUM_BLOCKS//CHUNK_SIZE
+        REMAINDER = NUM_BLOCKS-(CHUNKS*CHUNK_SIZE)
 
+        logging.info("SC node 0 generates {} blocks...".format(NUM_BLOCKS))
+        for i in range(CHUNKS):
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", CHUNK_SIZE, verbose=False)
+
+        if REMAINDER > 0:
+            self.nodes[0].generate(1)
+            generate_next_blocks(sc_node0, "first node", REMAINDER, verbose=False)
         self.run_sc_node(1)
         sc_node_1_height = int(sc_node1.block_best()["result"]["height"])
 

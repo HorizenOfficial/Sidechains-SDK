@@ -15,7 +15,7 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
@@ -69,7 +69,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
   /**
    * Creates a large temporary gas pool and passes it into the given function.
    */
-  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 1000000): A = {
+  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 10000000): A = {
     fun(new GasPool(gasLimit))
   }
 
@@ -84,7 +84,7 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
       ctx: BlockContext,
   ): Array[Byte] = {
     view.setupAccessList(msg, ctx.forgerAddress, new ForkRules(true))
-    val gas = new GasPool(1000000)
+    val gas = new GasPool(1000000000)
     val result = Try.apply(TestContext.process(processor, msg, view, ctx, gas))
     assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
     // return result or rethrow any exception

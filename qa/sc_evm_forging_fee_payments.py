@@ -4,17 +4,20 @@ import logging
 import math
 import time
 
-from eth_utils import add_0x_prefix
+from eth_utils import add_0x_prefix, function_signature_to_4byte_selector, encode_hex, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa, format_evm
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa, format_evm, \
+    contract_function_static_call, estimate_gas, contract_function_call
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VER_1_2_FORK_EPOCH
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VERSION_1_2_FORK_EPOCH, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
+    VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
-    SCCreationInfo, SC_CREATION_VERSION_2, SCForgerConfiguration
+    SCCreationInfo, SCForgerConfiguration
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
@@ -367,7 +370,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
         # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
-        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
+        self.advance_to_epoch(VERSION_1_2_FORK_EPOCH)
         generate_next_blocks(sc_node_1, "first node", 4)
         generate_next_blocks(sc_node_2, "second node", 2)
 
@@ -398,6 +401,55 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
         assert_equal(node_1_fees, fee_payments_api_response[0]['value'])
         assert_equal(node_2_fees, fee_payments_api_response[1]['value'])
+
+        # reach the VERSION_1_3_FORK_EPOCH fork and upgrade the forger stakes to the new format
+        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        '''
+        #####################################################################################
+        '''
+        native_contract = SmartContract("ForgerStakes")
+        method = 'upgrade()'
+        # Execute upgrade
+        contract_function_call(sc_node_2, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                               evm_address_sc_node_2, method)
+        generate_next_block(sc_node_1, "first node")
+        '''
+        #####################################################################################
+        '''
+
+        # we now have 2 stakes, one from creation and one just added
+        # res1 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1, "startPos": 0}))["result"]
+        # res2 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1, "startPos": int(res1['nextPos'])}))["result"]
+        #res3 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 100}))["result"]
+
+        # execute native smart contract for getting all associations
+        method = 'getPagedForgersStakes(int32,int32)'
+        abi_str = function_signature_to_4byte_selector(method)
+        start_pos = "00"*32
+        size_padded_str = "00"*31 + "01"
+
+        req = {
+            "from": format_evm(evm_address_sc_node_2),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": 3,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": encode_hex(abi_str) + start_pos + size_padded_str
+        }
+        response = sc_node_1.rpc_eth_call(req, 'latest')
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
+        # we have an offset of 96 bytes (32 bytes for nextStartPos + 32 bytes for DynamicArray offset + 32 bytes for
+        # DynamicArray length) and 1 record with 6 chunks of 32 bytes
+        exp_len = 32 + 32 + 32 + 1 * (6 * 32)
+        assert_equal(2 * exp_len, result_string_length)
 
 
 if __name__ == "__main__":

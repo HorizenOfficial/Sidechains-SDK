@@ -11,7 +11,7 @@ from SidechainTestFramework.account.ac_utils import ac_makeForgerStake
 from SidechainTestFramework.account.utils import convertZenToZennies
 from SidechainTestFramework.scutil import generate_next_blocks, \
     connect_sc_nodes, stop_sc_node, start_sc_node, wait_for_sc_node_initialization, \
-    EVM_APP_BINARY, disconnect_sc_nodes_bi, generate_next_block
+    EVM_APP_BINARY, disconnect_sc_nodes_bi, generate_next_block, start_sc_nodes
 from test_framework.util import assert_equal, assert_true, fail, forward_transfer_to_sidechain
 
 """
@@ -108,7 +108,7 @@ class EvmSyncStatusForgerNodes(AccountChainSetup):
 
     def run_sc_node(self, sc_node_idx):
         logging.info("Starting SC node " + str(sc_node_idx))
-        start_sc_node(sc_node_idx, self.options.tmpdir, binary=EVM_APP_BINARY)
+        start_sc_node(sc_node_idx, self.options.tmpdir, extra_args=[ ['-max_hist_rew_len', str(1000)]], binary=EVM_APP_BINARY)
         wait_for_sc_node_initialization(self.sc_nodes)
         time.sleep(3)
 
@@ -118,6 +118,10 @@ class EvmSyncStatusForgerNodes(AccountChainSetup):
         time.sleep(2)
 
         self.run_sc_node(sc_node_idx)
+
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(1000), EVM_APP_BINARY, self.API_KEY)
 
     def run_test(self):
         if self.options.all_forks:

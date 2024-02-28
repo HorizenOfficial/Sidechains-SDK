@@ -1,25 +1,24 @@
 package io.horizen.account.state
 
+import com.horizen.certnative.BackwardTransfer
 import io.horizen.SidechainTypes
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.fork.{GasFeeFork, Version1_2_0Fork}
 import io.horizen.account.history.validation.InvalidTransactionChainIdException
 import io.horizen.account.node.NodeAccountState
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumReceipt}
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils, WellKnownAddresses}
+import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
-import com.horizen.certnative.BackwardTransfer
-import io.horizen.account.fork.{GasFeeFork, Version1_2_0Fork, Version1_3_0Fork}
-import io.horizen.account.proposition.AddressProposition
 import io.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
+import io.horizen.evm._
 import io.horizen.params.NetworkParams
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import io.horizen.evm._
 import io.horizen.transaction.exception.TransactionSemanticValidityException
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
@@ -398,18 +397,18 @@ class AccountState(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
 
-  override def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakesInfoSeq)
+  override def getOrderedForgingStakesInfoSeq(epochNumber: Int): Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakesInfoSeq(epochNumber))
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // TODO this is common code with SidechainState
   override def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
-    if (forgingStakes.isEmpty) {
-      throw new IllegalStateException("ForgerStakes list can't be empty.")
-    }
 
     getConsensusEpochNumber match {
       case Some(consensusEpochNumber) =>
+        val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq(consensusEpochNumber)
+        if (forgingStakes.isEmpty) {
+          throw new IllegalStateException("ForgerStakes list can't be empty.")
+        }
         val lastBlockInEpoch = bytesToId(stateMetadataStorage.lastVersionId.get.data) // we use block id as version
         val consensusEpochInfo = ConsensusEpochInfo(
           consensusEpochNumber,
@@ -431,11 +430,13 @@ class AccountState(
 
   override def getNonce(address: Address): BigInteger = using(getView)(_.getNonce(address))
 
-  override def getListOfForgersStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes)
+  override def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes(isForkV1_3Active))
+
+  override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =  using(getView)(_.getPagedListOfForgersStakes(startPos, pageSize))
 
   override def getAllowedForgerList: Seq[Int] = using(getView)(_.getAllowedForgerList)
 
-  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
+  override def getForgerStakeData(stakeId: String, isForkV1_3Active: Boolean): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId, isForkV1_3Active))
 
   override def getListOfMcAddrOwnerships(scAddressOpt: Option[String] = None): Seq[McAddrOwnershipData] = using(getView)(_.getListOfMcAddrOwnerships(scAddressOpt))
 
@@ -530,10 +531,13 @@ class AccountState(
       true
   }
 
+  override def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean = using(getView)(_.isForgerStakeAvailable(isForkV1_3Active))
+
   override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     // TODO: no CSW support expected for the Eth sidechain
     None
   }
+
 
 }
 
