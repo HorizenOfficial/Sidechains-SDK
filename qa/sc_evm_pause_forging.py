@@ -120,19 +120,32 @@ class SCEvmPauseForging(AccountChainSetup):
                 assert_true("No mc refs in a long row of blocks error" in str(msg))
                 assert_true(sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"], VERSION_1_3_FORK_EPOCH)
 
-        mc_node.generate(1)
+        mc_block = mc_node.generate(1)[-1]
         self.sc_sync_all()
 
         # the first of these blocks will include the mc block ref, other 99 blocks will not have any
         NUM_OF_BLOCKS = 100
-
+        block_seq = []
         for i in range(NUM_OF_BLOCKS):
-            generate_next_block(sc_node_1, "second node")
+            sc_block = generate_next_block(sc_node_2, "second node")
+            block_seq.append(sc_block)
             self.sc_sync_all()
+            if i == 0:
+                # this block has a reference with the latest MC block
+                assert_equal(1, len(sc_node_1.block_best()["result"]['block']['mainchainHeaders']))
+                sc_mc_best_block_ref_info = sc_node_1.mainchain_bestBlockReferenceInfo()["result"]
+                sc_block_referencing = sc_mc_best_block_ref_info['blockReferenceInfo']['mainchainHeaderSidechainBlockId']
+                mc_block_referenced = sc_mc_best_block_ref_info['blockReferenceInfo']['hash']
+                assert_equal(sc_block, sc_block_referencing)
+                assert_equal(mc_block, mc_block_referenced)
+            else:
+                # all other blocks don't have refs
+                assert_equal(0, len(sc_node_1.block_best()["result"]['block']['mainchainHeaders']))
 
         # node 2 can not forge until we have one more mc block, since default value for maxHistoryRewriteLen=100
         try:
-           generate_next_block(sc_node_2, "first node")
+           generate_next_block(sc_node_2, "second node")
+           raise RuntimeError("Should not be able to forge here!!!")
         except AssertionError as msg:
             logging.error("Assertion failed: " + str(msg))
             assert_true("No mc refs in a long row of blocks error" in str(msg))

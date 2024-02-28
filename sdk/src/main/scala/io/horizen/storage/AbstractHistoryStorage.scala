@@ -145,11 +145,11 @@ abstract class AbstractHistoryStorage[
     var blockHasMcHeaders : Boolean = sidechainBlockInfo.mainchainHeaderBaseInfo.nonEmpty
 
     // go backwards on the chain until we found a mc header or we hit the genesis block, and break if we
-    // cross the threshold value of max revertable number of blocks
+    // cross the threshold value of max revertable number of blocks, included the latest block containing mc refs
     while(!blockHasMcHeaders) {
       scBlocksCount = scBlocksCount + 1
 
-      if (scBlocksCount >= params.maxHistoryRewritingLength ) {
+      if (scBlocksCount >= params.maxHistoryRewritingLength - 1 ) {
         log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references")
         return true
       }
