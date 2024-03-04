@@ -673,15 +673,14 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   def testChainWithoutMcBlockHeaders(): Unit = {
 
     // build a chain with genesis block + 10 sc blocks with no mc references but the 4th block
-    // the history storage and all mocked data have params.maxHistoryRewritingLength=5
+    // the history storage and all mocked data have params.maxHistoryRewritingLength=6
     //   G <- B1 <- B2 <-.. <-B4 <- .. <-B10
     //   ^                    ^
     //   |                    |
     //  mcRef                mcRef
 
-    val t : (SidechainHistoryStorage, Seq[SidechainBlock]) = getTestChainData(spanLength = 10, mcHeaderPos = 4, inMaxHistoryRewritingLength = 5)
-    val historyStorage = t._1
-    val chainList = t._2
+    val (historyStorage: SidechainHistoryStorage, chainList: Seq[SidechainBlock]) = getTestChainData(spanLength = 10, mcHeaderPos = 4, inMaxHistoryRewritingLength = 6)
+
     assertTrue(chainList.size == 1 + 10)
 
     assertTrue(chainList(0).mainchainHeaders.nonEmpty) // test 1
