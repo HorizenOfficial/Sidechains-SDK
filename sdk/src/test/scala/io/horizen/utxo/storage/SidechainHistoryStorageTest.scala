@@ -679,9 +679,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     //   |                    |
     //  mcRef                mcRef
 
-    val t : (SidechainHistoryStorage, Seq[SidechainBlock]) = getTestChainData(spanLength = 10, mcHeaderPos = 4, inMaxHistoryRewritingLength = 6)
-    val historyStorage = t._1
-    val chainList = t._2
+    val (historyStorage: SidechainHistoryStorage, chainList: Seq[SidechainBlock]) = getTestChainData(spanLength = 10, mcHeaderPos = 4, inMaxHistoryRewritingLength = 6)
+
     assertTrue(chainList.size == 1 + 10)
 
     assertTrue(chainList(0).mainchainHeaders.nonEmpty) // test 1

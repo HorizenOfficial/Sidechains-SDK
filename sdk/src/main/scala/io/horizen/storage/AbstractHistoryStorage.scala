@@ -146,10 +146,13 @@ abstract class AbstractHistoryStorage[
 
     // go backwards on the chain until we found a mc header or we hit the genesis block, and break if we
     // cross the threshold value of max revertable number of blocks, included the latest block containing mc refs
+    // In case a MC reorg, all SC blocks would be reverted including the one referencing the MC block
+    val maxBlocksWithoutMcHeaders = params.maxHistoryRewritingLength - 1
+
     while(!blockHasMcHeaders) {
       scBlocksCount = scBlocksCount + 1
 
-      if (scBlocksCount >= params.maxHistoryRewritingLength - 1 ) {
+      if (scBlocksCount >= maxBlocksWithoutMcHeaders ) {
         log.warn(s"Unexpectedly large number of consecutive SC blocks with no mc block references")
         return true
       }
