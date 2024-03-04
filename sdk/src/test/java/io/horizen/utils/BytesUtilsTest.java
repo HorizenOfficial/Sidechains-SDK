@@ -9,10 +9,8 @@ import io.horizen.params.NetworkParams;
 import io.horizen.params.TestNetParams;
 import org.junit.Test;
 import scala.Option;
-import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;
 import static org.junit.Assert.*;
@@ -287,6 +285,7 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, mainNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
+            assertTrue("wrong error message", e.getMessage().contains("pubKey TestNet prefix"));
         }
         assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
 
@@ -313,6 +312,7 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, testNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
+            assertTrue("wrong error message", e.getMessage().contains("pubKey MainNet prefix"));
         }
         assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
 
@@ -342,6 +342,7 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddMainNet, mainNetParams);
             fail("should fail with a script address");
         } catch (IllegalArgumentException e) {
+            assertTrue("wrong error message", e.getMessage().contains("script MainNet prefix"));
         }
 
         // Test 3: valid TestNet addresses in TestNet network
@@ -362,11 +363,26 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddTestNet, testNetParams);
             fail("should fail with a script address");
         } catch (IllegalArgumentException e) {
+            assertTrue("wrong error message", e.getMessage().contains("script TestNet prefix"));
         }
     }
 
     @Test
+    public void getPrefixDescription() {
+        assertEquals("pubKey MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2089")));
+        assertEquals("pubKey MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CB8")));
+        assertEquals("script MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2096")));
+        assertEquals("script MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CBD")));
+        assertEquals("pubKey TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2098")));
+        assertEquals("pubKey TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1D25")));
+        assertEquals("script TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2092")));
+        assertEquals("script TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CBA")));
+        assertEquals("Unknown prefix 1cb3", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CB3")));
+        assertEquals("Unknown prefix 2347", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2347")));
 
+    }
+
+    @Test
     public void toHorizenPublicKeyAddress() {
         // Test 1: valid MainNet addresses in MainNet network
         NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());
