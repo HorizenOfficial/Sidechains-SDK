@@ -406,15 +406,13 @@ case class SidechainNodeApiRoute[
     _ => {
       try {
         entity(as[ReqWithAddress]) { bodyRequest =>
-          val maybeAddress = addressAndPortRegexp.findFirstMatchIn(bodyRequest.address)
+          val peerAddress = bodyRequest.address
+          Try(InetAddress.getByName(peerAddress)) match {
+            case Failure(exception) =>
+              SidechainApiError(s"address $peerAddress is not well formatted: ${exception.getMessage}")
 
-          maybeAddress match {
-            case None => SidechainApiError(s"address $maybeAddress is not well formatted")
-
-            case Some(addressAndPort) =>
-              val host = InetAddress.getByName(addressAndPort.group(1))
-              val port = addressAndPort.group(2).toInt
-              peerManager ! RemoveFromBlacklist(new InetSocketAddress(host, port))
+            case Success(address) =>
+              peerManager ! RemoveFromBlacklist(address)
               ApiResponse.OK
           }
         }
