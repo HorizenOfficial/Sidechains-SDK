@@ -35,7 +35,7 @@ interface ForgerStakes {
 
     function getPagedForgersStakesByUser(address owner, int32 startIndex, int32 pageSize) external view returns (int32, StakeInfo[] memory);
 
-    function upgrade() external view returns (uint32);
+    function upgrade() external returns (uint32);
 
     function getPagedForgersStakes(int32 startIndex, int32 pageSize) external view returns (int32, StakeInfo[] memory);
 }
