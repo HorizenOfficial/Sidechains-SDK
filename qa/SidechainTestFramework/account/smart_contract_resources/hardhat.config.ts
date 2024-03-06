@@ -119,7 +119,28 @@ task(
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [{ version: "0.8.18" }],
+    compilers: [{ version: "0.8.23" }],
+    overrides: {
+      "contracts/NativeInteropShanghai.sol": {
+        version: "0.8.23",
+        settings: { 
+	   evmVersion: "shanghai"
+        }
+      },
+      "contracts/StorageShanghai.sol": {
+        version: "0.8.23",
+        settings: { 
+	   evmVersion: "shanghai"
+        }
+      },
+      "contracts/SimpleProxyShanghai.sol": {
+        version: "0.8.23",
+        settings: {
+           evmVersion: "shanghai"
+        }
+      },
+
+    }
   },
 };
 

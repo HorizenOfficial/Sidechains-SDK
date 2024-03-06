@@ -6,8 +6,8 @@ import time
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_2, DEFAULT_API_KEY
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    connect_sc_nodes, start_sc_node, wait_for_sc_node_initialization
+from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, generate_next_blocks, \
+    connect_sc_nodes, start_sc_node, wait_for_sc_node_initialization, SIMPLE_APP_BINARY
 from httpCalls.block.best import http_block_best
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress
@@ -58,7 +58,7 @@ class NodeTerminationDuringSync(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * 120 * 5)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return self.sc_setup_nodes_with_extra_arg('-max_hist_rew_len', str(1000), SIMPLE_APP_BINARY)
 
     def find_boxes_of_address(self, boxes, address):
         address_boxes = []
@@ -113,6 +113,8 @@ class NodeTerminationDuringSync(SidechainTestFramework):
         assert_equal(len(filtered_boxes), utxo_to_create)
         address_node2 = http_wallet_createPrivateKey25519(sc_node2)
 
+        mc_nodes[0].generate(1)
+
         for i in range(997):
             res = sendCointsToMultipleAddress(sc_node1, [address_node2 for _ in range(10)],
                                               [utxo_amount for _ in range(10)], 0)
@@ -137,7 +139,7 @@ class NodeTerminationDuringSync(SidechainTestFramework):
                 break
             time.sleep(1)
         time.sleep(30)  # some non-http actors might be still waiting for timeout
-        sc_node2 = start_sc_node(1, self.options.tmpdir, auth_api_key=DEFAULT_API_KEY)
+        sc_node2 = start_sc_node(1, self.options.tmpdir, extra_args=['-max_hist_rew_len', str(1000)],auth_api_key=DEFAULT_API_KEY)
         self.sc_nodes[1] = sc_node2
         wait_for_sc_node_initialization(self.sc_nodes)
         connect_sc_nodes(sc_node1, 1)

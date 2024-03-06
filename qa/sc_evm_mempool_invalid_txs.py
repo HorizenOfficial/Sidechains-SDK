@@ -5,10 +5,10 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
-from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT
+from SidechainTestFramework.account.utils import BLOCK_GAS_LIMIT, VERSION_1_3_FORK_EPOCH, INTEROPERABILITY_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, \
     assert_equal, \
-    assert_true
+    assert_true, EVM_APP_SLOT_TIME
 from httpCalls.transaction.allTransactions import allTransactions
 from test_framework.util import forward_transfer_to_sidechain, fail
 
@@ -32,12 +32,13 @@ Test:
     - size too big
     - nonce gap too big
     - account size exceeded
+    - After Shanghai activation, contract creation initcode size too big
 """
 
 
 class SCEvmMempoolInvalidTxs(AccountChainSetup):
     def __init__(self):
-        super().__init__(max_mempool_slots=20, max_nonexec_pool_slots=19)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH, max_mempool_slots=20, max_nonexec_pool_slots=19)
 
     def run_test(self):
         mc_node = self.nodes[0]
@@ -200,7 +201,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         # Test that a transaction with size bigger than 128 KB is rejected by the mem pool
         big_data = 'FF' * 128 * 1024
         try:
-            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
                                      nonce=0, gasLimit=20533001, maxPriorityFeePerGas=900000000,
                                      maxFeePerGas=900000000, value=1, data=str(big_data))
             fail("Adding a transaction with size bigger than 128 KB should have failed")
@@ -212,7 +213,7 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
 
         response = allTransactions(sc_node_1, False)
         assert_equal(0, len(response["transactionIds"]),
-                     "Transaction that creates a smart contract with empty data added to node 1 mempool")
+                     "Transaction with size bigger than 128 KB added to node 1 mempool")
 
         # Test that a transaction with nonce gap too big is rejected by the mem pool
         too_big_nonce = self.max_nonce_gap + 10
@@ -262,8 +263,8 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
 
         big_data = 'FF' * 100 * 1024  # Should correspond to a tx of 4 slots
         try:
-            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
-                                     nonce=nonce_addr_1, gasLimit=1691401, maxPriorityFeePerGas=900000000,
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
+                                     nonce=nonce_addr_1, gasLimit=1697801, maxPriorityFeePerGas=900000000,
                                      maxFeePerGas=900000000, value=1, data=str(big_data))
             fail("Adding a transaction exceeding the account size should have failed")
         except RuntimeError as e:
@@ -274,6 +275,34 @@ class SCEvmMempoolInvalidTxs(AccountChainSetup):
         response = allTransactions(sc_node_1, False)
         assert_equal(self.max_account_slots - 1, len(response["transactionIds"]),
                      "Transaction exceeding the account size added to node 1 mempool")
+
+
+        # Tests after Shanghai activation
+
+        # reach the SHANGHAI fork
+        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        # Test that a transaction creating a contract with init code size bigger than 49152 is rejected by the mem pool
+        MAX_INITCODE_SIZE = 49152
+        big_data = 'FF' * (MAX_INITCODE_SIZE + 1)
+        try:
+            createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=None,
+                                     nonce=0, gasLimit=20533001, maxPriorityFeePerGas=900000000,
+                                     maxFeePerGas=900000000, value=1, data=str(big_data))
+            fail("Adding a transaction with init code size bigger than {} after Shanghai activation should have failed".format(str(MAX_INITCODE_SIZE)))
+        except RuntimeError as e:
+            logging.info(
+                "Adding a transaction with init code size bigger than {} after Shanghai activation had an exception as expected: {}".format(str(MAX_INITCODE_SIZE),
+                    str(e)))
+            assert_true("max initcode size" in str(e), "Wrong exception type")
+
+        response = allTransactions(sc_node_1, False)
+        assert_equal(0, len(response["transactionIds"]),
+                     "Transaction that creates a smart contract with init code size bigger than {} after Shanghai activation added to node 1 mempool".format(str(MAX_INITCODE_SIZE)))
 
 
 if __name__ == "__main__":

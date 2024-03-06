@@ -10,6 +10,7 @@ import io.horizen.account.api.rpc.handler.RpcException
 import io.horizen.account.api.rpc.types._
 import io.horizen.account.api.rpc.utils._
 import io.horizen.account.block.AccountBlock
+import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
 import io.horizen.account.forger.AccountForgeMessageBuilder
 import io.horizen.account.fork.Version1_2_0Fork
@@ -49,6 +50,7 @@ import sparkz.util.{ModifierId, SparkzLogging}
 import java.lang.reflect.Method
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.util.Collections
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
@@ -519,6 +521,18 @@ class EthService(
       using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
     }
   }
+
+
+  private def getStateViewAndStateRootAtTag[A](nodeView: NV, tag: String)(fun: (StateDbAccountStateView, Hash) => A): A = {
+    val (block, blockInfo) = getBlockByTag(nodeView, tag)
+    val stateRootHash = new Hash(block.header.stateRoot)
+    if (tag == "pending") {
+      using(getPendingStateView(nodeView, block, blockInfo))(fun(_, stateRootHash))
+    } else {
+      using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, stateRootHash))
+    }
+  }
+
 
   private def parseBlockTag(nodeView: NV, tag: String): Int = {
     tag match {
@@ -992,10 +1006,11 @@ class EthService(
   @RpcMethod("zen_getFeePayments")
   def getFeePayments(blockHashOrNumber: String): FeePaymentsView = {
     applyOnAccountView { nodeView =>
-      nodeView.history
+      val feePaymentsInfo = nodeView.history
         .feePaymentsInfo(getBlockIdByHashOrNumber(nodeView, blockHashOrNumber))
-        .map(new FeePaymentsView(_))
-        .orNull
+        .getOrElse(AccountFeePaymentsInfo(Seq.empty))
+
+      new FeePaymentsView(feePaymentsInfo)
     }
   }
 
@@ -1018,8 +1033,8 @@ class EthService(
     applyOnAccountView { nodeView =>
       try {
         val tag = getBlockTagByEip1898Input(nodeView, input)
-        getStateViewAtTag(nodeView, tag) { (stateView, _) =>
-          stateView.getProof(address, storageKeys)
+        getStateViewAndStateRootAtTag(nodeView, tag) { (stateView, stateRootHash) =>
+         stateView.getProof(address, storageKeys, stateRootHash)
         }
       } catch {
         case _: BlockNotFoundException => null
@@ -1114,6 +1129,19 @@ class EthService(
           } else {
             val start = parseBlockTag(nodeView, query.fromBlock)
             val end = parseBlockTag(nodeView, query.toBlock)
+            if (start < 0 || end < 0){
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "negative values not admitted for fromBlock and toBlock parameters"))
+            }
+            val maxHeight = nodeView.history.getCurrentHeight;
+            if (start > maxHeight +1){
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "fromBlock value too high (max height in local history =  "+maxHeight+")"))
+            }
+            if (end > maxHeight +1) {
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
+                "toBlock value too high (max height in local history =  " + maxHeight + ")"))
+            }
             if (start > end || end - start > settings.getLogsBlockLimit) {
               throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams,
                 "invalid block range. fromBlock should be before toBlock and range should be not over " + settings.getLogsBlockLimit))
@@ -1127,7 +1155,7 @@ class EthService(
                 .map(ModifierId(_))
                 .flatMap(nodeView.history.getStorageBlockById)
                 .map(RpcFilter.getBlockLogs(stateView, _, query))
-                .get
+                .getOrElse(Seq.empty)
 
               resultCount += logs.length
               if (resultCount > settings.getLogsSizeLimit)

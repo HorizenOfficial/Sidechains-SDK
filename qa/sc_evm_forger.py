@@ -15,8 +15,9 @@ from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transacti
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.simple_proxy_contract import SimpleProxyContract
 from SidechainTestFramework.account.utils import convertZenToWei, \
-    convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
-    WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH
+    convertZenToZennies, convertZenniesToWei, computeForgedTxFee, convertWeiToZen, \
+    FORGER_STAKE_SMART_CONTRACT_ADDRESS, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS, INTEROPERABILITY_FORK_EPOCH, \
+    VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import (
@@ -24,6 +25,7 @@ from test_framework.util import (
 )
 
 """
+If it is run with --allforks, all the existing forks are enabled at epoch 2, so it will use Shanghai EVM.
 Configuration: 
     - 2 SC nodes connected with each other
     - 1 MC node
@@ -44,6 +46,28 @@ Test:
     
 
 """
+
+
+def decode_list_of_forger_stakes(result, exp_num_of_stakes):
+    # result is (bytes32, uint256, address, bytes32, bytes32, bytes1)[]. Its ABI encoding in this case is
+    # - first 32 bytes is the offset
+    # - second 32 bytes is array length
+    # - the remaining are the bytes representing the various (bytes32, uint256, bytes20, bytes32, bytes32, bytes1) tuples.
+    # Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
+
+    res = result[32:]  # cut offset, don't care in this case
+    num_of_stakes = int(bytes_to_hex_str(res[0:32]), 16)
+    assert_equal(exp_num_of_stakes, num_of_stakes, "wrong number of forger stakes")
+    res = res[32:]  # cut the array length
+
+    elem_size = 192  # 32 * 6
+    list_of_elems = [res[i:i + elem_size] for i in range(0, num_of_stakes * elem_size, elem_size)]
+
+    list_of_stakes = []
+    for p in list_of_elems:
+        list_of_stakes.append(decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], p))
+
+    return list_of_stakes
 
 
 def get_sc_wallet_pubkeys(sc_node):
@@ -99,7 +123,7 @@ def check_spend_forger_stake_event(event, owner, stake_id):
 class SCEvmForger(AccountChainSetup):
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, forward_amount=100,
-                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH)
+                         block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH)
 
     def run_test(self):
 
@@ -122,16 +146,16 @@ class SCEvmForger(AccountChainSetup):
 
         # check we have all keys in wallet
         pkey_list = get_sc_wallet_pubkeys(sc_node_1)
-        assert_true(sc_cr_owner_proposition in pkey_list, "sc cr owner propostion not in wallet")
+        assert_true(sc_cr_owner_proposition in pkey_list, "sc cr owner proposition not in wallet")
         assert_true(sc_cr_vrf_pub_key in pkey_list, "sc cr vrf pub key not in wallet")
         assert_true(sc_cr_sign_pub_key in pkey_list, "sc cr block signer pub key not in wallet")
 
         # get stake info from genesis block (no owner pub key here)
         sc_genesis_block = sc_node_1.block_best()
-        stakeInfo = sc_genesis_block["result"]["block"]["header"]["forgingStakeInfo"]
-        stakeAmount = stakeInfo['stakeAmount']
-        stakeSignPubKey = stakeInfo["blockSignPublicKey"]["publicKey"]
-        stakeVrfPublicKey = stakeInfo["vrfPublicKey"]["publicKey"]
+        stake_info = sc_genesis_block["result"]["block"]["header"]["forgingStakeInfo"]
+        stake_amount = stake_info['stakeAmount']
+        stake_sign_pub_key = stake_info["blockSignPublicKey"]["publicKey"]
+        stake_vrf_public_key = stake_info["vrfPublicKey"]["publicKey"]
 
         # check both nodes see the same stake list and same contract amount
         assert_equal(
@@ -142,23 +166,23 @@ class SCEvmForger(AccountChainSetup):
             http_wallet_balance(sc_node_2, FORGER_STAKE_SMART_CONTRACT_ADDRESS))
 
         # get owner pub key from the node stake list (we have only 1 item)
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 1)
-        stakeOwnerProposition = stakeList[0]['forgerStakeData']["ownerPublicKey"]["address"]
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(1, len(stake_list))
+        stake_owner_proposition = stake_list[0]['forgerStakeData']["ownerPublicKey"]["address"]
 
         # check stake info are as expected
-        assert_equal(stakeAmount, convertZenToZennies(self.forward_amount), "Forging stake amount is wrong.")
-        assert_equal(stakeSignPubKey, sc_cr_sign_pub_key, "Forging stake block sign key is wrong.")
-        assert_equal(stakeVrfPublicKey, sc_cr_vrf_pub_key, "Forging stake vrf key is wrong.")
-        assert_equal(stakeOwnerProposition, sc_cr_owner_proposition, "Forging stake owner proposition is wrong.")
+        assert_equal(stake_amount, convertZenToZennies(self.forward_amount), "Forging stake amount is wrong.")
+        assert_equal(stake_sign_pub_key, sc_cr_sign_pub_key, "Forging stake block sign key is wrong.")
+        assert_equal(stake_vrf_public_key, sc_cr_vrf_pub_key, "Forging stake vrf key is wrong.")
+        assert_equal(stake_owner_proposition, sc_cr_owner_proposition, "Forging stake owner proposition is wrong.")
 
         # the balance of the smart contract is as expected
-        assert_equal(convertZenniesToWei(stakeAmount),
+        assert_equal(convertZenniesToWei(stake_amount),
                      http_wallet_balance(sc_node_1, FORGER_STAKE_SMART_CONTRACT_ADDRESS),
 
                      "Contract address balance is wrong.")
 
-        stake_id_genesis = stakeList[0]['stakeId']
+        stake_id_genesis = stake_list[0]['stakeId']
 
         # transfer a small fund from MC to SC2 at a new evm address, do not mine mc block
         # this is for enabling SC 2 gas fee payment when sending txes
@@ -211,24 +235,24 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(forg_spend_res_2['error']['description'], "Forger Stake Owner not found")
 
         # Try to delegate stake to a native smart contract. It should fail.
-        sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
-        sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
+        sc2_block_sign_pub_key = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        sc2_vrf_pub_key = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
-        forgerStake1_amount = 300  # Zen
+        forger_stake1_amount = 300  # Zen
 
-        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
-                                                    sc2_blockSignPubKey,
-                                                    sc2_vrfPubKey, convertZenToZennies(forgerStake1_amount))
-        if "result" not in makeForgerStakeJsonRes:
+        make_forger_stake_json_res = ac_makeForgerStake(sc_node_1, WITHDRAWAL_REQ_SMART_CONTRACT_ADDRESS,
+                                                        sc2_block_sign_pub_key,
+                                                        sc2_vrf_pub_key, convertZenToZennies(forger_stake1_amount))
+        if "result" not in make_forger_stake_json_res:
             fail("make forger stake with native smart contract as owner should create a tx: " + json.dumps(
-                makeForgerStakeJsonRes))
+                make_forger_stake_json_res))
         else:
             logging.info("Transaction created as expected")
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
         # Checking the receipt
-        tx_id = makeForgerStakeJsonRes['result']['transactionId']
+        tx_id = make_forger_stake_json_res['result']['transactionId']
         receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with native smart contract as owner should create a failed tx")
@@ -236,7 +260,7 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
         # Check balance
-        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, make_forger_stake_json_res['result']['transactionId'])
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
@@ -260,19 +284,20 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
-        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_1, format_eoa(smart_contract_address), sc2_blockSignPubKey,
-                                                    sc2_vrfPubKey, convertZenToZennies(forgerStake1_amount))
+        make_forger_stake_json_res = ac_makeForgerStake(sc_node_1, format_eoa(smart_contract_address),
+                                                        sc2_block_sign_pub_key,
+                                                        sc2_vrf_pub_key, convertZenToZennies(forger_stake1_amount))
 
-        if "result" not in makeForgerStakeJsonRes:
+        if "result" not in make_forger_stake_json_res:
             fail("make forger stake with native smart contract as owner should create a tx: " + json.dumps(
-                makeForgerStakeJsonRes))
+                make_forger_stake_json_res))
         else:
             logging.info("Transaction created as expected")
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
         # Checking the receipt
-        tx_id = makeForgerStakeJsonRes['result']['transactionId']
+        tx_id = make_forger_stake_json_res['result']['transactionId']
         receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with native smart contract as owner should create a failed tx")
@@ -281,21 +306,21 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
         # Check balance
-        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, make_forger_stake_json_res['result']['transactionId'])
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
         # SC1 Delegate 300 Zen and 200 Zen to SC node 2 - expected stake is 500 Zen
 
-        forgerStake1_amount = 300  # Zen
-        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_blockSignPubKey,
-                                                    sc2_vrfPubKey, convertZenToZennies(forgerStake1_amount))
-        if "result" not in makeForgerStakeJsonRes:
-            fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
+        forger_stake1_amount = 300  # Zen
+        make_forger_stake_json_res = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_block_sign_pub_key,
+                                                        sc2_vrf_pub_key, convertZenToZennies(forger_stake1_amount))
+        if "result" not in make_forger_stake_json_res:
+            fail("make forger stake failed: " + json.dumps(make_forger_stake_json_res))
         else:
-            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
-        tx_hash = makeForgerStakeJsonRes['result']['transactionId']
+            logging.info("Forger stake created: " + json.dumps(make_forger_stake_json_res))
+        tx_hash = make_forger_stake_json_res['result']['transactionId']
         self.sc_sync_all()
 
         # Generate SC block on SC node (keep epoch)
@@ -312,10 +337,10 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
         event = receipt['result']['logs'][0]
         check_make_forger_stake_event(event, evm_address_sc_node_1, evm_address_sc_node_1,
-                                      forgerStake1_amount)
+                                      forger_stake1_amount)
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(2, len(stakeList))
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(2, len(stake_list))
 
         # reserve a small amount for fee payments
         amount_for_fees_zen = Decimal('0.01')
@@ -323,19 +348,19 @@ class SCEvmForger(AccountChainSetup):
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(initial_balance_1 - convertZenToWei(forgerStake1_amount) - gas_fee_paid, account_1_balance)
+        assert_equal(initial_balance_1 - convertZenToWei(forger_stake1_amount) - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
-        value_spent = forgerStake1_amount + convertWeiToZen(gas_fee_paid)
-        forgerStake2_amount = ft_amount_in_zen - amount_for_fees_zen - Decimal(value_spent)
-        makeForgerStakeJsonRes = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_blockSignPubKey,
-                                                    sc2_vrfPubKey, convertZenToZennies(forgerStake2_amount))
-        if "result" not in makeForgerStakeJsonRes:
-            fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
+        value_spent = forger_stake1_amount + convertWeiToZen(gas_fee_paid)
+        forger_stake2_amount = ft_amount_in_zen - amount_for_fees_zen - Decimal(value_spent)
+        make_forger_stake_json_res = ac_makeForgerStake(sc_node_1, evm_address_sc_node_1, sc2_block_sign_pub_key,
+                                                        sc2_vrf_pub_key, convertZenToZennies(forger_stake2_amount))
+        if "result" not in make_forger_stake_json_res:
+            fail("make forger stake failed: " + json.dumps(make_forger_stake_json_res))
         else:
-            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forger stake created: " + json.dumps(make_forger_stake_json_res))
         self.sc_sync_all()
-        tx_hash = makeForgerStakeJsonRes['result']['transactionId']
+        tx_hash = make_forger_stake_json_res['result']['transactionId']
 
         # Generate SC block on SC node (keep epoch)
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=False)
@@ -351,15 +376,15 @@ class SCEvmForger(AccountChainSetup):
         assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
         event = receipt['result']['logs'][0]
         check_make_forger_stake_event(event, evm_address_sc_node_1, evm_address_sc_node_1,
-                                      forgerStake2_amount)
+                                      forger_stake2_amount)
         # we now have 3 stakes
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(3, len(stakeList))
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(3, len(stake_list))
 
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(initial_balance_1 - convertZenToWei(forgerStake2_amount) - gas_fee_paid, account_1_balance)
+        assert_equal(initial_balance_1 - convertZenToWei(forger_stake2_amount) - gas_fee_paid, account_1_balance)
         initial_balance_1 = account_1_balance
 
         # Verify SC node 2 can not forge yet
@@ -401,21 +426,21 @@ class SCEvmForger(AccountChainSetup):
 
         # check we have the expected stake total amount
         assert_equal(
-            convertZenToWei(forgerStake1_amount) +
-            convertZenToWei(forgerStake2_amount) +
-            convertZenniesToWei(stakeAmount),
+            convertZenToWei(forger_stake1_amount) +
+            convertZenToWei(forger_stake2_amount) +
+            convertZenniesToWei(stake_amount),
             http_wallet_balance(sc_node_1, FORGER_STAKE_SMART_CONTRACT_ADDRESS))
 
         # spend the genesis stake
         logging.info("SC1 spends genesis stake...")
-        spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
+        spend_forger_stake_json_res = sc_node_1.transaction_spendForgingStake(
             json.dumps({"stakeId": str(stake_id_genesis)}))
-        if "result" not in spendForgerStakeJsonRes:
-            fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
+        if "result" not in spend_forger_stake_json_res:
+            fail("spend forger stake failed: " + json.dumps(spend_forger_stake_json_res))
         else:
-            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spend_forger_stake_json_res))
         self.sc_sync_all()
-        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
+        tx_hash = spend_forger_stake_json_res['result']['transactionId']
 
         # Generate SC block on SC node 1 (keep epoch)
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=False)
@@ -423,10 +448,10 @@ class SCEvmForger(AccountChainSetup):
         print_current_epoch_and_slot(sc_node_1)
 
         # check the genesis staked amount has been transferred from contract to owner address
-        assert_equal(convertZenniesToWei(stakeAmount), http_wallet_balance(sc_node_1, sc_cr_owner_proposition))
+        assert_equal(convertZenniesToWei(stake_amount), http_wallet_balance(sc_node_1, sc_cr_owner_proposition))
         assert_equal(
-            convertZenToWei(forgerStake1_amount) +
-            convertZenToWei(forgerStake2_amount),
+            convertZenToWei(forger_stake1_amount) +
+            convertZenToWei(forger_stake2_amount),
             http_wallet_balance(sc_node_1, FORGER_STAKE_SMART_CONTRACT_ADDRESS))
 
         # Check balance
@@ -454,11 +479,11 @@ class SCEvmForger(AccountChainSetup):
         else:
             fail("No forging stakes expected for SC node 1.")
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(2, len(stakeList))
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(2, len(stake_list))
 
-        stakeId_1 = stakeList[0]['stakeId']
-        stakeId_2 = stakeList[1]['stakeId']
+        stake_id_1 = stake_list[0]['stakeId']
+        stake_id_2 = stake_list[1]['stakeId']
 
         # balance is in wei
         final_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
@@ -466,12 +491,11 @@ class SCEvmForger(AccountChainSetup):
         initial_balance_1 = final_balance
 
         bal_sc_cr_prop = http_wallet_balance(sc_node_1, sc_cr_owner_proposition)
-        assert_equal(convertZenniesToWei(stakeAmount), bal_sc_cr_prop)
+        assert_equal(convertZenniesToWei(stake_amount), bal_sc_cr_prop)
         assert_equal(
-            convertZenToWei(forgerStake1_amount) +
-            convertZenToWei(forgerStake2_amount),
+            convertZenToWei(forger_stake1_amount) +
+            convertZenToWei(forger_stake2_amount),
             http_wallet_balance(sc_node_1, FORGER_STAKE_SMART_CONTRACT_ADDRESS), "Contract address balance is wrong.")
-
 
         #######################################################################################################
         # Interoperability test with an EVM smart contract calling forger stakes native contract
@@ -493,7 +517,7 @@ class SCEvmForger(AccountChainSetup):
         generate_next_block(sc_node_1, "first node")
 
         # Deploy proxy contract
-        proxy_contract = SimpleProxyContract(sc_node_1, evm_address_interop)
+        proxy_contract = SimpleProxyContract(sc_node_1, evm_address_interop, self.options.all_forks)
 
         # Send some funds to the proxy smart contract. Note that nonce=1 because evm_address_interop has deployed the proxy contract.
         contract_funds_in_zen = 10
@@ -504,59 +528,40 @@ class SCEvmForger(AccountChainSetup):
 
         native_contract = SmartContract("ForgerStakes")
 
-
         # Test before interoperability fork
         method = "getAllForgersStakes()"
         native_input = format_eoa(native_contract.raw_encode_call(method,))
-        try:
-            proxy_contract.do_static_call(evm_address_interop, 1, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
-            fail("Interoperability call should fail before fork point")
-        except RuntimeError as err:
-            print("Expected exception thrown: {}".format(err))
-            # error is raised from API since the address has no balance
-            assert_true("reverted" in str(err))
+        if self.options.all_forks is False:
+            try:
+                proxy_contract.do_static_call(evm_address_interop, 1, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
+                fail("Interoperability call should fail before fork point")
+            except RuntimeError as err:
+                print("Expected exception thrown: {}".format(err))
+                # error is raised from API since the address has no balance
+                assert_true("reverted" in str(err))
 
+            # reach the Interoperability fork
+            current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
-        # reach the Interoperability fork
-        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
-
-        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
-            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
-            self.sc_sync_all()
-
+            for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
 
         # Test getAllForgersStakes()
 
         res = proxy_contract.do_static_call(evm_address_interop, 2, FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_input)
 
-        # res is (bytes32,uint256,address, bytes32,bytes32,bytes1)[]. Its ABI encoding in this case is
-        # - first 32 bytes is the offset
-        # - second 32 bytes is array length
-        # - the remaining are the bytes representing the various (bytes32,uint256,bytes20, bytes32,bytes32,bytes1) tuples.
-        # Each tuple is formed of 192 bytes, 32 bytes for each element in the tuple.
-
-        res = res[32:]  # cut offset, don't care in this case
-        num_of_stakes = int(bytes_to_hex_str(res[0:32]), 16)
-        assert_equal(2, num_of_stakes, "wrong number of forger stakes")
-        res = res[32:]  # cut the array length
-
-        elem_size = 192  # 32 * 6
-        list_of_elems = [res[i:i + elem_size] for i in range(0, num_of_stakes * elem_size, elem_size)]
-
-        stake_1 = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], list_of_elems[0])
-        stake_2 = decode(['(bytes32,uint256,address,bytes32,bytes32,bytes1)'], list_of_elems[1])
-
+        list_of_stakes = decode_list_of_forger_stakes(res, 2)
         # Check the stakeId
-        assert_equal(stakeList[0]['stakeId'], bytes_to_hex_str(stake_1[0][0]), "wrong stakeId")
-        assert_equal(stakeList[1]['stakeId'], bytes_to_hex_str(stake_2[0][0]), "wrong stakeId")
-        logging.info("stakeList: {}".format(stakeList))
+        assert_equal(stake_list[0]['stakeId'], bytes_to_hex_str(list_of_stakes[0][0][0]), "wrong stakeId")
+        assert_equal(stake_list[1]['stakeId'], bytes_to_hex_str(list_of_stakes[1][0][0]), "wrong stakeId")
 
         # Test forger stake creation: delegate(bytes32,bytes32,bytes1,address)
 
         method = "delegate(bytes32,bytes32,bytes1,address)"
-        vrf_pub_key = hex_str_to_bytes(sc2_vrfPubKey)
+        vrf_pub_key = hex_str_to_bytes(sc2_vrf_pub_key)
 
-        native_input = format_eoa(native_contract.raw_encode_call(method, hex_str_to_bytes(sc2_blockSignPubKey),
+        native_input = format_eoa(native_contract.raw_encode_call(method, hex_str_to_bytes(sc2_block_sign_pub_key),
                                                                   vrf_pub_key[0:32], vrf_pub_key[32:],
                                                                   evm_address_interop))
 
@@ -614,7 +619,6 @@ class SCEvmForger(AccountChainSetup):
         gas_used_tracer = int(trace_result['gasUsed'], 16)
         assert_true(gas_used == gas_used_tracer, "Wrong gas")
 
-
         # remove the forger stake
         # There is not an easy way to test the 'withdraw' method, so this test is skipped. The problem is that it is difficult
         # to create and sign the message needed for withdrawing a stake, because I don't have a way to sign the message
@@ -623,12 +627,12 @@ class SCEvmForger(AccountChainSetup):
         # The same applies to 'openStakeForgerList' method.
 
         # Remove the stake with API
-        spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
+        spend_forger_stake_json_res = sc_node_1.transaction_spendForgingStake(
             json.dumps({"stakeId": bytes_to_hex_str(stake_id)}))
-        if "result" not in spendForgerStakeJsonRes:
-            fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
+        if "result" not in spend_forger_stake_json_res:
+            fail("spend forger stake failed: " + json.dumps(spend_forger_stake_json_res))
         else:
-            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spend_forger_stake_json_res))
         self.sc_sync_all()
 
         # Generate SC block on SC node 2
@@ -640,14 +644,14 @@ class SCEvmForger(AccountChainSetup):
         #######################################################################################################
 
         # SC1 remove all the remaining stakes
-        spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_1)}))
-        if "result" not in spendForgerStakeJsonRes:
-            fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
+        spend_forger_stake_json_res = sc_node_1.transaction_spendForgingStake(
+            json.dumps({"stakeId": str(stake_id_1)}))
+        if "result" not in spend_forger_stake_json_res:
+            fail("spend forger stake failed: " + json.dumps(spend_forger_stake_json_res))
         else:
-            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spend_forger_stake_json_res))
         self.sc_sync_all()
-        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
+        tx_hash = spend_forger_stake_json_res['result']['transactionId']
 
         # Generate SC block on SC node 1
         generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
@@ -662,24 +666,24 @@ class SCEvmForger(AccountChainSetup):
         # Check the logs
         assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
         event = receipt['result']['logs'][0]
-        check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_1)
+        check_spend_forger_stake_event(event, evm_address_sc_node_1, stake_id_1)
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(1, len(stakeList))
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(1, len(stake_list))
 
         # Check balance
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(initial_balance_1 + convertZenToWei(forgerStake1_amount), account_1_balance)
+        assert_equal(initial_balance_1 + convertZenToWei(forger_stake1_amount), account_1_balance)
         initial_balance_1 = account_1_balance
 
-        spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_2)}))
-        if "result" not in spendForgerStakeJsonRes:
-            fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
+        spend_forger_stake_json_res = sc_node_1.transaction_spendForgingStake(
+            json.dumps({"stakeId": str(stake_id_2)}))
+        if "result" not in spend_forger_stake_json_res:
+            fail("spend forger stake failed: " + json.dumps(spend_forger_stake_json_res))
         else:
-            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spend_forger_stake_json_res))
         self.sc_sync_all()
-        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
+        tx_hash = spend_forger_stake_json_res['result']['transactionId']
 
         # Generate SC block on SC node
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
@@ -687,8 +691,8 @@ class SCEvmForger(AccountChainSetup):
         print_current_epoch_and_slot(sc_node_1)
 
         # we have no more stakes!!
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 0)
+        stake_list = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
+        assert_equal(len(stake_list), 0)
 
         # all balance is now at the expected owner address
         # Checking the receipt
@@ -699,11 +703,11 @@ class SCEvmForger(AccountChainSetup):
         # Check the logs
         assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
         event = receipt['result']['logs'][0]
-        check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_2)
+        check_spend_forger_stake_event(event, evm_address_sc_node_1, stake_id_2)
 
         # Check balance
         account_1_balance = http_wallet_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(initial_balance_1 + convertZenToWei(forgerStake2_amount), account_1_balance)
+        assert_equal(initial_balance_1 + convertZenToWei(forger_stake2_amount), account_1_balance)
 
         # Generate SC block on SC node keeping current epoch
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=False)

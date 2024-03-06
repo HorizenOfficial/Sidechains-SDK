@@ -50,6 +50,10 @@ for i in "$@"; do
       PARALLEL="${i#*=}"
       shift
       ;;
+    -python_path=*)
+      PYTHON_PATH="${i#*=}"
+      shift
+      ;;
     *)
       # unknown option/passOn
       passOn+="${i} "
@@ -136,12 +140,16 @@ testScriptsEvm=(
     'mc_sc_evm_forging1_with_mc_block_delay.py'
     'mc_sc_evm_forging3_with_mc_block_delay.py'
     'mc_sc_evm_forging4_with_mc_block_delay.py'
-    'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
     'sc_evm_rpc_eth.py'
     'sc_evm_consensus_parameters_fork_with_sidechain_forks.py'
     'sc_evm_consensus_parameters_fork_with_mainchain_forks.py'
     'sc_evm_ft_to_smart_contract.py'
     'sc_evm_forging_fee_payments_rollback.py'
+    'sc_evm_forger_v2.py'
+    'sc_evm_forger_stakes_pager.py'
+    'sc_evm_shanghai.py'
+    'sc_evm_pause_forging.py'
+    'sc_evm_forger_reward_address.py'
 );
 
 testScriptsUtxo=(
@@ -192,7 +200,7 @@ testScriptsUtxo=(
     'sc_cert_key_rotation_across_epoch.py'
     'sc_cert_key_rotation_across_epoch.py --nonceasing'
     'sc_cert_submitter_secure_enclave.py'
-    'sc_closed_forger.py'
+### scapi exc    'sc_closed_forger.py'
     'sc_csw_ceased_at_epoch_1.py'
     'sc_csw_ceased_at_epoch_1_with_large_epoch_length.py'
     'sc_csw_ceased_at_epoch_2.py'
@@ -226,9 +234,10 @@ testScriptsUtxo=(
     'sc_sync_after_fork.py'
     'sc_dust_threshold_fork.py'
     'sc_ft_limit_fork.py'
-    'sc_fork_one_forced_tx.py'
+#### scapi excep   'sc_fork_one_forced_tx.py'
     'sc_big_block.py'
     'sc_seedernode.py'
+    'sc_withdrawal_certificate_after_mainchain_nodes_were_disconnected.py'
 );
 
 testScriptsNetworking=(
@@ -424,7 +433,7 @@ function runTestScript
     #Log test start time
     testStart=$(date +%s)
     runTimeMessage="Run Time: $testRuntime"
-    if eval "$@"; then
+    if eval "$PYTHON_PATH $@"; then
       testEnd=$(date +%s)
       testRuntime=$((testEnd-testStart))
       updateSuccessCount

@@ -1,7 +1,8 @@
 package io.horizen.account.state
 
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.utils.BigIntegerUtil
-import io.horizen.evm.EvmContext
+import io.horizen.evm.{EvmContext, ForkRules}
 import sparkz.util.SparkzLogging
 
 import java.math.BigInteger
@@ -51,12 +52,17 @@ class StateTransition(
     // trace TX start
     tracer.foreach(_.CaptureTxStart(gasPool.initialGas))
     try {
+      val isShanghaiActive = Version1_3_0Fork.get(blockContext.consensusEpochNumber).active
       // consume intrinsic gas
-      val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty)
+      val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo.isEmpty, isShanghaiActive)
       if (gasPool.getGas.compareTo(intrinsicGas) < 0) throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
       gasPool.subGas(intrinsicGas)
+
+      if (isShanghaiActive && msg.getTo.isEmpty && msg.getData.length > ProtocolParams.MaxInitCodeSize){
+          throw MaxInitCodeSizeExceededException(msg.getData.length, ProtocolParams.MaxInitCodeSize)
+      }
       // reset and prepare account access list
-      view.setupAccessList(msg)
+      view.setupAccessList(msg, blockContext.forgerAddress, new ForkRules(isShanghaiActive))
       // increase the nonce by 1
       view.increaseNonce(msg.getFrom)
       // execute top-level call frame
@@ -188,11 +194,11 @@ class StateTransition(
   }
 
   private def invoke(processor: MessageProcessor, invocation: Invocation): Array[Byte] = {
-    val startTime = System.nanoTime()
     if (!processor.customTracing()) {
       tracer.foreach(tracer => {
         if (depth == 0) {
           // trace start of top-level call frame
+
           val context = new EvmContext(
           BigInteger.valueOf(blockContext.chainID),
           blockContext.forgerAddress,
@@ -201,7 +207,9 @@ class StateTransition(
           BigInteger.valueOf(blockContext.blockNumber),
           BigInteger.valueOf(blockContext.timestamp),
           blockContext.baseFee,
-          blockContext.random)
+          blockContext.random,
+          new ForkRules(Version1_3_0Fork.get(blockContext.consensusEpochNumber).active))
+
           tracer.CaptureStart(
             view.getStateDbHandle,
             context,
@@ -268,7 +276,7 @@ class StateTransition(
         }
         if (depth == 0) {
           // trace end of top-level call frame
-          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, System.nanoTime() - startTime, error)
+          tracer.CaptureEnd(output, invocation.gasPool.getUsedGas, error)
         } else {
           // trace end of nested call frame
           tracer.CaptureExit(output, invocation.gasPool.getUsedGas, error)

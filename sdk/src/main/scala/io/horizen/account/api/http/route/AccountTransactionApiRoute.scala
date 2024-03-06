@@ -11,11 +11,12 @@ import io.horizen.account.api.http.route.AccountTransactionRestScheme._
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
-import io.horizen.account.state.McAddrOwnershipMsgProcessor.{checkMcAddresses, checkMcRedeemScriptForMultisig, getMcSignature, getOwnershipId, checkMultisigAddress}
+import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state._
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
@@ -72,7 +73,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~
       allForgingStakes ~ myForgingStakes ~ decodeTransactionBytes ~ openForgerList ~ allowedForgerList ~ createKeyRotationTransaction ~
       invokeProxyCall ~ invokeProxyStaticCall  ~ sendKeysOwnership ~ getKeysOwnership ~ removeKeysOwnership ~
-      getKeysOwnerScAddresses ~ sendMultisigKeysOwnership
+      getKeysOwnerScAddresses ~ sendMultisigKeysOwnership ~ pagedForgingStakes
   }
 
   private def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
@@ -397,43 +398,49 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqCreateForgerStake]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
+            val accountState = sidechainNodeView.getNodeState
+            val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+            if (!sidechainNodeView.getNodeState.isForgerStakeAvailable(Version1_3_0Fork.get(epochNumber).active)) {
+              ApiResponseUtil.toResponse(GenericTransactionError("Unable to add", JOptional.empty()))
+            } else {
+              val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
-            // default gas related params
-            val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
-            var maxPriorityFeePerGas = BigInteger.valueOf(120)
-            var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-            var gasLimit = BigInteger.valueOf(500000)
+              // default gas related params
+              val baseFee = sidechainNodeView.getNodeState.getNextBaseFee
+              var maxPriorityFeePerGas = BigInteger.valueOf(120)
+              var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+              var gasLimit = BigInteger.valueOf(500000)
 
-            if (body.gasInfo.isDefined) {
-              maxFeePerGas = body.gasInfo.get.maxFeePerGas
-              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
-              gasLimit = body.gasInfo.get.gasLimit
-            }
+              if (body.gasInfo.isDefined) {
+                maxFeePerGas = body.gasInfo.get.maxFeePerGas
+                maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+                gasLimit = body.gasInfo.get.gasLimit
+              }
 
-            val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+              val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
 
-            val secret = getFittingSecret(sidechainNodeView, None, txCost)
+              val secret = getFittingSecret(sidechainNodeView, None, txCost)
 
-            secret match {
-              case Some(secret) =>
+              secret match {
+                case Some(secret) =>
 
-                val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-                val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
-                val tmpTx: EthereumTransaction = new EthereumTransaction(
-                  params.chainId,
-                JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
-                  nonce,
-                  gasLimit,
-                  maxPriorityFeePerGas,
-                  maxFeePerGas,
-                  valueInWei,
-                  dataBytes,
-                  null
-                )
-                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
-              case None =>
-                ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val dataBytes = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    JOptional.of(new AddressProposition(FORGER_STAKE_SMART_CONTRACT_ADDRESS)),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    dataBytes,
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case None =>
+                  ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+              }
             }
           }
         }
@@ -465,7 +472,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(txCreatorSecret) =>
               val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
-              val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
+              val epochNumber = sidechainNodeView.getNodeState.getConsensusEpochNumber.getOrElse(0)
+              val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId, Version1_3_0Fork.get(epochNumber).active)
               stakeDataOpt match {
                 case Some(stakeData) =>
                   val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
@@ -503,10 +511,37 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def pagedForgingStakes: Route = (post & path("pagedForgingStakes")) {
+    withBasicAuth {
+      _ => {
+        entity(as[ReqPagedForgingStakes]) { body =>
+          withNodeView { sidechainNodeView =>
+            val accountState = sidechainNodeView.getNodeState
+            val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+            if (Version1_3_0Fork.get(epochNumber).active) {
+              Try {
+                accountState.getPagedListOfForgersStakes(body.startPos, body.size)
+              } match {
+                case Success((nextPos, listOfForgerStakes)) =>
+                  ApiResponseUtil.toResponse(RespPagedForgerStakes(nextPos, listOfForgerStakes.toList))
+                case Failure(exception) =>
+                  ApiResponseUtil.toResponse(GenericTransactionError(s"Invalid input parameters", JOptional.of(exception)))
+              }
+            } else {
+              ApiResponseUtil.toResponse(GenericTransactionError(s"Fork 1.3 is not active, can not invoke this command",
+                JOptional.empty()))
+            }
+          }
+        }
+      }
+    }
+  }
+
   def allForgingStakes: Route = (post & path("allForgingStakes")) {
     withNodeView { sidechainNodeView =>
       val accountState = sidechainNodeView.getNodeState
-      val listOfForgerStakes = accountState.getListOfForgersStakes
+      val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+      val listOfForgerStakes = accountState.getListOfForgersStakes(Version1_3_0Fork.get(epochNumber).active)
       ApiResponseUtil.toResponse(RespForgerStakes(listOfForgerStakes.toList))
     }
   }
@@ -539,8 +574,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       _ => {
         withNodeView { sidechainNodeView =>
           val accountState = sidechainNodeView.getNodeState
-          val listOfForgerStakes = accountState.getListOfForgersStakes
-
+          val epochNumber = accountState.getConsensusEpochNumber.getOrElse(0)
+          val listOfForgerStakes = accountState.getListOfForgersStakes(Version1_3_0Fork.get(epochNumber).active)
           if (listOfForgerStakes.nonEmpty) {
             val wallet = sidechainNodeView.getNodeWallet
             val walletPubKeys = wallet.allSecrets().map(_.publicImage).toSeq
@@ -562,7 +597,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         entity(as[ReqWithdrawCoins]) { body =>
           // lock the view and try to create CoreTransaction
           applyOnNodeView { sidechainNodeView =>
-            val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
             val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
             val gasInfo = body.gasInfo
 
@@ -582,20 +616,25 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           val secret = getFittingSecret(sidechainNodeView, None, txCost)
           secret match {
             case Some(secret) =>
-
-              val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-              val tmpTx: EthereumTransaction = new EthereumTransaction(
-                params.chainId,
-                JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
-                nonce,
-                gasLimit,
-                maxPriorityFeePerGas,
-                maxFeePerGas,
-                valueInWei,
-                dataBytes,
-                null
-              )
-              validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              val dataBytes = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
+              dataBytes match {
+                case Success(data) =>
+                  val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    JOptional.of(new AddressProposition(WithdrawalMsgProcessor.contractAddress)),
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    data,
+                    null
+                  )
+                  validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+                case Failure(exc) =>
+                  ApiResponseUtil.toResponse(ErrorInvalidMcAddress(s"Invalid Mc address ${body.withdrawalRequest.mainchainAddress}", JOptional.of(exc)))
+              }
             case None =>
               ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
           }
@@ -1103,12 +1142,15 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode())
   }
 
-  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Array[Byte] = {
-    // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
-    // different to `getnewaddress "" true` hash that is in BE endianness.
-    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenMcTransparentAddress(withdrawal.mainchainAddress, params))
-    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
-    Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
+  def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): Try[Array[Byte]] = {
+    Try(BytesUtils.fromHorizenMcTransparentKeyAddress(withdrawal.mainchainAddress, params)).map {
+      pubKeyHash =>
+        // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+        // different to `getnewaddress "" true` hash that is in BE endianness.
+        val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(pubKeyHash)
+        val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
+        Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode())
+    }
   }
 
 
@@ -1218,6 +1260,9 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class RespForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class RespPagedForgerStakes(nextPos: Int, stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
@@ -1393,6 +1438,16 @@ object AccountTransactionRestScheme {
     require(stakeId.nonEmpty, "Signature data must be provided")
   }
 
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[horizen] case class ReqPagedForgingStakes(
+                                                     nonce: Option[BigInteger],
+                                                     startPos: Int = 0,
+                                                     size: Int = 10,
+                                                     gasInfo: Option[EIP1559GasInfo]) {
+    require(size > 0 , "Size must be positive")
+  }
+
   @JsonView(Array(classOf[Views.Default]))
    private[horizen] case class ReqEIP1559Transaction(
                                                  to: Option[String],
@@ -1486,6 +1541,10 @@ object AccountTransactionErrorResponse {
   case class ErrorInvalidKeyRotationProof(description: String) extends ErrorResponse {
     override val code: String = "0209"
     override val exception: JOptional[Throwable] = JOptional.empty()
+  }
+
+  case class ErrorInvalidMcAddress(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0210"
   }
 
 }

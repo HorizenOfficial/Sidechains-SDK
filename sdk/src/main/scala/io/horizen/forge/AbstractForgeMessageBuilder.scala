@@ -154,6 +154,10 @@ abstract class AbstractForgeMessageBuilder[
     val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params.sidechainGenesisBlockTimestamp, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
+    if ((nextEpochNumber - currentTipBlockEpochAndSlot.epochNumber) > 1) {
+      return Some(SkipSlot(s"Chain tip with epoch ${currentTipBlockEpochAndSlot.epochNumber} is too far in past: next block epoch=${nextBlockEpochAndSlot.epochNumber}/slot=${nextBlockEpochAndSlot.slotNumber} (it is OK if we are syncing the node)"))
+    }
+
     if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
       return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")))
     }
@@ -187,7 +191,7 @@ abstract class AbstractForgeMessageBuilder[
             throw ex
       }
 
-    newHeaderHashes = if(newHeaderHashes.size != 0 && newHeaderHashes.size > params.mcBlockRefDelay) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
+    newHeaderHashes = if(newHeaderHashes.nonEmpty && newHeaderHashes.size > params.mcBlockRefDelay) newHeaderHashes.take(newHeaderHashes.size - params.mcBlockRefDelay) else Seq()
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
     if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
@@ -234,9 +238,9 @@ abstract class AbstractForgeMessageBuilder[
   }
 
   // the max size of the block excluding txs
-  def getMaxBlockOverheadSize() : Int
+  def getMaxBlockOverheadSize: Int
   // the max size of the block including txs
-  def getMaxBlockSize() : Int
+  def getMaxBlockSize: Int
 
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
@@ -295,9 +299,9 @@ abstract class AbstractForgeMessageBuilder[
     val startTime: Long = System.currentTimeMillis()
     mainchainBlockReferenceDataToRetrieve.takeWhile(hash => {
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
-        case Success(ref) => {
+        case Success(ref) =>
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if (blockSize + refDataSize > getMaxBlockOverheadSize()) {
+          if (blockSize + refDataSize > getMaxBlockOverheadSize) {
             log.info(s"Block size would exceed limit, stopping mc ref data collection. Block size $blockSize, Data collected so far: ${mainchainReferenceData.length}, refData skipped size: $refDataSize")
             false // stop data collection
           } else {
@@ -308,10 +312,15 @@ abstract class AbstractForgeMessageBuilder[
             val isTimeout: Boolean = System.currentTimeMillis() - startTime >= mcRefDataRetrievalTimeout.duration.toMillis
             !isTimeout // continue data collection
           }
-        }
         case Failure(ex) => return ForgeFailed(ex)
       }
     })
+
+    // if we have no mc block ref, we must ensure we are not creating too long a chain without mc ref blocks
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params.sidechainGenesisBlockTimestamp, timestamp)
+    if (nodeView.history.tooManyBlocksWithoutMcHeaders(branchPointInfo.branchPointId, mainchainHeaders.isEmpty, consensusEpochNumber)) {
+      return SkipSlot(s"We can not forge until we have at least a mc block reference included, skipping this slot...")
+    }
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
 

@@ -11,7 +11,7 @@ import io.horizen.account.utils.BigIntegerUInt256.getUnsignedByteArray
 import io.horizen.account.utils.Secp256k1.{PUBLIC_KEY_SIZE, SIGNATURE_RS_SIZE}
 import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.consensus.intToConsensusEpochNumber
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, ForkRules}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.params.{NetworkParams, RegTestParams}
@@ -1070,7 +1070,6 @@ class McAddrOwnershipMsgProcessorMultisigTest
 
   def getAllOwnershipList(stateView: AccountStateView): Array[Byte] = {
     val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfAllOwnershipsCmd), randomNonce)
-    stateView.setupAccessList(msg)
 
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
@@ -1091,7 +1090,6 @@ class McAddrOwnershipMsgProcessorMultisigTest
     val msg = getMessage(
       contractAddress, 0,
       BytesUtils.fromHexString(GetListOfOwnershipsCmd) ++ data, randomNonce)
-    stateView.setupAccessList(msg)
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
       (result, gas.getUsedGas)

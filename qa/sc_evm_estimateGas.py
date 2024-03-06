@@ -3,7 +3,10 @@ import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import estimate_gas
+from SidechainTestFramework.account.ac_utils import estimate_gas, deploy_smart_contract
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.utils import VERSION_1_3_FORK_EPOCH
+from SidechainTestFramework.scutil import generate_next_block, EVM_APP_SLOT_TIME
 from test_framework.util import assert_equal
 
 """
@@ -25,13 +28,14 @@ Test:
         - EOA to EOA without having funds
         - forging stake
         - SC to MC withdrawal
+        - Forger address in access list and Shanghai activation
 """
 
 
-class SCEvmBootstrap(AccountChainSetup):
+class SCEvmEstimateGas(AccountChainSetup):
 
     def __init__(self):
-        super().__init__(withdrawalEpochLength=10)
+        super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * VERSION_1_3_FORK_EPOCH, withdrawalEpochLength=10)
 
     def run_test(self):
         sc_node = self.sc_nodes[0]
@@ -92,6 +96,74 @@ class SCEvmBootstrap(AccountChainSetup):
         response = estimate_gas(sc_node, self.evm_address, to_address=to, data=data, value=value)
         assert_equal('0x15ef4', response['result'])
 
+        # Check how the gas used changes, adding the forger address in the access list with Shanghai
+        # (EIP-3651: Warm COINBASE).
+        # In Paris, only 'from' and 'to' addresses are automatically added to the access list. Starting from Shanghai the
+        # forger is added to the access list too. Any access to the state of an address in address list costs less gas
+        # that the same state access of another address. This test verifies that accessing the state of the forger costs
+        # the same gas as accessing the state of an address different from 'from' or 'to' in Paris, while, after Shanghai
+        # activation, the cost is lesser than before and similar to the 'to' address cost.
+
+        # Deploying smart contract qa/SidechainTestFramework/account/smart_contract_resources/contracts/AccessListTest.sol
+        access_contract = SmartContract("AccessListTest")
+        logging.info(access_contract)
+        access_contract_address = deploy_smart_contract(sc_node, access_contract, self.evm_address)
+
+        latest_block = sc_node.block_best()
+        forger_address = latest_block['result']['block']['header']['forgerAddress']['address']
+
+        sc_address_not_in_al = sc_node.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+
+        # Gas costs for cold/warm access (see GasUtil.scala/StateDbAccountStateViewGasTracked.scala)
+        cold_account_access_cost_eip2929 = 2600
+        warm_storage_read_cost_eip2929 = 100
+
+        gas_saved_with_access_list = cold_account_access_cost_eip2929 - warm_storage_read_cost_eip2929
+
+        method = "getBalance(address)"
+        if self.options.all_forks is False:
+            estimated_gas_to_paris = access_contract.estimate_gas(sc_node, method, access_contract_address, value=0,
+                                                                  fromAddress=self.evm_address,
+                                                                  toAddress=access_contract_address,
+                                                                  tag="latest")
+
+            estimated_gas_forger_paris = access_contract.estimate_gas(sc_node, method, forger_address, value=0,
+                                                                      fromAddress=self.evm_address,
+                                                                      toAddress=access_contract_address,
+                                                                      tag="latest")
+            estimated_gas_address_not_in_al_paris = access_contract.estimate_gas(sc_node, method, sc_address_not_in_al,
+                                                                                 value=0,
+                                                                                 fromAddress=self.evm_address,
+                                                                                 toAddress=access_contract_address,
+                                                                                 tag="latest")
+
+            assert_equal(estimated_gas_forger_paris, estimated_gas_address_not_in_al_paris)
+            assert_equal(estimated_gas_to_paris + gas_saved_with_access_list, estimated_gas_forger_paris)
+
+            # reach the SHANGHAI fork
+            current_best_epoch = sc_node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+            for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
+                generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
+
+        estimated_gas_to_shanghai = access_contract.estimate_gas(sc_node, method, access_contract_address, value=0,
+                                                                 fromAddress=self.evm_address,
+                                                                 toAddress=access_contract_address,
+                                                                 tag="latest")
+        estimated_gas_forger_shanghai = access_contract.estimate_gas(sc_node, method, forger_address, value=0,
+                                                                     fromAddress=self.evm_address,
+                                                                     toAddress=access_contract_address,
+                                                                     tag="latest")
+        estimated_gas_address_not_in_al_shanghai = access_contract.estimate_gas(sc_node, method, sc_address_not_in_al,
+                                                                                value=0,
+                                                                                fromAddress=self.evm_address,
+                                                                                toAddress=access_contract_address,
+                                                                                tag="latest")
+
+        assert_equal(estimated_gas_forger_shanghai + gas_saved_with_access_list,
+                     estimated_gas_address_not_in_al_shanghai)
+        assert_equal(estimated_gas_forger_shanghai, estimated_gas_to_shanghai)
 
 if __name__ == "__main__":
-    SCEvmBootstrap().main()
+    SCEvmEstimateGas().main()

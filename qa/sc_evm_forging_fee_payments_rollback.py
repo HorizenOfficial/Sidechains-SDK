@@ -24,6 +24,8 @@ from test_framework.util import (
 """
 Check Forger fee payments:
 1. Forging using stakes of different SC nodes
+This test doesn't support --allforks.
+
 Configuration:
     Start 1 MC node and 2 SC node (with default websocket configuration).
     SC nodes are connected to the MC node.
@@ -56,6 +58,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
             current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]

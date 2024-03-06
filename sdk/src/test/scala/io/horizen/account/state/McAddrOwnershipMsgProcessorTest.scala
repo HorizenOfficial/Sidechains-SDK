@@ -8,7 +8,7 @@ import io.horizen.account.state.events.{AddMcAddrOwnership, RemoveMcAddrOwnershi
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.consensus.intToConsensusEpochNumber
-import io.horizen.evm.Address
+import io.horizen.evm.{Address, ForkRules}
 import io.horizen.fixtures.StoreFixture
 import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.params.NetworkParams
@@ -909,7 +909,6 @@ class McAddrOwnershipMsgProcessorTest
 
   def getAllOwnershipList(stateView: AccountStateView): Array[Byte] = {
     val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfAllOwnershipsCmd), randomNonce)
-    stateView.setupAccessList(msg)
 
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
@@ -930,7 +929,6 @@ class McAddrOwnershipMsgProcessorTest
     val msg = getMessage(
       contractAddress, 0,
       BytesUtils.fromHexString(GetListOfOwnershipsCmd) ++ data, randomNonce)
-    stateView.setupAccessList(msg)
     val (returnData, usedGas) = withGas { gas =>
       val result = TestContext.process(messageProcessor, msg, stateView, defaultBlockContext, gas)
       (result, gas.getUsedGas)

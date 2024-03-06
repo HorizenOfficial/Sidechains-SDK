@@ -18,7 +18,7 @@ import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
-import io.horizen.params.TestNetParams
+import io.horizen.params.{NetworkParams, TestNetParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
 import io.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
@@ -230,8 +230,10 @@ class AccountForgeMessageBuilderTest
     val companion = mock[DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]]]
     val inputBlockSize = 0
     val signatureOption = Some(mock[Signature25519])
+    val params = mock[NetworkParams]
+    when(params.rewardAddress).thenReturn(Option.empty)
 
-    val forger = new AccountForgeMessageBuilder(null, null, null, false)
+    val forger = new AccountForgeMessageBuilder(null, null, params, false)
 
     assertThrows[IllegalArgumentException](
       classOf[IllegalArgumentException],

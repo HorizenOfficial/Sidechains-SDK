@@ -13,6 +13,8 @@ object GasUtil {
   val TxGasContractCreation: BigInteger = BigInteger.valueOf(53000)
   val TxDataZeroGas: BigInteger = BigInteger.valueOf(4)
   val TxDataNonZeroGasEIP2028: BigInteger = BigInteger.valueOf(16)
+  val InitCodeWordGas: BigInteger = BigInteger.valueOf(2)
+
 
   val ColdAccountAccessCostEIP2929: BigInteger = BigInteger.valueOf(2600)
   val WarmStorageReadCostEIP2929: BigInteger = BigInteger.valueOf(100)
@@ -34,7 +36,11 @@ object GasUtil {
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
 
-  def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
+  val WordSize = BigInteger.valueOf(32)
+
+  val BytesForRounding = BigInteger.valueOf(31)
+
+  def intrinsicGas(data: Array[Byte], isContractCreation: Boolean, isEIP3860: Boolean): BigInteger = {
     // Set the starting gas for the raw transaction
     var gas = if (isContractCreation) TxGasContractCreation else TxGas
 
@@ -45,6 +51,11 @@ object GasUtil {
       val zeroElements = data.length - nonZeroElements
       gas = gas.add(TxDataNonZeroGasEIP2028.multiply(BigInteger.valueOf(nonZeroElements)))
       gas = gas.add(TxDataZeroGas.multiply(BigInteger.valueOf(zeroElements)))
+
+      if (isContractCreation && isEIP3860){
+        val numOfWords =  BigInteger.valueOf(data.length).add(BytesForRounding).divide(WordSize)
+        gas = gas.add(InitCodeWordGas.multiply(numOfWords))
+      }
       if (!BigIntegerUtil.isUint64(gas)) throw GasUintOverflowException()
     }
 

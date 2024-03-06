@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -7,12 +8,14 @@ from SidechainTestFramework.account.utils import convertZenToWei
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_2, KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_next_block, AccountModel, \
-    try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks
+    try_to_generate_block_in_slots, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, EVM_APP_BINARY
 from test_framework.util import initialize_chain_clean, websocket_port_by_mc_node_index, \
     connect_nodes_bi, disconnect_nodes_bi, forward_transfer_to_sidechain, assert_equal, assert_true
 
 """
 Check the correct behavior of the consensus parameter fork activation with a mainchain fork
+
+This test doesn't support --allforks.
 
 Configuration:
     Start 2 MC node and 2 SC node.
@@ -63,6 +66,8 @@ class SCConsensusParamsForkWithMainchainForksTest(AccountChainSetup):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
+
+
         mc_node = self.nodes[0]
         sc_node_configuration = [
             SCNodeConfiguration(
@@ -87,7 +92,16 @@ class SCConsensusParamsForkWithMainchainForksTest(AccountChainSetup):
                                          *sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
 
+
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(1000), EVM_APP_BINARY, self.API_KEY)
+
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node1 = self.nodes[0]
         mc_node2 = self.nodes[1]
         sc_node1 = self.sc_nodes[0]
@@ -245,6 +259,7 @@ class SCConsensusParamsForkWithMainchainForksTest(AccountChainSetup):
         block_created_percentage = len(forged_block_ids) / slot_until_next_epoch * 100
 
         #Verify that we have more or less 5% of slots filled
+        print("block_created_percentage={}".format(block_created_percentage))
         assert_true(4.0 < block_created_percentage < 6.0)
 
         # --------------------------------------------------------------------------------------------------------------

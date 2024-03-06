@@ -8,10 +8,9 @@ import io.horizen.params.MainNetParams;
 import io.horizen.params.NetworkParams;
 import io.horizen.params.TestNetParams;
 import org.junit.Test;
-import scala.concurrent.duration.FiniteDuration;
+import scala.Option;
 
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
 import static io.horizen.utils.BytesUtils.padWithZeroBytes;
 import static org.junit.Assert.*;
@@ -246,9 +245,9 @@ public class BytesUtilsTest {
 
 
     @Test
-    public void fromHorizenPublicKeyAddress() {
+    public void fromHorizenMcTransparentAddress() {
         // Test 1: valid MainNet addresses in MainNet network
-        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());
         String pubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK";
         byte[] expectedPublicKeyHashBytesMainNet = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
 
@@ -286,6 +285,7 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, mainNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
+            assertTrue("wrong error message", e.getMessage().contains("pubKey TestNet prefix"));
         }
         assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
 
@@ -297,7 +297,7 @@ public class BytesUtilsTest {
                 0,  null,null, null,
                 null, null, null,
                 null, false, null, null,
-                11111111, true, false, true, 0, false);
+                11111111, true, false, true, 0, false, Option.empty());
         String pubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";
         byte[] expectedPublicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
@@ -312,14 +312,80 @@ public class BytesUtilsTest {
             BytesUtils.fromHorizenMcTransparentAddress(invalidNetworkPubKeyAddress, testNetParams);
         } catch (IllegalArgumentException e) {
             exceptionOccurred = true;
+            assertTrue("wrong error message", e.getMessage().contains("pubKey MainNet prefix"));
         }
         assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+
+
+    }
+
+    @Test
+    public void fromHorizenMcTransparentKeyAddress() {
+        byte[] expectedPublicKeyHashBytes = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
+
+        // Test 1: valid MainNet addresses in MainNet network
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, null);
+        String pubKeyAddressMainNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, mainNetParams);
+
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentKeyAddress(pubKeyAddressMainNet, mainNetParams));
+
+        // Test 2:  MainNet script addresses in MainNet network
+        String scriptAddMainNet  = BytesUtils.toHorizenScriptAddress(expectedPublicKeyHashBytes, mainNetParams);
+
+        //This is just to verify that the address is valid, but it is not a pubkey
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(scriptAddMainNet, mainNetParams));
+        try {
+            BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddMainNet, mainNetParams);
+            fail("should fail with a script address");
+        } catch (IllegalArgumentException e) {
+            assertTrue("wrong error message", e.getMessage().contains("script MainNet prefix"));
+        }
+
+        // Test 3: valid TestNet addresses in TestNet network
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, null);
+        String pubKeyAddressTestNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, testNetParams);
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(pubKeyAddressTestNet, testNetParams));
+
+        // Test 4:  TestNet script addresses in TestNet network
+        String scriptAddTestNet  = BytesUtils.toHorizenScriptAddress(expectedPublicKeyHashBytes, testNetParams);
+
+        //This is just to verify that the address is valid, but it is not a pubkey
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytes,
+                BytesUtils.fromHorizenMcTransparentAddress(scriptAddTestNet, testNetParams));
+        try {
+            BytesUtils.fromHorizenMcTransparentKeyAddress(scriptAddTestNet, testNetParams);
+            fail("should fail with a script address");
+        } catch (IllegalArgumentException e) {
+            assertTrue("wrong error message", e.getMessage().contains("script TestNet prefix"));
+        }
+    }
+
+    @Test
+    public void getPrefixDescription() {
+        assertEquals("pubKey MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2089")));
+        assertEquals("pubKey MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CB8")));
+        assertEquals("script MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2096")));
+        assertEquals("script MainNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CBD")));
+        assertEquals("pubKey TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2098")));
+        assertEquals("pubKey TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1D25")));
+        assertEquals("script TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2092")));
+        assertEquals("script TestNet prefix", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CBA")));
+        assertEquals("Unknown prefix 1cb3", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("1CB3")));
+        assertEquals("Unknown prefix 2347", BytesUtils.getPrefixDescription(BytesUtils.fromHexString("2347")));
+
     }
 
     @Test
     public void toHorizenPublicKeyAddress() {
         // Test 1: valid MainNet addresses in MainNet network
-        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());
 
         byte[] publicKeyHashBytesMainNet = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
         String expectedPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK";
@@ -330,7 +396,7 @@ public class BytesUtilsTest {
 
 
         // Test 2: valid TestNet addresses in TestNet network
-        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false);
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, false, Option.empty());
 
         byte[] publicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
         String expectedPubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";

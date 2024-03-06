@@ -52,7 +52,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
            @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
            @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
            @Named("AppVersion") appVersion: String,
-           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int
+           @Named("MainchainBlockReferenceDelay") mcBlockReferenceDelay : Int,
+           @Named("MaxHistoryRewriteLength") maxHistoryRewriteLength : Int
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {
@@ -67,7 +68,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           forkConfigurator,
           chainInfo,
           appVersion,
-          mcBlockReferenceDelay
+          mcBlockReferenceDelay,
+          maxHistoryRewriteLength
         )
       }
     }

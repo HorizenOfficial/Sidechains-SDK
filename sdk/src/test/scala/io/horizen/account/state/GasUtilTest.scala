@@ -16,32 +16,66 @@ class GasUtilTest extends JUnitSuite with EthereumTransactionFixture {
     assertEquals(
       "eoa to eoa",
       BigInteger.valueOf(21000),
-      GasUtil.intrinsicGas(Array[Byte](), isContractCreation = false)
+      GasUtil.intrinsicGas(Array[Byte](), isContractCreation = false, isEIP3860 = false)
     )
 
     assertEquals(
       "eoa to eoa with data",
       BigInteger.valueOf(24040),
-      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = false)
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = false, isEIP3860 = false)
     )
 
     assertEquals(
       "eoa to eoa with data including zero bytes",
       BigInteger.valueOf(24240),
-      GasUtil.intrinsicGas(zeroes(25) ++ Array.range(10, 200).map(_.toByte) ++ zeroes(25), isContractCreation = false)
+      GasUtil.intrinsicGas(zeroes(25) ++ Array.range(10, 200).map(_.toByte) ++ zeroes(25), isContractCreation = false, isEIP3860 = false)
     )
 
     assertEquals(
       "contract creation small",
       BigInteger.valueOf(56040),
-      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = true)
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = true, isEIP3860 = false)
     )
 
     assertEquals(
       "contract creation big including zero bytes",
       BigInteger.valueOf(293200),
-      GasUtil.intrinsicGas(zeroes(8) ++ Array.fill(15000) { 0x83.toByte } ++ zeroes(42), isContractCreation = true)
+      GasUtil.intrinsicGas(zeroes(8) ++ Array.fill(15000) { 0x83.toByte } ++ zeroes(42), isContractCreation = true, isEIP3860 = false)
     )
+  }
+
+  @Test
+  def testIntrinsicGasIsEIP3860(): Unit = {
+   assertEquals(
+      "eoa to eoa isEIP3860 = true",
+      BigInteger.valueOf(21000),
+      GasUtil.intrinsicGas(Array[Byte](), isContractCreation = false, isEIP3860 = true)
+    )
+
+    assertEquals(
+      "eoa to eoa with data",
+      BigInteger.valueOf(24040),
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = false, isEIP3860 = true)
+    )
+
+    assertEquals(
+      "eoa to eoa with data including zero bytes",
+      BigInteger.valueOf(24240),
+      GasUtil.intrinsicGas(zeroes(25) ++ Array.range(10, 200).map(_.toByte) ++ zeroes(25), isContractCreation = false, isEIP3860 = true)
+    )
+
+    assertEquals(
+      "contract creation small",
+      BigInteger.valueOf(56052),
+      GasUtil.intrinsicGas(Array.range(10, 200).map(_.toByte), isContractCreation = true, isEIP3860 = true)
+    )
+
+    assertEquals(
+      "contract creation big including zero bytes",
+      BigInteger.valueOf(294142),
+      GasUtil.intrinsicGas(zeroes(8) ++ Array.fill(15000) { 0x83.toByte } ++ zeroes(42), isContractCreation = true, isEIP3860 = true)
+    )
+
   }
 
   @Test

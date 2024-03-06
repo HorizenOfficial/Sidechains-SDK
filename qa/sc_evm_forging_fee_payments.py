@@ -4,22 +4,27 @@ import logging
 import math
 import time
 
-from eth_utils import add_0x_prefix
+from eth_utils import add_0x_prefix, function_signature_to_4byte_selector, encode_hex, remove_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
-from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa, format_evm
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_utils import ac_makeForgerStake, format_eoa, format_evm, \
+    contract_function_static_call, estimate_gas, contract_function_call
 from SidechainTestFramework.account.httpCalls.transaction.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransaction import createLegacyTransaction
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
-    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VER_1_2_FORK_EPOCH
+    computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VERSION_1_2_FORK_EPOCH, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
+    VERSION_1_3_FORK_EPOCH
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
+    SCCreationInfo, SCForgerConfiguration
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.scutil import (
     connect_sc_nodes, generate_account_proposition, generate_next_block, SLOTS_IN_EPOCH, EVM_APP_SLOT_TIME,
-    generate_next_blocks, )
+    generate_next_blocks, bootstrap_sidechain_nodes, AccountModel, )
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import (
-    assert_equal, fail, forward_transfer_to_sidechain, assert_false, )
+    assert_equal, fail, forward_transfer_to_sidechain, assert_false, websocket_port_by_mc_node_index, )
 
 """
 Info about forger account block fee payments
@@ -47,10 +52,14 @@ Test:
     - Forge SC block by the second SC node for the next consensus epoch (Second node ForgingStake must become active).
     - Generate MC and SC blocks to reach the end of the withdrawal epoch. 
     - Check forger payments for the SC nodes.
+    
+    This test doesn't support --allforks.
 """
 
 
 class ScEvmForgingFeePayments(AccountChainSetup):
+    FORGER_REWARD_ADDRESS = '0000000000000000000012341234123412341234'
+
     def __init__(self):
         super().__init__(number_of_sidechain_nodes=2, withdrawalEpochLength=20, forward_amount=3,
                          block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 100)
@@ -67,7 +76,33 @@ class ScEvmForgingFeePayments(AccountChainSetup):
             forging_info = sc_node.block_forgingInfo()
             current_epoch = forging_info["result"]["bestBlockEpochNumber"]
 
+    def sc_setup_chain(self):
+        mc_node = self.nodes[0]
+        sc_node_configuration = [
+            SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                api_key='Horizen',
+                cert_submitter_enabled=True),
+
+            SCNodeConfiguration(
+                MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                forger_options=SCForgerConfiguration(forger_reward_address=self.FORGER_REWARD_ADDRESS),
+                api_key='Horizen',
+                cert_submitter_enabled=False
+            )
+        ]
+
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 3, 20), *sc_node_configuration)
+        self.sc_nodes_bootstrap_info = \
+            bootstrap_sidechain_nodes(self.options, network,
+                                      block_timestamp_rewind=SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 100,
+                                      model=AccountModel)
+
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         mc_node = self.nodes[0]
         sc_node_1 = self.sc_nodes[0]
         sc_node_2 = self.sc_nodes[1]
@@ -284,7 +319,10 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         # Check forger fee payments
         assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
                      "Wrong fee payment amount for SC node 1")
-        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
+        # SC node 2 is configured to send rewards to some other address
+        reward_address_balance = http_wallet_balance(sc_node_2, self.FORGER_REWARD_ADDRESS)
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees,
+                     sc_node_2_balance_after_payments + reward_address_balance,
                      "Wrong fee payment amount for SC node 2")
 
         # Check fee payments from API perspective
@@ -332,7 +370,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
         # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
-        self.advance_to_epoch(VER_1_2_FORK_EPOCH)
+        self.advance_to_epoch(VERSION_1_2_FORK_EPOCH)
         generate_next_blocks(sc_node_1, "first node", 4)
         generate_next_blocks(sc_node_2, "second node", 2)
 
@@ -345,12 +383,15 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         node_2_fees = per_block_fee * 3
 
         sc_node_1_balance_before_payments = sc_node_1_balance_after_payments
-        sc_node_2_balance_before_payments = sc_node_2_balance_after_payments
+        sc_node_2_balance_before_payments = sc_node_2_balance_after_payments + reward_address_balance
         sc_node_1_balance_after_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
         sc_node_2_balance_after_payments = sc_node_2.wallet_getTotalBalance()['result']['balance']
         assert_equal(sc_node_1_balance_before_payments + node_1_fees, sc_node_1_balance_after_payments,
                      "Wrong fee payment amount for SC node 1")
-        assert_equal(sc_node_2_balance_before_payments + node_2_fees, sc_node_2_balance_after_payments,
+        # SC node 2 is configured to send rewards to some other address
+        reward_address_balance = http_wallet_balance(sc_node_2, self.FORGER_REWARD_ADDRESS)
+        assert_equal(sc_node_2_balance_before_payments + node_2_fees,
+                     sc_node_2_balance_after_payments + reward_address_balance,
                      "Wrong fee payment amount for SC node 2")
 
         # assert forger pool balance is 0 now, as the fees are distributed
@@ -360,6 +401,55 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
         assert_equal(node_1_fees, fee_payments_api_response[0]['value'])
         assert_equal(node_2_fees, fee_payments_api_response[1]['value'])
+
+        # reach the VERSION_1_3_FORK_EPOCH fork and upgrade the forger stakes to the new format
+        current_best_epoch = sc_node_1.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+        for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
+            generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
+            self.sc_sync_all()
+
+        '''
+        #####################################################################################
+        '''
+        native_contract = SmartContract("ForgerStakes")
+        method = 'upgrade()'
+        # Execute upgrade
+        contract_function_call(sc_node_2, native_contract, FORGER_STAKE_SMART_CONTRACT_ADDRESS,
+                               evm_address_sc_node_2, method)
+        generate_next_block(sc_node_1, "first node")
+        '''
+        #####################################################################################
+        '''
+
+        # we now have 2 stakes, one from creation and one just added
+        # res1 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1, "startPos": 0}))["result"]
+        # res2 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 1, "startPos": int(res1['nextPos'])}))["result"]
+        #res3 = sc_node_1.transaction_pagedForgingStakes(json.dumps({"size": 100}))["result"]
+
+        # execute native smart contract for getting all associations
+        method = 'getPagedForgersStakes(int32,int32)'
+        abi_str = function_signature_to_4byte_selector(method)
+        start_pos = "00"*32
+        size_padded_str = "00"*31 + "01"
+
+        req = {
+            "from": format_evm(evm_address_sc_node_2),
+            "to": format_evm(FORGER_STAKE_SMART_CONTRACT_ADDRESS),
+            "nonce": 3,
+            "gasLimit": 2300000,
+            "gasPrice": 850000000,
+            "value": 0,
+            "data": encode_hex(abi_str) + start_pos + size_padded_str
+        }
+        response = sc_node_1.rpc_eth_call(req, 'latest')
+        abi_return_value = remove_0x_prefix(response['result'])
+        print(abi_return_value)
+        result_string_length = len(abi_return_value)
+        # we have an offset of 96 bytes (32 bytes for nextStartPos + 32 bytes for DynamicArray offset + 32 bytes for
+        # DynamicArray length) and 1 record with 6 chunks of 32 bytes
+        exp_len = 32 + 32 + 32 + 1 * (6 * 32)
+        assert_equal(2 * exp_len, result_string_length)
 
 
 if __name__ == "__main__":

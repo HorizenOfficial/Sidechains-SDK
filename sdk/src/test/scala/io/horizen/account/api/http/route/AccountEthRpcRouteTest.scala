@@ -54,21 +54,21 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     "reply at /ethv1 - single request - parse error no quotes" in {
       rpc(
         """{"jsonrpc":"2.0","id":"225","method":"eth_chainId_",params:[]}""",
-        """{"error":{"code":-32700,"message":"Parse error","data":"Unexpected character ('p' (code 112)): was expecting double-quote to start field name\n at [Source: (String)\"{\"jsonrpc\":\"2.0\",\"id\":\"225\",\"method\":\"eth_chainId_\",params:[]}\"; line: 1, column: 54]"},"jsonrpc":"2.0","id":null}"""
+        """{"error":{"code":-32700,"message":"Parse error: Unexpected character ('p' (code 112)): was expecting double-quote to start field name\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 54]","data":"Unexpected character ('p' (code 112)): was expecting double-quote to start field name\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 54]"},"jsonrpc":"2.0","id":null}"""
       )
     }
 
     "reply at /ethv1 - single request - parse error no braces" in {
       rpc(
         """ "jsonrpc":"2.0","id":"225","method":"eth_chainId_","params":[]""",
-        """{"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"},"jsonrpc":"2.0","id":null}"""
+        """{"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"},"jsonrpc":"2.0","id":null}"""
       )
     }
 
     "reply at /ethv1 - single request - id not present" in {
       rpc(
         """{"jsonrpc":"2.0","method":"eth_chainId_","params":[]}""",
-        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: id"}}"""
+        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"}}"""
       )
     }
 
@@ -112,7 +112,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
         ]""",
         s"""[
           {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: id"}}
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"}}
         ]"""
       )
     }
@@ -126,7 +126,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
         ]""",
         s"""[
           {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}},
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"}},
           {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
         ]"""
       )
@@ -140,9 +140,9 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           24
         ]""",
         """[
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}},
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}},
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}}
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"}},
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"}},
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"}}
         ]"""
       )
     }
@@ -150,14 +150,14 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
     "reply at /ethv1 - batch request - invalid batch - empty array" in {
       rpc(
         """[]""",
-        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"missing field: jsonrpc"}}"""
+        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: missing field: jsonrpc","data":"missing field: jsonrpc"}}"""
       )
     }
 
     "reply at /ethv1 - single request - invalid id" in {
       rpc(
         """{"jsonrpc":"2.0","id":65465817687165465465,"method":"eth_chainId","params":[]}""",
-        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"Rpc Id value is greater than datatype max value"}}"""
+        """{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: Rpc Id value is greater than datatype max value","data":"Rpc Id value is greater than datatype max value"}}"""
       )
     }
 
@@ -168,7 +168,7 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
         s"""[
-          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request","data":"Rpc Id can't be a negative number"}},
+          {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request: Rpc Id can't be a negative number","data":"Rpc Id can't be a negative number"}},
           {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
         ]"""
       )

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import time
+
 from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
@@ -10,11 +11,14 @@ from SidechainTestFramework.sc_boostrap_info import KEY_ROTATION_CIRCUIT
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SC_CREATION_VERSION_2
 from SidechainTestFramework.scutil import generate_next_block, bootstrap_sidechain_nodes, \
-    AccountModel, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots
+    AccountModel, disconnect_sc_nodes_bi, connect_sc_nodes, sync_sc_blocks, try_to_generate_block_in_slots, \
+    EVM_APP_BINARY
 from test_framework.util import assert_equal, websocket_port_by_mc_node_index, forward_transfer_to_sidechain, \
     assert_true
 
 """
+This test doesn't support --allforks.
+
 Configuration:
     Start 1 MC node and 2 SC node.
     SC node 1 connected to the MC node 1.
@@ -78,7 +82,16 @@ class SCConsensusParamsForkWithSidechainForksTest(AccountChainSetup):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind = (720 * 120 * 5), model=AccountModel)
 
 
+    def sc_setup_nodes(self):
+        return self.sc_setup_nodes_with_extra_arg(
+            '-max_hist_rew_len', str(1000), EVM_APP_BINARY, self.API_KEY)
+
+
     def run_test(self):
+        if self.options.all_forks:
+            logging.info("This test cannot be executed with --allforks")
+            exit()
+
         time.sleep(0.1)
 
         # We need regular coins (the genesis account balance is locked into forging stake), so we perform a
@@ -251,6 +264,7 @@ class SCConsensusParamsForkWithSidechainForksTest(AccountChainSetup):
         block_created_percentage = len(forged_block_ids) / slot_until_next_epoch * 100
 
         #Verify that we have more or less 5% of slots filled
+        print("block_created_percentage={}".format(block_created_percentage))
         assert_true(4.0 < block_created_percentage < 6.0)
 
 

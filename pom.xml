@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>Sidechains</artifactId>
-  <version>0.10.1</version>
+  <version>0.11.0</version>
   <inceptionYear>2018</inceptionYear>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

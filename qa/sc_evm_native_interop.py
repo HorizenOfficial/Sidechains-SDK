@@ -8,12 +8,17 @@ from SidechainTestFramework.account.ac_chain_setup import AccountChainSetup
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.ac_utils import deploy_smart_contract, format_evm
 from SidechainTestFramework.account.utils import FORGER_STAKE_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS, \
-    INTEROPERABILITY_FORK_EPOCH
+    INTEROPERABILITY_FORK_EPOCH, VERSION_1_3_FORK_EPOCH
 from SidechainTestFramework.scutil import EVM_APP_SLOT_TIME, generate_next_block
 from test_framework.util import assert_equal, assert_false, assert_true, fail
 
 """
 Check contracts interoperability, i.e an EVM Contract calling a native contract or vice-versa.
+The tests are executed for EVM versions:
+- Paris
+- Shanghai
+If it is run with --allforks, all the existing forks are enabled at epoch 2. 
+
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -38,13 +43,16 @@ class SCEvmNativeInterop(AccountChainSetup):
     def __init__(self):
         super().__init__(block_timestamp_rewind=1500 * EVM_APP_SLOT_TIME * INTEROPERABILITY_FORK_EPOCH,
                          withdrawalEpochLength=100)
+        self.NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"  # GetForgerStakes signature on native_interop EVM contract
+        self.FORGER_STAKE_GETFORGERSTAKES_SIG = "0xf6ad3c23"  # GetForgerStakes signature on forger stake native contract
+
 
     def deploy(self, contract_name, *args):
         logging.info(f"Creating smart contract utilities for {contract_name}")
         contract = SmartContract(contract_name)
         logging.info(contract)
-        contract_address = deploy_smart_contract(self.sc_nodes[0], contract, self.evm_address, *args)
-        return contract, contract_address
+        interop_contract_address = deploy_smart_contract(self.sc_nodes[0], contract, self.evm_address, *args)
+        return contract, interop_contract_address
 
     def run_test(self):
         self.sc_ac_setup()
@@ -54,41 +62,66 @@ class SCEvmNativeInterop(AccountChainSetup):
         Tests from EVM Smart contract to Native Smart contract
         """
 
-        # Compile and deploy the NativeInterop contract
+        # Compile and deploy the NativeInterop contract. It is compiled fork Paris
         # d9908c86: GetForgerStakes()
         # 3ef7a7c9: GetForgerStakesCallCode()
         # 585e290d: GetForgerStakesDelegateCall()
-        _, contract_address = self.deploy("NativeInterop")
+        _, interop_contract_address = self.deploy("NativeInterop")
 
-        NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"  # GetForgerStakes signature on native_interop EVM contract
-        FORGER_STAKE_GETFORGERSTAKES_SIG = "0xf6ad3c23"  # GetForgerStakes signature on forger stake native contract
-
-        NATIVE_INTEROP_GETFORGERSTAKES_SIG = "0xd9908c86"
-
-        # Test before interoperability fork
-        actual_value = node.rpc_eth_call(
-                {
-                    "to": contract_address,
-                    "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
-                }, "latest"
-            )
-        assert_true("error" in actual_value)
-        assert_true("reverted" in actual_value["error"]["message"])
-
-        # reach the Interoperability fork
-        current_best_epoch = node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
-
-        for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+        # If all_forks is set, the fork starts at epoch 2
+        if self.options.all_forks:
             generate_next_block(node, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
+        else:
+            # Test before interoperability fork
+            actual_value = node.rpc_eth_call(
+                    {
+                        "to": interop_contract_address,
+                        "input":  self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                    }, "latest"
+                )
+            assert_true("error" in actual_value)
+            assert_true("reverted" in actual_value["error"]["message"])
 
+            # reach the Interoperability fork
+            current_best_epoch = node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
 
+            for i in range(0, INTEROPERABILITY_FORK_EPOCH - current_best_epoch):
+                generate_next_block(node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
+
+        self.execute_test(interop_contract_address, "Storage")
+
+        # Shanghai fork. First verify that a contract compiled with shanghai cannot be deployed before the fork
+        if self.options.all_forks is False:
+            try:
+                _, interop_contract_address = self.deploy("NativeInteropShanghai")
+            except RuntimeError as err:
+                print("Expected error thrown: {}".format(err))
+                pass
+            else:
+                fail("Exception expected")
+
+            # reach the SHANGHAI fork
+            current_best_epoch = node.block_forgingInfo()["result"]["bestBlockEpochNumber"]
+
+            for i in range(0, VERSION_1_3_FORK_EPOCH - current_best_epoch):
+                generate_next_block(node, "first node", force_switch_to_next_epoch=True)
+                self.sc_sync_all()
+
+        _, interop_contract_address = self.deploy("NativeInteropShanghai")
+
+        # Execute the same tests as before but using Shanghai EVM and contracts compiled for Shanghai
+        self.execute_test(interop_contract_address, "StorageShanghai")
+
+    def execute_test(self, interop_contract_address, storage_contract_name):
+        node = self.sc_nodes[0]
 
         # Fetch all forger stakes via the NativeInterop contract
         actual_value = node.rpc_eth_call(
             {
-                "to": contract_address,
-                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                "to": interop_contract_address,
+                "input":  self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
             }, "latest"
         )
 
@@ -96,7 +129,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         expected_value = node.rpc_eth_call(
             {
                 "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                "input": FORGER_STAKE_GETFORGERSTAKES_SIG
+                "input":  self.FORGER_STAKE_GETFORGERSTAKES_SIG
             }, "latest"
         )
 
@@ -106,7 +139,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Verify DELEGATECALL to a native contract throws an error
         delegate_call_result = node.rpc_eth_call(
             {
-                "to": contract_address,
+                "to": interop_contract_address,
                 "input": "0x585e290d"
             }, "latest"
         )
@@ -116,7 +149,7 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Verify CALLCODE to a native contract throws an error
         call_code_result = node.rpc_eth_call(
             {
-                "to": contract_address,
+                "to": interop_contract_address,
                 "input": "0x3ef7a7c9"
             }, "latest"
         )
@@ -126,8 +159,8 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Verify tracing gives reasonable result for the call from EVM contract to native contract
         trace_response = node.rpc_debug_traceCall(
             {
-                "to": contract_address,
-                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                "to": interop_contract_address,
+                "input": self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
             }, "latest", {
                 "tracer": "callTracer"
             }
@@ -136,7 +169,6 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_true("result" in trace_response)
         trace_result = trace_response["result"]
         logging.info("trace result: {}".format(trace_result))
-
 
         # Expected output
         # {
@@ -161,30 +193,30 @@ class SCEvmNativeInterop(AccountChainSetup):
         #   ]
         # }
 
-        assert_equal(contract_address.lower(), trace_result["to"].lower())
+        assert_equal(interop_contract_address.lower(), trace_result["to"].lower())
         assert_equal(1, len(trace_result["calls"]))
-        assert_equal(NATIVE_INTEROP_GETFORGERSTAKES_SIG, trace_result["input"])
+        assert_equal(self.NATIVE_INTEROP_GETFORGERSTAKES_SIG, trace_result["input"])
         native_call = trace_result["calls"][0]
         assert_equal("STATICCALL", native_call["type"])
-        assert_equal(contract_address.lower(), native_call["from"].lower())
+        assert_equal(interop_contract_address.lower(), native_call["from"].lower())
         assert_equal("0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS, native_call["to"])
         assert_true(int(native_call["gas"], 16) > 0)
         assert_true(int(native_call["gasUsed"], 16) > 0)
-        assert_equal(FORGER_STAKE_GETFORGERSTAKES_SIG, native_call["input"])
+        assert_equal(self.FORGER_STAKE_GETFORGERSTAKES_SIG, native_call["input"])
         assert_true(len(native_call["output"]) > 512)
         assert_false("calls" in native_call)
 
         # Get gas estimations
         estimation_interop = node.rpc_eth_estimateGas(
             {
-                "to": contract_address,
-                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                "to": interop_contract_address,
+                "input": self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
             }
         )
         estimation_native = node.rpc_eth_estimateGas(
             {
                 "to": "0x" + FORGER_STAKE_SMART_CONTRACT_ADDRESS,
-                "input": FORGER_STAKE_GETFORGERSTAKES_SIG
+                "input": self.FORGER_STAKE_GETFORGERSTAKES_SIG
             }
         )
         logging.info("estimated gas interop: {}".format(estimation_interop))
@@ -203,8 +235,8 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Default tracer
         trace_response_1 = node.rpc_debug_traceCall(
             {
-                "to": contract_address,
-                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                "to": interop_contract_address,
+                "input": self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
             }, "latest"
         )
         assert_false("error" in trace_response_1)
@@ -216,8 +248,8 @@ class SCEvmNativeInterop(AccountChainSetup):
         # Default 4byteTracer
         trace_response_1 = node.rpc_debug_traceCall(
             {
-                "to": contract_address,
-                "input": NATIVE_INTEROP_GETFORGERSTAKES_SIG
+                "to": interop_contract_address,
+                "input": self.NATIVE_INTEROP_GETFORGERSTAKES_SIG
             }, "latest",
             {"tracer": "4byteTracer"}
         )
@@ -226,15 +258,15 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_true("result" in trace_response_1)
         assert_equal(2, len(trace_response_1["result"]))
         # Each element has as key SELECTOR-CALLDATASIZE and value number of occurrences of this key.
-        assert_equal(1, trace_response_1["result"][NATIVE_INTEROP_GETFORGERSTAKES_SIG + '-0'])
-        assert_equal(1, trace_response_1["result"][FORGER_STAKE_GETFORGERSTAKES_SIG + '-0'])
+        assert_equal(1, trace_response_1["result"][self.NATIVE_INTEROP_GETFORGERSTAKES_SIG + '-0'])
+        assert_equal(1, trace_response_1["result"][self.FORGER_STAKE_GETFORGERSTAKES_SIG + '-0'])
 
         """
         Tests from Native Smart contract to EVM Smart contract
         """
         # Compile and deploy the Storage contract
         initial_value = 142
-        storage_contract, storage_contract_address = self.deploy("Storage", initial_value)
+        storage_contract, storage_contract_address = self.deploy(storage_contract_name, initial_value)
 
         method_inc = 'inc()'
         method_retrieve = 'retrieve()'
@@ -261,7 +293,8 @@ class SCEvmNativeInterop(AccountChainSetup):
         data_input = encoded_abi_method_signature + addr_padded_str
         data_input += "0000000000000000000000000000000000000000000000000000000000000040"
         h_len = hex(len(remove_0x_prefix(sol_contract_call_data_retrieve)) // 2)
-        data_input += "000000000000000000000000000000000000000000000000000000000000000" + remove_0x_prefix(HexStr(h_len))
+        data_input += "000000000000000000000000000000000000000000000000000000000000000" + remove_0x_prefix(
+            HexStr(h_len))
         data_input += remove_0x_prefix(sol_contract_call_data_retrieve)
         data_input += "00000000000000000000000000000000000000000000000000000000"
 
@@ -360,7 +393,6 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_equal(1, trace_response_1["result"][sol_contract_call_data_retrieve + '-0'])
         assert_equal(1, trace_response_1["result"][encoded_abi_method_signature + '-128'])
 
-
         # Verify STATICCALL to a readwrite EVM contract method throws an error
         method = 'invokeStaticCall(address,bytes)'
         abi_str = function_signature_to_4byte_selector(method)
@@ -369,7 +401,8 @@ class SCEvmNativeInterop(AccountChainSetup):
         data_input_failed = encoded_abi_method_signature + addr_padded_str
         data_input_failed += "0000000000000000000000000000000000000000000000000000000000000040"
         h_len = hex(len(remove_0x_prefix(sol_contract_call_data_inc)) // 2)
-        data_input_failed += "000000000000000000000000000000000000000000000000000000000000000" + remove_0x_prefix(HexStr(h_len))
+        data_input_failed += "000000000000000000000000000000000000000000000000000000000000000" + remove_0x_prefix(
+            HexStr(h_len))
         data_input_failed += remove_0x_prefix(sol_contract_call_data_inc)
         data_input_failed += "00000000000000000000000000000000000000000000000000000000"
 
@@ -411,7 +444,6 @@ class SCEvmNativeInterop(AccountChainSetup):
         assert_equal(sol_contract_call_data_inc.lower(), evm_call["input"].lower())
         assert_equal("write protection", evm_call["error"])
         assert_false("calls" in evm_call)
-
 
 
 if __name__ == "__main__":

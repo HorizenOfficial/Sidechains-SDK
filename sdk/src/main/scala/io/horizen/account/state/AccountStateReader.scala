@@ -22,9 +22,11 @@ trait AccountStateReader {
 
   def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest]
 
-  def getListOfForgersStakes: Seq[AccountForgingStakeInfo]
-  def getForgerStakeData(stakeId: String): Option[ForgerStakeData]
+  def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
+  def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
+  def getForgerStakeData(stakeId: String, isForkV1_3Active: Boolean): Option[ForgerStakeData]
   def isForgingOpen: Boolean
+  def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean
   def getAllowedForgerList: Seq[Int]
 
   def getListOfMcAddrOwnerships(scAddress: Option[String] = None): Seq[McAddrOwnershipData]

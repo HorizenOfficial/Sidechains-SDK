@@ -78,6 +78,8 @@ The following command-line options can be used in addition:
 - `--logconsolelevel=<log level>`: log4j log level for sidechain node logging on console.Valid values are: fatal, error, warn, info, debug, off, all
 - `--testlogfilelevel=<log level>`: log level for test logging on log file. Valid values are: fatal, error, warn, info, debug, notset
 - `--testlogconsolelevel=<log level>`: log level for test logging on console. Valid values are: fatal, error, warn, info, debug, notset
+- `--allforks`: this parameter enables all hard forks starting from epoch 2. It is supported only by account Sidechain tests.
+- `--maxhistoryrewritinglength <val>`: set the int value of maximum number of revertable blocks in history, defaults to 100.
 
 Additional options can be found in sc_test_framework.py file.
 

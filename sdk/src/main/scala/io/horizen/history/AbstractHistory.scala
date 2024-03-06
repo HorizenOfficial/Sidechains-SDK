@@ -1,6 +1,7 @@
 package io.horizen.history
 
 import io.horizen.SidechainSyncInfo
+import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.state.HistoryBlockHashProvider
 import io.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import io.horizen.chain._
@@ -96,14 +97,13 @@ abstract class AbstractHistory[
                   storage.update(block, blockInfo),
                   progInfo
                 )
-              case Failure(e) => {
+              case Failure(e) =>
                 log.error("New best block found, but it can not be applied: %s".format(e.getMessage), e)
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                   ProgressInfo[PM](None, Seq(), Seq())
                 )
-              }
             }
           } else {
             // We retrieved block from another chain that is not the best one
@@ -196,10 +196,11 @@ abstract class AbstractHistory[
     chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
       case Some(newBestChain) =>
         val commonBlockHeight = storage.blockInfoById(newBestChain.head).height
-        if(height - commonBlockHeight > params.maxHistoryRewritingLength)
-        // fork length is more than params.maxHistoryRewritingLength
+        if(height - commonBlockHeight > params.maxHistoryRewritingLength) {
+          // fork length is more than params.maxHistoryRewritingLength
+          log.error(s"fork length=${height-commonBlockHeight} is more than params.maxHistoryRewritingLength=${params.maxHistoryRewritingLength}; current height=$height, commonBlockHeight=$commonBlockHeight")
           (Seq[ModifierId](), Seq[ModifierId]())
-        else
+        } else
           (newBestChain, storage.activeChainSince(newBestChain.head, None))
 
       case None => (Seq[ModifierId](), Seq[ModifierId]())
@@ -600,9 +601,14 @@ abstract class AbstractHistory[
       case None => Optional.empty()
     }
   }
+
+  def tooManyBlocksWithoutMcHeaders(parentBlockId: ModifierId, noMcHeadersInCurrentBlock: Boolean, consensusEpochNumber: Int): Boolean
+
 }
 
 object AbstractHistory {
+  val MAX_HISTORY_REWRITING_LENGTH: Int = 100
+
   def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
 

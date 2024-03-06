@@ -30,11 +30,15 @@ public class EvmAppModule extends AccountAppModule {
     // 1 or 2 should be enough to avoid SC block reverting in the most cases.
     // WARNING. It must be constant and should not be changed inside Sidechain network
     private final int mcBlockRefDelay;
+    private final boolean allForksEnabled;
+    private final int maxHistRewLen;
 
 
-    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference) {
+    public EvmAppModule(String userSettingsFileName, int mcBlockDelayReference, boolean allForksEnabled, int maxHistRewLen) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
         this.mcBlockRefDelay = mcBlockDelayReference;
+        this.allForksEnabled = allForksEnabled;
+        this.maxHistRewLen = maxHistRewLen;
     }
 
     @Override
@@ -50,7 +54,7 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
-        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+        ForkConfigurator forkConfigurator = allForksEnabled ? new AppForkConfiguratorAllEnabledFromEpoch2() : new AppForkConfigurator();
 
         // Here I can add my custom rest api and/or override existing one
         List<AccountApplicationApiGroup> customApiGroups = new ArrayList<>();
@@ -113,5 +117,8 @@ public class EvmAppModule extends AccountAppModule {
         bind(Integer.class)
                 .annotatedWith(Names.named("MainchainBlockReferenceDelay"))
                 .toInstance(mcBlockRefDelay);
+        bind(Integer.class)
+                .annotatedWith(Names.named("MaxHistoryRewriteLength"))
+                .toInstance(maxHistRewLen);
     }
 }

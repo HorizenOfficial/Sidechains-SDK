@@ -221,6 +221,28 @@ public final class BytesUtils {
     public static final byte OFFSET_FOR_OP_N = (byte) 0x50; // in MC it is computed as (OP_1 -1) since 0x50 is a reserved OP
 
     public static byte[] fromHorizenMcTransparentAddress(String address, NetworkParams params) {
+        return fromHorizenMcTransparentAddress(address, params, false);
+    }
+
+    static String getPrefixDescription(byte[] prefix) {
+        if (Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) || Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD)){
+            return "pubKey MainNet prefix";
+        }
+        else if (Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX) || Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX_OLD)){
+            return "script MainNet prefix";
+        }
+        else if (Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) || Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD)){
+            return "pubKey TestNet prefix";
+        }
+        else if (Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX) || Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX_OLD)){
+            return "script TestNet prefix";
+        }
+        else {
+            return String.format("Unknown prefix %s", BytesUtils.toHexString(prefix));
+        }
+    }
+
+    public static byte[] fromHorizenMcTransparentAddress(String address, NetworkParams params, boolean onlyPubKey) {
         if(address.length() != HORIZEN_MC_TRANSPARENT_ADDRESS_BASE_58_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect Horizen mc transparent address length %d", address.length()));
 
@@ -230,17 +252,31 @@ public final class BytesUtils {
         // Check version
         byte[] prefix = Arrays.copyOfRange(addressBytes, 0, HORIZEN_ADDRESS_PREFIX_LENGTH);
         if(params instanceof MainNetParams) {
-            if(!Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD) &&
-                    !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX_OLD))
-                throw new IllegalArgumentException(String.format(
-                        "Incorrect Horizen address format, pubKey or script MainNet prefix expected, got %s",
-                        BytesUtils.toHexString(prefix)));
+            if(!Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD)){
+                if (onlyPubKey){
+                    throw new IllegalArgumentException(String.format(
+                            "Incorrect Horizen address format, pubKey MainNet prefix expected, got %s",
+                            getPrefixDescription(prefix)));
+                }
+                else if (!Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_MAINNET_PREFIX_OLD)){
+                    throw new IllegalArgumentException(String.format(
+                            "Incorrect Horizen address format, pubKey or script MainNet prefix expected, got %s",
+                            getPrefixDescription(prefix)));
+                }
+            }
         }
-        else if(!Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD) &&
-                !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX_OLD))
-            throw new IllegalArgumentException(String.format(
-                    "Incorrect Horizen address format,  pubKey or script TestNet prefix expected, got %s",
-                    BytesUtils.toHexString(prefix)));
+        else if(!Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD)){
+            if (onlyPubKey) {
+                throw new IllegalArgumentException(String.format(
+                        "Incorrect Horizen address format, pubKey TestNet prefix expected, got %s",
+                        getPrefixDescription(prefix)));
+            }
+            else if (!Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX) && !Arrays.equals(prefix, SCRIPT_TESTNET_PREFIX_OLD)){
+                throw new IllegalArgumentException(String.format(
+                        "Incorrect Horizen address format, pubKey or script TestNet prefix expected, got %s",
+                        getPrefixDescription(prefix)));
+            }
+        }
 
         byte[] addressDataHash = Arrays.copyOfRange(addressBytes, HORIZEN_ADDRESS_PREFIX_LENGTH, HORIZEN_ADDRESS_PREFIX_LENGTH + HORIZEN_ADDRESS_HASH_LENGTH);
 
@@ -253,6 +289,11 @@ public final class BytesUtils {
         // The returned data can be a pubKeyHash or a scriptHash, depending on the address type
         return addressDataHash;
     }
+
+    public static byte[] fromHorizenMcTransparentKeyAddress(String address, NetworkParams params) {
+        return fromHorizenMcTransparentAddress(address, params, true);
+    }
+
 
     public static String toHorizenPublicKeyAddress(byte[] publicKeyHashBytes, NetworkParams params) {
         if(publicKeyHashBytes.length != HORIZEN_ADDRESS_HASH_LENGTH)

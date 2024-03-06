@@ -6,7 +6,9 @@ import io.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import io.horizen.account.proposition.AddressProposition
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
+import io.horizen.history.AbstractHistory
 import io.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import sparkz.util.{ModifierId, bytesToId}
@@ -52,10 +54,12 @@ trait NetworkParams {
   val isHandlingTransactionsEnabled: Boolean = true
   val mcBlockRefDelay:Int
 
-  val maxHistoryRewritingLength: Int = 100
+  // it is overridden only by regtest class for testing purposes
+  val maxHistoryRewritingLength: Int = AbstractHistory.MAX_HISTORY_REWRITING_LENGTH
 
   // Fee payment params:
   final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
+  val rewardAddress: Option[AddressProposition] = None // Address to send fees to. If None - chosen from the local wallet (first key found)
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC

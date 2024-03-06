@@ -19,7 +19,7 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 
 WAIT_CONST = 1
 
-SNAPSHOT_VERSION_TAG = "0.10.1"
+SNAPSHOT_VERSION_TAG = "0.11.0-SNAPSHOT"
 
 # log levels of the log4j trace system used by java applications
 APP_LEVEL_OFF = "off"
@@ -189,9 +189,9 @@ def launch_bootstrap_tool(command_name, json_parameters, model):
     try:
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
-    except ValueError:
-        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
-                     .format(command_name, json_param, sc_bootstrap_output.decode()))
+    except ValueError as e:
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\nException: {}\n"
+                     .format(command_name, json_param, sc_bootstrap_output.decode(), str(e)))
         raise Exception("Bootstrap tool error occurred")
 
 
@@ -550,7 +550,8 @@ def initialize_sc_datadir(dirname, n, model, bootstrap_info=SCBootstrapInfo, sc_
         'MAX_MEMPOOL_SLOTS': sc_node_config.max_mempool_slots,
         'MAX_NONEXEC_SLOTS': sc_node_config.max_nonexec_pool_slots,
         'TX_LIFETIME': sc_node_config.tx_lifetime,
-        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false")
+        'HANDLING_TXS_ENABLED': ("true" if sc_node_config.handling_txs_enabled else "false"),
+        'FORGER_REWARD_ADDRESS': sc_node_config.forger_options.forger_reward_address
 
     }
     config = config.replace("'", "")
@@ -683,12 +684,26 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     enabling the debug agent which will act as a server listening on the specified port.
     '''
     dbg_agent_opt = ''
-    if (extra_args is not None) and ("-agentlib" in extra_args):
-        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+    additional_params = ''
 
-    mc_block_delay_ref = ''
-    if (extra_args is not None) and ("-mc_block_delay_ref" in extra_args):
-        mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+    # Cmd line arguments are positional, so parameters might need to provide default values
+    val_mc_block_delay_ref = "0"
+    val_all_forks = "0"
+    val_max_hist_rew_len = "100" # default value defined in io/horizen/history/AbstractHistory.scala, it can be overridden only in regtest
+
+    if extra_args is not None:
+        if "-agentlib" in extra_args:
+            dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+        if "-mc_block_delay_ref" in extra_args:
+            val_mc_block_delay_ref = extra_args[extra_args.index("-mc_block_delay_ref") + 1]
+
+        if "-all_forks" in extra_args:
+            val_all_forks = extra_args[extra_args.index("-all_forks") + 1]
+
+        if "-max_hist_rew_len" in extra_args:
+            val_max_hist_rew_len = extra_args[extra_args.index("-max_hist_rew_len") + 1]
+
+        additional_params = val_mc_block_delay_ref + " " + val_all_forks + " " + val_max_hist_rew_len
 
     cfgFileName = datadir + ('/node%s.conf' % i)
     '''
@@ -705,10 +720,10 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if is_jacoco_included:
         bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + jacoco_cmd + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
-              + " " + mc_block_delay_ref
+              + " " + additional_params
     else:
         bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName \
-              + " " + mc_block_delay_ref
+              + " " + additional_params
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
@@ -1223,6 +1238,8 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError("One transaction in the block is semantically invalid")
         if ("CertificateKeyRotationTransaction" in forge_result["error"]["description"]):
             raise AssertionError("CertificateKeyRotationTransaction error: {}".format(forge_result["error"]["description"]))
+        if ("We can not forge until we have at least a mc block reference" in forge_result["error"]["description"]):
+            raise AssertionError("No mc refs in a long row of blocks error: {}".format(forge_result["error"]["description"]))
 
         count_slot -= 1
         if (count_slot <= 0):
@@ -1247,7 +1264,6 @@ def generate_next_blocks(node, node_name, blocks_count, verbose=True):
     for i in range(blocks_count):
         blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
-
 
 def try_to_generate_block_in_slot(node, next_epoch, next_slot):
 

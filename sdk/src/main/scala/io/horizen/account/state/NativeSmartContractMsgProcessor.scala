@@ -34,6 +34,10 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
   def getEthereumConsensusDataLog(event: Any): EthereumConsensusDataLog = {
     EthereumEvent.getEthereumConsensusDataLog(contractAddress, event)
   }
+
+  def requireIsNotPayable(invocation: Invocation): Unit = if (invocation.value.signum() != 0) {
+    throw new ExecutionRevertedException("Call value must be zero")
+  }
 }
 
 object NativeSmartContractMsgProcessor {

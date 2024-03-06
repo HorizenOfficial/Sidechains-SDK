@@ -244,7 +244,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /removeFromBlacklist" in {
       // 2 peers
-      Post(basePath + "removeFromBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("/92.92.92.92:27017"))) ~> sidechainNodeApiRoute ~> check {
+      Post(basePath + "removeFromBlacklist").addCredentials(credentials).withEntity(SerializationUtil.serialize(ReqWithAddress("92.92.92.92"))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
