@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.11.0-SNAPSHOT</version>
+  <version>0.11.0</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>sparkz-core_2.12</artifactId>
-      <version>2.3.0-SNAPSHOT</version>
+      <version>2.3.0</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -336,7 +336,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>libevm</artifactId>
-      <version>1.1.0-SNAPSHOT</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>at.favre.lib</groupId>
