@@ -56,7 +56,10 @@ case class AccountEthRpcRoute(
         _ =>
         {
           entity(as[JsonNode]) { body =>
-            SidechainApiResponse(rpcProcessor.processEthRpc(body));
+            {
+              val (json_resp, hasError) = rpcProcessor.processEthRpc(body)
+                SidechainApiResponse(json_resp, hasError)
+            }
           }
         }
       }
