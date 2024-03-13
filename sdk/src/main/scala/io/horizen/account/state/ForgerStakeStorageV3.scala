@@ -31,11 +31,17 @@ object ForgerStakeStorageV3 {
   def getDelegatorKey(delegatorPublicKey: Address): Array[Byte] =
     Blake2b256.hash(new AddressProposition(delegatorPublicKey).pubKeyBytes())
 
-  def getStakeKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey, delegatorPublicKey: Address): Array[Byte] = {
-    val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
+//  def getStakeKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey, delegatorPublicKey: Address): Array[Byte] = {
+//    val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
+//    val delegatorKey = getDelegatorKey(delegatorPublicKey)
+//    Blake2b256.hash(Bytes.concat(forgerKey, delegatorKey))
+//  }
+
+  def getStakeKey(forgerKey: Array[Byte], delegatorPublicKey: Address): Array[Byte] = {
     val delegatorKey = getDelegatorKey(delegatorPublicKey)
     Blake2b256.hash(Bytes.concat(forgerKey, delegatorKey))
   }
+
 
   def addForger(view: BaseAccountStateView,
                 blockSignProposition: PublicKey25519Proposition,
@@ -63,8 +69,7 @@ object ForgerStakeStorageV3 {
     val forgerHistory = StakeHistory(forgerKey)
     forgerHistory.addCheckpoint(view, epochNumber, stakedAmount)
 
-    val stakeKey = getStakeKey(blockSignProposition, vrfPublicKey, delegatorPublicKey)
-
+    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
     val stakeHistory = StakeHistory(stakeKey)
     stakeHistory.addCheckpoint(view, epochNumber, stakedAmount)
 
@@ -77,13 +82,12 @@ object ForgerStakeStorageV3 {
 
   }
 
-  def existsForger(view: BaseAccountStateView, forgerKey: Array[Byte]): Boolean = {
+  private[horizen] def existsForger(view: BaseAccountStateView, forgerKey: Array[Byte]): Boolean = {
     val forgerData = view.getAccountStorage(FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS, forgerKey)
     // getting a not existing key from state DB using RAW strategy
     // gives an array of 32 bytes filled with 0, while using CHUNK strategy
     // gives an empty array instead
     !forgerData.sameElements(NULL_HEX_STRING_32)
-
   }
 
   def getPagedListOfForgers(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[ForgerInfoV3]) = {
@@ -117,7 +121,35 @@ object ForgerStakeStorageV3 {
     (endPos, listOfElems)
   }
 
+  def addStake(view: BaseAccountStateView,
+                blockSignProposition: PublicKey25519Proposition,
+                vrfPublicKey: VrfPublicKey,
+                epochNumber: Int,
+                delegatorPublicKey: Address,
+                stakedAmount: BigInteger): Unit = {
 
+    val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
+    if (!existsForger(view, forgerKey))
+      throw new ExecutionRevertedException(s"Forger doesn't exist.")
+
+    val forgerHistory = StakeHistory(forgerKey)
+    forgerHistory.updateOrAddCheckpoint(view, epochNumber, stakedAmount)
+
+    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
+    val stakeHistory = StakeHistory(stakeKey)
+    if (stakeHistory.getSize(view) > 0)
+      stakeHistory.updateOrAddCheckpoint(view, epochNumber, stakedAmount)
+    else {
+      val ownerAddressProposition = new AddressProposition(delegatorPublicKey)
+      stakeHistory.addCheckpoint(view, epochNumber, stakedAmount)
+      val listOfDelegators = DelegatorList(forgerKey)
+      listOfDelegators.addDelegator(view, ownerAddressProposition)
+      val listOfForgers = ForgerList(ownerAddressProposition)
+      listOfForgers.addForger(view, forgerKey)
+    }
+
+
+  }
 
   case class StakeHistory(uid: Array[Byte])
     extends StateDbArray(FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS, Blake2b256.hash(Bytes.concat(uid, "History".getBytes("UTF-8"))))  {
@@ -127,7 +159,23 @@ object ForgerStakeStorageV3 {
         append(view, BytesUtils.padRightWithZeroBytes(StakeCheckpointSerializer.toBytes(checkpoint), 32))
       }
 
-      def getCheckpoint(view: BaseAccountStateView, index: Int): StakeCheckpoint = {
+    def updateOrAddCheckpoint(view: BaseAccountStateView, epoch: Int, stakeAmount: BigInteger): Unit = {
+      val size = getSize(view)
+      if (size > 0) {
+        val lastCheckpoint = getCheckpoint(view, size - 1)
+        val newAmount = stakeAmount.add(lastCheckpoint.stakedAmount)
+        if (lastCheckpoint.fromEpochNumber == epoch) {
+          val checkpoint = StakeCheckpoint(epoch, newAmount)
+          updateValue(view, size - 1, BytesUtils.padRightWithZeroBytes(StakeCheckpointSerializer.toBytes(checkpoint), 32))
+        }
+        else
+          addCheckpoint(view, epoch, newAmount)
+      }
+      else
+        addCheckpoint(view, epoch, stakeAmount)
+    }
+
+    def getCheckpoint(view: BaseAccountStateView, index: Int): StakeCheckpoint = {
         val paddedValue = getValue(view, index)
         StakeCheckpointSerializer.parseBytes(paddedValue)
       }
