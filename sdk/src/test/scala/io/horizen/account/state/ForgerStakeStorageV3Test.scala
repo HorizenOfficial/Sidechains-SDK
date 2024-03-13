@@ -64,7 +64,7 @@ class ForgerStakeStorageV3Test
       assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
       assertEquals(stakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
 
-      val stakeKey = ForgerStakeStorageV3.getStakeKey(blockSignerProposition, vrfPublicKey, delegator)
+      val stakeKey = ForgerStakeStorageV3.getStakeKey(forgerKey, delegator)
       val stakeHistory = StakeHistory(stakeKey)
       assertEquals(1, stakeHistory.getSize(view))
       assertEquals(epochNumber, stakeHistory.getCheckpoint(view, 0).fromEpochNumber)
@@ -136,12 +136,11 @@ class ForgerStakeStorageV3Test
       assertEquals(epochNumber2, forgerHistory2.getCheckpoint(view, 0).fromEpochNumber)
       assertEquals(stakeAmount2, forgerHistory2.getCheckpoint(view, 0).stakedAmount)
 
-      val stakeKey2 = ForgerStakeStorageV3.getStakeKey(blockSignerProposition2, vrfPublicKey2, delegator)
+      val stakeKey2 = ForgerStakeStorageV3.getStakeKey(forgerKey2, delegator)
       val stakeHistory2 = StakeHistory(stakeKey2)
       assertEquals(1, stakeHistory2.getSize(view))
       assertEquals(epochNumber2, stakeHistory2.getCheckpoint(view, 0).fromEpochNumber)
       assertEquals(stakeAmount2, stakeHistory2.getCheckpoint(view, 0).stakedAmount)
-
 
       assertEquals(2, forgerList.getSize(view))
       assertArrayEquals(forgerKey, forgerList.getValue(view, 0))
@@ -203,7 +202,7 @@ class ForgerStakeStorageV3Test
         assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
         assertEquals(stakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
 
-        val stakeKey = ForgerStakeStorageV3.getStakeKey(blockSignerProposition, vrfPublicKey, delegator)
+        val stakeKey = ForgerStakeStorageV3.getStakeKey(forgerKey, delegator)
         val stakeHistory = StakeHistory(stakeKey)
         assertEquals(1, stakeHistory.getSize(view))
         assertEquals(epochNumber, stakeHistory.getCheckpoint(view, 0).fromEpochNumber)
@@ -246,5 +245,177 @@ class ForgerStakeStorageV3Test
 
     }
   }
+
+  @Test
+  def testAddStake(): Unit = {
+    usingView { view =>
+
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+
+      // Check that we don't have any forger yet
+      var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
+      assertTrue(result._2.isEmpty)
+
+
+      val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
+      val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("d6b775fd4cefc7446236683fdde9d0464bba43cc565fa066b0b3ed1b888b9d1180")) // 33 bytes
+
+      val delegator1 = new Address("0xaaa00001230000000000deadbeefaaaa22222222")
+      val epochNumber = 135869
+
+      val stakeAmount = BigInteger.valueOf(300)
+
+      // Add stake to a non-registered forger. it should fail
+      val ex = intercept[ExecutionRevertedException] {
+        ForgerStakeStorageV3.addStake(view, blockSignerProposition, vrfPublicKey, epochNumber, delegator1, stakeAmount)
+      }
+      assertEquals("Forger doesn't exist.", ex.getMessage)
+
+      // Register the forger and try again adding stakes
+      val rewardAddress = new Address("0xaaa0000123000000000011112222aaaa22222222")
+      val rewardShare = 93
+      val initialEpochNumber = 125869
+      val initialStakeAmount = BigInteger.TEN
+      ForgerStakeStorageV3.addForger(view, blockSignerProposition, vrfPublicKey, rewardShare, rewardAddress, initialEpochNumber, delegator1, initialStakeAmount)
+
+      ForgerStakeStorageV3.addStake(view, blockSignerProposition, vrfPublicKey, epochNumber, delegator1, stakeAmount)
+      result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
+
+      val listOfForgers = result._2
+      assertEquals(1, listOfForgers.size)
+      assertEquals(blockSignerProposition, listOfForgers.head.forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey, listOfForgers.head.forgerPublicKeys.vrfPublicKey)
+      assertEquals(rewardAddress, listOfForgers.head.rewardAddress.address())
+      assertEquals(rewardShare, listOfForgers.head.rewardShare)
+      assertEquals(-1, result._1)
+
+      val forgerKey = ForgerStakeStorageV3.getForgerKey(blockSignerProposition, vrfPublicKey)
+      val delegator1List = DelegatorList(forgerKey)
+      assertEquals(1, delegator1List.getSize(view))
+      assertEquals(delegator1, delegator1List.getDelegatorAt(view, 0).address())
+
+      val forgerHistory = StakeHistory(forgerKey)
+      assertEquals(2, forgerHistory.getSize(view))
+      assertEquals(initialEpochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(initialStakeAmount.add(stakeAmount), forgerHistory.getCheckpoint(view, 1).stakedAmount)
+
+      val stakeKey1 = ForgerStakeStorageV3.getStakeKey(forgerKey, delegator1)
+      val stakeHistory1 = StakeHistory(stakeKey1)
+      assertEquals(2, stakeHistory1.getSize(view))
+      assertEquals(initialEpochNumber, stakeHistory1.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, stakeHistory1.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, stakeHistory1.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(initialStakeAmount.add(stakeAmount), stakeHistory1.getCheckpoint(view, 1).stakedAmount)
+
+      val forgerList1 = ForgerList(new AddressProposition(delegator1))
+      assertEquals(1, forgerList1.getSize(view))
+      assertArrayEquals(forgerKey, forgerList1.getValue(view, 0))
+
+      // Add another stake from the same delegator in the same consensus epoch
+      var currentForgerStake = initialStakeAmount.add(stakeAmount)
+
+      val stakeAmount2 = BigInteger.valueOf(1000)
+      ForgerStakeStorageV3.addStake(view, blockSignerProposition, vrfPublicKey, epochNumber, delegator1, stakeAmount2)
+
+      // delegator list shouldn't change
+      assertEquals(1, delegator1List.getSize(view))
+
+      // ForgerHistory size should remain the same, but the value of the last checkpoint should change
+      assertEquals(2, forgerHistory.getSize(view))
+      assertEquals(initialEpochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(currentForgerStake.add(stakeAmount2), forgerHistory.getCheckpoint(view, 1).stakedAmount)
+
+      // StakeHistory size should remain the same, but the value of the last checkpoint should change
+      assertEquals(2, stakeHistory1.getSize(view))
+      assertEquals(initialEpochNumber, stakeHistory1.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, stakeHistory1.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, stakeHistory1.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(currentForgerStake.add(stakeAmount2), stakeHistory1.getCheckpoint(view, 1).stakedAmount)
+      var currentDelegator1Stake = currentForgerStake.add(stakeAmount2)
+
+      // forger list of first delegator shouldn't change
+      assertEquals(1, forgerList1.getSize(view))
+      assertArrayEquals(forgerKey, forgerList1.getValue(view, 0))
+
+      // Add another stake from the another delegator in the same consensus epoch
+      currentForgerStake = currentForgerStake.add(stakeAmount2)
+      val delegator2 = new Address("0xaaa00001230000000000aaaaaaabbbbb22222222")
+      val stakeAmount_2_1 = BigInteger.valueOf(753536)
+
+      ForgerStakeStorageV3.addStake(view, blockSignerProposition, vrfPublicKey, epochNumber, delegator2, stakeAmount_2_1)
+
+      //Check delegator list
+      assertEquals(2, delegator1List.getSize(view))
+      assertEquals(delegator1, delegator1List.getDelegatorAt(view, 0).address())
+      assertEquals(delegator2, delegator1List.getDelegatorAt(view, 1).address())
+
+      // ForgerHistory size should remain the same, but the value of the last checkpoint should change
+      assertEquals(2, forgerHistory.getSize(view))
+      assertEquals(initialEpochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(currentForgerStake.add(stakeAmount_2_1), forgerHistory.getCheckpoint(view, 1).stakedAmount)
+
+      val stakeKey2 = ForgerStakeStorageV3.getStakeKey(forgerKey, delegator2)
+      val stakeHistory2 = StakeHistory(stakeKey2)
+      assertEquals(1, stakeHistory2.getSize(view))
+      assertEquals(epochNumber, stakeHistory2.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(stakeAmount_2_1, stakeHistory2.getCheckpoint(view, 0).stakedAmount)
+
+      // Check delegator2 forger list
+      val forgerList2 = ForgerList(new AddressProposition(delegator2))
+      assertEquals(1, forgerList2.getSize(view))
+      assertArrayEquals(forgerKey, forgerList1.getValue(view, 0))
+
+      // Add another stake from the second delegator in a different consensus epoch
+      currentForgerStake = currentForgerStake.add(stakeAmount_2_1)
+      val stakeAmount_2_2 = BigInteger.valueOf(22356)
+      val epochNumber2 = epochNumber + 10
+      ForgerStakeStorageV3.addStake(view, blockSignerProposition, vrfPublicKey, epochNumber2, delegator2, stakeAmount_2_2)
+
+      //Check delegator list, shouldn't change
+      assertEquals(2, delegator1List.getSize(view))
+      assertEquals(delegator1, delegator1List.getDelegatorAt(view, 0).address())
+      assertEquals(delegator2, delegator1List.getDelegatorAt(view, 1).address())
+
+      // Check ForgerHistory, we should have 3 checkpoints
+      assertEquals(3, forgerHistory.getSize(view))
+      assertEquals(initialEpochNumber, forgerHistory.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, forgerHistory.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, forgerHistory.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(currentForgerStake, forgerHistory.getCheckpoint(view, 1).stakedAmount)
+      assertEquals(epochNumber2, forgerHistory.getCheckpoint(view, 2).fromEpochNumber)
+      assertEquals(currentForgerStake.add(stakeAmount_2_2), forgerHistory.getCheckpoint(view, 2).stakedAmount)
+
+      // Check delegator1 stakehistory, shouldn't change
+      assertEquals(2, stakeHistory1.getSize(view))
+      assertEquals(initialEpochNumber, stakeHistory1.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(initialStakeAmount, stakeHistory1.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber, stakeHistory1.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(currentDelegator1Stake, stakeHistory1.getCheckpoint(view, 1).stakedAmount)
+
+      // Check delegator2 stakehistory, we should have 2 checkpoints
+      assertEquals(2, stakeHistory2.getSize(view))
+      assertEquals(epochNumber, stakeHistory2.getCheckpoint(view, 0).fromEpochNumber)
+      assertEquals(stakeAmount_2_1, stakeHistory2.getCheckpoint(view, 0).stakedAmount)
+      assertEquals(epochNumber2, stakeHistory2.getCheckpoint(view, 1).fromEpochNumber)
+      assertEquals(stakeAmount_2_1.add(stakeAmount_2_2), stakeHistory2.getCheckpoint(view, 1).stakedAmount)
+
+      // Check delegator1 forger list
+      assertEquals(1, forgerList1.getSize(view))
+      assertArrayEquals(forgerKey, forgerList1.getValue(view, 0))
+
+      // Check delegator2 forger list
+      assertEquals(1, forgerList2.getSize(view))
+      assertArrayEquals(forgerKey, forgerList1.getValue(view, 0))
+    }
+  }
+
+
+
 
 }
