@@ -29,7 +29,7 @@ object ForgerStakeStorageV3 {
     Blake2b256.hash(Bytes.concat(blockSignProposition.pubKeyBytes(), vrfPublicKey.pubKeyBytes()))
 
   def getDelegatorKey(delegatorPublicKey: Address): Array[Byte] =
-    Blake2b256.hash(new AddressProposition(delegatorPublicKey).bytes())
+    Blake2b256.hash(new AddressProposition(delegatorPublicKey).pubKeyBytes())
 
   def getStakeKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey, delegatorPublicKey: Address): Array[Byte] = {
     val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
@@ -124,17 +124,26 @@ object ForgerStakeStorageV3 {
 
       def addCheckpoint(view: BaseAccountStateView, epoch: Int, stakeAmount: BigInteger): Unit = {
         val checkpoint = StakeCheckpoint(epoch, stakeAmount)
-        append(view, BytesUtils.padWithZeroBytes(StakeCheckpointSerializer.toBytes(checkpoint), 32))
+        append(view, BytesUtils.padRightWithZeroBytes(StakeCheckpointSerializer.toBytes(checkpoint), 32))
       }
+
+      def getCheckpoint(view: BaseAccountStateView, index: Int): StakeCheckpoint = {
+        val paddedValue = getValue(view, index)
+        StakeCheckpointSerializer.parseBytes(paddedValue)
+      }
+
     }
 
   case class DelegatorList(fuid: Array[Byte])
     extends StateDbArray(FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS, Blake2b256.hash(Bytes.concat(fuid, "Delegators".getBytes("UTF-8"))))  {
 
     def addDelegator(view: BaseAccountStateView, delegator: AddressProposition): Unit = {
-      append(view, BytesUtils.padWithZeroBytes(AddressPropositionSerializer.getSerializer.toBytes(delegator), 32))
+      append(view, BytesUtils.padRightWithZeroBytes(AddressPropositionSerializer.getSerializer.toBytes(delegator), 32))
     }
 
+    def getDelegatorAt(view: BaseAccountStateView, index: Int): AddressProposition = {
+      AddressPropositionSerializer.getSerializer.parseBytes(getValue(view, index))
+    }
   }
 
   case class ForgerList(delegator: AddressProposition)
