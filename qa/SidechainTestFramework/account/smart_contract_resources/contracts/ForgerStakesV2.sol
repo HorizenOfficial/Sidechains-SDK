@@ -75,7 +75,7 @@ interface ForgerStakesV2 {
        Return array contains also elements with 0 value. Returned values are ordered by epoch, and the array lenght may
        be < maxNumOfEpoch if the current consensus epoch is < (consensusEpochStart + maxNumOfEpoch)
     */
-    function stakeOf(bytes32 signPubKey, bytes32 vrf1, bytes1 vrf2, address delegator, uint32 consensusEpochStart, uint32 maxNumOfEpoch) external view returns (uint256[] memory);
+    function stakeTotal(bytes32 signPubKey, bytes32 vrf1, bytes1 vrf2, address delegator, uint32 consensusEpochStart, uint32 maxNumOfEpoch) external view returns (uint256[] memory);
 
     /*
        Return total sum payd to reward_address  at the end of one or more consensus epochs.
@@ -106,6 +106,11 @@ interface ForgerStakesV2 {
     /  Each element of the list is the total amount delegated to  a specific forger.
     */
     function getPagedForgersStakesByDelegator(address delegator, int32 startIndex, int32 pageSize) external view returns  (int32, StakeDataForger[] memory);
+
+    /*
+    /  Returns the current consensus epoch based on absolute timestamp on the node
+    */
+    function getCurrentConsesusEpoch() external view returns (uint32);
 
     function upgrade(uint32) external returns (uint32);
 }
