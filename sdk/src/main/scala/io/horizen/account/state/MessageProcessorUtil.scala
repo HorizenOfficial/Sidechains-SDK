@@ -33,6 +33,7 @@ object MessageProcessorUtil {
       Seq(EoaMessageProcessor,
         WithdrawalMsgProcessor,
         ForgerStakeMsgProcessor(params),
+        ForgerStakeV2MsgProcessor(params),
       ) ++
       maybeKeyRotationMsgProcessor.toSeq ++
       customMessageProcessors

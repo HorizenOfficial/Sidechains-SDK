@@ -41,10 +41,8 @@ case class WithdrawCmdInput(forgerPublicKeys: ForgerPublicKeys, value: BigIntege
 
   override def asABIType(): StaticStruct = {
     val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
-    val listOfParams: util.List[Type[_]] = util.Arrays.asList(
-      forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]],
-      new Uint256(value),
-    )
+    val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
+    listOfParams.add(new Uint256(value))
     new StaticStruct(listOfParams)
   }
 

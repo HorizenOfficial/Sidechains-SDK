@@ -9,12 +9,12 @@ import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import sparkz.crypto.hash.Keccak256
 
-case class ForgerStakeV2MsgProcessor(networkParams: NetworkParams) extends NativeSmartContractMsgProcessor {
+case class ForgerStakeV2MsgProcessor(networkParams: NetworkParams) extends NativeSmartContractWithFork {
   override val contractAddress: Address = FORGER_STAKEV2_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeV2SmartContractCode")
 
-  override def init(view: BaseAccountStateView, consensusEpochNumber: Int): Unit = {
-    // No actions required for transferring coins during genesis state initialization.
+  override def isForkActive(consensusEpochNumber: Int): Boolean = {
+    Version1_4_0Fork.get(consensusEpochNumber).active
   }
   
   override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
