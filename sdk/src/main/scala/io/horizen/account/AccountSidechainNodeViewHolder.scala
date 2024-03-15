@@ -161,7 +161,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int) : FPI = {
     val consensusEpochNumber: ConsensusEpochNumber = state.getCurrentConsensusEpochInfo._2.epoch
     val feePayments = state.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber)
-    AccountFeePaymentsInfo(feePayments)
+    AccountFeePaymentsInfo(feePayments._1)
   }
 
   override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {

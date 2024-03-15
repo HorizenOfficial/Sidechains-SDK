@@ -1,13 +1,14 @@
 package io.horizen.account.utils
 
 import io.horizen.account.proposition.AddressProposition
-import io.horizen.account.utils.AccountFeePaymentsUtils.getForgersRewards
+import io.horizen.account.utils.AccountFeePaymentsUtils.{getForgersRewards, getMainchainWithdrawalEpochDistributionCap}
 import io.horizen.fixtures._
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
+
 import java.math.BigInteger
 
 
@@ -204,5 +205,25 @@ class AccountFeePaymentsUtilsTest
           assertEquals(BigInteger.valueOf(120), payment.value)
       }
     )
+  }
+
+  @Test
+  def getMainchainWithdrawalEpochDistributionCapTest(): Unit = {
+    // test 1 - before first halving
+    var actual: Long = getMainchainWithdrawalEpochDistributionCap(500, 20).longValue()
+    var expected: Long = (12.5 * 1e8 * 20 * 0.1).longValue()
+    assertEquals(expected, actual)
+    // test 2 - at first halving
+    actual = getMainchainWithdrawalEpochDistributionCap(840010, 20).longValue()
+    expected = ((12.5 * 1e8 * 10 * 0.1) + (6.25 * 1e8 * 10 * 0.1)).longValue()
+    assertEquals(expected, actual)
+    // test 3 - after first halving
+    actual = getMainchainWithdrawalEpochDistributionCap(1000010, 20).longValue()
+    expected = (6.25 * 1e8 * 20 * 0.1).longValue()
+    assertEquals(expected, actual)
+    // test 4 - at second halving
+    actual = getMainchainWithdrawalEpochDistributionCap(1680010, 20).longValue()
+    expected = ((6.25 * 1e8 * 10 * 0.1) + (3.125 * 1e8 * 10 * 0.1)).longValue()
+    assertEquals(expected, actual)
   }
 }

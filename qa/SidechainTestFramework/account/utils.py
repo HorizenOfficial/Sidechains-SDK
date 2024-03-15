@@ -53,6 +53,8 @@ INTEROPERABILITY_FORK_EPOCH = 50
 VERSION_1_2_FORK_EPOCH = 60
 # The activation epoch for features released in v1.3 (e.g. SHANGHAI EVM), as coded in the sdk
 VERSION_1_3_FORK_EPOCH = 70
+# The activation epoch for features released in v1.4
+VERSION_1_4_FORK_EPOCH = 80
 
 # Block gas limit
 BLOCK_GAS_LIMIT = 30000000

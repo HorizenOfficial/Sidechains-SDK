@@ -57,4 +57,21 @@ object AccountFeePaymentsUtils {
       }
     }
   }
+
+  def getMainchainWithdrawalEpochDistributionCap(epochMaxHeight: Long, epochLength: Long): BigInteger = {
+    val baseReward = 12.5 * 1e8
+    val halvingInterval = 840000
+
+    var result = 0L
+    for (height <- epochMaxHeight - epochLength until epochMaxHeight) {
+      var reward = baseReward.longValue()
+      val halvings = height / halvingInterval
+      for (_ <- 1L to halvings) {
+        reward = reward >> 1
+      }
+      result = result + reward
+    }
+
+    BigInteger.valueOf(result).divide(BigInteger.valueOf(10))
+  }
 }
