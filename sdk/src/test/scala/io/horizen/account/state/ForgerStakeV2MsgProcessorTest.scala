@@ -38,7 +38,7 @@ import java.util
 import java.util.{Optional, Random}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
-import io.horizen.account.state.nativescdata.forgerstakev2.{DelegateCmdInput, WithdrawCmdInput}
+import io.horizen.account.state.nativescdata.forgerstakev2.{DelegateCmdInput, PagedForgersStakesByDelegatorCmdInput, PagedForgersStakesByForgerCmdInput, StakeTotalCmdInput, WithdrawCmdInput}
 import io.horizen.fork.{ForkConfigurator, ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.consensus.intToConsensusEpochNumber
 
@@ -72,6 +72,8 @@ class ForgerStakeV2MsgProcessorTest
   val NumOfIndexedOpenForgerStakeListEvtParams = 1
   val StakeUpgradeEventSig: Array[Byte] = getEventSignature("StakeUpgrade(uint32,uint32)")
 
+  val scAddrStr1: String = "00C8F107a09cd4f463AFc2f1E6E5bF6022Ad4600"
+  val scAddressObj1 = new Address("0x" + scAddrStr1)
 
   val V1_4_MOCK_FORK_POINT: Int = 300
 
@@ -188,7 +190,54 @@ class ForgerStakeV2MsgProcessorTest
 
       //TODO: add checks...
 
+      //stake total
 
+      val stakeTotalInput = StakeTotalCmdInput(
+        ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+        scAddressObj1,
+        5,
+        5
+      )
+
+      val data3: Array[Byte] = stakeTotalInput.encode()
+      val msg3 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(StakeTotalCmd) ++ data3, randomNonce)
+      val returnData3= assertGas(0, msg2, view, forgerStakeV2MessageProcessor, blockContextForkV1_4)
+      assertNotNull(returnData3)
+      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
+
+      //TODO: add checks...
+
+      //GetPagedForgersStakesByForger
+
+      val pagedForgersStakesByForgerCmd = PagedForgersStakesByForgerCmdInput(
+        ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+        5,
+        5
+      )
+
+      val data4: Array[Byte] = pagedForgersStakesByForgerCmd.encode()
+      val msg4 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(GetPagedForgersStakesByForgerCmd) ++ data3, randomNonce)
+      val returnData4 = assertGas(0, msg2, view, forgerStakeV2MessageProcessor, blockContextForkV1_4)
+      assertNotNull(returnData4)
+      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
+
+      //TODO: add checks...
+
+      //GetPagedForgersStakesByDelegator
+
+      val pagedForgersStakesByDelegatorCmd = PagedForgersStakesByDelegatorCmdInput(
+        scAddressObj1,
+        5,
+        5
+      )
+
+      val data5: Array[Byte] = pagedForgersStakesByDelegatorCmd.encode()
+      val msg5 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(GetPagedForgersStakesByDelegatorCmd) ++ data5, randomNonce)
+      val returnData5 = assertGas(0, msg5, view, forgerStakeV2MessageProcessor, blockContextForkV1_4)
+      assertNotNull(returnData5)
+      println("This is the returned value: " + BytesUtils.toHexString(returnData2))
+
+      //TODO: add checks...
     }
   }
 
