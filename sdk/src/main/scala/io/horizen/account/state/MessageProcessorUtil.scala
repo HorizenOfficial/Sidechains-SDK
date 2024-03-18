@@ -29,11 +29,11 @@ object MessageProcessorUtil {
     // the Eoa msg processor would preempt it
 
     Seq(McAddrOwnershipMsgProcessor(params)) ++
-      maybeProxyMsgProcessor.toSeq ++
-      Seq(EoaMessageProcessor,
+    maybeProxyMsgProcessor.toSeq ++
+    Seq(ForgerStakeV2MsgProcessor(params)) ++
+    Seq(EoaMessageProcessor,
         WithdrawalMsgProcessor,
         ForgerStakeMsgProcessor(params),
-        ForgerStakeV2MsgProcessor(params),
       ) ++
       maybeKeyRotationMsgProcessor.toSeq ++
       customMessageProcessors
