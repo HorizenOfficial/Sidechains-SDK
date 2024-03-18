@@ -142,6 +142,29 @@ class ForgerStakeStorageV3Test
       assertArrayEquals(forger1Key, forgerList.getValue(view, 0))
       assertArrayEquals(forger2Key, forgerList.getValue(view, 1))
 
+      // Add a forger without reward address
+      val epochNumber3 = epochNumber2 + 1
+      val blockSignerProposition3 = new PublicKey25519Proposition(BytesUtils.fromHexString("3333334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
+      val vrfPublicKey3 = new VrfPublicKey(BytesUtils.fromHexString("333375fd4cefc7446236683fdde9d0464bba43cc565fa066b0b3ed1b888b9d1180")) // 33 bytes
+      ForgerStakeStorageV3.addForger(view, blockSignerProposition3, vrfPublicKey3, 0, Address.ZERO, epochNumber2, delegator1, stakeAmount2)
+
+      result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
+      listOfForgers = result._2
+      assertEquals(3, listOfForgers.size)
+      assertEquals(blockSignerProposition1, listOfForgers.head.forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey1, listOfForgers.head.forgerPublicKeys.vrfPublicKey)
+
+      assertEquals(blockSignerProposition2, listOfForgers(1).forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey2, listOfForgers(1).forgerPublicKeys.vrfPublicKey)
+      assertEquals(rewardAddress, listOfForgers(1).rewardAddress.address())
+      assertEquals(rewardShare2, listOfForgers(1).rewardShare)
+
+      assertEquals(blockSignerProposition3, listOfForgers(2).forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey3, listOfForgers(2).forgerPublicKeys.vrfPublicKey)
+      assertEquals(Address.ZERO, listOfForgers(2).rewardAddress.address())
+      assertEquals(0, listOfForgers(2).rewardShare)
+
+      assertEquals(-1, result._1)
     }
   }
 
@@ -639,6 +662,66 @@ class ForgerStakeStorageV3Test
       assertEquals(listOfExpectedData, listOfStakes)
     }
   }
+
+
+  @Test
+  def testUpdateForger(): Unit = {
+    usingView { view =>
+
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      val rewardAddress = new Address("0xaaa0000123000000000011112222aaaa22222222")
+      val rewardShare = 93
+
+      //  Try to update a non existing forger. It should fail
+      var ex = intercept[ExecutionRevertedException] {
+        ForgerStakeStorageV3.updateForger(view, blockSignerProposition1, vrfPublicKey1, rewardShare, rewardAddress)
+      }
+      assertEquals("Forger doesn't exist.", ex.getMessage)
+
+      // Try to update a forger that didn't specify rewardAddress and rewardShare during registration. It should work
+      val epochNumber = 135869
+      val stakeAmount = BigInteger.valueOf(20000000000L)
+      ForgerStakeStorageV3.addForger(view, blockSignerProposition1, vrfPublicKey1, 0, Address.ZERO, epochNumber, delegator1, stakeAmount)
+      var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
+      var listOfForgers = result._2
+      assertEquals(1, listOfForgers.size)
+      assertEquals(blockSignerProposition1, listOfForgers(0).forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey1, listOfForgers(0).forgerPublicKeys.vrfPublicKey)
+      assertEquals(Address.ZERO, listOfForgers(0).rewardAddress.address())
+      assertEquals(0, listOfForgers(0).rewardShare)
+
+      // Change the reward address and share
+      ForgerStakeStorageV3.updateForger(view, blockSignerProposition1, vrfPublicKey1, rewardShare, rewardAddress)
+      result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
+      listOfForgers = result._2
+      assertEquals(1, listOfForgers.size)
+      assertEquals(blockSignerProposition1, listOfForgers(0).forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey1, listOfForgers(0).forgerPublicKeys.vrfPublicKey)
+      assertEquals(rewardAddress, listOfForgers(0).rewardAddress.address())
+      assertEquals(rewardShare, listOfForgers(0).rewardShare)
+
+      // Try to change again rewardAddress and rewardShare. it should fail.
+      val rewardAddress2 = new Address("0xaaa0000123000000000011112222aaaa2222aaa2")
+      val rewardShare2 = 23
+
+      ex = intercept[ExecutionRevertedException] {
+        ForgerStakeStorageV3.updateForger(view, blockSignerProposition1, vrfPublicKey1, rewardShare2, rewardAddress2)
+      }
+      assertEquals("Forger has already set reward share and reward address.", ex.getMessage)
+
+      // Try to update a forger that didn't specify rewardAddress and rewardShare during registration. It should work
+      ForgerStakeStorageV3.addForger(view, blockSignerProposition2, vrfPublicKey2, rewardShare2, rewardAddress2, epochNumber, delegator2, stakeAmount)
+
+      // Change the reward address and share
+      ex = intercept[ExecutionRevertedException] {
+        ForgerStakeStorageV3.updateForger(view, blockSignerProposition2, vrfPublicKey2, rewardShare, rewardAddress)
+      }
+      assertEquals("Forger has already set reward share and reward address.", ex.getMessage)
+
+
+    }
+  }
+
 
 
   def checkStakeHistory(view: BaseAccountStateView, history: StakeHistory, expectedCheckpoints: Seq[StakeCheckpoint]): Unit = {

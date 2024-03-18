@@ -61,6 +61,15 @@ object ForgerStakeStorageV3 {
 
   }
 
+  def updateForger(view: AccountStateView, blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey, rewardShare: Int, rewardAddress: Address): Unit = {
+    val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
+    val forger = ForgerMap.getForger(view, forgerKey).getOrElse(throw new ExecutionRevertedException("Forger doesn't exist."))
+    if ((forger.rewardShare > 0) || (forger.rewardAddress.address() != Address.ZERO))
+      throw new ExecutionRevertedException("Forger has already set reward share and reward address.")
+    ForgerMap.updateForger(view, forgerKey, blockSignProposition, vrfPublicKey, rewardShare, rewardAddress)
+  }
+
+
   def addNewDelegator(view: BaseAccountStateView, forgerKey: Array[Byte], delegator: Address): Unit = {
     val delegatorAddressProposition = new AddressProposition(delegator)
     val listOfDelegators = DelegatorList(forgerKey)
@@ -321,6 +330,23 @@ object ForgerMap {
     view.updateAccountStorageBytes(ACCOUNT, forgerKey,
       ForgerInfoV3Serializer.toBytes(forgerStakeData))
   }
+
+  def updateForger(view: BaseAccountStateView,
+                forgerKey: Array[Byte],
+                blockSignProposition: PublicKey25519Proposition,
+                vrfPublicKey: VrfPublicKey,
+                rewardShare: Int,
+                rewardAddress: Address,
+               ): Unit = {
+
+    val forgerStakeData = ForgerInfoV3(
+      ForgerPublicKeys(blockSignProposition, vrfPublicKey), rewardShare, new AddressProposition(rewardAddress))
+
+    // store the forger stake data
+    view.updateAccountStorageBytes(ACCOUNT, forgerKey,
+      ForgerInfoV3Serializer.toBytes(forgerStakeData))
+  }
+
 
   def getSize(view: BaseAccountStateView): Int = forgerList.getSize(view)
 
