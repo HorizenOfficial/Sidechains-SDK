@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeStorageV3.{DelegatorList, ForgerList, StakeHistory}
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.evm.Address
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -32,7 +32,7 @@ class ForgerStakeStorageV3Test
   def testAddForger(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
       var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
 
@@ -143,7 +143,6 @@ class ForgerStakeStorageV3Test
       assertArrayEquals(forger2Key, forgerList.getValue(view, 1))
 
       // Add a forger without reward address
-      val epochNumber3 = epochNumber2 + 1
       val blockSignerProposition3 = new PublicKey25519Proposition(BytesUtils.fromHexString("3333334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
       val vrfPublicKey3 = new VrfPublicKey(BytesUtils.fromHexString("333375fd4cefc7446236683fdde9d0464bba43cc565fa066b0b3ed1b888b9d1180")) // 33 bytes
       ForgerStakeStorageV3.addForger(view, blockSignerProposition3, vrfPublicKey3, 0, Address.ZERO, epochNumber2, delegator1, stakeAmount2)
@@ -173,7 +172,7 @@ class ForgerStakeStorageV3Test
   def testGetPagedListOfForgers(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
       val (nextIdx, forgers) = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
       assertTrue(forgers.isEmpty)
@@ -270,7 +269,7 @@ class ForgerStakeStorageV3Test
   def testAddStake(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
       // Check that we don't have any forger yet
       var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
@@ -440,7 +439,7 @@ class ForgerStakeStorageV3Test
   def testRemoveStake(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
       // Check that we don't have any forger yet
       var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
@@ -605,7 +604,7 @@ class ForgerStakeStorageV3Test
   def testGetAllForgerStakes(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
       var listOfStakes = ForgerStakeStorageV3.getAllForgerStakes(view)
       assertTrue(listOfStakes.isEmpty)
@@ -668,7 +667,7 @@ class ForgerStakeStorageV3Test
   def testUpdateForger(): Unit = {
     usingView { view =>
 
-      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS)
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
       val rewardAddress = new Address("0xaaa0000123000000000011112222aaaa22222222")
       val rewardShare = 93
 
@@ -685,20 +684,20 @@ class ForgerStakeStorageV3Test
       var result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
       var listOfForgers = result._2
       assertEquals(1, listOfForgers.size)
-      assertEquals(blockSignerProposition1, listOfForgers(0).forgerPublicKeys.blockSignPublicKey)
-      assertEquals(vrfPublicKey1, listOfForgers(0).forgerPublicKeys.vrfPublicKey)
-      assertEquals(Address.ZERO, listOfForgers(0).rewardAddress.address())
-      assertEquals(0, listOfForgers(0).rewardShare)
+      assertEquals(blockSignerProposition1, listOfForgers.head.forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey1, listOfForgers.head.forgerPublicKeys.vrfPublicKey)
+      assertEquals(Address.ZERO, listOfForgers.head.rewardAddress.address())
+      assertEquals(0, listOfForgers.head.rewardShare)
 
       // Change the reward address and share
       ForgerStakeStorageV3.updateForger(view, blockSignerProposition1, vrfPublicKey1, rewardShare, rewardAddress)
       result = ForgerStakeStorageV3.getPagedListOfForgers(view, 0, 10)
       listOfForgers = result._2
       assertEquals(1, listOfForgers.size)
-      assertEquals(blockSignerProposition1, listOfForgers(0).forgerPublicKeys.blockSignPublicKey)
-      assertEquals(vrfPublicKey1, listOfForgers(0).forgerPublicKeys.vrfPublicKey)
-      assertEquals(rewardAddress, listOfForgers(0).rewardAddress.address())
-      assertEquals(rewardShare, listOfForgers(0).rewardShare)
+      assertEquals(blockSignerProposition1, listOfForgers.head.forgerPublicKeys.blockSignPublicKey)
+      assertEquals(vrfPublicKey1, listOfForgers.head.forgerPublicKeys.vrfPublicKey)
+      assertEquals(rewardAddress, listOfForgers.head.rewardAddress.address())
+      assertEquals(rewardShare, listOfForgers.head.rewardShare)
 
       // Try to change again rewardAddress and rewardShare. it should fail.
       val rewardAddress2 = new Address("0xaaa0000123000000000011112222aaaa2222aaa2")
@@ -729,7 +728,7 @@ class ForgerStakeStorageV3Test
     expectedCheckpoints.indices.foreach { idx =>
       assertEquals(expectedCheckpoints(idx), history.getCheckpoint(view, idx))
     }
-    expectedCheckpoints.lastOption.map(checkpoint =>  assertEquals(checkpoint.stakedAmount, history.getLatestAmount(view)))
+    expectedCheckpoints.lastOption.foreach(checkpoint =>  assertEquals(checkpoint.stakedAmount, history.getLatestAmount(view)))
   }
 
 
