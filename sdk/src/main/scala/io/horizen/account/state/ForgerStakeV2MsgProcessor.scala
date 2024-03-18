@@ -4,13 +4,13 @@ import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgu
 import io.horizen.account.fork.Version1_4_0Fork
 import io.horizen.account.state.ForgerStakeV2MsgProcessor.{DelegateCmd, GetPagedForgersStakesByDelegatorCmd, GetPagedForgersStakesByForgerCmd, StakeTotalCmd, WithdrawCmd}
 import io.horizen.account.state.nativescdata.forgerstakev2.{DelegateCmdInputDecoder, PagedForgersStakesByDelegatorCmdInputDecoder, PagedForgersStakesByForgerCmdInputDecoder, StakeTotalCmdInputDecoder, WithdrawCmdInputDecoder}
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKEV2_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.params.NetworkParams
 import sparkz.crypto.hash.Keccak256
 
 case class ForgerStakeV2MsgProcessor(networkParams: NetworkParams) extends NativeSmartContractWithFork {
-  override val contractAddress: Address = FORGER_STAKEV2_SMART_CONTRACT_ADDRESS
+  override val contractAddress: Address = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
   override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeV2SmartContractCode")
 
   override def isForkActive(consensusEpochNumber: Int): Boolean = {

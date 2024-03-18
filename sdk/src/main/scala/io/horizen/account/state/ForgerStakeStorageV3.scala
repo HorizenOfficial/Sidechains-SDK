@@ -2,15 +2,13 @@ package io.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import io.horizen.account.state.ForgerMap.{forgerList, getSize}
 import io.horizen.account.state.ForgerStakeStorageV3.ACCOUNT
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.utils.BigIntegerUInt256
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.utils.BytesUtils
-import io.horizen.utxo.utils.BlockFeeInfo
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.serialization.{Reader, Writer}
@@ -21,7 +19,7 @@ import scala.collection.mutable.ListBuffer
 
 object ForgerStakeStorageV3 {
 
-  val ACCOUNT = FORGER_STAKE_V3_SMART_CONTRACT_ADDRESS
+  val ACCOUNT = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 
   def getForgerKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): Array[Byte] =
     Blake2b256.hash(Bytes.concat(blockSignProposition.pubKeyBytes(), vrfPublicKey.pubKeyBytes()))
