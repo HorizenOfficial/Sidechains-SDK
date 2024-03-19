@@ -12,7 +12,8 @@ import java.util
 
 object StakeTotalCmdInputDecoder
   extends ABIDecoder[StakeTotalCmdInput]
-    with MsgProcessorInputDecoder[StakeTotalCmdInput] {
+    with MsgProcessorInputDecoder[StakeTotalCmdInput]
+    with VRFDecoder{
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -34,10 +35,6 @@ object StakeTotalCmdInputDecoder
     StakeTotalCmdInput(forgerPublicKeys, delegator, consensusEpochStart, maxNumOfEpoch)
   }
 
-  private[horizen] def decodeVrfKey(vrfFirst32Bytes: Bytes32, vrfLastByte: Bytes1): VrfPublicKey = {
-    val vrfinBytes = vrfFirst32Bytes.getValue ++ vrfLastByte.getValue
-    new VrfPublicKey(vrfinBytes)
-  }
 }
 
 case class StakeTotalCmdInput(forgerPublicKeys: ForgerPublicKeys, delegator: Address, consensusEpochStart: Int, maxNumOfEpoch: Int) extends ABIEncodable[StaticStruct] {
