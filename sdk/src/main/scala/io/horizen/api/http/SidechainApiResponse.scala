@@ -31,10 +31,15 @@ object SidechainApiResponse {
 
   def apply(result: String): Route = OK(result)
 
+  def apply(result: String, hasError: Boolean): Route =
+    if (hasError) BAD_REQ(result) else OK(result)
+
   def apply(result: Future[String]): Route = OK(result)
 
   def apply(result: Either[Throwable, String]): Route = result.fold(SidechainApiError.apply, OK.apply)
 
   object OK extends SidechainApiResponse(StatusCodes.OK)
+
+  object BAD_REQ extends SidechainApiResponse(StatusCodes.BadRequest)
 
 }

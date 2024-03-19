@@ -19,7 +19,7 @@ object AccountEthRpcRejectionHandler {
                 new RpcId(),
                 RpcError.fromCode(RpcCode.ParseError, msg)
               )
-            )
+            ), hasError = true
           )
       }
       .result()

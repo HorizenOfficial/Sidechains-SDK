@@ -68,7 +68,7 @@ class WebSocketAccountServerEndpoint() extends SparkzLogging {
             }
           }
         case _ =>
-          val response = WebSocketAccountServerRef.rpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
+          val (response, _) = WebSocketAccountServerRef.rpcProcessor.processEthRpc(new ObjectMapper().readTree(message))
           WebSocketAccountServerEndpoint.sendRpcResponse(response, session)
       }
     } catch {
