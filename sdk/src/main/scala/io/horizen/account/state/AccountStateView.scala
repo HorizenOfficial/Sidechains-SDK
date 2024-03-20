@@ -137,6 +137,11 @@ class AccountStateView(
   def subtractForgerPoolBalanceAndResetBlockCounters(consensusEpochNumber: ConsensusEpochNumber, poolBalanceDistributed: BigInteger): Unit = {
     if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       val forgerPoolBalance = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      if (poolBalanceDistributed.compareTo(forgerPoolBalance) > 0) {
+        val errMsg = s"Trying to subtract more($poolBalanceDistributed) from the forger pool balance than available($forgerPoolBalance)"
+        log.error(errMsg)
+        throw new IllegalArgumentException(errMsg)
+      }
       if (forgerPoolBalance.signum() == 1) {
         subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, poolBalanceDistributed)
         metadataStorageView.resetForgerBlockCounters()

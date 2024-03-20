@@ -3,6 +3,7 @@ package io.horizen.account.utils
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.utils.AccountFeePaymentsUtils.{getForgersRewards, getMainchainWithdrawalEpochDistributionCap}
 import io.horizen.fixtures._
+import io.horizen.params.{MainNetParams, TestNetParams}
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -209,21 +210,27 @@ class AccountFeePaymentsUtilsTest
 
   @Test
   def getMainchainWithdrawalEpochDistributionCapTest(): Unit = {
+    val params = MainNetParams()
+    val baseReward = 1250000000L
+    val rewardAfterFirstHalving = baseReward / 2
+    val rewardAfterSecondHalving = rewardAfterFirstHalving / 2
+    val divider = 10
+
     // test 1 - before first halving
-    var actual: Long = getMainchainWithdrawalEpochDistributionCap(500, 20).longValue()
-    var expected: Long = (12.5 * 1e8 * 20 * 0.1).longValue()
+    var actual: BigInteger = getMainchainWithdrawalEpochDistributionCap(500, params)
+    var expected: BigInteger = ZenWeiConverter.convertZenniesToWei(baseReward * params.withdrawalEpochLength / divider)
     assertEquals(expected, actual)
     // test 2 - at first halving
-    actual = getMainchainWithdrawalEpochDistributionCap(840010, 20).longValue()
-    expected = ((12.5 * 1e8 * 10 * 0.1) + (6.25 * 1e8 * 10 * 0.1)).longValue()
+    actual = getMainchainWithdrawalEpochDistributionCap(840010, params)
+    expected = ZenWeiConverter.convertZenniesToWei((baseReward * (params.withdrawalEpochLength - 10) / divider) + (rewardAfterFirstHalving * 10 / divider))
     assertEquals(expected, actual)
     // test 3 - after first halving
-    actual = getMainchainWithdrawalEpochDistributionCap(1000010, 20).longValue()
-    expected = (6.25 * 1e8 * 20 * 0.1).longValue()
+    actual = getMainchainWithdrawalEpochDistributionCap(1000010, params)
+    expected = ZenWeiConverter.convertZenniesToWei(rewardAfterFirstHalving * params.withdrawalEpochLength / divider)
     assertEquals(expected, actual)
     // test 4 - at second halving
-    actual = getMainchainWithdrawalEpochDistributionCap(1680010, 20).longValue()
-    expected = ((6.25 * 1e8 * 10 * 0.1) + (3.125 * 1e8 * 10 * 0.1)).longValue()
+    actual = getMainchainWithdrawalEpochDistributionCap(1680010, params)
+    expected = ZenWeiConverter.convertZenniesToWei((rewardAfterFirstHalving * (params.withdrawalEpochLength - 10) / divider) + (rewardAfterSecondHalving * 10 / divider))
     assertEquals(expected, actual)
   }
 }

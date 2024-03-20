@@ -53,6 +53,7 @@ trait NetworkParams {
   val isCSWEnabled: Boolean
   val isHandlingTransactionsEnabled: Boolean = true
   val mcBlockRefDelay:Int
+  val mcHalvingInterval:Int
 
   // it is overridden only by regtest class for testing purposes
   val maxHistoryRewritingLength: Int = AbstractHistory.MAX_HISTORY_REWRITING_LENGTH

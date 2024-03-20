@@ -210,11 +210,7 @@ class AccountState(
       stateView.updateForgerBlockCounter(mod.forgerPublicKey, consensusEpochNumber)
 
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
-      val distributionCap = if (Version1_4_0Fork.get(consensusEpochNumber).active) {
-        val mcLastBlockHeight = params.mainchainCreationBlockHeight + ((currentWithdrawalEpochInfo.epoch + 1) * params.withdrawalEpochLength) - 1
-        AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params.withdrawalEpochLength)
-      } else BigInteger.valueOf(Long.MaxValue)
-      evalForgersReward(mod, modWithdrawalEpochInfo, consensusEpochNumber, distributionCap, stateView)
+      evalForgersReward(mod, modWithdrawalEpochInfo, consensusEpochNumber, stateView)
 
       // check logs bloom consistency with block header
       mod.verifyLogsBloomConsistency(receiptList)
@@ -250,12 +246,16 @@ class AccountState(
   }
 
 
-  private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, consensusEpochNumber: ConsensusEpochNumber, distributionCap: BigInteger, stateView: AccountStateView): Unit = {
+  private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, consensusEpochNumber: ConsensusEpochNumber, stateView: AccountStateView): Unit = {
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
     if (isWithdrawalEpochFinished) {
       // current block fee info is already in the view therefore we pass None as third param
+      val distributionCap = if (Version1_4_0Fork.get(consensusEpochNumber).active) {
+        val mcLastBlockHeight = params.mainchainCreationBlockHeight + (modWithdrawalEpochInfo.epoch * params.withdrawalEpochLength) - 1
+        AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params)
+      } else BigInteger.valueOf(Long.MaxValue)
       val (feePayments, poolBalanceDistributed) = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, consensusEpochNumber, distributionCap, None)
 
       log.info(s"End of Withdrawal Epoch ${modWithdrawalEpochInfo.epoch} reached, added ${feePayments.length} rewards with block ${mod.header.id}")

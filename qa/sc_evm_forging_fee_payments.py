@@ -238,7 +238,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # let assume a portion of the MC coinbase is sent to the SC as a contribution to the forger pool
         # this funds should not be distributed until fork happens at epoch 60
-        ft_pool_amount = 0.5
+        ft_pool_amount = 100
         ft_pool_amount_wei = convertZenToWei(ft_pool_amount)
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
@@ -379,7 +379,13 @@ class ScEvmForgingFeePayments(AccountChainSetup):
         self.sc_sync_all()
         last_block_id = generate_next_block(sc_node_2, "second node")
         self.sc_sync_all()
-        distribution_cap = 2500000000
+
+        # 2500000000 = 12.5 * 10^8 * 20 * 0.1, where
+        # 12.5 * 10^8 - base mainchain coinbase reward
+        # 20 - withdrawal epoch length
+        # 0.1 - divider/coefficient (10% of sum of mainchain coinbase reward for last epoch)
+        mc_withdrawal_epoch_distribution_cap = 2500000000
+        distribution_cap = convertZenniesToWei(mc_withdrawal_epoch_distribution_cap)
         per_block_fee = distribution_cap // 25
         ft_pool_remaining = ft_pool_amount_wei - distribution_cap
         node_1_fees = per_block_fee * 22

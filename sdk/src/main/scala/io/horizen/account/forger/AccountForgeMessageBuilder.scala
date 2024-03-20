@@ -261,7 +261,7 @@ class AccountForgeMessageBuilder(
               val withdrawalEpochNumber: Int = WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferencesData.size, dummyView.getWithdrawalEpochInfo, params).epoch
               val distributionCap = if (Version1_4_0Fork.get(consensusEpochNumber).active) {
                 val mcLastBlockHeight = params.mainchainCreationBlockHeight + ((withdrawalEpochNumber + 1) * params.withdrawalEpochLength) - 1
-                AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params.withdrawalEpochLength)
+                AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params)
               } else BigInteger.valueOf(Long.MaxValue)
               // get all previous payments for current ending epoch and append the one of the current block
               val (feePayments, poolBalanceDistributed) = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber, distributionCap, Some(currentBlockPayments))

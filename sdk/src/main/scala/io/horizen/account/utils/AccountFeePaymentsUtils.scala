@@ -2,11 +2,13 @@ package io.horizen.account.utils
 
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.evm.{StateDB, TrieHasher}
+import io.horizen.params.NetworkParams
 
 import java.math.BigInteger
 
 object AccountFeePaymentsUtils {
   val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH.toBytes
+  val MC_DISTRIBUTION_CAP_DIVIDER: BigInteger = BigInteger.valueOf(10)
 
   def calculateFeePaymentsHash(feePayments: Seq[AccountPayment]): Array[Byte] = {
     if(feePayments.isEmpty) {
@@ -58,20 +60,24 @@ object AccountFeePaymentsUtils {
     }
   }
 
-  def getMainchainWithdrawalEpochDistributionCap(epochMaxHeight: Long, epochLength: Long): BigInteger = {
+  def getMainchainWithdrawalEpochDistributionCap(epochMaxHeight: Long, params: NetworkParams): BigInteger = {
     val baseReward = 12.5 * 1e8
-    val halvingInterval = 840000
+    val halvingInterval = params.mcHalvingInterval
+    val epochLength = params.withdrawalEpochLength
 
-    var result = 0L
+    var mcEpochRewardZennies = 0L
     for (height <- epochMaxHeight - epochLength until epochMaxHeight) {
       var reward = baseReward.longValue()
       val halvings = height / halvingInterval
       for (_ <- 1L to halvings) {
         reward = reward >> 1
       }
-      result = result + reward
+      mcEpochRewardZennies = mcEpochRewardZennies + reward
     }
 
-    BigInteger.valueOf(result).divide(BigInteger.valueOf(10))
+    val mcEpochRewardWei = ZenWeiConverter.convertZenniesToWei(mcEpochRewardZennies)
+    mcEpochRewardWei.divide(getMcDistributionCapDivider)
   }
+
+  private def getMcDistributionCapDivider: BigInteger = MC_DISTRIBUTION_CAP_DIVIDER
 }
