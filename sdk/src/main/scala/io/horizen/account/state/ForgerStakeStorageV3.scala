@@ -19,7 +19,7 @@ import scala.collection.mutable.ListBuffer
 
 object ForgerStakeStorageV3 {
 
-  val ACCOUNT = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
+  val ACCOUNT: Address = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 
   def getForgerKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): Array[Byte] =
     Blake2b256.hash(Bytes.concat(blockSignProposition.pubKeyBytes(), vrfPublicKey.pubKeyBytes()))
@@ -48,11 +48,10 @@ object ForgerStakeStorageV3 {
 
     ForgerMap.addForger(view, forgerKey, blockSignProposition, vrfPublicKey, rewardShare, rewardAddress)
 
-    val forgerHistory = StakeHistory(forgerKey)
+    val forgerHistory = BaseStakeHistory(forgerKey)
     forgerHistory.addCheckpoint(view, epochNumber, stakedAmount)
 
-    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
-    val stakeHistory = StakeHistory(stakeKey)
+    val stakeHistory = getStakeHistory(delegatorPublicKey, forgerKey)
     stakeHistory.addCheckpoint(view, epochNumber, stakedAmount)
 
     addNewDelegator(view, forgerKey, delegatorPublicKey)
@@ -79,7 +78,7 @@ object ForgerStakeStorageV3 {
   }
 
 
-  def getPagedListOfForgers(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[ForgerInfoV3]) =
+  def getPagedListOfForgers(view: BaseAccountStateView, startPos: Int, pageSize: Int): PagedForgersListResponse =
     ForgerMap.getPagedListOfForgers(view, startPos, pageSize)
 
   def getForger(view: BaseAccountStateView, signKey: PublicKey25519Proposition, vrfKey: VrfPublicKey): Option[ForgerInfoV3] = {
@@ -95,15 +94,14 @@ object ForgerStakeStorageV3 {
                stakedAmount: BigInteger): Unit = {
 
     val forgerKey = getForgerKey(signKey, vrfPublicKey)
-    val forgerHistory = StakeHistory(forgerKey)
+    val forgerHistory = BaseStakeHistory(forgerKey)
     val forgerHistorySize =  forgerHistory.getSize(view)
     if (forgerHistorySize == 0)
       throw new ExecutionRevertedException(s"Forger doesn't exist.")
 
     forgerHistory.updateOrAddCheckpoint(view, forgerHistorySize, epochNumber, latestStake => latestStake.add(stakedAmount))
 
-    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
-    val stakeHistory = StakeHistory(stakeKey)
+    val stakeHistory = getStakeHistory(delegatorPublicKey, forgerKey)
     val stakeHistorySize = stakeHistory.getSize(view)
     stakeHistory.updateOrAddCheckpoint(view, stakeHistorySize, epochNumber, latestStake => latestStake.add(stakedAmount))
     if (stakeHistorySize == 0)
@@ -119,13 +117,12 @@ object ForgerStakeStorageV3 {
 
 
     val forgerKey = getForgerKey(blockSignProposition, vrfPublicKey)
-    val forgerHistory = StakeHistory(forgerKey)
+    val forgerHistory = BaseStakeHistory(forgerKey)
     val forgerHistorySize = forgerHistory.getSize(view)
     if (forgerHistorySize == 0)
       throw new ExecutionRevertedException("Forger doesn't exist.")
 
-    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
-    val stakeHistory = StakeHistory(stakeKey)
+    val stakeHistory = getStakeHistory(delegatorPublicKey, forgerKey)
     val stakeHistorySize = stakeHistory.getSize(view)
     if (stakeHistorySize == 0)
       throw new ExecutionRevertedException(s"Delegator ${BytesUtils.toHexString(delegatorPublicKey.toBytes)} doesn't have stake with the forger.")
@@ -142,20 +139,24 @@ object ForgerStakeStorageV3 {
     forgerHistory.updateOrAddCheckpoint(view, forgerHistorySize, epochNumber, subtractStake)
   }
 
-  def getAllForgerStakes(view: BaseAccountStateView): Seq[(PublicKey25519Proposition, VrfPublicKey, Address, BigInteger)] = {
+  private def getStakeHistory(delegatorPublicKey: Address, forgerKey: Array[Byte]): BaseStakeHistory = {
+    val stakeKey = getStakeKey(forgerKey, delegatorPublicKey)
+    BaseStakeHistory(stakeKey)
+  }
+
+  def getAllForgerStakes(view: BaseAccountStateView): Seq[ForgerStakeData] = {
     val listOfForgerKeys = ForgerMap.getKeys(view)
     listOfForgerKeys.flatMap { forgerKey =>
       val forger = ForgerMap(view, forgerKey)
       val delegatorList = DelegatorList(forgerKey)
       val delegatorSize = delegatorList.getSize(view)
-      val listOfStakes: ListBuffer[(PublicKey25519Proposition, VrfPublicKey, Address, BigInteger)] = ListBuffer()
+      val listOfStakes: ListBuffer[ForgerStakeData] = ListBuffer()
       for (idx <- 0 until delegatorSize) {
         val delegator = delegatorList.getDelegatorAt(view, idx).address()
-        val stakeKey = getStakeKey(forgerKey, delegator)
-        val stakeHistory = StakeHistory(stakeKey)
+        val stakeHistory = getStakeHistory(delegator, forgerKey)
         val amount = stakeHistory.getLatestAmount(view)
         if (amount.signum() == 1)
-          listOfStakes.append((forger.forgerPublicKeys.blockSignPublicKey, forger.forgerPublicKeys.vrfPublicKey, delegator, amount))
+          listOfStakes.append(ForgerStakeData(forger.forgerPublicKeys, new AddressProposition(delegator), amount))
       }
       listOfStakes
     }
@@ -164,7 +165,7 @@ object ForgerStakeStorageV3 {
   }
 
 
-  case class StakeHistory(uid: Array[Byte])
+  case class BaseStakeHistory(uid: Array[Byte])
     extends StateDbArray(ACCOUNT, Blake2b256.hash(Bytes.concat(uid, "History".getBytes("UTF-8")))) {
 
     def addCheckpoint(view: BaseAccountStateView, epoch: Int, stakeAmount: BigInteger): Unit = {
@@ -364,12 +365,11 @@ object ForgerMap {
   }
 
   def apply(view: BaseAccountStateView, forgerKey: Array[Byte]): ForgerInfoV3 = {
-    val forgerData = view.getAccountStorage(ACCOUNT, forgerKey)
     ForgerInfoV3Serializer.parseBytes(view.getAccountStorageBytes(ACCOUNT, forgerKey))
   }
 
 
-  def getPagedListOfForgers(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[ForgerInfoV3]) = {
+  def getPagedListOfForgers(view: BaseAccountStateView, startPos: Int, pageSize: Int): PagedForgersListResponse = {
 
     val listSize = getSize(view)
     if (startPos < 0)
@@ -378,7 +378,7 @@ object ForgerMap {
       throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
 
     if (startPos == 0 && listSize == 0)
-      return (-1, Seq.empty[ForgerInfoV3])
+      return PagedForgersListResponse(-1, Seq.empty[ForgerInfoV3])
 
     if (startPos > listSize-1)
       throw new IllegalArgumentException(s"Invalid start position: $startPos, array size: $listSize")
@@ -397,8 +397,10 @@ object ForgerMap {
       endPos = -1
     }
 
-    (endPos, listOfElems)
+    PagedForgersListResponse(endPos, listOfElems)
   }
 
 
 }
+
+case class PagedForgersListResponse(nextStartPos: Int, forgers: Seq[ForgerInfoV3])
