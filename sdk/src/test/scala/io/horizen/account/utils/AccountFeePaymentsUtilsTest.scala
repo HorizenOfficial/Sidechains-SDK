@@ -3,7 +3,7 @@ package io.horizen.account.utils
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.utils.AccountFeePaymentsUtils.{getForgersRewards, getMainchainWithdrawalEpochDistributionCap}
 import io.horizen.fixtures._
-import io.horizen.params.{MainNetParams, TestNetParams}
+import io.horizen.params.MainNetParams
 import io.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._

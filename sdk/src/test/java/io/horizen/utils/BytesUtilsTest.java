@@ -297,7 +297,7 @@ public class BytesUtilsTest {
                 0,  null,null, null,
                 null, null, null,
                 null, false, null, null,
-                11111111, true, false, true, 0, 2000, false, Option.empty());
+                11111111, true, false, true, 0, 840000, false, Option.empty());
         String pubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";
         byte[] expectedPublicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
@@ -346,7 +346,7 @@ public class BytesUtilsTest {
         }
 
         // Test 3: valid TestNet addresses in TestNet network
-        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, 2000, false, null);
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, 840000, false, null);
         String pubKeyAddressTestNet = BytesUtils.toHorizenPublicKeyAddress(expectedPublicKeyHashBytes, testNetParams);
         assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
                 expectedPublicKeyHashBytes,
@@ -396,7 +396,7 @@ public class BytesUtilsTest {
 
 
         // Test 2: valid TestNet addresses in TestNet network
-        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, 2000, false, Option.empty());
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, null, null, CircuitTypes.NaiveThresholdSignatureCircuit(),0, null, null, null, null, null, null, null, false, null, null, 11111111, true, false, true, 0, 840000, false, Option.empty());
 
         byte[] publicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
         String expectedPubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";
