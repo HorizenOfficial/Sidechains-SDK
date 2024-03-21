@@ -29,7 +29,7 @@ case class MockedRpcProcessor(mockedSidechainNodeViewHolderRef: ActorRef,
       params,
       mockedSidechainSettings.ethService,
       mockedSidechainSettings.sparkzSettings.network.maxIncomingConnections,
-      RpcUtils.getClientVersion,
+      RpcUtils.getClientVersion("dev"),
       mockedSidechainTransactionActorRef,
       mockedSyncStatusActorRef,
       sidechainTransactionsCompanion

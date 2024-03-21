@@ -248,7 +248,7 @@ case class SidechainNodeApiRoute[
             nodeType = nodeTypes,
             protocolVersion = protocolVersion,
             agentName = agentName,
-            sdkVersion = RpcUtils.getClientVersion,
+            sdkVersion = RpcUtils.getClientVersion(appVersion),
             nodeVersion = if (appVersion != "") Option(appVersion) else Option.empty,
             scId = sidechainId,
             scType = if (params.isNonCeasing) "non ceasing" else "ceasing",

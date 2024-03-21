@@ -35,7 +35,7 @@ class SCEvmRpcWeb3Methods(AccountChainSetup):
 
         # Check web3_clientVersion
         clientVersion = str(sc_node_1.rpc_web3_clientVersion()['result'])
-        assert_true(clientVersion.startswith('sidechains-sdk/'))
+        assert_true(clientVersion.startswith('dev/'))
         clientVersion = clientVersion.split("/")
         # Check that sdk version has at least three digits
         assert_true(re.search(r'\d.*\d.*\d', clientVersion[1]))

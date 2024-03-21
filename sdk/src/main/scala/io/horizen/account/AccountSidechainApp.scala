@@ -170,7 +170,7 @@ class AccountSidechainApp @Inject()
       params,
       sidechainSettings.ethService,
       sidechainSettings.sparkzSettings.network.maxIncomingConnections,
-      RpcUtils.getClientVersion,
+      RpcUtils.getClientVersion(appVersion),
       sidechainTransactionActorRef,
       syncStatusActorRef,
       sidechainTransactionsCompanion
