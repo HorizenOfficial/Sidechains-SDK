@@ -1,19 +1,19 @@
 package io.horizen.account.state.nativescdata.forgerstakev2
 
 import io.horizen.account.abi.{ABIDecoder, ABIEncodable, MsgProcessorInputDecoder}
-import io.horizen.account.state.{AddNewStakeCmdInput, ForgerPublicKeys}
-import io.horizen.evm.Address
-import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import io.horizen.account.state.ForgerPublicKeys
+import io.horizen.proposition.PublicKey25519Proposition
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256, Uint32}
-import org.web3j.abi.datatypes.{StaticStruct, Type, Address => AbiAddress}
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
+import org.web3j.abi.datatypes.{StaticStruct, Type}
 
 import java.math.BigInteger
 import java.util
 
 object WithdrawCmdInputDecoder
   extends ABIDecoder[WithdrawCmdInput]
-    with MsgProcessorInputDecoder[WithdrawCmdInput] {
+    with MsgProcessorInputDecoder[WithdrawCmdInput]
+    with VRFDecoder{
 
   override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
     org.web3j.abi.Utils.convert(util.Arrays.asList(
@@ -31,10 +31,6 @@ object WithdrawCmdInputDecoder
     WithdrawCmdInput(forgerPublicKeys, value)
   }
 
-  private[horizen] def decodeVrfKey(vrfFirst32Bytes: Bytes32, vrfLastByte: Bytes1): VrfPublicKey = {
-    val vrfinBytes = vrfFirst32Bytes.getValue ++ vrfLastByte.getValue
-    new VrfPublicKey(vrfinBytes)
-  }
 }
 
 case class WithdrawCmdInput(forgerPublicKeys: ForgerPublicKeys, value: BigInteger) extends ABIEncodable[StaticStruct] {

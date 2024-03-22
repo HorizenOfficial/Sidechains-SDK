@@ -113,6 +113,9 @@ case class ForgerPublicKeys(
     )
   }
 
+  override def toString: String = "%s(blockSignPublicKey: %s, vrfPublicKey: %s)"
+    .format(this.getClass.toString, blockSignPublicKey, vrfPublicKey)
+
   override def serializer: SparkzSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
 
 }
