@@ -30,7 +30,7 @@ object MessageProcessorUtil {
 
     Seq(McAddrOwnershipMsgProcessor(params)) ++
     maybeProxyMsgProcessor.toSeq ++
-    Seq(ForgerStakeV2MsgProcessor(params)) ++
+    Seq(ForgerStakeV2MsgProcessor) ++
     Seq(EoaMessageProcessor,
         WithdrawalMsgProcessor,
         ForgerStakeMsgProcessor(params),

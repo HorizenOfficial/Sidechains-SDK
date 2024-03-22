@@ -91,6 +91,27 @@ trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandle
     result.get
   }
 
+  /**
+   * Creates a large temporary gas pool and verifies the amount of total gas consumed.
+   * It uses StateTransition instead of TestContext in order to allow calls between smart contracts.
+   */
+  def assertGasInterop(
+                 expectedGas: BigInteger,
+                 msg: Message,
+                 view: AccountStateView,
+                 processors: Seq[MessageProcessor],
+                 ctx: BlockContext,
+               ): Array[Byte] = {
+    view.setupAccessList(msg, ctx.forgerAddress, new ForkRules(true))
+    val gas = new GasPool(1000000000)
+    val transition = new StateTransition(view, processors, gas, ctx, msg)
+    val result = Try.apply(transition.execute(Invocation.fromMessage(msg, gas)))
+    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+    // return result or rethrow any exception
+    result.get
+  }
+
+
   def getEventSignature(eventABISignature: String): Array[Byte] =
     org.web3j.utils.Numeric.hexStringToByteArray(EventEncoder.buildEventSignature(eventABISignature))
 

@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import io.horizen.account.state.ForgerStakeStorageV3.ACCOUNT
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.utils.BigIntegerUInt256
+import io.horizen.account.utils.{BigIntegerUInt256, BigIntegerUtil}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -20,6 +20,23 @@ import scala.collection.mutable.ListBuffer
 object ForgerStakeStorageV3 {
 
   val ACCOUNT = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
+
+  val ForgerStakeVersionKey: Array[Byte] = Blake2b256.hash("ForgerStakeVersion")
+
+  def saveStorageVersion(view: BaseAccountStateView, version: ForgerStakeStorageVersion.ForgerStakeStorageVersion): Array[Byte]  = {
+    val ver = BigIntegerUtil.toUint256Bytes(BigInteger.valueOf(version.id))
+    view.updateAccountStorage(ACCOUNT, ForgerStakeVersionKey, ver)
+    ver
+  }
+
+  def getStorageVersionFromDb(view: BaseAccountStateView): ForgerStakeStorageVersion.ForgerStakeStorageVersion = {
+    val version = view.getAccountStorage(ACCOUNT, ForgerStakeVersionKey)
+    ForgerStakeStorageVersion(new BigInteger(1, version).intValueExact()) match {
+      case ForgerStakeStorageVersion.VERSION_3 => ForgerStakeStorageVersion.VERSION_3
+      case ForgerStakeStorageVersion.VERSION_2 => ForgerStakeStorageVersion.VERSION_2 //TODO what is the default?
+      case _ => ForgerStakeStorageVersion.VERSION_1
+    }
+  }
 
   def getForgerKey(blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): Array[Byte] =
     Blake2b256.hash(Bytes.concat(blockSignProposition.pubKeyBytes(), vrfPublicKey.pubKeyBytes()))

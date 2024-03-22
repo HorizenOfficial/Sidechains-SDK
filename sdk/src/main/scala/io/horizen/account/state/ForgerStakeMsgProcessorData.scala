@@ -21,6 +21,7 @@ import sparkz.util.serialization.{Reader, Writer}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters.collectionAsScalaIterableConverter
 
 @JsonView(Array(classOf[Views.Default]))
 // used as element of the list to return when getting all forger stakes via msg processor
@@ -73,6 +74,33 @@ case class AccountForgingStakeInfo(
 object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo, StaticStruct]{
   override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
 }
+
+case class AccountForgingStakeInfoList(listOfStakes: Seq[AccountForgingStakeInfo]){
+  override def toString: String = "%s(listOfStakes: %s)".format(this.getClass.toString, listOfStakes)
+}
+
+
+object AccountForgingStakeInfoListDecoder extends ABIDecoder[AccountForgingStakeInfoList]
+  with MsgProcessorInputDecoder[AccountForgingStakeInfoList] {
+
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[DynamicArray[AccountForgingStakeInfoABI]]() {}
+    ))
+
+  override def createType(listOfParams: util.List[Type[_]]): AccountForgingStakeInfoList = {
+    val listOfStaticStruct = listOfParams.get(0).asInstanceOf[DynamicArray[AccountForgingStakeInfoABI]].getValue.asScala
+    val list = listOfStaticStruct.map(x => AccountForgingStakeInfo(x.stakeId,
+      ForgerStakeData(
+        ForgerPublicKeys(new PublicKey25519Proposition(x.pubKey),
+          new VrfPublicKey(x.vrf1 ++ x.vrf2)),
+        new AddressProposition(new Address(x.owner)),
+        x.amount)))
+    AccountForgingStakeInfoList(list.toSeq)
+  }
+}
+
+
 
 object AccountForgingStakeInfoSerializer extends SparkzSerializer[AccountForgingStakeInfo] {
 
