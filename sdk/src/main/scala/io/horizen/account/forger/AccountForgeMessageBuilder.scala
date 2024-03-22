@@ -6,7 +6,7 @@ import io.horizen.account.block.AccountBlock.calculateReceiptRoot
 import io.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import io.horizen.account.chain.AccountFeePaymentsInfo
 import io.horizen.account.companion.SidechainAccountTransactionsCompanion
-import io.horizen.account.fork.{Version1_2_0Fork, GasFeeFork}
+import io.horizen.account.fork.{GasFeeFork, Version1_2_0Fork, Version1_4_0Fork}
 import io.horizen.account.history.AccountHistory
 import io.horizen.account.mempool.{AccountMemoryPool, MempoolMap, TransactionsByPriceAndNonceIter}
 import io.horizen.account.proposition.AddressProposition
@@ -259,11 +259,14 @@ class AccountForgeMessageBuilder(
               require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
               val withdrawalEpochNumber: Int = WithdrawalEpochUtils.getWithdrawalEpochInfo(mainchainBlockReferencesData.size, dummyView.getWithdrawalEpochInfo, params).epoch
-
+              val distributionCap = if (Version1_4_0Fork.get(consensusEpochNumber).active) {
+                val mcLastBlockHeight = params.mainchainCreationBlockHeight + ((withdrawalEpochNumber + 1) * params.withdrawalEpochLength) - 1
+                AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params)
+              } else BigInteger.valueOf(Long.MaxValue)
               // get all previous payments for current ending epoch and append the one of the current block
-              val feePayments = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber, Some(currentBlockPayments))
+              val (feePayments, poolBalanceDistributed) = dummyView.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber, distributionCap, Some(currentBlockPayments))
 
-              dummyView.resetForgerPoolAndBlockCounters(consensusEpochNumber)
+              dummyView.subtractForgerPoolBalanceAndResetBlockCounters(consensusEpochNumber, poolBalanceDistributed)
 
               // add rewards to forgers balance
               feePayments.foreach(payment => dummyView.addBalance(payment.address.address(), payment.value))

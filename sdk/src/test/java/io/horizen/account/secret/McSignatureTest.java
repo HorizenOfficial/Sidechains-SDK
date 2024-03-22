@@ -124,7 +124,7 @@ public class McSignatureTest {
                         null, null, null,
                         null, null, false, null,
                         null, 0, false, false,
-                        false, 0, false, 0, Option.empty()));
+                        false, 0, 2000, false, 0, Option.empty()));
 
 
         System.out.println(computedTaddr);
@@ -286,7 +286,7 @@ public class McSignatureTest {
                         null, null, null,
                         null, null, false, null,
                         null, 0,false, false,
-                        false, 0, false, 0, Option.empty()));
+                        false, 0, 2000,  false, 0, Option.empty()));
 
 
         assertEquals(taddr, computedTaddr);

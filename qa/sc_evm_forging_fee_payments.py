@@ -15,7 +15,7 @@ from SidechainTestFramework.account.httpCalls.transaction.createLegacyTransactio
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from SidechainTestFramework.account.utils import convertZenToZennies, convertZenniesToWei, convertZenToWei, \
     computeForgedTxFee, FORGER_POOL_RECIPIENT_ADDRESS, VERSION_1_2_FORK_EPOCH, FORGER_STAKE_SMART_CONTRACT_ADDRESS, \
-    VERSION_1_3_FORK_EPOCH
+    VERSION_1_3_FORK_EPOCH, VERSION_1_4_FORK_EPOCH
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo, SCNetworkConfiguration, \
     SCCreationInfo, SCForgerConfiguration
 from SidechainTestFramework.sc_forging_util import check_mcreference_presence
@@ -238,7 +238,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # let assume a portion of the MC coinbase is sent to the SC as a contribution to the forger pool
         # this funds should not be distributed until fork happens at epoch 60
-        ft_pool_amount = 0.5
+        ft_pool_amount = 100
         ft_pool_amount_wei = convertZenToWei(ft_pool_amount)
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
@@ -368,18 +368,27 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
 
-        # Advance to epoch 60 to enable forger pool fork. First block will already be counted for the distribution
-        # Generate more blocks so that in total there were 5 blocks from node_1 and 3 blocks from node_2
-        self.advance_to_epoch(VERSION_1_2_FORK_EPOCH)
-        generate_next_blocks(sc_node_1, "first node", 4)
+        # Advance to epoch 80 to enable forger pool fork + forger pool distribution cap fork.
+        # First block will already be counted for the distribution.
+        # Generate more blocks so that in total there were 22 blocks from node_1 and 3 blocks from node_2
+        self.advance_to_epoch(VERSION_1_4_FORK_EPOCH)
+        generate_next_blocks(sc_node_1, "first node", 1)
         generate_next_blocks(sc_node_2, "second node", 2)
 
         mc_node.generate(self.withdrawalEpochLength)
         self.sc_sync_all()
         last_block_id = generate_next_block(sc_node_2, "second node")
         self.sc_sync_all()
-        per_block_fee = convertZenToWei(ft_pool_amount) // 8
-        node_1_fees = per_block_fee * 5
+
+        # 2500000000 = 12.5 * 10^8 * 20 * 0.1, where
+        # 12.5 * 10^8 - base mainchain coinbase reward
+        # 20 - withdrawal epoch length
+        # 0.1 - divider/coefficient (10% of sum of mainchain coinbase reward for last epoch)
+        mc_withdrawal_epoch_distribution_cap = 2500000000
+        distribution_cap = convertZenniesToWei(mc_withdrawal_epoch_distribution_cap)
+        per_block_fee = distribution_cap // 25
+        ft_pool_remaining = ft_pool_amount_wei - distribution_cap
+        node_1_fees = per_block_fee * 22
         node_2_fees = per_block_fee * 3
 
         sc_node_1_balance_before_payments = sc_node_1_balance_after_payments
@@ -396,7 +405,7 @@ class ScEvmForgingFeePayments(AccountChainSetup):
 
         # assert forger pool balance is 0 now, as the fees are distributed
         forger_pool_balance = int(self.sc_nodes[0].rpc_eth_getBalance(format_evm(FORGER_POOL_RECIPIENT_ADDRESS), 'latest')['result'], 16)
-        assert_equal(0, forger_pool_balance)
+        assert_equal(ft_pool_remaining, forger_pool_balance)
 
         fee_payments_api_response = http_block_getFeePayments(sc_node_1, last_block_id)['feePayments']
         assert_equal(node_1_fees, fee_payments_api_response[0]['value'])

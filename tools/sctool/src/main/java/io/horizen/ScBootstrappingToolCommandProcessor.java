@@ -937,11 +937,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, Option.empty());
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, null, null, circuitType,0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, 840000,  false, Option.empty());
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, Option.empty());
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, 840000, false, Option.empty());
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, false, 0, Option.empty());
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, null, null, circuitType, 0, null, null, null, null, null, null, null, false, null, null, 11111111,true, false, true, 0, 2000, false, 0, Option.empty());
 
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);

@@ -42,6 +42,7 @@ case class TestNetParams(
                           override val isNonCeasing: Boolean = false,
                           override val isHandlingTransactionsEnabled: Boolean = true,
                           override val mcBlockRefDelay: Int = 0,
+                          override val mcHalvingInterval: Int = 840000,
                           override val resetModifiersStatus: Boolean = false,
                           override val rewardAddress: Option[AddressProposition] = None,
                         ) extends NetworkParams {

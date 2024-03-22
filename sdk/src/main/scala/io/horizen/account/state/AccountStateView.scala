@@ -88,35 +88,38 @@ class AccountStateView(
   override def getFeePaymentsInfo(
       withdrawalEpoch: Int,
       consensusEpochNumber: ConsensusEpochNumber,
+      distributionCap: BigInteger,
       blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None
-  ): Seq[AccountPayment] = {
+  ): (Seq[AccountPayment], BigInteger) = {
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
-    val mcForgerPoolRewards = getMcForgerPoolRewards(consensusEpochNumber)
+    val mcForgerPoolRewards = getMcForgerPoolRewards(consensusEpochNumber, distributionCap)
+    val poolBalanceDistributed = mcForgerPoolRewards.values.foldLeft(BigInteger.ZERO)((a, b) => a.add(b))
     metadataStorageView.updateMcForgerPoolRewards(mcForgerPoolRewards)
-    AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards)
+    (AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq, mcForgerPoolRewards), poolBalanceDistributed)
   }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
-  def getMcForgerPoolRewards(consensusEpochNumber: ConsensusEpochNumber): Map[AddressProposition, BigInteger] = {
+  def getMcForgerPoolRewards(consensusEpochNumber: ConsensusEpochNumber, distributionCap: BigInteger): Map[AddressProposition, BigInteger] = {
     if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       val extraForgerReward = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
       if (extraForgerReward.signum() == 1) {
-          val counters: Map[AddressProposition, Long] = getForgerBlockCounters
-          val perBlockFee_remainder = extraForgerReward.divideAndRemainder(BigInteger.valueOf(counters.values.sum))
-          val perBlockFee = perBlockFee_remainder(0)
-          var remainder = perBlockFee_remainder(1)
-          //sort and add remainder based by block count
-          val forgerPoolRewards = counters.toSeq.sortBy(_._2)
-            .map { address_blocks =>
-              val blocks = BigInteger.valueOf(address_blocks._2)
-              val usedRemainder = remainder.min(blocks)
-              val reward = perBlockFee.multiply(blocks).add(usedRemainder)
-              remainder = remainder.subtract(usedRemainder)
-              (address_blocks._1, reward)
-            }
-          forgerPoolRewards.toMap
+        val availableReward = extraForgerReward.min(distributionCap)
+        val counters: Map[AddressProposition, Long] = getForgerBlockCounters
+        val perBlockFee_remainder = availableReward.divideAndRemainder(BigInteger.valueOf(counters.values.sum))
+        val perBlockFee = perBlockFee_remainder(0)
+        var remainder = perBlockFee_remainder(1)
+        //sort and add remainder based by block count
+        val forgerPoolRewards = counters.toSeq.sortBy(_._2)
+          .map { address_blocks =>
+            val blocks = BigInteger.valueOf(address_blocks._2)
+            val usedRemainder = remainder.min(blocks)
+            val reward = perBlockFee.multiply(blocks).add(usedRemainder)
+            remainder = remainder.subtract(usedRemainder)
+            (address_blocks._1, reward)
+          }
+        forgerPoolRewards.toMap
       } else Map.empty
     } else Map.empty
   }
@@ -131,11 +134,16 @@ class AccountStateView(
     metadataStorageView.getForgerBlockCounters
   }
 
-  def resetForgerPoolAndBlockCounters(consensusEpochNumber: ConsensusEpochNumber): Unit = {
+  def subtractForgerPoolBalanceAndResetBlockCounters(consensusEpochNumber: ConsensusEpochNumber, poolBalanceDistributed: BigInteger): Unit = {
     if (Version1_2_0Fork.get(consensusEpochNumber).active) {
       val forgerPoolBalance = getBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS)
+      if (poolBalanceDistributed.compareTo(forgerPoolBalance) > 0) {
+        val errMsg = s"Trying to subtract more($poolBalanceDistributed) from the forger pool balance than available($forgerPoolBalance)"
+        log.error(errMsg)
+        throw new IllegalArgumentException(errMsg)
+      }
       if (forgerPoolBalance.signum() == 1) {
-        subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, forgerPoolBalance)
+        subBalance(WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS, poolBalanceDistributed)
         metadataStorageView.resetForgerBlockCounters()
       }
     }
