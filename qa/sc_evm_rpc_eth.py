@@ -209,6 +209,7 @@ class SCEvmRPCEth(AccountChainSetup):
             }
         ])
         code, result = do_rpc_call(sc_node, payload)
+        assert_equal(400, code)
         expected_result = [
             {'jsonrpc': '2.0', 'id': 1, 'result': '1000000001'},
             {'error': {'code': -32600, 'message': 'Invalid request: missing field: id', 'data': 'missing field: id'}, 'jsonrpc': '2.0', 'id': None}
