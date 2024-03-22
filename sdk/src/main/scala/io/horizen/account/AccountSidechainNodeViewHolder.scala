@@ -160,7 +160,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def getFeePaymentsInfo(state: MS, withdrawalEpochNumber: Int) : FPI = {
     val consensusEpochNumber: ConsensusEpochNumber = state.getCurrentConsensusEpochInfo._2.epoch
-    val feePayments = state.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber)
+    val (feePayments, _) = state.getFeePaymentsInfo(withdrawalEpochNumber, consensusEpochNumber)
     AccountFeePaymentsInfo(feePayments)
   }
 

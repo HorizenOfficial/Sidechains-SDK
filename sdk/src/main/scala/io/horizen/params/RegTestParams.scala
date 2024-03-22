@@ -41,6 +41,7 @@ case class RegTestParams(
                           override val isNonCeasing: Boolean = false,
                           override val isHandlingTransactionsEnabled: Boolean = true,
                           override val mcBlockRefDelay: Int = 0,
+                          override val mcHalvingInterval: Int = 2000,
                           override val resetModifiersStatus: Boolean = false,
                           override val maxHistoryRewritingLength: Int = MAX_HISTORY_REWRITING_LENGTH,
                           override val rewardAddress: Option[AddressProposition] = None,

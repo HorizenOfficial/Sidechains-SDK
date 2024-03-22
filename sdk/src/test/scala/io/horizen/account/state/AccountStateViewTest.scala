@@ -172,11 +172,11 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     when(stateDb.getBalance(FORGER_POOL_RECIPIENT_ADDRESS)).thenReturn(BigInteger.valueOf(1000L))
     when(metadataStorageView.getForgerBlockCounters).thenAnswer(_ => blockCounters)
-    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0))
+    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0),BigInteger.valueOf(Long.MaxValue))
     assertTrue(rewardsBeforeFork.isEmpty)
 
     when(metadataStorageView.getConsensusEpochNumber).thenAnswer(_ => Some(36))
-    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36))
+    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36), BigInteger.valueOf(Long.MaxValue))
     assertEquals(3, rewardsAfterFork.size)
     assertEquals(BigInteger.valueOf(200L), rewardsAfterFork(addr1))
     assertEquals(BigInteger.valueOf(300L), rewardsAfterFork(addr2))

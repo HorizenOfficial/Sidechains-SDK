@@ -73,6 +73,10 @@ public class AppForkConfigurator extends ForkConfigurator {
             new Pair<>(
                     new SidechainForkConsensusEpoch(70, 70, 70),
                     new Version1_3_0Fork(true)
+            ),
+            new Pair<>(
+                    new SidechainForkConsensusEpoch(80, 80, 80),
+                    new Version1_4_0Fork(true)
             )
         );
     }
