@@ -43,12 +43,7 @@ case class RpcProcessor(rpcHandler: RpcHandler) extends SparkzLogging {
     })
 
     val json = if (jsonIsArray) {
-      if (hasError) {
-        // if any error has occurred, just reply with one single error message
-        EthJsonMapper.serialize(new RpcResponseError(new RpcId(), RpcError.fromCode(RpcCode.InvalidRequest)))
-      } else {
-        EthJsonMapper.serialize(responses)
-      }
+      EthJsonMapper.serialize(responses)
     } else {
       EthJsonMapper.serialize(responses.head)
     }

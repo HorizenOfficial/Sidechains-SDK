@@ -194,7 +194,7 @@ class SCEvmRPCEth(AccountChainSetup):
         check_result(code, result, expected_http_code=200, expected_string_in_result='Method',
                      expected_rpc_code=METHOD_NOT_FOUND_CODE)
 
-        # batch request with a failure, the expected output is a single error json (TODO check this behaviour)
+        # batch request with a failure, the expected output is an Array containing the corresponding Response objects
         payload = json.dumps([
             {
                 "jsonrpc": "2.0",
@@ -209,9 +209,11 @@ class SCEvmRPCEth(AccountChainSetup):
             }
         ])
         code, result = do_rpc_call(sc_node, payload)
-        check_result(code, result, expected_http_code=400, expected_string_in_result='Invalid request',
-                     expected_rpc_code=INVALID_REQUEST_CODE)
-        expected_result = {'error': {'code': -32600, 'message': 'Invalid request'}, 'jsonrpc': '2.0', 'id': None}
+        assert_equal(400, code)
+        expected_result = [
+            {'jsonrpc': '2.0', 'id': 1, 'result': '1000000001'},
+            {'error': {'code': -32600, 'message': 'Invalid request: missing field: id', 'data': 'missing field: id'}, 'jsonrpc': '2.0', 'id': None}
+        ]
         assert_equal(expected_result, result)
 
         # empty batch request
@@ -220,11 +222,13 @@ class SCEvmRPCEth(AccountChainSetup):
         check_result(code, result, expected_http_code=400, expected_string_in_result='Invalid request',
                      expected_rpc_code=INVALID_REQUEST_CODE)
 
-        # batch request with just a failure, the expected output is a single error json
+        # batch request with just a failure, the expected output is a an array with a single error json
         payload = json.dumps([1])
         code, result = do_rpc_call(sc_node, payload)
         assert_equal(400, code)
-        expected_result = {'error': {'code': -32600, 'message': 'Invalid request'}, 'jsonrpc': '2.0', 'id': None}
+        expected_result = [
+            {'error': {'code': -32600, 'message': 'Invalid request: missing field: id', 'data': 'missing field: id'}, 'jsonrpc': '2.0', 'id': None}
+        ]
         assert_equal(expected_result, result)
 
         # batch with a single request, the response should be a json array with a single result (not just a result)

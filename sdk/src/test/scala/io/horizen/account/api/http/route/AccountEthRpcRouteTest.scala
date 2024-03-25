@@ -113,7 +113,10 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":8,"method":"eth_chainId","params":[]},
           {"jsonrpc":"2.0","method":"eth_chainId","params":[]}
         ]""",
-        s"""{"error":{"code":-32600,"message":"Invalid request"},"jsonrpc":"2.0","id":null}""",
+        s"""[
+           {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
+           {"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"},"jsonrpc":"2.0","id":null}
+        ]""".stripMargin,
         expectedHttpCode = StatusCodes.BadRequest.intValue
       )
     }
@@ -125,7 +128,11 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           24,
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
-        s"""{"error":{"code":-32600,"message":"Invalid request"},"jsonrpc":"2.0","id":null}""",
+        s"""[
+           {"jsonrpc":"2.0","id":8,"result":"$checkChainId"},
+           {"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"},"jsonrpc":"2.0","id":null},
+           {"jsonrpc":"2.0","id":16,"result":"0x1fca055"}
+        ]""".stripMargin,
         expectedHttpCode = StatusCodes.BadRequest.intValue
       )
     }
@@ -137,7 +144,11 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           16,
           24
         ]""",
-        """{"error":{"code":-32600,"message":"Invalid request"},"jsonrpc":"2.0","id":null}""",
+        """[
+          {"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"},"jsonrpc":"2.0","id":null},
+          {"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"},"jsonrpc":"2.0","id":null},
+          {"error":{"code":-32600,"message":"Invalid request: missing field: id","data":"missing field: id"},"jsonrpc":"2.0","id":null}
+        ]""".stripMargin,
         expectedHttpCode = StatusCodes.BadRequest.intValue
       )
     }
@@ -164,7 +175,10 @@ class AccountEthRpcRouteTest extends AccountEthRpcRouteMock {
           {"jsonrpc":"2.0","id":-258,"method":"eth_chainId","params":[]},
           {"jsonrpc":"2.0","id":16,"method":"eth_chainId","params":[]}
         ]""",
-        s"""{"error":{"code":-32600,"message":"Invalid request"},"jsonrpc":"2.0","id":null}""",
+        s"""[
+           {"error":{"code":-32600,"message":"Invalid request: Rpc Id can't be a negative number","data":"Rpc Id can't be a negative number"},"jsonrpc":"2.0","id":null},
+           {"jsonrpc":"2.0","id":16,"result":"$checkChainId"}
+        ]""".stripMargin,
         expectedHttpCode = StatusCodes.BadRequest.intValue
       )
     }
