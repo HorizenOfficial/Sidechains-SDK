@@ -119,5 +119,5 @@ interface ForgerStakesV2 {
     */
     function getCurrentConsensusEpoch() external view returns (uint32 epoch);
 
-    function upgrade(int32 newVersion) external returns (int32 upgradedVersion);
+    function activate() external;
 }

@@ -390,7 +390,7 @@ object ForgerStakeStorage {
 
 object ForgerStakeStorageVersion extends Enumeration {
   type ForgerStakeStorageVersion = Value
-  val VERSION_1, VERSION_2, VERSION_3 = Value
+  val VERSION_1, VERSION_2 = Value
 }
 
 case class OwnerStakeInfo(owner: AddressProposition)

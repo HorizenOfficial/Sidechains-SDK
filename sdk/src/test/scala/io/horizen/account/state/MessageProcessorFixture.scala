@@ -3,8 +3,8 @@ package io.horizen.account.state
 import io.horizen.account.AccountFixture
 import io.horizen.account.fork.GasFeeFork.DefaultGasFeeFork
 import io.horizen.account.storage.AccountStateMetadataStorageView
-import io.horizen.consensus.{ConsensusEpochInfo, intToConsensusEpochNumber}
-import io.horizen.evm.{Address, ForkRules, Hash, MemoryDatabase, StateDB}
+import io.horizen.consensus.intToConsensusEpochNumber
+import io.horizen.evm._
 import io.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.mockito.Mockito
@@ -15,7 +15,7 @@ import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 import java.math.BigInteger
 import java.util.Optional
 import scala.language.implicitConversions
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 trait MessageProcessorFixture extends AccountFixture with ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]

@@ -2,11 +2,12 @@ package io.horizen.account.state.nativescdata.forgerstakev2
 
 import com.google.common.primitives.Bytes
 import io.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import io.horizen.account.state.ForgerStakeStorage.DisabledKey
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state._
 import io.horizen.account.state.nativescdata.forgerstakev2.StakeStorage.{ACCOUNT, ForgerKey}
-import io.horizen.account.utils.BigIntegerUInt256
-import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
+import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS}
+import io.horizen.account.utils.{BigIntegerUInt256, BigIntegerUtil}
 import io.horizen.evm.Address
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import io.horizen.utils.BytesUtils
@@ -21,6 +22,19 @@ import scala.collection.mutable.ListBuffer
 object StakeStorage {
 
   val ACCOUNT: Address = FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
+
+  val ActivationKey: Array[Byte] = Blake2b256.hash("Activate")
+
+  def isActive(view: BaseAccountStateView): Boolean = {
+    val activated = view.getAccountStorage(ACCOUNT, ActivationKey)
+    new BigInteger(1, activated) == BigInteger.ONE
+  }
+
+  def setActive(view: BaseAccountStateView): Unit  = {
+    val activated = BigIntegerUtil.toUint256Bytes(BigInteger.ONE)
+    view.updateAccountStorage(ACCOUNT, ActivationKey, activated)
+  }
+
 
   def addForger(view: BaseAccountStateView,
                 blockSignProposition: PublicKey25519Proposition,

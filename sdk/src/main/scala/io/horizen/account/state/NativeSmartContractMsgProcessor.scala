@@ -1,5 +1,6 @@
 package io.horizen.account.state
 
+import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getArgumentsFromData}
 import io.horizen.account.state.events.EthereumEvent
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
 import io.horizen.evm.Address
@@ -35,9 +36,17 @@ abstract class NativeSmartContractMsgProcessor extends MessageProcessor with Spa
     EthereumEvent.getEthereumConsensusDataLog(contractAddress, event)
   }
 
-  def requireIsNotPayable(invocation: Invocation): Unit = if (invocation.value.signum() != 0) {
-    throw new ExecutionRevertedException("Call value must be zero")
+  def requireIsNotPayable(invocation: Invocation): Unit = if (invocation.value.signum() != 0) throw new ExecutionRevertedException("Call value must be zero")
+
+  def checkInputDoesntContainParams(invocation: Invocation): Unit = {
+    // check we have no other bytes after the op code in the msg data
+    if (getArgumentsFromData(invocation.input).length > 0) {
+      val msgStr = s"invalid msg data length: ${invocation.input.length}, expected $METHOD_ID_LENGTH"
+      log.debug(msgStr)
+      throw new ExecutionRevertedException(msgStr)
+    }
   }
+
 }
 
 object NativeSmartContractMsgProcessor {

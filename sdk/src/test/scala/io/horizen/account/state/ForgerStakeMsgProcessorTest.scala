@@ -2335,6 +2335,8 @@ class ForgerStakeMsgProcessorTest
       }
       assertEquals(s"Authorization failed", exc.getMessage)
 
+      // Test that disable can be called not only by Forger stake contract V2 address but it needs also the hashcode (i.e.
+      // that it is initialized)
       msg = getMessage(
         contractAddress, 0, BytesUtils.fromHexString(DisableCmd), nonce, WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
 
