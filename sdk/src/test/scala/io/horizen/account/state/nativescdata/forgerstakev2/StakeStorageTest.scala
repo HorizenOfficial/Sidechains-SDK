@@ -632,6 +632,58 @@ class StakeStorageTest
     }
   }
 
+  @Test
+  def testDuplicateCheckpoints(): Unit = {
+    usingView { view =>
+
+      createSenderAccount(view, BigInteger.TEN, FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS)
+
+      // Register the forger and try again removing stakes
+      val rewardAddress = new Address("0xaaa0000123000000000011112222aaaa22222222")
+      val rewardShare = 93
+      val initialEpochNumber = 125869
+      val initialStakeAmount = BigInteger.valueOf(5358869)
+
+      StakeStorage.addForger(view, blockSignerProposition1, vrfPublicKey1, rewardShare, rewardAddress, initialEpochNumber, delegator1, initialStakeAmount)
+
+      // Remove and then add again the same amount in the same epoch of the registration. Check everything works
+
+      val stakeAmount1 = BigInteger.valueOf(5358869)
+
+      StakeStorage.removeStake(view, blockSignerProposition1, vrfPublicKey1, initialEpochNumber, delegator1, stakeAmount1)
+      StakeStorage.addStake(view, blockSignerProposition1, vrfPublicKey1, initialEpochNumber, delegator1, stakeAmount1)
+
+      var listOfExpectedForger1Checkpoints = StakeCheckpoint(initialEpochNumber, initialStakeAmount) :: Nil
+      var listOfExpectedD1F1Checkpoints = StakeCheckpoint(initialEpochNumber, initialStakeAmount) :: Nil
+
+      val forger1History = ForgerStakeHistory(forger1Key)
+      checkStakeHistory(view, forger1History, listOfExpectedForger1Checkpoints)
+
+      val stakeHistory_d1_f1 = StakeHistory(forger1Key, delegator1)
+      checkStakeHistory(view, stakeHistory_d1_f1, listOfExpectedD1F1Checkpoints)
+
+      // Let's do the same but in another epoch. The stake history should not becomes bigger
+
+      val epochNumber1 = 135869
+      StakeStorage.removeStake(view, blockSignerProposition1, vrfPublicKey1, epochNumber1, delegator1, stakeAmount1)
+      StakeStorage.addStake(view, blockSignerProposition1, vrfPublicKey1, epochNumber1, delegator1, stakeAmount1)
+
+      checkStakeHistory(view, forger1History, listOfExpectedForger1Checkpoints)
+      checkStakeHistory(view, stakeHistory_d1_f1, listOfExpectedD1F1Checkpoints)
+
+      // Add again another stake in the same epoch. Check that we have a new checkpoint
+      val stakeAmount2 = BigInteger.valueOf(5555555)
+      StakeStorage.addStake(view, blockSignerProposition1, vrfPublicKey1, epochNumber1, delegator1, stakeAmount2)
+
+      listOfExpectedForger1Checkpoints = listOfExpectedForger1Checkpoints :+ StakeCheckpoint(epochNumber1, initialStakeAmount.add(stakeAmount2))
+      listOfExpectedD1F1Checkpoints = listOfExpectedD1F1Checkpoints :+ StakeCheckpoint(epochNumber1, initialStakeAmount.add(stakeAmount2))
+
+      checkStakeHistory(view, forger1History, listOfExpectedForger1Checkpoints)
+      checkStakeHistory(view, stakeHistory_d1_f1, listOfExpectedD1F1Checkpoints)
+
+    }
+  }
+
 
   @Test
   def testGetAllForgerStakes(): Unit = {

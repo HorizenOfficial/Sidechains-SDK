@@ -16,7 +16,7 @@ class StateDbArray(val account: Address, val keySeed: Array[Byte]) {
     size
   }
 
-  private def updateSize(view: BaseAccountStateView, newSize: Int): Unit = {
+  protected def updateSize(view: BaseAccountStateView, newSize: Int): Unit = {
     val paddedSize = BigIntegerUtil.toUint256Bytes(BigInteger.valueOf(newSize))
     view.updateAccountStorage(account, baseArrayKey, paddedSize)
   }
