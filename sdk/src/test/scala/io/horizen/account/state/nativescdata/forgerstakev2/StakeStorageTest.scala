@@ -1,8 +1,9 @@
 package io.horizen.account.state.nativescdata.forgerstakev2
 
 import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.ForgerStakeStorageV2.getPagedForgersStakesByForger
 import io.horizen.account.state._
-import io.horizen.account.state.nativescdata.forgerstakev2.StakeStorage.{BaseStakeHistory, DelegatorKey, DelegatorList, ForgerKey, DelegatorListOfForgerKeys, ForgerStakeHistory, StakeHistory}
+import io.horizen.account.state.nativescdata.forgerstakev2.StakeStorage.{BaseStakeHistory, DelegatorKey, DelegatorList, DelegatorListOfForgerKeys, ForgerKey, ForgerStakeHistory, StakeHistory}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter
 import io.horizen.evm.Address
@@ -744,6 +745,10 @@ class StakeStorageTest
       listOfExpectedData = listOfExpectedData.slice(1, listOfExpectedData.size)
       listOfStakes = StakeStorage.getAllForgerStakes(view)
       assertEquals(listOfExpectedData, listOfStakes)
+
+      // TODO - Go on with test
+      val qqq = getPagedForgersStakesByForger(view, ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2), 0, 5)
+      qqq.toString()
     }
   }
 

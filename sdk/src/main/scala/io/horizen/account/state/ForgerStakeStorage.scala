@@ -7,7 +7,8 @@ import io.horizen.account.state.ForgerStakeStorage.saveStorageVersion
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.WithdrawalMsgProcessor.calculateKey
-import io.horizen.account.utils.BigIntegerUtil
+import io.horizen.account.state.nativescdata.forgerstakev2.StakeStorage.{DelegatorList, ForgerKey, StakeHistory}
+import io.horizen.account.utils.{AccountPayment, BigIntegerUtil}
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.evm.Address
 import io.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
@@ -45,6 +46,7 @@ trait ForgerStakeStorage {
 
   def getListOfForgersStakes(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
   def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
+  def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment])
 
   def addForgerStake(view: BaseAccountStateView, stakeId: Array[Byte],
                      blockSignProposition: PublicKey25519Proposition,
@@ -143,6 +145,9 @@ object ForgerStakeStorageV1 extends ForgerStakeStorage {
   override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =
     throw new IllegalArgumentException(s"Method not supported before fork point 1_3")
 
+  override def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment]) =
+    throw new IllegalArgumentException(s"Method not supported before fork point 1_4")
+
 }
 
 /*
@@ -203,6 +208,38 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
     (endPos, stakeList)
   }
 
+  override def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment]) = {
+
+    if (startPos < 0)
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos can not be negative")
+    if (pageSize <= 0)
+      throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
+
+    val forgerKey = ForgerKey(forger.blockSignPublicKey, forger.vrfPublicKey)
+    val listOfDelegators = DelegatorList(forgerKey)
+
+    val numOfDelegators = listOfDelegators.getSize(view)
+    if (startPos > numOfDelegators-1)
+      throw new IllegalArgumentException(s"Invalid position where to start reading list of delegators: $startPos, delegators array size: $numOfDelegators")
+
+    var endPos = startPos + pageSize
+    if (endPos > numOfDelegators)
+      endPos = numOfDelegators
+
+    val resultList = (startPos until endPos).map(index => {
+      val delegatorKey = listOfDelegators.getDelegatorAt(view, index)
+      val stakeHistory = StakeHistory(forgerKey, delegatorKey)
+      val amount = stakeHistory.getLatestAmount(view)
+      AccountPayment(new AddressProposition(delegatorKey), amount)
+    })
+
+    if (endPos == numOfDelegators) {
+      // tell the caller we are done with the array
+      endPos = -1
+    }
+
+    (endPos, resultList)
+  }
 
   override def addForgerStake(view: BaseAccountStateView,
                               stakeId: Array[Byte],

@@ -1,6 +1,7 @@
 package io.horizen.account.state
 
 import io.horizen.account.state.receipt.EthereumConsensusDataLog
+import io.horizen.account.utils.AccountPayment
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
 import io.horizen.evm.{Address, ResourceHandle}
 
@@ -24,6 +25,7 @@ trait AccountStateReader {
 
   def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
   def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
+  def getPagedForgersStakesByForger(forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment])
   def getForgerStakeData(stakeId: String, isForkV1_3Active: Boolean): Option[ForgerStakeData]
   def isForgingOpen: Boolean
   def isForgerStakeAvailable(isForkV1_3Active: Boolean): Boolean

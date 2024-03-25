@@ -432,7 +432,9 @@ class AccountState(
 
   override def getListOfForgersStakes(isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgersStakes(isForkV1_3Active))
 
-  override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =  using(getView)(_.getPagedListOfForgersStakes(startPos, pageSize))
+  override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = using(getView)(_.getPagedListOfForgersStakes(startPos, pageSize))
+
+  override def getPagedForgersStakesByForger(forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment]) = using(getView)(_.getPagedForgersStakesByForger(forger, startPos, pageSize))
 
   override def getAllowedForgerList: Seq[Int] = using(getView)(_.getAllowedForgerList)
 
