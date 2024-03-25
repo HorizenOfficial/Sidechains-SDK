@@ -157,8 +157,19 @@ object StakeStorage {
         val lastCheckpoint = getCheckpoint(view, lastElemIndex)
         val newAmount = op(lastCheckpoint.stakedAmount)
         if (lastCheckpoint.fromEpochNumber == epoch) {
-          val checkpoint = StakeCheckpoint(epoch, newAmount)
-          updateValue(view, lastElemIndex, checkpointToPaddedBytes(checkpoint))
+          // Let's check if the newAmount is the same og the previous checkpoint. In that case, this last checkpoint
+          // is removed.
+          val secondLastCheckpointIdx = lastElemIndex - 1
+          if (secondLastCheckpointIdx > -1 && getCheckpoint(view, secondLastCheckpointIdx).stakedAmount == newAmount){
+            // Rollback to second last checkpoint
+            updateSize(view, historySize - 1)
+            // TODO It is not necessary to remove the last element in the history, because it will be overwritten sooner or later.
+            // However, it may save some gas. To be checked.
+          }
+          else {
+            val checkpoint = StakeCheckpoint(epoch, newAmount)
+            updateValue(view, lastElemIndex, checkpointToPaddedBytes(checkpoint))
+          }
         }
         else if (lastCheckpoint.fromEpochNumber < epoch)
           addCheckpoint(view, epoch, newAmount)
