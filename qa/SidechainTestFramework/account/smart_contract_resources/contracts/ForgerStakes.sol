@@ -22,6 +22,7 @@ interface ForgerStakes {
     event WithdrawForgerStake(address indexed owner, bytes32 stakeId);
     event StakeUpgrade(uint32 oldVersion, uint32 newVersion);
     event OpenForgerList(uint32 indexed forgerIndex, address sender, bytes32 blockSignProposition);
+    event DisableStakeV1();
 
     function getAllForgersStakes() external view returns (StakeInfo[] memory);
 
