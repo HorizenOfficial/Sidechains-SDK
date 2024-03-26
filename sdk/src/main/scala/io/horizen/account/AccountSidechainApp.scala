@@ -192,7 +192,8 @@ class AccountSidechainApp @Inject()
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params, circuitType),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
-    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
+    route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor),
+    route.AccountMetricsRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
   )
 
   val nodeViewProvider: NodeViewProvider[

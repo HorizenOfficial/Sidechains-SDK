@@ -19,6 +19,7 @@ import io.horizen.forge.MainchainSynchronizer
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
+import io.horizen.metrics.MetricsManager
 import io.horizen.params._
 import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
@@ -74,6 +75,8 @@ abstract class AbstractSidechainApp
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
+
+  protected val metricsManager = MetricsManager.init(timeProvider);
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -397,6 +400,8 @@ abstract class AbstractSidechainApp
       log.info("New REST api connection from address :: %s".format(connection.remoteAddress.toString))
       connection.handleWithAsyncHandler(combinedRoute)
     }).run()
+
+
 
     //Remove the Logger shutdown hook
     LogManager.getFactory match {
