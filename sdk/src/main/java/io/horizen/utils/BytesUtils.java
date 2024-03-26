@@ -338,4 +338,14 @@ public final class BytesUtils {
         return src;
     }
 
+    // pad an array appending the necessary 0x00 bytes up to the wanted size
+    public static byte[] padRightWithZeroBytes(byte[] src, int destSize) {
+        if (src != null && src.length < destSize) {
+            byte[] padded_s = new byte[destSize];
+            System.arraycopy(src, 0, padded_s, 0, src.length);
+            return padded_s;
+        }
+        return src;
+    }
+
 }
