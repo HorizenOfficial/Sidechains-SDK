@@ -38,4 +38,7 @@ interface ForgerStakes {
     function upgrade() external returns (uint32);
 
     function getPagedForgersStakes(int32 startIndex, int32 pageSize) external view returns (int32, StakeInfo[] memory);
+
+    // disable can be called only after fork point 1.4 and only by the ForgerStakesV2 smart contract
+    function disable() external;
 }

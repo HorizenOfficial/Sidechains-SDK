@@ -100,22 +100,26 @@ object ForgerStakeV2MsgProcessor extends NativeSmartContractWithFork {
       throw new ExecutionRevertedException(msgStr)
     }
 
+    val intrinsicGas = invocation.gasPool.getUsedGas
+
     //Get all existing stakes from old native contract
     val result = context.execute(invocation.call(FORGER_STAKE_SMART_CONTRACT_ADDRESS, BigInteger.ZERO,
       BytesUtils.fromHexString(ForgerStakeMsgProcessor.GetListOfForgersCmd), invocation.gasPool.getGas))
     val listOfExistingStakes = AccountForgingStakeInfoListDecoder.decode(result).listOfStakes
-    val listOfExistingStakesByForger = listOfExistingStakes.groupBy(_.forgerStakeData.forgerPublicKeys)
+    val stakesByForger = listOfExistingStakes.groupBy(_.forgerStakeData.forgerPublicKeys)
 
     val epochNumber = context.blockContext.consensusEpochNumber
 
-    listOfExistingStakesByForger.foreach{ case (forgerKeys, stakesByForger) =>
+    stakesByForger.foreach { case (forgerKeys, stakesByForger) =>
       // Sum the stakes by delegator
-      val listOfTotalStakesByDelegator = stakesByForger.groupBy(_.forgerStakeData.ownerPublicKey).mapValues(_.foldLeft(BigInteger.ZERO){(sum, stake) => sum.add(stake.forgerStakeData.stakedAmount)})
+      val stakesByDelegator = stakesByForger.groupBy(_.forgerStakeData.ownerPublicKey)
+      val listOfTotalStakesByDelegator = stakesByDelegator.mapValues(_.foldLeft(BigInteger.ZERO){
+        (sum, stake) => sum.add(stake.forgerStakeData.stakedAmount)})
       //Take first delegator for registering the forger
       val (firstDelegator, firstDelegatorStakeAmount) = listOfTotalStakesByDelegator.head
       StakeStorage.addForger(view, forgerKeys.blockSignPublicKey,
         forgerKeys.vrfPublicKey, 0, Address.ZERO, epochNumber, firstDelegator.address(), firstDelegatorStakeAmount)
-      listOfTotalStakesByDelegator.tail.foreach{ case (delegator, delegatorStakeAmount) =>
+      listOfTotalStakesByDelegator.tail.foreach { case (delegator, delegatorStakeAmount) =>
         StakeStorage.addStake(view, forgerKeys.blockSignPublicKey, forgerKeys.vrfPublicKey,
           epochNumber, delegator.address(), delegatorStakeAmount)
       }
@@ -125,8 +129,8 @@ object ForgerStakeV2MsgProcessor extends NativeSmartContractWithFork {
     context.execute(invocation.call(FORGER_STAKE_SMART_CONTRACT_ADDRESS, BigInteger.ZERO,
       BytesUtils.fromHexString(ForgerStakeMsgProcessor.DisableCmd), invocation.gasPool.getGas))
 
-    // Refund the used gas, because upgrade should be (almost) free
-    invocation.gasPool.addGas(invocation.gasPool.getUsedGas)
+    // Refund the used gas, because activate should be free, except for the intrinsic gas
+    invocation.gasPool.addGas(invocation.gasPool.getUsedGas.subtract(intrinsicGas))
 
     val activateEvent = ActivateStakeV2()
     val evmLog = getEthereumConsensusDataLog(activateEvent)

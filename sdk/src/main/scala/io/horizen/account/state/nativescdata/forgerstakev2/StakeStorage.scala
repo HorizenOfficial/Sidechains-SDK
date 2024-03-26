@@ -100,12 +100,13 @@ object StakeStorage {
     if (forgerHistorySize == 0)
       throw new ExecutionRevertedException(s"Forger doesn't exist.")
 
-    forgerHistory.updateOrAddCheckpoint(view, forgerHistorySize, epochNumber, latestStake => latestStake.add(stakedAmount))
+    val addToStake = (latestStake: BigInteger) => latestStake.add(stakedAmount)
+    forgerHistory.updateOrAddCheckpoint(view, forgerHistorySize, epochNumber, addToStake)
 
     val delegatorChkSumAddress = DelegatorKey(delegatorPublicKey)
     val stakeHistory = StakeHistory(forgerKey, delegatorChkSumAddress)
     val stakeHistorySize = stakeHistory.getSize(view)
-    stakeHistory.updateOrAddCheckpoint(view, stakeHistorySize, epochNumber, latestStake => latestStake.add(stakedAmount))
+    stakeHistory.updateOrAddCheckpoint(view, stakeHistorySize, epochNumber, addToStake)
     if (stakeHistorySize == 0)
       addNewDelegator(view, forgerKey, delegatorChkSumAddress)
   }
