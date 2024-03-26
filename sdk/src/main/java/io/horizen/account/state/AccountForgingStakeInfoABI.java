@@ -18,12 +18,12 @@ public class AccountForgingStakeInfoABI extends StaticStruct {
 
     public AccountForgingStakeInfoABI(byte[] stakeId, BigInteger amount, String owner, byte[] pubKey, byte[] vrf1, byte[] vrf2 ) {
         super(
-                new org.web3j.abi.datatypes.generated.Bytes32(stakeId),
-                new org.web3j.abi.datatypes.generated.Uint256(amount),
+                new Bytes32(stakeId),
+                new Uint256(amount),
                 new org.web3j.abi.datatypes.Address(owner),
-                new org.web3j.abi.datatypes.generated.Bytes32(pubKey),
-                new org.web3j.abi.datatypes.generated.Bytes32(vrf1),
-                new org.web3j.abi.datatypes.generated.Bytes32(vrf2)
+                new Bytes32(pubKey),
+                new Bytes32(vrf1),
+                new Bytes32(vrf2)
                 );
         this.stakeId = stakeId;
         this.amount = amount;

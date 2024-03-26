@@ -2,7 +2,7 @@ package io.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import io.horizen.account.abi.ABIUtil.{METHOD_ID_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
-import io.horizen.account.fork.{Version1_2_0Fork, Version1_3_0Fork}
+import io.horizen.account.fork.{Version1_2_0Fork, Version1_3_0Fork, Version1_4_0Fork}
 import io.horizen.account.proof.SignatureSecp256k1
 import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.state.ForgerStakeLinkedList.{getStakeListItem, linkedListNodeRefIsNull, removeNode}
@@ -11,7 +11,8 @@ import io.horizen.account.state.ForgerStakeStorage.getStorageVersionFromDb
 import io.horizen.account.state.ForgerStakeStorageV1.LinkedListTipKey
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
-import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
+import io.horizen.account.state.events.{DelegateForgerStake, DisableStakeV1, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
+import io.horizen.account.utils.WellKnownAddresses
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import io.horizen.evm.Address
@@ -85,7 +86,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     stakeStorage.findStakeData(view, stakeId)
   }
 
-  override private[horizen] def  isForgerStakeAvailable(view: BaseAccountStateView, isForkV1_3Active: Boolean): Boolean = {
+  override private[horizen] def isForgerStakeAvailable(view: BaseAccountStateView, isForkV1_3Active: Boolean): Boolean = {
     if (!isForkV1_3Active){
        true
     }else{
@@ -445,28 +446,56 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
     restrictForgerList
   }
 
-  @throws(classOf[ExecutionFailedException])
-  override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
-    val gasView = view.getGasTrackedView(invocation.gasPool)
-    getFunctionSignature(invocation.input) match {
-      case GetPagedListOfForgersCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                               => doGetPagedListOfForgersCmd(invocation, gasView)
-      case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
-      case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg,
-                              Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
-      case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
-      case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
-      case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
-      case UpgradeCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doUpgradeCmd(invocation, view)// This doesn't consume gas, so it doesn't use GasTrackedView
-      case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doStakeOfCmd(invocation, gasView)
-      case GetPagedForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
-                                => doGetPagedForgersStakesOfUserCmd(invocation, gasView)
-      case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
-    }
+  def doDisable(invocation: Invocation, view: BaseAccountStateView): Array[Byte] = {
+    requireIsNotPayable(invocation)
+    checkInputDoesntContainParams(invocation.input)
+    if (WellKnownAddresses.FORGER_STAKE_V2_SMART_CONTRACT_ADDRESS != invocation.caller ||
+      !view.getCodeHash(invocation.caller).sameElements(ForgerStakeV2MsgProcessor.contractCodeHash))
+      throw new ExecutionRevertedException("Authorization failed")
+
+    ForgerStakeStorage.setDisabled(view)
+
+    val evmLog = getEthereumConsensusDataLog(new DisableStakeV1)
+    view.addLog(evmLog)
+
+    Array.emptyByteArray
   }
+
+    @throws(classOf[ExecutionFailedException])
+    override def process(invocation: Invocation, view: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+      val gasView = view.getGasTrackedView(invocation.gasPool)
+      if (Version1_4_0Fork.get(context.blockContext.consensusEpochNumber).active && ForgerStakeStorage.isDisabled(gasView)) {
+        getFunctionSignature(invocation.input) match {
+          case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+          case OpenStakeForgerListCmdCorrect => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+          case GetPagedListOfForgersCmd | GetListOfForgersCmd | AddNewStakeCmd | RemoveStakeCmd |
+            UpgradeCmd | StakeOfCmd | GetPagedForgersStakesOfUserCmd | DisableCmd => throw new ExecutionRevertedException(s"Method is disabled")
+          case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
+        }
+      }
+      else {
+        getFunctionSignature(invocation.input) match {
+          case GetPagedListOfForgersCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doGetPagedListOfForgersCmd(invocation, gasView)
+          case GetListOfForgersCmd => doGetListOfForgersCmd(invocation, gasView, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
+          case AddNewStakeCmd => doAddNewStakeCmd(invocation, gasView, context.msg,
+            Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
+          case RemoveStakeCmd => doRemoveStakeCmd(invocation, gasView, context.msg, Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active)
+          case OpenStakeForgerListCmd => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+          case OpenStakeForgerListCmdCorrect if Version1_2_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doOpenStakeForgerListCmd(invocation, gasView, context.msg)
+          case UpgradeCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doUpgradeCmd(invocation, view) // This doesn't consume gas, so it doesn't use GasTrackedView
+          case StakeOfCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doStakeOfCmd(invocation, gasView)
+          case GetPagedForgersStakesOfUserCmd if Version1_3_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doGetPagedForgersStakesOfUserCmd(invocation, gasView)
+          case DisableCmd if Version1_4_0Fork.get(context.blockContext.consensusEpochNumber).active
+          => doDisable(invocation, gasView)
+          case opCodeHex => throw new ExecutionRevertedException(s"op code not supported: $opCodeHex")
+        }
+      }
+    }
 
 
   override private[horizen] def isForgerListOpen(view: BaseAccountStateView): Boolean = {
@@ -507,6 +536,8 @@ object ForgerStakeMsgProcessor {
   val UpgradeCmd: String = getABIMethodId("upgrade()")
   val StakeOfCmd: String = getABIMethodId("stakeOf(address)")
   val GetPagedForgersStakesOfUserCmd: String = getABIMethodId("getPagedForgersStakesByUser(address,int32,int32)")
+  // Methods added after Fork v. 1.4
+  val DisableCmd: String = getABIMethodId("disable()")
 
   // ensure we have strings consistent with size of opcode
   require(
@@ -518,7 +549,8 @@ object ForgerStakeMsgProcessor {
       OpenStakeForgerListCmdCorrect.length == 2 * METHOD_ID_LENGTH &&
       UpgradeCmd.length == 2 * METHOD_ID_LENGTH &&
       StakeOfCmd.length == 2 * METHOD_ID_LENGTH &&
-      GetPagedForgersStakesOfUserCmd.length == 2 * METHOD_ID_LENGTH
+      GetPagedForgersStakesOfUserCmd.length == 2 * METHOD_ID_LENGTH &&
+      DisableCmd.length == 2 * METHOD_ID_LENGTH
   )
 
   def getRemoveStakeCmdMessageToSign(stakeId: Array[Byte], from: Address, nonce: Array[Byte]): Array[Byte] = {

@@ -348,6 +348,7 @@ object ForgerStakeStorageV2 extends ForgerStakeStorage {
 object ForgerStakeStorage {
 
   val ForgerStakeVersionKey: Array[Byte] = Blake2b256.hash("ForgerStakeVersion")
+  val DisabledKey: Array[Byte] = Blake2b256.hash("Disabled")
 
   def apply(storageVersion: ForgerStakeStorageVersion): ForgerStakeStorage = {
     storageVersion match {
@@ -371,6 +372,19 @@ object ForgerStakeStorage {
     view.updateAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, ForgerStakeVersionKey, ver)
     ver
   }
+
+  def isDisabled(view: BaseAccountStateView): Boolean = {
+    val disabled = view.getAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, DisabledKey)
+    new BigInteger(1, disabled) == BigInteger.ONE
+  }
+
+  def setDisabled(view: BaseAccountStateView): Unit  = {
+    val disabled = BigIntegerUtil.toUint256Bytes(BigInteger.ONE)
+    view.updateAccountStorage(FORGER_STAKE_SMART_CONTRACT_ADDRESS, DisabledKey, disabled)
+  }
+
+
+
 }
 
 
