@@ -14,7 +14,7 @@ interface ForgerStakesV2 {
     event UpdateForger(address indexed sender, bytes32 signPubKey,  bytes32 indexed vrf1, bytes1 indexed vrf2,  uint32 rewardShare, address reward_address);
     event DelegateForgerStake(address indexed sender, bytes32 signPubKey, bytes32 indexed vrf1, bytes1 indexed vrf2, uint256 value);
     event WithdrawForgerStake(address indexed sender, bytes32 signPubKey, bytes32 indexed vrf1, bytes1 indexed vrf2, uint256 value);
-    event StakeUpgrade(int32 oldVersion, int32 newVersion);
+    event ActivateStakeV2();
 
 
     //Data structures
