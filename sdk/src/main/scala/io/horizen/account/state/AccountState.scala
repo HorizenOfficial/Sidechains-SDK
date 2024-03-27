@@ -10,6 +10,7 @@ import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumRecei
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
+import io.horizen.account.utils.ZenWeiConverter.{MAX_MONEY_IN_WEI, convertZenniesToWei}
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
@@ -255,7 +256,7 @@ class AccountState(
       val distributionCap = if (Version1_4_0Fork.get(consensusEpochNumber).active) {
         val mcLastBlockHeight = params.mainchainCreationBlockHeight + (modWithdrawalEpochInfo.epoch * params.withdrawalEpochLength) - 1
         AccountFeePaymentsUtils.getMainchainWithdrawalEpochDistributionCap(mcLastBlockHeight, params)
-      } else BigInteger.valueOf(Long.MaxValue)
+      } else MAX_MONEY_IN_WEI
       val (feePayments, poolBalanceDistributed) = stateView.getFeePaymentsInfo(modWithdrawalEpochInfo.epoch, consensusEpochNumber, distributionCap, None)
 
       log.info(s"End of Withdrawal Epoch ${modWithdrawalEpochInfo.epoch} reached, added ${feePayments.length} rewards with block ${mod.header.id}")
@@ -393,7 +394,7 @@ class AccountState(
   override def getFeePaymentsInfo(
     withdrawalEpoch: Int,
     consensusEpochNumber: ConsensusEpochNumber,
-    distributionCap: BigInteger = BigInteger.valueOf(Long.MaxValue),
+    distributionCap: BigInteger = convertZenniesToWei(Long.MaxValue),
     blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): (Seq[AccountPayment], BigInteger) =
   {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)

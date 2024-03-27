@@ -5,6 +5,7 @@ import io.horizen.account.fixtures.ForgerAccountFixture.getPrivateKeySecp256k1
 import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils.WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
+import io.horizen.account.utils.ZenWeiConverter.convertZenniesToWei
 import io.horizen.account.utils.{WellKnownAddresses, ZenWeiConverter}
 import io.horizen.consensus.intToConsensusEpochNumber
 import io.horizen.fixtures.StoreFixture
@@ -172,11 +173,11 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     when(stateDb.getBalance(FORGER_POOL_RECIPIENT_ADDRESS)).thenReturn(BigInteger.valueOf(1000L))
     when(metadataStorageView.getForgerBlockCounters).thenAnswer(_ => blockCounters)
-    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0),BigInteger.valueOf(Long.MaxValue))
+    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0),convertZenniesToWei(Long.MaxValue))
     assertTrue(rewardsBeforeFork.isEmpty)
 
     when(metadataStorageView.getConsensusEpochNumber).thenAnswer(_ => Some(36))
-    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36), BigInteger.valueOf(Long.MaxValue))
+    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36), convertZenniesToWei(Long.MaxValue))
     assertEquals(3, rewardsAfterFork.size)
     assertEquals(BigInteger.valueOf(200L), rewardsAfterFork(addr1))
     assertEquals(BigInteger.valueOf(300L), rewardsAfterFork(addr2))
