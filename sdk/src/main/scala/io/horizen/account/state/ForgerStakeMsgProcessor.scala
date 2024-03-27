@@ -12,7 +12,6 @@ import io.horizen.account.state.ForgerStakeStorageV1.LinkedListTipKey
 import io.horizen.account.state.ForgerStakeStorageVersion.ForgerStakeStorageVersion
 import io.horizen.account.state.NativeSmartContractMsgProcessor.NULL_HEX_STRING_32
 import io.horizen.account.state.events.{DelegateForgerStake, OpenForgerList, StakeUpgrade, WithdrawForgerStake}
-import io.horizen.account.utils.AccountPayment
 import io.horizen.account.utils.WellKnownAddresses.FORGER_STAKE_SMART_CONTRACT_ADDRESS
 import io.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import io.horizen.evm.Address
@@ -29,8 +28,6 @@ import scala.util.{Failure, Success, Try}
 
 trait ForgerStakesProvider {
   private[horizen] def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo])
-
-  private[horizen] def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment])
 
   private[horizen] def getListOfForgersStakes(view: BaseAccountStateView, isForkV1_3Active: Boolean): Seq[AccountForgingStakeInfo]
 
@@ -220,11 +217,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends NativeSmartCon
   override def getPagedListOfForgersStakes(view: BaseAccountStateView, startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) = {
     ForgerStakeStorageV2.getPagedListOfForgersStakes(view, startPos, pageSize)
   }
-
-  override def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment]) = {
-    ForgerStakeStorageV2.getPagedForgersStakesByForger(view, forger, startPos, pageSize)
-  }
-
 
   private def getForgerStakeStorage(view: BaseAccountStateView, isForkV1_3Active: Boolean): ForgerStakeStorage = {
     val forgerStakeStorageVersion = getForgerStakeStorageVersion(view, isForkV1_3Active)

@@ -3,6 +3,7 @@ package io.horizen.account.state
 import io.horizen.SidechainTypes
 import io.horizen.account.fork.Version1_3_0Fork
 import io.horizen.account.proposition.AddressProposition
+import io.horizen.account.state.nativescdata.forgerstakev2.{StakeDataDelegator, StakeDataForger}
 import io.horizen.account.state.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt}
 import io.horizen.account.transaction.EthereumTransaction
@@ -31,8 +32,12 @@ class StateDbAccountStateView(
       with SparkzLogging {
   lazy val withdrawalReqProvider: WithdrawalRequestProvider =
     messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
+
   lazy val forgerStakesProvider: ForgerStakesProvider =
     messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
+  lazy val forgerStakesV2Provider: ForgerStakesV2Provider =
+    messageProcessors.find(_.isInstanceOf[ForgerStakesV2Provider]).get.asInstanceOf[ForgerStakesV2Provider]
+
   // certificateKeysProvider is present only for NaiveThresholdSignatureCircuitWithKeyRotation
   lazy val certificateKeysProvider: CertificateKeysProvider =
     messageProcessors.find(_.isInstanceOf[CertificateKeysProvider]).get.asInstanceOf[CertificateKeysProvider]
@@ -69,8 +74,11 @@ class StateDbAccountStateView(
   override def getPagedListOfForgersStakes(startPos: Int, pageSize: Int): (Int, Seq[AccountForgingStakeInfo]) =
     forgerStakesProvider.getPagedListOfForgersStakes(this, startPos, pageSize)
 
-  override def getPagedForgersStakesByForger(forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[AccountPayment]) =
-    forgerStakesProvider.getPagedForgersStakesByForger(this, forger, startPos, pageSize)
+  override def getPagedForgersStakesByForger(forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[StakeDataDelegator]) =
+    forgerStakesV2Provider.getPagedForgersStakesByForger(this, forger, startPos, pageSize)
+
+  override def getPagedForgersStakesByDelegator(delegator: Address, startPos: Int, pageSize: Int): (Int, Seq[StakeDataForger]) =
+    forgerStakesV2Provider.getPagedForgersStakesByDelegator(this, delegator, startPos, pageSize)
 
   override def getAllowedForgerList: Seq[Int] =
     forgerStakesProvider.getAllowedForgerListIndexes(this)

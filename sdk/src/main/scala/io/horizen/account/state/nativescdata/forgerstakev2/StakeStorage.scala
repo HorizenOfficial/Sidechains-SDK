@@ -143,6 +143,71 @@ object StakeStorage {
     }
   }
 
+  def getPagedForgersStakesByForger(view: BaseAccountStateView, forger: ForgerPublicKeys, startPos: Int, pageSize: Int): (Int, Seq[StakeDataDelegator]) = {
+
+    if (startPos < 0)
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos can not be negative")
+    if (pageSize <= 0)
+      throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
+
+    val forgerKey = ForgerKey(forger.blockSignPublicKey, forger.vrfPublicKey)
+    val listOfDelegators = DelegatorList(forgerKey)
+    val numOfDelegators = listOfDelegators.getSize(view)
+    if (startPos > numOfDelegators - 1)
+      throw new IllegalArgumentException(s"Invalid position where to start reading list of delegators: $startPos, delegators array size: $numOfDelegators")
+
+    var endPos = startPos + pageSize
+    if (endPos > numOfDelegators)
+      endPos = numOfDelegators
+
+    val resultList = (startPos until endPos).map(index => {
+      val delegatorKey = listOfDelegators.getDelegatorAt(view, index)
+      val stakeHistory = StakeHistory(forgerKey, delegatorKey)
+      val amount = stakeHistory.getLatestAmount(view)
+      StakeDataDelegator(new AddressProposition(delegatorKey), amount)
+    })
+
+    if (endPos == numOfDelegators) {
+      // tell the caller we are done with the array
+      endPos = -1
+    }
+
+    (endPos, resultList)
+  }
+
+  def getPagedForgersStakesByDelegator(view: BaseAccountStateView,  delegator: Address, startPos: Int, pageSize: Int): (Int, Seq[StakeDataForger]) = {
+
+    if (startPos < 0)
+      throw new IllegalArgumentException(s"Invalid startPos input: $startPos can not be negative")
+    if (pageSize <= 0)
+      throw new IllegalArgumentException(s"Invalid page size $pageSize, must be positive")
+
+    val delegatorKey = DelegatorKey(delegator)
+    val listOfForgers = DelegatorListOfForgerKeys(delegatorKey)
+    val numOfForgers = listOfForgers.getSize(view)
+    if (startPos > numOfForgers - 1)
+      throw new IllegalArgumentException(s"Invalid position where to start reading list of forgers: $startPos, forgers array size: $numOfForgers")
+
+    var endPos = startPos + pageSize
+    if (endPos > numOfForgers)
+      endPos = numOfForgers
+
+    val resultList = (startPos until endPos).map(index => {
+      val forgerKey = listOfForgers.getForgerKey(view, index)
+      val stakeHistory = StakeHistory(forgerKey, delegatorKey)
+      val amount = stakeHistory.getLatestAmount(view)
+      val forger = ForgerMap.getForgerOption(view, forgerKey).getOrElse(throw new ExecutionRevertedException("Forger doesn't exist."))
+      StakeDataForger(forger.forgerPublicKeys, amount)
+    })
+
+    if (endPos == numOfForgers) {
+      // tell the caller we are done with the array
+      endPos = -1
+    }
+    (endPos, resultList)
+  }
+
+
   class BaseStakeHistory(uid: Array[Byte])
     extends StateDbArray(ACCOUNT, Blake2b256.hash(Bytes.concat(uid, "History".getBytes("UTF-8")))) {
 

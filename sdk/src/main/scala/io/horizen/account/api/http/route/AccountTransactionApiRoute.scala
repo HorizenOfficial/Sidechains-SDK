@@ -18,6 +18,7 @@ import io.horizen.account.proposition.AddressProposition
 import io.horizen.account.secret.PrivateKeySecp256k1
 import io.horizen.account.state.McAddrOwnershipMsgProcessor._
 import io.horizen.account.state._
+import io.horizen.account.state.nativescdata.forgerstakev2.StakeDataDelegator
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.WellKnownAddresses.{FORGER_STAKE_SMART_CONTRACT_ADDRESS, MC_ADDR_OWNERSHIP_SMART_CONTRACT_ADDRESS, PROXY_SMART_CONTRACT_ADDRESS}
 import io.horizen.account.utils.{AccountPayment, EthereumTransactionUtils, ZenWeiConverter}
@@ -1291,7 +1292,7 @@ object AccountTransactionRestScheme {
   private[horizen] case class RespPagedForgerStakes(nextPos: Int, stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[horizen] case class RespPagedForgerStakesByForger(nextPos: Int, stakes: List[AccountPayment]) extends SuccessResponse
+  private[horizen] case class RespPagedForgerStakesByForger(nextPos: Int, stakes: List[StakeDataDelegator]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[horizen] case class RespMcAddrOwnership(keysOwnership: Map[String, Seq[String]]) extends SuccessResponse
