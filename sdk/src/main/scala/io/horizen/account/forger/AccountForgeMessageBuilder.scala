@@ -16,7 +16,7 @@ import io.horizen.account.state.receipt.EthereumConsensusDataReceipt
 import io.horizen.account.storage.AccountHistoryStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.FeeUtils.calculateBaseFee
-import io.horizen.account.utils.ZenWeiConverter.{MAX_MONEY_IN_WEI, convertZenniesToWei}
+import io.horizen.account.utils.ZenWeiConverter.MAX_MONEY_IN_WEI
 import io.horizen.account.utils._
 import io.horizen.account.wallet.AccountWallet
 import io.horizen.block._

@@ -10,7 +10,7 @@ import io.horizen.account.state.receipt.{EthereumConsensusDataLog, EthereumRecei
 import io.horizen.account.storage.AccountStateMetadataStorage
 import io.horizen.account.transaction.EthereumTransaction
 import io.horizen.account.utils.Secp256k1.generateContractAddress
-import io.horizen.account.utils.ZenWeiConverter.{MAX_MONEY_IN_WEI, convertZenniesToWei}
+import io.horizen.account.utils.ZenWeiConverter.MAX_MONEY_IN_WEI
 import io.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
 import io.horizen.block.WithdrawalEpochCertificate
 import io.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof}
@@ -20,7 +20,6 @@ import io.horizen.evm._
 import io.horizen.params.NetworkParams
 import io.horizen.state.State
 import io.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import io.horizen.transaction.exception.TransactionSemanticValidityException
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
@@ -394,7 +393,7 @@ class AccountState(
   override def getFeePaymentsInfo(
     withdrawalEpoch: Int,
     consensusEpochNumber: ConsensusEpochNumber,
-    distributionCap: BigInteger = convertZenniesToWei(Long.MaxValue),
+    distributionCap: BigInteger = MAX_MONEY_IN_WEI,
     blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): (Seq[AccountPayment], BigInteger) =
   {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)

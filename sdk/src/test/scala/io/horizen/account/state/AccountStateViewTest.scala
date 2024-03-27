@@ -5,17 +5,17 @@ import io.horizen.account.fixtures.ForgerAccountFixture.getPrivateKeySecp256k1
 import io.horizen.account.fork.Version1_2_0Fork
 import io.horizen.account.storage.AccountStateMetadataStorageView
 import io.horizen.account.utils.WellKnownAddresses.FORGER_POOL_RECIPIENT_ADDRESS
-import io.horizen.account.utils.ZenWeiConverter.convertZenniesToWei
+import io.horizen.account.utils.ZenWeiConverter.MAX_MONEY_IN_WEI
 import io.horizen.account.utils.{WellKnownAddresses, ZenWeiConverter}
 import io.horizen.consensus.intToConsensusEpochNumber
+import io.horizen.evm.{Address, StateDB}
 import io.horizen.fixtures.StoreFixture
+import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
 import io.horizen.params.NetworkParams
 import io.horizen.proposition.MCPublicKeyHashProposition
+import io.horizen.utils
 import io.horizen.utils.ByteArrayWrapper
 import io.horizen.utils.WithdrawalEpochUtils.MaxWithdrawalReqsNumPerEpoch
-import io.horizen.evm.{Address, StateDB}
-import io.horizen.fork.{ForkManagerUtil, OptionalSidechainFork, SidechainForkConsensusEpoch, SimpleForkConfigurator}
-import io.horizen.utils
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito.when
@@ -173,11 +173,11 @@ class AccountStateViewTest extends JUnitSuite with MockitoSugar with MessageProc
 
     when(stateDb.getBalance(FORGER_POOL_RECIPIENT_ADDRESS)).thenReturn(BigInteger.valueOf(1000L))
     when(metadataStorageView.getForgerBlockCounters).thenAnswer(_ => blockCounters)
-    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0),convertZenniesToWei(Long.MaxValue))
+    val rewardsBeforeFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(0),MAX_MONEY_IN_WEI)
     assertTrue(rewardsBeforeFork.isEmpty)
 
     when(metadataStorageView.getConsensusEpochNumber).thenAnswer(_ => Some(36))
-    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36), convertZenniesToWei(Long.MaxValue))
+    val rewardsAfterFork = stateView.getMcForgerPoolRewards(intToConsensusEpochNumber(36), MAX_MONEY_IN_WEI)
     assertEquals(3, rewardsAfterFork.size)
     assertEquals(BigInteger.valueOf(200L), rewardsAfterFork(addr1))
     assertEquals(BigInteger.valueOf(300L), rewardsAfterFork(addr2))
