@@ -169,6 +169,8 @@ if [ -n "${TRAVIS_TAG}" ]; then
       export IS_A_GH_PRERELEASE="true"
 
       release_prep Development
+    else
+      export IS_A_GH_PRERELEASE="false"
     fi
   fi
 fi
