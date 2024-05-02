@@ -27,6 +27,7 @@ import io.horizen.consensus.ConsensusDataStorage
 import io.horizen.evm.LevelDBDatabase
 import io.horizen.fork.ForkConfigurator
 import io.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import io.horizen.metrics.MetricsManager
 import io.horizen.network.SyncStatusActorRef
 import io.horizen.node.NodeWalletBase
 import io.horizen.secret.SecretSerializer
@@ -194,6 +195,9 @@ class AccountSidechainApp @Inject()
     SidechainSubmitterApiRoute(settings.restApi, params, certificateSubmitterRef, nodeViewHolderRef, circuitType),
     route.AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, rpcProcessor)
   )
+  override lazy val metricsApiRoute: ApiRoute =  if (sidechainSettings.metricsSettings.enabled)  route.AccountMetricsRoute(sidechainSettings.metricsSettings, nodeViewHolderRef) else null
+
+  MetricsManager.getInstance().setVersion(RpcUtils.getClientVersion(appVersion))
 
   val nodeViewProvider: NodeViewProvider[
     TX,

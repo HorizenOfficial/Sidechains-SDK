@@ -19,6 +19,7 @@ import io.horizen.forge.MainchainSynchronizer
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, ForkConfigurator, ForkManager, OptionalSidechainFork, SidechainForkConsensusEpoch}
 import io.horizen.helper.{SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider}
 import io.horizen.json.serializer.JsonHorizenPublicKeyHashSerializer
+import io.horizen.metrics.MetricsManager
 import io.horizen.params._
 import io.horizen.proposition._
 import io.horizen.secret.SecretSerializer
@@ -74,6 +75,8 @@ abstract class AbstractSidechainApp
 
 
   log.info(s"Starting application with settings \n$sidechainSettings")
+
+  protected val metricsManager = MetricsManager.init(timeProvider);
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -357,6 +360,8 @@ abstract class AbstractSidechainApp
 
   val coreApiRoutes: Seq[ApiRoute]
 
+  val metricsApiRoute: ApiRoute
+
   // disabledApiRoutes is the list of endpoints from coreApiRoutes that may need to be disabled when certain criteria
   // are met (e.g. seeder node)
   lazy val disabledApiRoutes: Seq[SidechainRejectionApiRoute] = coreApiRoutes.flatMap{
@@ -397,6 +402,19 @@ abstract class AbstractSidechainApp
       log.info("New REST api connection from address :: %s".format(connection.remoteAddress.toString))
       connection.handleWithAsyncHandler(combinedRoute)
     }).run()
+
+    metricsApiRoute match {
+      case null => // do not expose metrics via http
+      case _ =>
+        //Metrcis api are exposed on a separate port
+        val metricsBindAddress = sidechainSettings.metricsSettings.bindAddress
+        log.info("Exposing metric endpoint to %s".format(metricsBindAddress))
+        Http().newServerAt(metricsBindAddress.getAddress.getHostAddress, metricsBindAddress.getPort).connectionSource().to(Sink.foreach { connection =>
+          log.info("New REST metrics api connection from address :: %s".format(connection.remoteAddress.toString))
+          connection.handleWithAsyncHandler(metricsApiRoute.route)
+        }).run()
+    }
+
 
     //Remove the Logger shutdown hook
     LogManager.getFactory match {

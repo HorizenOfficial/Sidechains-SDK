@@ -5,8 +5,8 @@ import com.typesafe.scalalogging.LazyLogging
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
-import net.ceedubs.ficus.readers.EnumerationReader._ //actually used
-import sparkz.core.settings.{SettingsReaders, SparkzSettings}
+import net.ceedubs.ficus.readers.EnumerationReader._
+import sparkz.core.settings.{RESTApiSettings, SettingsReaders, SparkzSettings}
 
 import java.io.File
 import java.math.BigInteger
@@ -37,6 +37,7 @@ object SidechainSettingsReader
     val webSocketClientSettings = config.as[WebSocketClientSettings]("sparkz.websocketClient")
     val webSocketServerSettings = config.as[WebSocketServerSettings]("sparkz.websocketServer")
     val sparkzSettings = config.as[SparkzSettings]("sparkz")
+    val metricsSettings = config.as[MetricsApiSettings]("sparkz.metricsApi")
     val genesisSettings = config.as[GenesisDataSettings]("sparkz.genesis")
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("sparkz.withdrawalEpochCertificate")
     val remoteKeysManagerSettings = config.as[RemoteKeysManagerSettings]("sparkz.remoteKeysManager")
@@ -50,7 +51,7 @@ object SidechainSettingsReader
     val apiRateLimiterSettings = config.as[ApiRateLimiterSettings]("sparkz.apiRateLimiter")
     val historySettings = config.as[HistorySettings]("sparkz.history")
 
-    SidechainSettings(sparkzSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
+    SidechainSettings(sparkzSettings, metricsSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       remoteKeysManagerSettings, mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings,
       ethServiceSettings, accountMempoolSettings, apiRateLimiterSettings, historySettings)
   }

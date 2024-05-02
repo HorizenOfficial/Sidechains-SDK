@@ -3,9 +3,9 @@ package io.horizen
 import io.horizen.account.mempool.MempoolMap
 import io.horizen.cryptolibprovider.CircuitTypes
 import io.horizen.cryptolibprovider.CircuitTypes.CircuitTypes
-import sparkz.core.settings.SparkzSettings
-
+import sparkz.core.settings.{ApiSettings, SparkzSettings}
 import java.math.BigInteger
+import java.net.InetSocketAddress
 import scala.annotation.meta.field
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
@@ -160,8 +160,15 @@ case class HistorySettings(
     resetModifiersStatus: Boolean = false,
 )
 
+case class MetricsApiSettings(
+                           enabled: Boolean,
+                           bindAddress: InetSocketAddress,
+                           apiKeyHash: Option[String],
+                           corsAllowedOrigin: Option[String],
+                           timeout: FiniteDuration) extends ApiSettings
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
+    metricsSettings: MetricsApiSettings,
     genesisData: GenesisDataSettings,
     websocketClient: WebSocketClientSettings,
     websocketServer: WebSocketServerSettings,

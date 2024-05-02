@@ -9,6 +9,7 @@ import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToCo
 import io.horizen.fixtures._
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.SidechainTypes
+import io.horizen.metrics.MetricsManager
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.utxo.block.SidechainBlock
 import io.horizen.utxo.box.ZenBox
@@ -24,9 +25,11 @@ import org.junit.{Before, Test}
 import org.mockito.Mockito.times
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar.mock
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
 import sparkz.util.{ModifierId, SparkzEncoding}
@@ -62,6 +65,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
   @Before
   def setUp(): Unit = {
+    MetricsManager.init(mock[NetworkTimeProvider])
     history = mock[SidechainHistory]
     state = mock[SidechainState]
     wallet = mock[SidechainWallet]

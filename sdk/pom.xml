@@ -110,6 +110,21 @@
       <version>5.1.0</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>prometheus-metrics-core</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>prometheus-metrics-instrumentation-jvm</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>prometheus-metrics-exporter-common</artifactId>
+      <version>1.2.0</version>
+    </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
     <dependency>
       <groupId>com.google.inject.extensions</groupId>

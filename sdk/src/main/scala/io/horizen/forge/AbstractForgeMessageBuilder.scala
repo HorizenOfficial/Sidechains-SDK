@@ -6,6 +6,7 @@ import io.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, Sidechain
 import io.horizen.consensus._
 import io.horizen.fork.{ActiveSlotCoefficientFork, ForkManager}
 import io.horizen.history.AbstractHistory
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.secret.{PrivateKey25519, VrfSecretKey}
@@ -46,6 +47,7 @@ abstract class AbstractForgeMessageBuilder[
 
   type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
 
+  val metricsManager:MetricsManager = MetricsManager.getInstance()
 
   def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, mcRefDataRetrievalTimeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
     val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, mcRefDataRetrievalTimeout, forcedTx)
@@ -75,6 +77,8 @@ abstract class AbstractForgeMessageBuilder[
       case _ => // checks passed
     }
 
+    val lotteryStart = metricsManager.currentMillis();
+
     val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params.sidechainGenesisBlockTimestamp, nextConsensusEpochNumber, nextConsensusSlotNumber)
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
@@ -100,6 +104,8 @@ abstract class AbstractForgeMessageBuilder[
 
 
       val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
+
+      metricsManager.lotteryDone(metricsManager.currentMillis() - lotteryStart)
 
       val forgingResult = eligibleForgerOpt
         .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, vrfOutput) =>

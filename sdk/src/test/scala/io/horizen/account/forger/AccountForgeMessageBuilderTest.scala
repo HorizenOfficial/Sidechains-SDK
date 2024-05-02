@@ -18,6 +18,7 @@ import io.horizen.consensus.{ConsensusParamsUtil, ForgingStakeInfo}
 import io.horizen.evm.{Address, Hash}
 import io.horizen.fixtures.{CompanionsFixture, SecretFixture, SidechainRelatedMainchainOutputFixture, VrfGenerator}
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.{NetworkParams, TestNetParams}
 import io.horizen.proof.{Signature25519, VrfProof}
 import io.horizen.proposition.VrfPublicKey
@@ -34,8 +35,10 @@ import org.mockito.Mockito.when
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.Assertions.assertThrows
 import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.utils.Numeric
 import sparkz.core.transaction.state.Secret
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.crypto.hash.Keccak256
 import sparkz.util.serialization.VLQByteBufferWriter
 import sparkz.util.{ByteArrayBuilder, bytesToId}
@@ -61,6 +64,7 @@ class AccountForgeMessageBuilderTest
 
   @Before
   def init(): Unit = {
+    MetricsManager.init(mock[NetworkTimeProvider])
     ForkManagerUtil.initializeForkManager(CustomForkConfiguratorWithConsensusParamsFork.getCustomForkConfiguratorWithConsensusParamsFork(Seq(), Seq(), Seq()), "regtest")
   }
 

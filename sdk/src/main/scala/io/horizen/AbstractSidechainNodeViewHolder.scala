@@ -5,6 +5,7 @@ import io.horizen.chain.AbstractFeePaymentsInfo
 import io.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import io.horizen.history.AbstractHistory
 import io.horizen.history.validation._
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.NetworkParams
 import io.horizen.secret.{Secret, SecretCreator}
 import io.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
@@ -46,6 +47,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
   val maxTxFee: Long = sidechainSettings.wallet.maxTxFee
   val listOfStorageInfo: Seq[SidechainStorageInfo]
+  val metricsManager:MetricsManager = MetricsManager.getInstance()
 
 
   /**
@@ -276,6 +278,7 @@ abstract class AbstractSidechainNodeViewHolder[
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
   override protected def pmodModify(pmod: PMOD): Unit = {
+    val startTime = metricsManager.currentMillis()
     if (!history().contains(pmod.id)) {
       context.system.eventStream.publish(StartingPersistentModifierApplication(pmod))
 
@@ -298,14 +301,22 @@ abstract class AbstractSidechainNodeViewHolder[
 
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully and node view updated!")
-
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
+
+                val endTime = metricsManager.currentMillis()
+                metricsManager.mempoolSize(newMemPool.size)
+                metricsManager.appliedBlockOk(
+                  endTime- startTime,
+                  endTime - (pmod.timestamp * 1000)
+                );
+
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool
               //                 or a new AbstractMemoryPool class should be created between MP and the concrete classes
               // - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
                 updateNodeView(updatedHistory = Some(newHistory))
+                metricsManager.appliedBlockKo();
                 context.system.eventStream.publish(SemanticallyFailedModification(pmod, e))
             }
           } else {
@@ -313,6 +324,7 @@ abstract class AbstractSidechainNodeViewHolder[
           }
         case Failure(e) =>
           log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to history", e)
+          metricsManager.appliedBlockKo();
           context.system.eventStream.publish(SyntacticallyFailedModification(pmod, e))
       }
     } else {

@@ -16,6 +16,7 @@ import io.horizen.cryptolibprovider.CircuitTypes.NaiveThresholdSignatureCircuit
 import io.horizen.evm.{Address, Database}
 import io.horizen.fixtures._
 import io.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.NetworkParams
 import io.horizen.storage.SidechainSecretStorage
 import io.horizen.utils.BytesUtils
@@ -55,8 +56,10 @@ class AccountSidechainNodeViewHolderEventTest
 
   val mockStateDbNonces:TrieMap[Address, BigInteger]  = TrieMap[Address, BigInteger]()
 
+
   @Before
   def setUp(): Unit = {
+    MetricsManager.init(mock[NetworkTimeProvider])
     ForkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     historyMock = mock[AccountHistory]
 
@@ -75,6 +78,7 @@ class AccountSidechainNodeViewHolderEventTest
 
     wallet = mock[AccountWallet]
     Mockito.when(wallet.scanOffchain(ArgumentMatchers.any[SidechainTypes#SCAT])).thenReturn(wallet)
+
   }
 
   @Test

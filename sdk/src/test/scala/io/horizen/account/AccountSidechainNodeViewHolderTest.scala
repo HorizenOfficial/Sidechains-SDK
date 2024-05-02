@@ -16,6 +16,7 @@ import io.horizen.account.wallet.AccountWallet
 import io.horizen.block.SidechainBlockBase
 import io.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import io.horizen.fixtures._
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.{NetworkParams, RegTestParams}
 import io.horizen.utils.{CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import io.horizen.{AccountMempoolSettings, SidechainSettings}
@@ -28,6 +29,7 @@ import org.scalatestplus.junit.JUnitSuite
 import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, LocallyGeneratedTransaction, ModifiersFromRemote}
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, ModifiersProcessingResult, SemanticallySuccessfulModifier}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{VersionTag, idToVersion}
 import sparkz.util.{ModifierId, SparkzEncoding}
@@ -76,6 +78,7 @@ class AccountSidechainNodeViewHolderTest extends JUnitSuite
     mempool = AccountMemoryPool.createEmptyMempool(accountStateReaderProvider, baseStateReaderProvider,
       AccountMempoolSettings(), () => mock[AccountEventNotifier])
     mockedNodeViewHolderRef = getMockedAccountSidechainNodeViewHolderRef(history, state, wallet, mempool)
+    MetricsManager.init(mock[NetworkTimeProvider])
   }
 
   @Test

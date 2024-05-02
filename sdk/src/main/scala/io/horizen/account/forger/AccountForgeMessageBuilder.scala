@@ -413,7 +413,7 @@ class AccountForgeMessageBuilder(
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) {
       stateViewFromRoot =>
-        stateViewFromRoot.getOrderedForgingStakesInfoSeq(nextConsensusEpochNumber - 2)
+         stateViewFromRoot.getOrderedForgingStakesInfoSeq(nextConsensusEpochNumber - 2)
     }
 
     // 3. using wallet secrets, filter out the not-mine forging stakes

@@ -7,6 +7,7 @@ import io.horizen.utxo.companion.SidechainTransactionsCompanion
 import io.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import io.horizen.forge.MainchainSynchronizer
 import io.horizen.fork.{ConsensusParamsFork, ConsensusParamsForkInfo, CustomForkConfiguratorWithConsensusParamsFork, ForkManagerUtil}
+import io.horizen.metrics.MetricsManager
 import io.horizen.params.NetworkParams
 import io.horizen.utils.TimeToEpochUtils
 import io.horizen.utxo.block.SidechainBlock
@@ -25,7 +26,7 @@ import scala.concurrent.duration.DurationInt
 class ForgerTest extends JUnitSuite with Matchers {
 
   implicit val system: ActorSystem = ActorSystem()
-
+  MetricsManager.init(mock[NetworkTimeProvider])
   @Test
   def testForgingScheduleAtTheBeginningOfNewSlot(): Unit = {
     /*

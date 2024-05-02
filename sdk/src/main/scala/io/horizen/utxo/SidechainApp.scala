@@ -3,6 +3,7 @@ package io.horizen.utxo
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import io.horizen.account.api.http.route
 import io.horizen.api.http._
 import io.horizen.api.http.route.{MainchainBlockApiRoute, SidechainNodeApiRoute, SidechainSubmitterApiRoute}
 import io.horizen.block.SidechainBlockBase
@@ -240,6 +241,7 @@ class SidechainApp @Inject()
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator, params)
   )
+  override lazy val metricsApiRoute: ApiRoute =  null  //TODO: add metrics also for UXO
 
   val nodeViewProvider: NodeViewProvider[
     TX,
