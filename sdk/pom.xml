@@ -247,7 +247,7 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk18on</artifactId>
-      <version>1.77</version>
+      <version>1.78</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://repo.softmotions.com/repository/softmotions-public/org/ethereum/leveldbjni-all -->
