@@ -54,7 +54,7 @@ object ForgerStakeV2MsgProcessor extends NativeSmartContractWithFork  with Forge
       case RegisterForgerCmd =>
         doRegisterForger(invocation, gasView, context)
       case UpdateForgerCmd =>
-        doUpdateForger(invocation, gasView, context)
+        doUpdateForger(invocation, gasView)
       case DelegateCmd =>
         doDelegateCmd(invocation, gasView, context)
       case WithdrawCmd =>
@@ -186,7 +186,7 @@ object ForgerStakeV2MsgProcessor extends NativeSmartContractWithFork  with Forge
     Array.emptyByteArray
   }
 
-  def doUpdateForger(invocation: Invocation, gasView: BaseAccountStateView, context: ExecutionContext): Array[Byte] = {
+  def doUpdateForger(invocation: Invocation, gasView: BaseAccountStateView): Array[Byte] = {
     requireIsNotPayable(invocation)
     checkForgerStakesV2IsActive(gasView)
 
