@@ -16,7 +16,7 @@ function publish_project () {
   # Building and publishing
   cd "${project}"
   if [[ "${TRAVIS_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT){1}[0-9]*$ ]]; then
-    echo "" && echo "=== Publishing DEVELOPMENT release of '${project}' project on Sonatype Nexus repository. Timestamp is: $(date '+%a %b %d %H:%M:%S %Z %Y') ===" && echo ""
+    echo "" && echo "=== Publishing DEVELOPMENT release of '${project}' project on Maven Central Portal repository. Timestamp is: $(date '+%a %b %d %H:%M:%S %Z %Y') ===" && echo ""
     mvn deploy -P sign,build-extras --settings "${workdir}"/ci/mvn_settings.xml -DskipTests=true -B || { retval="$?"; echo "Error: was not able to publish ${project} project version = ${TRAVIS_TAG} on public repository."; }
  elif [[ "${TRAVIS_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+){1}$ ]]; then
     echo "" && echo "=== Publishing RC release of '${project}' project on Maven repository. Timestamp is: $(date '+%Y-%m-%d %H:%M') ===" && echo ""

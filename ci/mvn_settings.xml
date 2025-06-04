@@ -2,7 +2,7 @@
 <settings>
   <servers>
     <server>
-      <id>ossrh</id>
+      <id>central</id>
       <username>${env.CONTAINER_OSSRH_JIRA_USERNAME}</username>
       <password>${env.CONTAINER_OSSRH_JIRA_PASSWORD}</password>
     </server>

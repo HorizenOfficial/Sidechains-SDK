@@ -8,9 +8,9 @@ version of the artifacts by setting the provided version for all the required de
 
 ---
 ## Prerequisites for publishing a package:
-  - Singed by GPG key commit and valid GitHub tag in the format of `DIGIT.DIGIT.DIGIT` or `DIGIT.DIGIT.DIGIT-SNAPSHOT`
+  - Signed by GPG key commit and valid GitHub tag in the format of `DIGIT.DIGIT.DIGIT` or `DIGIT.DIGIT.DIGIT-SNAPSHOT`
   - GitHub tag matching `${pom_version_of_package}"[0-9]*$` regex
-  - Your(a person who pushes a tag) GPG key being added to CI/CD pipeline build settings
+  - Your (a person who pushes a tag) GPG key being added to CI/CD pipeline build settings
 
 Otherwise, the build process will run without entering the publishing stage.
 
@@ -20,14 +20,8 @@ GitHub tag = 1.1.1-SNAPSHOT can build 1.1.1-SNAPSHOT package
 GitHub tag = 1.1.1-SNAPSHOT1 can build 1.1.1-SNAPSHOT package
 GitHub tag = 1.1.1-SNAPSHOT2 can build 1.1.1-SNAPSHOT package
 ```
-All SNAPSHOT packages are being pushed to a snapshot repository configured under pom.xml file:
-```
-<snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-</snapshotRepository>
-```
-and can be referred to inside the configuration files by providing the full version, that can be found inside nexus [repository](https://oss.sonatype.org/content/repositories/snapshots/io/horizen/sidechains-sdk/)
+All SNAPSHOT packages are being pushed to the same repository as release packages and can be referred to inside the configuration
+files by providing the full version, that can be found inside Central [repository](https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/io/horizen/sidechains-sdk/)
 
 ---
 ## Usage
@@ -47,7 +41,7 @@ Before starting the build process use `set_version.sh` script if needed by provi
 
 ---
 ## How to refer
-- Find all the existing versions of [0.3.5-SNAPSHOT package](https://oss.sonatype.org/content/repositories/snapshots/io/horizen/sidechains-sdk/0.3.5-SNAPSHOT/)
+- Find all the existing versions of [0.3.5-SNAPSHOT package](https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/io/horizen/sidechains-sdk/0.3.5-SNAPSHOT/)
 - Use the full version of SNAPSHOT package as a dependency in the following format for your project.
 ```
 <dependency>
