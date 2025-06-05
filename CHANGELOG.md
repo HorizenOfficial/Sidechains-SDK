@@ -2,6 +2,7 @@
 1. Fork configuration to disable backward transfers towards mainchain
 2. Enabling preimages configuration
 3. [eth RPC endpoint]: added zen_dump rpc method for requesting an EVM state dump on a json file
+4. Migration from OSSHR to Central Portal
 
 **0.12.0**
 1. Sparkz dependency updated to 2.4.0
