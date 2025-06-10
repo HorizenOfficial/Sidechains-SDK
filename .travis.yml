@@ -39,7 +39,6 @@ jobs:
 deploy:
   provider: releases
   token: $GH_TOKEN_RELEASES
-  prerelease: $IS_A_GH_PRERELEASE
   overwrite: true
   on:
     tags: true
